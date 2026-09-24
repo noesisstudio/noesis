@@ -504,6 +504,14 @@ def prepare_invoice_delivery(
         target = str(client.get("email") or "").strip()
         if not target:
             raise ValueError("El cliente no tiene correo configurado.")
+        # Sin proveedor de correo no se encola nada: encolarlo hacía que la app
+        # dijera «en camino» y el autónomo creyera que su cliente tenía la
+        # factura. Un envío que no puede salir se dice, no se promete.
+        if not email_adapter.available():
+            raise ValueError(
+                "El correo no está configurado en el servidor, así que no puedo "
+                "enviarla. Hacen falta BREVO_API_KEY, o SMTP_HOST, SMTP_USER y "
+                "SMTP_PASS. Mientras tanto, descarga el PDF y mándalo tú.")
         email_adapter.queue_email(
             target,
             f"Factura {invoice['number']} — {business.get('name') or 'Bynoesis'}",
@@ -523,6 +531,10 @@ def prepare_invoice_delivery(
         target = whatsapp.recipient_phone(client.get("phone"))
         if not target:
             raise ValueError("El cliente no tiene un WhatsApp válido configurado.")
+        if not (whatsapp._TOKEN and whatsapp._PHONE_ID.strip()):
+            raise ValueError(
+                "WhatsApp no está configurado en el servidor, así que no puedo "
+                "enviarla. Mientras tanto, descarga el PDF y mándalo tú.")
         whatsapp.queue_template(
             target,
             config.WHATSAPP_TEMPLATE_INVOICE,

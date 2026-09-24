@@ -1,5 +1,36 @@
 ﻿# Registro de cambios
 
+## 2026-09-24 — Nunca decir «en camino» si no hay forma de enviar
+
+Buscando cómo hacer real el envío por correo apareció el peor fallo de la zona:
+**con el servidor sin ninguna credencial de correo, la app encolaba el envío y
+contestaba «📨 Factura en camino a …»**. El autónomo creía que su cliente tenía la
+factura y no había salido nada. Silencioso, y de los que hacen que no te paguen.
+Es el punto **#24** del founder: estados reales de entrega.
+
+`prepare_invoice_delivery` comprueba ahora que el canal elegido **pueda enviar**
+antes de encolar: proveedor de correo para email, credenciales de Meta para
+WhatsApp. Si no puede, no encola nada, dice **qué falta por su nombre** y ofrece la
+salida que sí funciona: descargar el PDF y mandarlo a mano.
+
+**`scripts/check_email.py`**, hermano de `check_email_dns.py`: aquel mira el DNS,
+este mira el envío. Dice qué credenciales hay, **quién firma el correo** —lo que
+verá el cliente— y, con una dirección, manda un correo real con un PDF adjunto,
+que es la única forma de saber que la cadena entera funciona. Avisa además de que
+el remitente por defecto es un `no-reply`: si el cliente responde a la factura,
+esa respuesta no llega a nadie.
+
+- **Áreas/archivos:** `src/noesis/tools.py`, `scripts/check_email.py` (nuevo).
+- **Pruebas:** `tests/test_entrega_factura.py` gana la clase de servidor sin
+  proveedor. **Dos pruebas existentes cambian a propósito**: daban por bueno que
+  se encolara un envío sin proveedor, y ahora representan un servidor
+  configurado, que es lo que son.
+- **Límites externos:** sigue sin haber credenciales de correo en este equipo. Lo
+  probado llega hasta la cola; el envío real lo tiene que verificar el founder con
+  el comprobador nuevo.
+- **Riesgo:** bajo. Deja de hacerse algo que no podía terminar.
+- **Rollback:** sin migración; revertir los archivos basta.
+
 ## 2026-09-24 — Preguntar algo en medio ya no tira la propuesta
 
 Punto **#13** de la lista del founder. Se proponía una factura, se preguntaba

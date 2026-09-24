@@ -4836,10 +4836,13 @@ class ProfessionalInvoicingHttpTestCase(unittest.TestCase):
                 self.assertEqual(
                     original_row["pending_rectification_id"], correction["id"]
                 )
-                delivered = client.post(
-                    f"/api/{business['id']}/invoices/{invoice['id']}/deliver",
-                    json={"channel": "auto"},
-                )
+                # Entregar exige proveedor de correo: sin él no se encola nada
+                # a propósito, para no prometer un envío que no puede salir.
+                with patch.object(config, "BREVO_API_KEY", "xkeysib-pruebas"):
+                    delivered = client.post(
+                        f"/api/{business['id']}/invoices/{invoice['id']}/deliver",
+                        json={"channel": "auto"},
+                    )
                 self.assertEqual(delivered.status_code, 200, delivered.text)
                 self.assertEqual(delivered.json()["channel"], "email")
                 self.assertTrue(delivered.json()["queued"])
@@ -5933,7 +5936,7 @@ class WhatsappMediaTestCase(unittest.TestCase):
             client["id"], "Revisión anual", 100, business_id=business["id"]
         )
         replies = []
-        with patch.object(
+        with patch.object(config, "BREVO_API_KEY", "xkeysib-pruebas"), patch.object(
             whatsapp, "send",
             side_effect=lambda phone, text, **kw: replies.append(text),
         ):

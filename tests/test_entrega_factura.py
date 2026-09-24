@@ -24,7 +24,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from noesis import config, db, nlu
-from noesis.web import chat
+from noesis.web import chat, whatsapp
 
 
 class _Base(unittest.TestCase):
@@ -33,12 +33,16 @@ class _Base(unittest.TestCase):
 
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
+        # Un servidor CON proveedor de correo y WhatsApp, que es lo que
+        # representa el camino bueno. Sin ellos no se encola nada a propósito.
         self.settings = patch.multiple(
             config, DATABASE_URL="", DB_PATH=Path(self.temp.name) / "t.db",
             BACKUP_DIR=Path(self.temp.name) / "b",
             DOCS_PATH=Path(self.temp.name) / "d", ANTHROPIC_API_KEY="",
-            ASSISTANT_REVIEW_ENABLED=True)
+            ASSISTANT_REVIEW_ENABLED=True, BREVO_API_KEY="xkeysib-pruebas")
         self.settings.start()
+        self.canal_wa = patch.multiple(whatsapp, _TOKEN="token", _PHONE_ID="123")
+        self.canal_wa.start()
         db.init_db()
         self.bid = db.create_business("Reformas Prueba", "a@example.com")["id"]
         db.update_fiscal(self.bid, nif="12345678Z", address="Calle Prueba 1")
@@ -52,6 +56,7 @@ class _Base(unittest.TestCase):
                         if self.EMITIDA else factura)
 
     def tearDown(self):
+        self.canal_wa.stop()
         self.settings.stop()
         self.temp.cleanup()
 
@@ -136,6 +141,39 @@ class SinCorreoTests(_Base):
     def test_whatsapp_works_when_the_phone_is_the_one_on_file(self):
         self.wa("envía la factura 1 por whatsapp")
         self.assertIn("en camino", self.wa("sí"))
+
+
+class SinProveedorTests(_Base):
+    """Nunca decir «en camino» si no hay forma de enviar.
+
+    Con el servidor sin credenciales de correo, la app encolaba el envío igual y
+    contestaba «📨 en camino». El autónomo creía que su cliente tenía la factura y
+    no había salido nada. Es el peor tipo de fallo: silencioso y de los que hacen
+    que no te paguen.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.sin_correo = patch.multiple(
+            config, SMTP_HOST="", SMTP_USER="", SMTP_PASS="", BREVO_API_KEY="")
+        self.sin_correo.start()
+
+    def tearDown(self):
+        self.sin_correo.stop()
+        super().tearDown()
+
+    def test_it_says_what_is_missing_instead_of_promising_delivery(self):
+        self.wa("envía la factura 1 por correo")
+        respuesta = self.wa("sí")
+        self.assertNotIn("en camino", respuesta)
+        self.assertIn("no está configurado", respuesta)
+        # Y nombra lo que falta, para poder arreglarlo sin adivinar.
+        self.assertIn("BREVO_API_KEY", respuesta)
+        self.assertEqual(self.en_cola(), [])
+
+    def test_it_offers_the_way_out_that_does_work(self):
+        self.wa("envía la factura 1 por correo")
+        self.assertIn("descarga el PDF", self.wa("sí"))
 
 
 class ContrapesoTests(_Base):

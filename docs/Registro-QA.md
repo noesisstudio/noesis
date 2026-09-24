@@ -1,5 +1,19 @@
 ﻿# Registro de QA
 
+## 2026-09-24 — Entrega honesta y comprobador de correo
+
+- Suite completa **1.184 en verde**. Ruff OK.
+- **El fallo se encontró reproduciendo el caso real**: servidor sin credenciales,
+  factura emitida, cliente con correo. La app decía «en camino» y la cola estaba
+  vacía. Ahora dice qué falta y no encola.
+- **Dos pruebas existentes cambian a propósito** y conviene entender por qué:
+  fijaban que se encolara sin proveedor. Fallaban por el motivo correcto.
+- **`scripts/check_email.py` probado sin credenciales**: enumera lo que falta,
+  enseña el remitente efectivo, avisa del `no-reply` y sale con código 1.
+- **No ejecutado:** ningún envío real. Es lo que el founder tiene que hacer con
+  `python scripts/check_email.py su-cuenta@gmail.com` cuando ponga las claves.
+
+
 ## 2026-09-24 — Interrupciones en una propuesta viva
 
 - `tests/test_correcciones.py` sube a **15 casos**. Suite completa **1.182 en

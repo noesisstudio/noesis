@@ -1,5 +1,24 @@
 # Tareas vivas
 
+## Correo real — 24-sep
+
+- [x] Sin proveedor no se promete ningún envío: se dice qué falta y se ofrece
+  descargar el PDF mientras tanto.
+- [x] `scripts/check_email.py` para comprobar credenciales, remitente y un envío
+  real con adjunto.
+- [ ] Founder, **los tres pasos, en orden**:
+  1. Poner en Railway `BREVO_API_KEY` + `SMTP_FROM`, **o** `SMTP_HOST` +
+     `SMTP_USER` + `SMTP_PASS` + `SMTP_FROM`.
+  2. `python scripts/check_email.py tu-cuenta@gmail.com`.
+  3. Comprobar que llega **a bandeja de entrada** y que en «Mostrar original» el
+     DKIM dice `bynoesis.com`. Aceptado por el proveedor no es lo mismo que
+     entregado.
+- [ ] Decisión pendiente: el remitente por defecto es `no-reply@bynoesis.com`, así
+  que las respuestas de los clientes no llegan a nadie. El founder prefiere
+  enviar desde el correo del propio autónomo, lo que exige verificación de Google
+  (otra puerta como la de Meta) o guardar credenciales suyas.
+
+
 ## Interrupciones — 24-sep
 
 - [x] Punto #13: una pregunta en medio ya no descarta la propuesta, y la
