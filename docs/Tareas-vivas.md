@@ -1,5 +1,11 @@
 # Tareas vivas
 
+## Consolidación — 24-sep
+
+- [ ] Validar y publicar el hotfix de PostgreSQL, correcciones y rollback;
+  comprobar resumen, costes y series de la cuenta QA.
+- [ ] Mantener pendiente la unificación amplia del chat y la entrega real en Meta.
+
 ## Correo real — 24-sep
 
 - [x] Sin proveedor no se promete ningún envío: se dice qué falta y se ofrece

@@ -19,6 +19,37 @@ class LocalInvoiceTests(unittest.TestCase):
     def enable(self):
         self.stack.enter_context(patch.object(config, "LOCAL_PLANNER_ENABLED", True))
 
+    def test_simple_client_correction_preserves_every_line(self):
+        self.enable()
+        other = db.add_client("Ana Ruiz", business_id=self.bid)
+        self.say(ORDER)
+        self.say("es para Ana Ruiz")
+        self.say("sí")
+        invoice = db.list_invoices(self.bid)[0]
+        self.assertEqual(invoice["client_id"], other["id"])
+        self.assertEqual(invoice["total"], 130.08)
+        self.assertEqual(len(db.get_invoice_lines(invoice["id"], self.bid)), 2)
+
+    def test_irpf_correction_keeps_line_items(self):
+        self.enable()
+        self.say(ORDER)
+        self.say("15% de IRPF")
+        self.say("sí")
+        invoice = db.list_invoices(self.bid)[0]
+        self.assertEqual(invoice["total"], 113.95)
+        self.assertEqual(len(db.get_invoice_lines(invoice["id"], self.bid)), 2)
+
+    def test_ambiguous_global_line_correction_never_flattens_invoice(self):
+        self.enable()
+        for correction in ("no, eran 120", "con IVA incluido", "ponle 10% de IVA",
+                           "el concepto es reparación completa"):
+            with self.subTest(correction=correction):
+                self.say(ORDER)
+                reply = self.say(correction)
+                self.assertIn("varias líneas", reply["reply"])
+                self.say("sí")
+                self.assertEqual(db.list_invoices(self.bid), [])
+
     def test_parser_is_precise_and_has_no_effects(self):
         plan = local_invoice.parse(ORDER)
         self.assertEqual(plan.client, "Marta López")

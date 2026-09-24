@@ -41,6 +41,22 @@ def _snapshot() -> dict:
 
 def _rollback() -> None:
     original = _snapshot()
+    # No se puede retirar la guardia mientras existan borradores incompletos.
+    draft = next((i for i in original["invoices"] if i["status"] == "borrador"), None)
+    if draft:
+        with db.get_conn() as conn:
+            conn.execute("UPDATE invoices SET pending_fields=? WHERE id=? AND business_id=?",
+                         ('["importe"]', draft["id"], draft["business_id"]))
+        try:
+            migrations.downgrade(57)
+        except ValueError:
+            assert migrations.current_version() == migrations.LATEST_VERSION
+        else:
+            raise AssertionError("El rollback expuso un borrador incompleto al código anterior.")
+        finally:
+            with db.get_conn() as conn:
+                conn.execute("UPDATE invoices SET pending_fields=? WHERE id=? AND business_id=?",
+                             (draft.get("pending_fields"), draft["id"], draft["business_id"]))
     assert migrations.downgrade(55) == 55
     assert _snapshot() == original
     assert migrations.downgrade(54) == 54
@@ -65,7 +81,7 @@ def _rollback() -> None:
         pass
     else:
         raise AssertionError("Se perdió la inmutabilidad fiscal durante el rollback.")
-    print("PostgreSQL 55->54->53->54->55: datos e inmutabilidad conservados.")
+    print("PostgreSQL vigente->55->54->53->54->55->vigente: datos e inmutabilidad conservados.")
 
 
 def _privacy() -> None:

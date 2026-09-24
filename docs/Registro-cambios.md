@@ -1,5 +1,20 @@
 ﻿# Registro de cambios
 
+## 2026-09-24 — Finanzas PostgreSQL, correcciones multilínea y rollback
+
+- Objetivo: consolidar f38dd40 sin sustituir el chat ni tocar proveedores.
+- `db.py`: convertir cada fecha antes de COALESCE; evita errores PostgreSQL.
+- `action_review.py`: conservar líneas al cambiar cliente/IRPF; rechazar cambios
+  globales ambiguos sin aplanar la factura ni confirmar la versión anterior.
+- `migrations.py`: rollback 58 conserva la columna en ambos motores y bloquea
+  la bajada con borradores incompletos que el código anterior no sabe proteger.
+- Pruebas: 65 regresiones locales correctas. Humo PostgreSQL ampliado con fechas
+  nulas/explícitas y `/series`; CI completa aislada antes de main.
+- Riesgo: consultas y revisión fiscal; sin nueva versión de esquema ni backfill.
+- Rollback: revertir código conservando esquema; no bajar con borradores a medias.
+  No ejecutar humos destructivos contra Railway.
+- Límites: pendientes Meta real, voz y Stripe; contratos locales del socio aparte.
+
 ## 2026-09-24 — Nunca decir «en camino» si no hay forma de enviar
 
 Buscando cómo hacer real el envío por correo apareció el peor fallo de la zona:

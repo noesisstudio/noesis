@@ -13,6 +13,7 @@ from noesis.web import backups, server
 
 
 HOT_API_PATHS = [
+    "/api/{bid}/series",
     "/api/{bid}/summary",
     "/api/{bid}/plan",
     "/api/{bid}/pending",
@@ -245,6 +246,23 @@ def _check_gets(client: TestClient, business_id: int) -> list[str]:
     return failures
 
 
+def _check_financial_dates() -> None:
+    """No basta con una demo: cuenta normal, fechas explícitas y fechas nulas."""
+    business = db.create_business("Finanzas regresión PG", "finance-pg@example.test")
+    bid = business["id"]
+    today = datetime.now().date().isoformat()
+    db.add_expense("Sin fecha", 45, business_id=bid)
+    db.add_received_invoice(121, base=100, vat_amount=21,
+                            issued_on=today, business_id=bid)
+    db.add_received_invoice(60.5, base=50, vat_amount=10.5,
+                            business_id=bid)
+    totals = db.month_billing(business_id=bid)
+    assert totals["expenses"] == 226.5, totals
+    assert len(db.list_expenses(bid)) == 1
+    assert db.monthly_series(bid)
+    assert db.expenses_by_category(bid)
+
+
 def _check_security_audit(business_id: int) -> None:
     """Comprueba en Postgres la cadena y el trigger, no solo su DDL."""
     event = db.record_security_event(
@@ -352,6 +370,7 @@ def main() -> int:
         _ensure_postgres()
         db.init_db()
         business = _seed_if_empty()
+        _check_financial_dates()
         _check_security_audit(int(business["id"]))
         _check_document_deduplication(int(business["id"]))
         _check_value_ledger(int(business["id"]))

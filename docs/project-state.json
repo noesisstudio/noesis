@@ -1,5 +1,6 @@
 {
   "state_date": "2026-09-24",
+  "reliability_hotfix_2026_09_24": "Candidato sobre f38dd40: fechas compatibles PostgreSQL, correcciones multilínea sin pérdida de detalle y rollback 58 aditivo bloqueado ante borradores incompletos. 65 pruebas dirigidas locales correctas; CI completa aislada pendiente antes de main. Sin cambios de flags ni proveedores.",
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
   "schema_version": 58,
   "verified_test_count": 1184,

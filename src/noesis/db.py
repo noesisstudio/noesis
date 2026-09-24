@@ -4992,7 +4992,7 @@ def team_productivity(business_id: int, days: int = 30) -> dict:
                 "THEN COALESCE(price_estimate, 0) ELSE 0 END), 0) AS ventas "
                 "FROM jobs WHERE business_id=? AND worker_id=? "
                 f"AND status NOT IN ({dead_ph}) "
-                "AND substr(CAST(COALESCE(scheduled_for, created_at) AS TEXT), 1, 10) >= ?",
+                "AND substr(COALESCE(CAST(scheduled_for AS TEXT), CAST(created_at AS TEXT)), 1, 10) >= ?",
                 (*_JOB_DONE_STATES, *_JOB_DONE_STATES,
                  business_id, worker["id"], *_JOB_DEAD_STATES, since),
             ).fetchone()
@@ -8483,7 +8483,7 @@ def cash_forecast(business_id, days: int = 30) -> dict:
         spent = conn.execute(
             "SELECT COALESCE(SUM(amount),0) AS total FROM expenses "
             "WHERE business_id=? "
-            "AND substr(CAST(COALESCE(spent_on, created_at) AS TEXT),1,10) >= ?",
+            "AND substr(COALESCE(CAST(spent_on AS TEXT), CAST(created_at AS TEXT)),1,10) >= ?",
             (business_id, since),
         ).fetchone()["total"]
     sale = round(float(spent) / 90 * days, 2)
@@ -8718,7 +8718,7 @@ def get_project(project_id: int, business_id: int) -> dict | None:
         ).fetchall()
         expenses = conn.execute(
             "SELECT * FROM expenses WHERE project_id=? AND business_id=? "
-            "ORDER BY COALESCE(spent_on, created_at) DESC, id DESC",
+            "ORDER BY COALESCE(CAST(spent_on AS TEXT), CAST(created_at AS TEXT)) DESC, id DESC",
             (project_id, business_id),
         ).fetchall()
         documents = conn.execute(
@@ -9827,7 +9827,7 @@ def month_billing(month: str | None = None, *, business_id: int) -> dict:
         expense_rows = [
             dict(row) for row in conn.execute(
                 "SELECT * FROM expenses WHERE business_id=? "
-                "AND CAST(COALESCE(spent_on, created_at) AS TEXT) LIKE ?",
+                "AND COALESCE(CAST(spent_on AS TEXT), CAST(created_at AS TEXT)) LIKE ?",
                 (business_id, f"{month}%"),
             ).fetchall()
         ]
@@ -9837,7 +9837,7 @@ def month_billing(month: str | None = None, *, business_id: int) -> dict:
         received_rows = [
             dict(row) for row in conn.execute(
                 "SELECT * FROM received_invoices WHERE business_id=? "
-                "AND CAST(COALESCE(issued_on, created_at) AS TEXT) LIKE ?",
+                "AND COALESCE(CAST(issued_on AS TEXT), CAST(created_at AS TEXT)) LIKE ?",
                 (business_id, f"{month}%"),
             ).fetchall()
         ]

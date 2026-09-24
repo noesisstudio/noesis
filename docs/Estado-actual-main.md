@@ -1,5 +1,12 @@
 # Estado actual del producto
 
+## 24-sep — Candidato de consolidación tras f38dd40
+
+Correcciones multilínea sin pérdida de detalle, consultas financieras compatibles
+con PostgreSQL y rollback 58 aditivo bloqueado ante borradores incompletos.
+65 pruebas dirigidas correctas; publicación supeditada a CI completa aislada.
+Sin activar flags ni cambiar proveedor.
+
 ## 23-sep — Pedir una factura como se hable
 
 La misma factura se puede pedir de quince maneras y salen las quince: con «a» o

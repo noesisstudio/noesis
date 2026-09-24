@@ -1,5 +1,12 @@
 # Mapa de código
 
+## Hotfix de fiabilidad — 24-sep
+
+`action_review._correccion` conserva líneas; `db` convierte los operandos de
+COALESCE antes de combinarlos. Downgrade 58 conserva `pending_fields` y bloquea
+la bajada con borradores incompletos. Regresiones: `test_local_invoice`,
+`test_rollback_pending`, `postgres_smoke` y `postgres_release_smoke`.
+
 ## CRM de captación — 21-sep
 
 Dos CRM con el mismo nombre y dueños distintos, que es la confusión a evitar al

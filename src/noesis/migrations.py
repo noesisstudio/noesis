@@ -4228,9 +4228,14 @@ def _upgrade_invoice_pending_fields(conn) -> None:
 
 
 def _downgrade_invoice_pending_fields(conn) -> None:
-    # En SQLite se conserva la columna: es nullable y no molesta al revertir.
-    if conn.dialect != "sqlite":
-        conn.execute("ALTER TABLE invoices DROP COLUMN IF EXISTS pending_fields")
+    # El código anterior no sabe bloquear borradores incompletos. No permitir
+    # ese rollback hasta completarlos o eliminarlos mediante el flujo normal.
+    if conn.execute("SELECT id FROM invoices WHERE pending_fields IS NOT NULL "
+                    "AND pending_fields NOT IN ('', '[]') LIMIT 1").fetchone():
+        raise ValueError("Completa o descarta los borradores incompletos antes "
+                         "de revertir la migración 58.")
+    # Columna aditiva nullable: conservarla en ambos motores evita perder datos
+    # y permite volver a subir sin diferencias en los registros históricos.
 
 
 MIGRATIONS: tuple[Migration, ...] = (

@@ -1,5 +1,14 @@
 ﻿# Registro de QA
 
+## 2026-09-24 — Consolidación posterior a f38dd40
+
+65 pruebas dirigidas correctas: `test_local_invoice`, `test_rollback_pending`,
+`test_correcciones` y `test_invoice_conversation` (99,218 s). Cambio de cliente e
+IRPF conserva líneas; cambios globales ambiguos no aplanan ni confirman. Rollback
+58 conserva datos y bloquea borradores incompletos. Humo PostgreSQL ampliado con
+fechas nulas/explícitas y `/series`. CI completa aislada pendiente antes de main.
+No se han probado proveedores reales ni ejecutado escrituras en producción.
+
 ## 2026-09-24 — Entrega honesta y comprobador de correo
 
 - Suite completa **1.184 en verde**. Ruff OK.

@@ -234,7 +234,14 @@ def _correccion(text: str, tool: str, args: dict) -> dict | None:
         return None
     # Lo que no se nombra no se toca: se parte de la propuesta vigente.
     revisado = {**args, **cambios}
-    revisado.pop("lineas", None)  # una corrección simple no rehace las líneas
+    if args.get("lineas"):
+        # Cliente e IRPF no deben borrar el desglose. Cambiar
+        # un total o el IVA de varias líneas exige indicar cómo repartirlo.
+        if any(key in cambios for key in ("base", "iva", "importe_incluye_iva", "concepto")):
+            raise ValueError("La factura tiene varias líneas. Indica qué línea y "
+                             "precio o cantidad quieres corregir. Para cambiar "
+                             "conceptos o impuestos por línea, revísala en Facturas.")
+        revisado["lineas"] = [dict(line) for line in args["lineas"]]
     return revisado
 
 
@@ -268,7 +275,12 @@ def respond(bid: int, actor: str, text: str) -> dict | None:
         pendiente = db.get_pending_action(bid, actor)
         if pendiente and pendiente["kind"] == "reviewed_tool":
             guardado = json.loads(pendiente["payload"])
-            revisado = _correccion(text, guardado.get("tool"), guardado["args"])
+            try:
+                revisado = _correccion(text, guardado.get("tool"), guardado["args"])
+            except ValueError as exc:
+                db.discard_pending_action_version(bid, actor, pendiente["id"])
+                return {"reply": f"{exc} La propuesta anterior queda descartada.",
+                        "source": "local"}
             if revisado is not None:
                 token = context.set({"actor": actor})
                 try:
