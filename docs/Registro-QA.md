@@ -1,5 +1,19 @@
 ﻿# Registro de QA
 
+## 2026-09-24 — Correcciones habladas
+
+- `tests/test_correcciones.py` (nuevo): **11 casos**. Suite completa **1.162 en
+  verde**. Ruff OK.
+- **Medido antes**: 9 formas de corregir, funcionaba 1. Después, 10 de 10.
+- **Lo que se conserva está probado campo a campo**: corregir el importe deja
+  cliente y concepto; corregir el cliente deja importe y concepto; corregir el
+  concepto deja cliente e importe. Era el punto #12 del founder.
+- **Contrapeso probado**: una orden completa nueva sustituye la propuesta, el «sí»
+  y el «no» siguen valiendo, «corregir:» sigue funcionando y una pregunta se
+  contesta sin inventarse una corrección.
+- **Corregir no escribe nada**: vuelve a proponer y sigue haciendo falta el «sí».
+
+
 ## 2026-09-24 — Nota de voz directa a PDF
 
 - Suite completa **1.151 en verde**. Ruff OK.

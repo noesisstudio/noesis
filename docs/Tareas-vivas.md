@@ -1,5 +1,17 @@
 # Tareas vivas
 
+## Correcciones habladas — 24-sep
+
+- [x] «No, eran 120», «con IVA incluido», «es para Pedro», «el concepto es X» y
+  las variantes del importe corrigen la propuesta sin repetir la orden.
+- [x] Una corrección solo cambia lo que se nombra (#12 de la lista del founder).
+- [ ] Founder: **volver a poner `NOESIS_ASSISTANT_REVIEW_ENABLED=true`** si aún
+  está en `false` del vídeo.
+- [ ] Siguiente de la lista del founder por valor: **#3 y #4** (no interceptar con
+  una coincidencia parcial), que es la causa raíz de la mayoría de lo corregido
+  hoy, y **#13** (una pregunta en medio no debería descartar la propuesta viva).
+
+
 ## Vídeo: audio directo a PDF — 24-sep
 
 - [x] Una nota de voz que solo prepara (borrador, gasto, presupuesto) ya no pide

@@ -6,6 +6,7 @@ revisada. La reclamación atómica evita duplicados entre procesos del servidor.
 from __future__ import annotations
 
 import json
+import re
 from contextvars import ContextVar
 from decimal import Decimal, ROUND_HALF_UP
 
@@ -144,6 +145,72 @@ def propose(bid: int, tool: str, args: dict, *, expected_id: int | None = None) 
     return result
 
 
+# --------------------------------------------------- Correcciones habladas ---
+# Con la revisión encendida, la conversación de cada día es «propongo → confirmas
+# o corriges». Corregir solo funcionaba escribiendo «corregir:» y repitiendo la
+# orden entera: «no, eran 120» soltaba el parte del día y, peor, descartaba la
+# propuesta, así que había que reescribirlo todo. Aquí se entienden los cambios
+# como se dicen, **y solo cambian lo que se nombra**: una corrección de importe
+# no toca el cliente ni el concepto.
+_ARRANQUE = r"^(?:no\s*,?\s*)?(?:que\s+)?"
+_VERBO_CAMBIO = (r"(?:eran?|son|es|seran?|serian?|mejor|ponle|pon|dejalo en|"
+                 r"cambialo a|cambiala a|cambia a|que sean?)")
+
+
+def _correccion(text: str, tool: str, args: dict) -> dict | None:
+    """Lo que cambia de una propuesta ya hecha. `None` si no es una corrección."""
+    if tool not in {"crear_factura", "crear_presupuesto", "registrar_gasto"}:
+        return None
+    crudo = str(text or "").strip().strip(".!¡")
+    norm = nlu._norm(crudo)
+    cambios: dict = {}
+
+    # Importe: «no, eran 120», «mejor 120 euros», o la cifra a secas.
+    importe = (re.fullmatch(_ARRANQUE + rf"{_VERBO_CAMBIO}\s+({nlu._AMOUNT_RE})"
+                            r"\s*(?:€|euros?|eur)?", norm)
+               or re.fullmatch(_ARRANQUE + rf"({nlu._AMOUNT_RE})\s*(?:€|euros?|eur)",
+                               norm))
+    if importe:
+        valor = nlu._amount_value(importe.group(1))
+        if valor > 0:
+            cambios["importe" if tool == "registrar_gasto" else "base"] = valor
+
+    # IVA e IRPF: «con IVA incluido», «ponle 10% de IVA», «15% de IRPF».
+    if re.search(r"\biva\s*(?:incluido|inclos|dentro)\b|\bcon\s+el\s+iva\b", norm):
+        cambios["importe_incluye_iva"] = True
+    tipo_iva = re.search(r"(?:iva\s*(?:del|al)?\s*(0|4|10|21)|(0|4|10|21)\s*%?\s*"
+                         r"(?:de\s+)?iva)\b", norm)
+    if tipo_iva:
+        cambios["iva"] = float(tipo_iva.group(1) or tipo_iva.group(2))
+    tipo_irpf = re.search(r"(?:irpf\s*(?:del|al)?\s*(0|7|15)|(0|7|15)\s*%?\s*"
+                          r"(?:de\s+)?irpf)\b", norm)
+    if tipo_irpf:
+        cambios["irpf"] = float(tipo_irpf.group(1) or tipo_irpf.group(2))
+
+    # Cliente: «es para Pedro», «el cliente es Pedro».
+    quien = re.match(_ARRANQUE + r"(?:es\s+)?(?:para|el cliente es|"
+                     r"la cliente es|cliente:?)\s+(.+)$", norm)
+    if quien and tool != "registrar_gasto":
+        nombre = nlu._limpiar_cliente(crudo[quien.start(1):].strip())
+        if nombre:
+            cambios["cliente"] = nombre
+            cambios["cliente_id"] = None
+
+    # Concepto: «el concepto es ventana», «concepto: ventana».
+    que = re.match(_ARRANQUE + r"(?:el\s+)?concepto\s*(?:es|:)?\s+(.+)$", norm)
+    if que:
+        concepto = nlu._limpiar_concepto(crudo[que.start(1):].strip())
+        if concepto:
+            cambios["concepto"] = concepto
+
+    if not cambios:
+        return None
+    # Lo que no se nombra no se toca: se parte de la propuesta vigente.
+    revisado = {**args, **cambios}
+    revisado.pop("lineas", None)  # una corrección simple no rehace las líneas
+    return revisado
+
+
 def respond(bid: int, actor: str, text: str) -> dict | None:
     """Consume una propuesta exacta; no interpreta de nuevo lo confirmado."""
     norm = nlu._norm(text)
@@ -169,6 +236,24 @@ def respond(bid: int, actor: str, text: str) -> dict | None:
                             return {**propose(bid, "crear_factura", revised, expected_id=pending["id"]), "source": "local"}
                         finally:
                             context.reset(token)
+        # Corrección hablada sobre cualquier propuesta pendiente, sin depender
+        # del planificador local ni de que la factura tenga varias líneas.
+        pendiente = db.get_pending_action(bid, actor)
+        if pendiente and pendiente["kind"] == "reviewed_tool":
+            guardado = json.loads(pendiente["payload"])
+            revisado = _correccion(text, guardado.get("tool"), guardado["args"])
+            if revisado is not None:
+                token = context.set({"actor": actor})
+                try:
+                    return {**propose(bid, guardado["tool"], revisado,
+                                      expected_id=pendiente["id"]),
+                            "source": "local"}
+                except ValueError as exc:
+                    db.discard_pending_action_version(bid, actor, pendiente["id"])
+                    return {"reply": f"{exc} La propuesta anterior queda "
+                                     "descartada.", "source": "local"}
+                finally:
+                    context.reset(token)
         return None
     pending = db.get_pending_action(bid, actor)
     if not pending or pending["kind"] != "reviewed_tool":

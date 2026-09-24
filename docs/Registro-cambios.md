@@ -1,5 +1,39 @@
 ﻿# Registro de cambios
 
+## 2026-09-24 — Corregir una propuesta hablando, sin repetirlo todo
+
+Con la revisión encendida —lo de producción— la conversación de cada día es
+«propongo → confirmas o corriges». Medido antes de tocar nada: de nueve formas
+naturales de corregir funcionaba **una**, la de escribir «corregir:» y repetir la
+orden entera. Las demás soltaban el parte del día o el resumen de impuestos y,
+peor, **descartaban la propuesta**, así que había que reescribirlo todo.
+
+El mecanismo de revisar existía pero era muy estrecho: `local_invoice.revise` solo
+entiende líneas de una factura múltiple («cambia la línea 2 precio a X») y está
+detrás del planificador local. Lo que se dice a diario —«no, eran 120», «con IVA
+incluido», «es para Pedro»— no entraba por ningún sitio.
+
+`action_review._correccion` entiende ahora el importe, el IVA e IRPF, el cliente y
+el concepto, dichos como se dicen, sobre facturas, presupuestos y gastos. **Solo
+cambia lo que se nombra**: corregir el importe deja intactos cliente y concepto.
+Y corregir **vuelve a proponer**, nunca ejecuta: sigue haciendo falta el «sí», y la
+propuesta nueva sustituye a la anterior por versión, así que un «sí» viejo no puede
+confirmar una propuesta ya cambiada.
+
+Es el punto **#11 y #12** de la lista de mejoras del founder.
+
+- **Áreas/archivos:** `src/noesis/action_review.py`.
+- **Pruebas:** `tests/test_correcciones.py` (nuevo, 11 casos) con las dos reglas:
+  lo que no se nombra se conserva, y una orden nueva sigue sustituyendo la
+  propuesta con el sí y el no valiendo lo que valían.
+- **Límites externos:** ninguno.
+- **Riesgo:** medio. Se interpreta más cosa sobre una propuesta viva; por eso
+  cada corrección exige nombrar el campo o una marca de cambio, y el contrapeso
+  está probado.
+- **Diagnóstico:** si una frase se toma por corrección sin serlo, el sitio es
+  `action_review._correccion`.
+- **Rollback:** sin migración; revertir el archivo basta.
+
 ## 2026-09-24 — Preparar no es emitir: la voz deja de pedir permiso para todo
 
 Petición del founder para grabar un vídeo: mandar una nota de voz y que salga la
