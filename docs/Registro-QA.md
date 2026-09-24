@@ -7,11 +7,22 @@ ficticia `xkeysib-pruebas` del fixture de entrega introducido por el socio;
 excepción puntual comentada, sin relajar el escáner ni regenerar la baseline.
 Copia previa de producción creada y restauración verificada (4,588 s).
 
+CI final 36012914685 sobre df113b1: **1189 tests correctos** (352,518 s),
+36 rutas PostgreSQL, rollback, migraciones, secretos, dependencias, análisis
+estático y pruebas JavaScript correctas. Publicado en main después de ese resultado.
+
+Railway b668b4c1-d161-4f7c-a0fb-a763ede45d2a SUCCESS; `/ready` release
+df113b1fbe18 y esquema 58. Cuenta QA 14 autenticada, sin nuevas escrituras:
+summary, series, analysis, costs/breakdown, expenses e invoices HTTP 200;
+gasto 29 = 45 €, borradores 47 = 120 € y 50 = 95,40 €. Páginas resumen,
+costes, facturas y documentos HTTP 200. No se reabrió navegador por los cierres
+previos de Codex: esta comprobación es HTTP/datos, no una nueva validación visual.
+
 65 pruebas dirigidas correctas: `test_local_invoice`, `test_rollback_pending`,
 `test_correcciones` y `test_invoice_conversation` (99,218 s). Cambio de cliente e
 IRPF conserva líneas; cambios globales ambiguos no aplanan ni confirman. Rollback
 58 conserva datos y bloquea borradores incompletos. Humo PostgreSQL ampliado con
-fechas nulas/explícitas y `/series`. CI completa aislada pendiente antes de main.
+fechas nulas/explícitas y `/series`. CI completa aislada superada antes de main.
 No se han probado proveedores reales ni ejecutado escrituras en producción.
 
 ## 2026-09-24 — Entrega honesta y comprobador de correo

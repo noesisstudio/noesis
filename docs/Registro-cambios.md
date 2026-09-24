@@ -16,6 +16,11 @@
 - Límites: pendientes Meta real, voz y Stripe; contratos locales del socio aparte.
 - CI detectó una clave ficticia del fixture `test_entrega_factura`; excepción
   puntual documentada, sin excluir archivos ni desactivar detección de secretos.
+- Resultado final CI 36012914685: 1189 tests, 36 rutas PostgreSQL, rollback y
+  seguridad correctos sobre df113b1. Copia previa restaurada y verificada.
+- Publicación: Railway b668b4c1-d161-4f7c-a0fb-a763ede45d2a SUCCESS, ready
+  df113b1fbe18/esquema 58. Seis APIs y cuatro páginas QA HTTP 200, importes
+  guardados intactos. Sin nueva prueba visual ni entrega real por Meta.
 
 ## 2026-09-24 — Nunca decir «en camino» si no hay forma de enviar
 

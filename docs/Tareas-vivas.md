@@ -2,8 +2,8 @@
 
 ## Consolidación — 24-sep
 
-- [ ] Validar y publicar el hotfix de PostgreSQL, correcciones y rollback;
-  comprobar resumen, costes y series de la cuenta QA.
+- [x] Hotfix de PostgreSQL, correcciones y rollback publicado como df113b1;
+  CI 1189 pruebas y verificación autenticada de resumen, costes y series correctas.
 - [ ] Mantener pendiente la unificación amplia del chat y la entrega real en Meta.
 
 ## Correo real — 24-sep

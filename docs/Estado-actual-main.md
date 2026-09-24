@@ -1,10 +1,13 @@
 # Estado actual del producto
 
-## 24-sep — Candidato de consolidación tras f38dd40
+## 24-sep — Consolidación validada tras f38dd40
 
 Correcciones multilínea sin pérdida de detalle, consultas financieras compatibles
 con PostgreSQL y rollback 58 aditivo bloqueado ante borradores incompletos.
-65 pruebas dirigidas correctas; publicación supeditada a CI completa aislada.
+65 pruebas dirigidas y CI completa correctas: 1189 tests, 36 rutas PostgreSQL,
+rollback y seguridad. Código df113b1 publicado en main y Railway (SUCCESS,
+ready esquema 58). Seis APIs QA y cuatro páginas HTTP 200; gasto de 45 € y
+borradores de 120/95,40 € conservados. Evidencia detallada en Registro-QA.
 Sin activar flags ni cambiar proveedor.
 
 ## 23-sep — Pedir una factura como se hable
