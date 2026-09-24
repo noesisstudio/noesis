@@ -1,5 +1,42 @@
 ﻿# Registro de cambios
 
+## 2026-09-24 — Lo que escribe Whisper no es lo que escribiríamos nosotros
+
+El founder, después de probar el producto: «donde hay más fallos es en la voz».
+Medido con doce transcripciones **realistas** de la misma orden —muletillas,
+tartamudeos, puntuación inventada, mayúsculas en todo, «iba» por «IVA»— fallaban
+dos, y las dos son cosas que se dicen sin pensar.
+
+**«Con el 21 por ciento».** El concepto de la factura quedaba en **«ciento»** y el
+IVA se perdía. Ahora «N por ciento» se traduce a «N%», el porcentaje sale del
+concepto y, si no hay descuento ni IRPF por medio, se toma como el IVA.
+
+**«De ciento veinte con cincuenta a Reformas Martinez».** Al hablar, el importe se
+dice **sin** la palabra «euros», y el conversor de cifras dictadas la exigía: no
+veía ningún importe. Ahora también convierte la cifra que va detrás de «de» o
+«por» y delante de un conector, con sus céntimos. El límite está puesto a
+propósito: si detrás de la cifra hay otra palabra en vez de un conector, no se
+toca, y así «Tres Torres» o «Cien Montaditos» siguen siendo clientes.
+
+- **Áreas/archivos:** `src/noesis/nlu.py`.
+- **Pruebas:** `tests/test_ordenes_del_dia.py` gana el corpus de transcripción (12
+  formas reales de la misma orden) y tres contrapesos: el porcentaje es IVA pero
+  un descuento no, y los nombres que suenan a número se respetan.
+- **Límites externos:** esto arregla el texto que llega. La calidad de la
+  transcripción en sí depende de Whisper.
+- **Riesgo:** medio-bajo, con el contrapeso probado.
+- **Rollback:** sin migración; revertir el archivo basta.
+
+**Diagnóstico para la siguiente mejora, ya investigado:** a Groq solo se le manda
+el audio y el nombre del modelo. **No se le pasa `prompt` ni `language`**, y las
+dos son gratis. El `prompt` acepta vocabulario esperado: pasarle los nombres de
+los clientes del negocio y las palabras del oficio (factura, IVA, IRPF, concepto,
+albarán) atacaría en origen los dos fallos que más ha sufrido el founder —«reforma»
+por «Reformas Martinez» y «iba» por «IVA»— en vez de corregirlos después. El
+idioma ya está guardado por negocio y ahora mismo el modelo lo adivina en cada
+nota. Cambiar de `whisper-large-v3-turbo` a `whisper-large-v3` es el tercer paso,
+y es el único que cuesta dinero: calderilla frente a los dos primeros.
+
 ## 2026-09-24 — Corregir una propuesta hablando, sin repetirlo todo
 
 Con la revisión encendida —lo de producción— la conversación de cada día es

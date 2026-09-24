@@ -91,13 +91,38 @@ def _numero_en_letra(palabras: list[str]) -> int | None:
     return (total + parcial) if visto else None
 
 
+def _sin_euros(match: re.Match) -> str:
+    """Cifra dictada sin la palabra «euros», con sus céntimos si los lleva."""
+    valor = _numero_en_letra(_norm(match.group("cifra")).split())
+    if not valor or valor <= 0:
+        return match.group(0)
+    centimos = match.groupdict().get("centimos")
+    if centimos:
+        sueltos = _numero_en_letra(_norm(centimos).split())
+        if sueltos is not None and 0 < sueltos < 100:
+            return f"{match.group('marca')}{valor},{sueltos:02d}"
+    return f"{match.group('marca')}{valor}"
+
+
 def _cifras_dictadas(text: str) -> str:
     """Pasa a cifras los importes dichos en letra, y solo esos.
 
     «Gasté treinta y cinco euros» → «Gasté 35 euros». Se exige que la secuencia
     termine justo antes de «euros» (o «con cincuenta» de céntimos) para no tocar
     nombres propios que suenan a número.
+
+    Al dictar también se dice el importe **sin** la palabra euros: «una factura de
+    ciento veinte a Juan». Para esos se pide que la cifra vaya detrás de «de» o
+    «por» y delante de un conector, nunca de otra palabra: así «Tres Torres» o
+    «Cien Montaditos» siguen siendo nombres y no se convierten en números.
     """
+    palabras_sueltas = "|".join(sorted(_PALABRA_NUMERO, key=len, reverse=True))
+    text = re.sub(
+        rf"(?<=\b)(?P<marca>(?:de|por|importe|precio|son|es)\s+)"
+        rf"(?P<cifra>(?:(?:{palabras_sueltas})\s+)*(?:{palabras_sueltas}))"
+        rf"(?:\s+(?:con|amb)\s+(?P<centimos>(?:(?:{palabras_sueltas})\s*)+?))?"
+        rf"(?=\s+(?:a|para|per|con|y|i)\b|\s*[,.;]|$)",
+        _sin_euros, text, flags=re.I)
     if not re.search(r"\b(?:euros?|eur|€)\b", text, re.I):
         return text
 
@@ -537,7 +562,10 @@ def _parse_doc_command(text: str, norm: str, verb_re: str) -> dict | None:
     text = re.sub(
         r"\s+(?:(?:con|más|mas|sin|\+)\s+)?(?:IVA|IRPF)\s*(?:(?:del|al)\s*)?"
         r"(?:incluido|inclos|\d+(?:[.,]\d+)?\s*%?)?",
-        " ", text, flags=re.I).strip(" ,.")  # un espacio, no vacío: si no, pega
+        " ", text, flags=re.I).strip(" ,.")
+    # «…concepto ventana con el 21%» dejaba el porcentaje dentro del concepto.
+    text = re.sub(r"\s+(?:con|más|mas|y)\s+(?:el\s+)?\d+(?:[.,]\d+)?\s*%",
+                  " ", text, flags=re.I).strip(" ,.")  # un espacio, no vacío: si no, pega
     text = re.sub(r"\s{2,}", " ", text)      # «euros mas iva concepto» → «eurosconcepto»
     # Si se dice «concepto», eso ES el concepto y manda sobre cualquier otra
     # lectura. Sin esto, «factura a reformas martinez concepto ventana por 750»
@@ -759,6 +787,12 @@ def parse_party_name(raw: str) -> tuple[str | None, str | None]:
 
 
 def _add_tax_rates(norm: str, args: dict) -> None:
+    # «Con el 21 por ciento» es como se dice el IVA hablando, sin nombrarlo. Solo
+    # se toma como IVA si no hay un descuento por medio, que también va en %.
+    if not re.search(r"\biva\b|\bdescuento\b|\bdto\b|\birpf\b", norm):
+        suelto = re.search(r"\b(?:con|mas|más|y)\s+(?:el\s+)?(0|4|10|21)\s*%", norm)
+        if suelto:
+            args["iva"] = float(suelto.group(1))
     vat = re.search(r"\biva\s*(?:del|al)?\s*(0|4|10|21)\s*%?", norm)
     irpf = re.search(r"\birpf\s*(?:del|al)?\s*(0|7|15)\s*%?", norm)
     if vat:
@@ -835,6 +869,9 @@ def _party_intent(papel: str, nombre: str) -> tuple[str, dict]:
 def parse(text: str) -> tuple[str, dict] | None:
     # Lo primero: pasar a cifras los importes dictados en letra. Todo lo que
     # viene detrás busca números, y una nota de voz los trae escritos.
+    # «El 21 por ciento» es como se dice un porcentaje hablando. Sin traducirlo,
+    # «ciento» acababa siendo el concepto de la factura.
+    text = re.sub(r"(\d+(?:[.,]\d+)?)\s*por\s*ciento\b", r"\1%", text, flags=re.I)
     text = _cifras_dictadas(text)
     norm = _norm(text)
 

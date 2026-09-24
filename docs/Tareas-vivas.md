@@ -1,5 +1,18 @@
 # Tareas vivas
 
+## Calidad de la transcripción — 24-sep
+
+- [x] «Por ciento», importes sin la palabra «euros» y el corpus de 12
+  transcripciones realistas.
+- [ ] **Mejora en origen, pendiente de decidir con el founder:** pasarle a Whisper
+  un `prompt` con los nombres de los clientes del negocio y el vocabulario del
+  oficio, y el `language` que ya está guardado por negocio. Las dos son gratis y
+  atacan la causa en vez del síntoma. Hoy no se manda ninguna de las dos.
+- [ ] Tercer paso, ya de pago y menor: `GROQ_WHISPER_MODEL=whisper-large-v3` en
+  vez de `-turbo`. Más preciso y más lento; el coste de transcribir es de
+  céntimos por hora, así que la diferencia no se nota en la factura.
+
+
 ## Correcciones habladas — 24-sep
 
 - [x] «No, eran 120», «con IVA incluido», «es para Pedro», «el concepto es X» y

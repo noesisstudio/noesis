@@ -1,5 +1,19 @@
 ﻿# Registro de QA
 
+## 2026-09-24 — Transcripciones realistas
+
+- `tests/test_ordenes_del_dia.py` sube a **33 casos**. Suite completa **1.166 en
+  verde**. Ruff OK.
+- **Medido con lo que escribe una transcripción, no con lo que escribiríamos**:
+  12 variantes de la misma orden, fallaban 2. Después, 12 de 12.
+- **Los contrapesos importan aquí más que nunca**: convertir cifras dictadas sin
+  la palabra «euros» es lo que podría convertir «Tres Torres» en «3 Torres», así
+  que está probado que no pasa; y un descuento en tanto por ciento no se toma
+  por IVA.
+- **No ejecutado:** ninguna nota de voz real. Sigue faltando `GROQ_API_KEY` en el
+  entorno para probar el circuito completo.
+
+
 ## 2026-09-24 — Correcciones habladas
 
 - `tests/test_correcciones.py` (nuevo): **11 casos**. Suite completa **1.162 en

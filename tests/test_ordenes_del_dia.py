@@ -202,6 +202,67 @@ class ConsultasTests(unittest.TestCase):
                 self.assertEqual(nlu.parse(frase)[0], "ver_cobros_pendientes")
 
 
+# Cómo transcribe de verdad una nota de voz: muletillas al empezar y al acabar,
+# la orden repetida al arrancar, puntuación inventada, «IVA» escrito «iba», el
+# porcentaje dicho «por ciento» y el importe sin la palabra euros. Todas dicen lo
+# mismo: cliente «reformas martinez», concepto «ventana».
+CORPUS_TRANSCRIPCION = {
+    "A ver, hazme una factura de 800 a reformas martinez concepto ventana.": 800.0,
+    "Pues eso, hazme una factura de 800 a reformas martinez, concepto ventana": 800.0,
+    "hazme una hazme una factura de 800 a reformas martinez concepto ventana": 800.0,
+    "hazme una factura de 800 euros a reformas martinez concepto ventana mas iba": 800.0,
+    "hazme una factura de 800 a reformas martinez concepto ventana más IBA": 800.0,
+    "hazme una factura de 800 a reformas martinez concepto ventana con el 21 por ciento": 800.0,
+    "hazme una factura de ciento veinte con cincuenta a reformas martinez concepto ventana": 120.5,
+    "Hazme Una Factura De 800 A Reformas Martinez Concepto Ventana": 800.0,
+    "hazme una factura de 800€ a reformas martinez concepto ventana": 800.0,
+    "eh hazme una factura de 800 a reformas martinez concepto ventana vale": 800.0,
+    "hazme una factura de ochocientos a reformas martinez concepto ventana": 800.0,
+    "hazme una factura de 800 para reformas martinez concepto cambio de ventana": 800.0,
+}
+
+
+class TranscripcionTests(unittest.TestCase):
+    """Lo que escribe Whisper no es lo que escribiríamos nosotros.
+
+    Medido el 24-09 con transcripciones realistas de la misma orden: fallaban dos
+    de doce. «Con el 21 por ciento» dejaba el concepto en «ciento» y perdía el
+    IVA; y un importe dicho sin la palabra «euros» («de ciento veinte a Juan») no
+    se veía como número.
+    """
+
+    def test_every_realistic_transcription_of_the_same_order(self):
+        for frase, base in CORPUS_TRANSCRIPCION.items():
+            with self.subTest(frase=frase):
+                herramienta, datos = nlu.parse(frase)
+                self.assertEqual(herramienta, "crear_factura")
+                self.assertEqual(datos["base"], base)
+                self.assertIn("ventana", datos["concepto"].lower())
+                self.assertIn("martinez", nlu._norm(datos["cliente"]))
+
+    def test_a_percentage_said_out_loud_is_the_vat_not_the_concept(self):
+        datos = nlu.parse("hazme una factura de 800 a reformas martinez "
+                          "concepto ventana con el 10 por ciento")[1]
+        self.assertEqual(datos["iva"], 10.0)
+        self.assertEqual(datos["concepto"], "ventana")
+
+    def test_a_discount_is_not_taken_for_vat(self):
+        # El contrapeso: un porcentaje suelto solo es IVA si no hay un descuento
+        # por medio, que también se dice en tanto por ciento.
+        datos = nlu.parse("hazme una factura a Juan por obra 100 euros "
+                          "con descuento del 10 por ciento")[1]
+        self.assertNotIn("iva", datos)
+
+    def test_a_name_that_sounds_like_a_number_survives_without_euros(self):
+        # La regla nueva convierte cifras dictadas sin «euros»; no puede tocar
+        # «Tres Torres» ni «Cien Montaditos».
+        for frase, cliente in (("factura a Tres Torres por obra 300 euros", "Tres Torres"),
+                               ("factura a Cien Montaditos por obra 300 euros",
+                                "Cien Montaditos")):
+            with self.subTest(frase=frase):
+                self.assertEqual(nlu.parse(frase)[1]["cliente"], cliente)
+
+
 class CatalanTests(unittest.TestCase):
     """El producto se vende en Lleida y se habla catalán a diario.
 
