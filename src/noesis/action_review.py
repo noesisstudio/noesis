@@ -25,6 +25,7 @@ LABELS = {
     "agendar_trabajo": "Agendar trabajo", "registrar_gasto": "Registrar gasto",
     "registrar_pago": "Registrar el saldo pendiente como cobrado",
     "enviar_factura": "Emitir factura (la entrega se gestiona por separado)",
+    "entregar_factura": "Entregar la factura al cliente",
 }
 
 
@@ -103,6 +104,32 @@ def _preview(bid: int, tool: str, args: dict) -> tuple[str, dict]:
         lines.extend([f"Concepto: {args.get('concepto') or 'Gasto'}", f"Importe: {nlu._eur(amount)}", "Destino: gastos generales del negocio; sin asignación a cliente."])
     if tool == "agendar_trabajo":
         lines.extend([f"Trabajo: {args.get('descripcion') or 'Trabajo'}", f"Cuándo: {args.get('fecha_hora')}", f"Lugar: {args.get('zona') or 'sin especificar'}"])
+    if tool == "entregar_factura":
+        invoice = db.get_invoice(int(args.get("factura_id", 0)), bid)
+        if not invoice:
+            raise ValueError("No existe esa factura en tu negocio.")
+        if invoice.get("status") == "borrador" or not invoice.get("number"):
+            raise ValueError("Esa factura todavía es un borrador. Emítela antes de "
+                             "entregarla, o dime «emitir y enviar factura "
+                             f"{invoice['id']}».")
+        cliente = db.get_client(invoice["client_id"], bid) or {}
+        canal = str(args.get("canal") or "auto")
+        snapshot["invoice"] = invoice
+        snapshot["client"] = {k: cliente.get(k) for k in ("id", "name", "email", "phone")}
+        destino = (cliente.get("email") if canal == "email"
+                   else cliente.get("phone") if canal == "whatsapp" else None)
+        if canal == "email" and not destino:
+            raise ValueError(f"{cliente.get('name') or 'Ese cliente'} no tiene "
+                             "correo en su ficha. Añádeselo en Clientes.")
+        if canal == "whatsapp" and not destino:
+            raise ValueError(f"{cliente.get('name') or 'Ese cliente'} no tiene "
+                             "teléfono en su ficha. Añádeselo en Clientes.")
+        lines.extend([
+            f"Factura {invoice.get('number')} · {cliente.get('name') or ''}",
+            f"Canal: {'el que tenga en ficha' if canal == 'auto' else canal}"
+            + (f" · {destino}" if destino else ""),
+            "Se manda al CLIENTE, no a ti.",
+        ])
     if tool in {"registrar_pago", "enviar_factura"}:
         invoice = db.get_invoice(int(args.get("factura_id", 0)), bid)
         if not invoice:

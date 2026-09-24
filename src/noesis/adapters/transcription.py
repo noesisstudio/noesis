@@ -20,8 +20,32 @@ from typing import Protocol
 
 
 class Transcriber(Protocol):
-    def transcribe(self, audio: bytes, filename: str = "audio") -> str:
+    def transcribe(self, audio: bytes, filename: str = "audio",
+                   language: str | None = None) -> str:
         ...
+
+
+# Idiomas que el producto habla. Forzar el idioma evita que una nota corta o con
+# ruido de obra se transcriba como portugués o italiano, que es lo que pasa
+# cuando el modelo tiene que adivinar. Se ignora cualquier otro valor: un código
+# inventado hace que el proveedor rechace la petición entera.
+_IDIOMAS = {"es", "ca", "en"}
+
+
+def idioma_efectivo(language: str | None) -> str | None:
+    """Idioma que se le pide al transcriptor, o `None` para que lo detecte él.
+
+    Manda la variable del servidor si está puesta; si no, el idioma del negocio.
+    `auto` en la variable desactiva forzarlo, que es lo que conviene a quien dicta
+    en dos idiomas: forzar uno estropea el otro.
+    """
+    from .. import config
+
+    global_ = (config.WHISPER_LANGUAGE or "").strip().lower()
+    if global_ == "auto":
+        return None
+    elegido = global_ or (language or "").strip().lower()
+    return elegido if elegido in _IDIOMAS else None
 
 
 class LocalWhisperProvider:
@@ -41,15 +65,17 @@ class LocalWhisperProvider:
                                        cpu_threads=2, num_workers=1, download_root=self._dir)
         return self._model
 
-    def transcribe(self, audio: bytes, filename: str = "audio") -> str:
+    def transcribe(self, audio: bytes, filename: str = "audio",
+                   language: str | None = None) -> str:
         if not self._lock.acquire(blocking=False):
             raise ValueError("El transcriptor está ocupado. Inténtalo en unos segundos.")
         try:
-            return self._transcribe(audio, filename)
+            return self._transcribe(audio, filename, language)
         finally:
             self._lock.release()
 
-    def _transcribe(self, audio: bytes, filename: str = "audio") -> str:
+    def _transcribe(self, audio: bytes, filename: str = "audio",
+                    language: str | None = None) -> str:
         from .. import config
 
         if not audio or len(audio) > config.MAX_AUDIO_BYTES:
@@ -72,7 +98,7 @@ class LocalWhisperProvider:
                         raise ValueError("La nota supera la duración máxima. Divídela en notas más cortas.")
             segments, _info = model.transcribe(
                 path,
-                language=config.WHISPER_LANGUAGE or None,
+                language=idioma_efectivo(language),
                 beam_size=5,
                 vad_filter=True,
                 condition_on_previous_text=False,
@@ -122,7 +148,8 @@ class GroqWhisperProvider:
 
     ENDPOINT = "https://api.groq.com/openai/v1/audio/transcriptions"
 
-    def transcribe(self, audio: bytes, filename: str = "audio.ogg") -> str:
+    def transcribe(self, audio: bytes, filename: str = "audio.ogg",
+                   language: str | None = None) -> str:
         import json as _json
         import urllib.error
         import uuid
@@ -138,8 +165,9 @@ class GroqWhisperProvider:
             ("model", config.GROQ_WHISPER_MODEL),
             ("response_format", "json"),
         ]
-        if config.WHISPER_LANGUAGE:
-            fields.append(("language", config.WHISPER_LANGUAGE))
+        idioma = idioma_efectivo(language)
+        if idioma:
+            fields.append(("language", idioma))
         for field, value in fields:
             parts.append(
                 f"--{boundary}\r\n"
@@ -191,7 +219,8 @@ class PrivateWhisperProvider:
         if len(self.token) < 32 or parsed.username or parsed.password or parsed.query or parsed.fragment or not parsed.hostname or (parsed.scheme != "https" and not (parsed.scheme == "http" and private_host)):
             raise ValueError("Configura Whisper por HTTPS o red privada Railway y una clave de servicio.")
 
-    def transcribe(self, audio: bytes, filename: str = "audio") -> str:
+    def transcribe(self, audio: bytes, filename: str = "audio",
+                   language: str | None = None) -> str:
         import json
         from .. import config
 

@@ -1,5 +1,21 @@
 ﻿# Registro de QA
 
+## 2026-09-24 — Entrega por correo e idioma del dictado
+
+- `tests/test_entrega_factura.py` (nuevo): **10 casos**. Suite completa **1.178 en
+  verde**. Ruff OK.
+- **Probado el circuito entero**: la propuesta nombra destino y canal, el «sí»
+  deja el correo en la cola con `entity_type=invoice` —que es lo que hace que el
+  PDF se adjunte al enviarlo— y queda el evento `entrega_preparada`.
+- **Los tres caminos malos también**: un borrador dice que hay que emitirlo, un
+  cliente sin correo se nombra, y sin «sí» no sale nada.
+- **Contrapeso**: redactar un correo normal a un cliente sigue funcionando; la
+  salida nueva del redactor solo afecta a las frases que nombran una factura por
+  su número.
+- **No ejecutado:** ningún envío real. No hay credenciales de correo en este
+  equipo, así que lo probado llega hasta la cola, no hasta el buzón del cliente.
+
+
 ## 2026-09-24 — Transcripciones realistas
 
 - `tests/test_ordenes_del_dia.py` sube a **33 casos**. Suite completa **1.166 en

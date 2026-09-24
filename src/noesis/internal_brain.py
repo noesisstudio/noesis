@@ -441,6 +441,14 @@ def _build_draft(business_id: int, text: str) -> tuple[CommunicationDraft | None
 def handles(text: str) -> bool:
     """Detecta peticiones de redacción sin capturar órdenes operativas normales."""
     norm = nlu._norm(text)
+    # «Envía la factura 3 por correo» es entregar un documento que ya existe, no
+    # redactar un mensaje. Sin esta salida, el redactor se quedaba la frase por
+    # llevar la palabra «correo» y contestaba «dime a qué cliente escribimos»,
+    # con la factura delante y numerada.
+    if (re.search(r"\bfactura\s*#?\s*\d{1,9}\b", norm)
+            and re.search(r"\b(?:envia\w*|enviale|manda\w*|mandale|remite|"
+                          r"entrega\w*)\b", norm)):
+        return False
     communication_words = (
         "mensaje", "missatge", "correo", "correu", "email", "whatsapp",
         "recordatorio", "recordatori",

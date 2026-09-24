@@ -1,5 +1,22 @@
 # Tareas vivas
 
+## Entrega por correo — 24-sep
+
+- [x] «Envía la factura 3 por correo» entrega la factura; ya no cae en el
+  redactor de mensajes. Un borrador avisa de que hay que emitirlo primero.
+- [x] El transcriptor recibe el idioma del negocio.
+- [ ] Founder, **para que el correo salga de verdad**, en Railway una de las dos:
+  `BREVO_API_KEY` + `SMTP_FROM`, o `SMTP_HOST` + `SMTP_USER` + `SMTP_PASS` +
+  `SMTP_FROM`. Con SMTP hacen falta las tres o se considera no configurado.
+- [ ] Founder: **antes de mandar facturas a clientes reales**, la prueba de
+  siempre — una a Gmail y mirar en «Mostrar original» que DKIM diga
+  `bynoesis.com`. Sigue pendiente lo de Brevo: falta la clave DKIM y el
+  `include:spf.brevo.com` dentro del SPF que ya existe, nunca en uno nuevo.
+- [ ] Pendiente de aclarar con el founder: qué significa «que se autorice de
+  manera automática» (no confirmar cada envío / autorizar una vez por cliente /
+  que la app configure el proveedor de correo).
+
+
 ## Calidad de la transcripción — 24-sep
 
 - [x] «Por ciento», importes sin la palabra «euros» y el corpus de 12

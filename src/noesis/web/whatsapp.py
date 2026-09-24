@@ -758,8 +758,14 @@ _VOZ_EXPLICACION = {
 }
 
 
-def _audio_to_text(audio_id: str) -> tuple[str | None, str | None]:
-    """Transcribe la nota de voz. Devuelve `(texto, motivo del fallo)`."""
+def _audio_to_text(audio_id: str,
+                   language: str | None = None) -> tuple[str | None, str | None]:
+    """Transcribe la nota de voz. Devuelve `(texto, motivo del fallo)`.
+
+    `language` es el idioma del negocio. Decírselo al transcriptor evita que una
+    nota corta o con ruido de obra acabe transcrita como portugués o italiano,
+    que es lo que pasa cuando el modelo tiene que adivinar en cada nota.
+    """
     from ..adapters import transcription
 
     try:
@@ -775,7 +781,7 @@ def _audio_to_text(audio_id: str) -> tuple[str | None, str | None]:
     if not data:
         return (None, _VOZ_SIN_DESCARGA)
     try:
-        texto = transcriber.transcribe(data, "voz.ogg")
+        texto = transcriber.transcribe(data, "voz.ogg", language=language)
     except Exception as exc:  # noqa: BLE001
         log.warning("Fallo transcribiendo audio: %s", exc)
         return (None, _VOZ_MAL_CONFIGURADA)
@@ -1862,13 +1868,16 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
                 continue
 
         if audio_id and not text:
-            text, motivo_voz = _audio_to_text(audio_id)
+            # El negocio se resuelve ANTES de transcribir para poder decirle al
+            # transcriptor en qué idioma se habla en esta cuenta.
+            business = (
+                db.get_business(connection["business_id"])
+                if connection else db.get_business_by_phone(phone)
+            )
+            text, motivo_voz = _audio_to_text(
+                audio_id, language=(business or {}).get("language"))
             text = text or ""
             if not text:
-                business = (
-                    db.get_business(connection["business_id"])
-                    if connection else db.get_business_by_phone(phone)
-                )
                 if business and config.ASSISTANT_REVIEW_ENABLED:
                     db.clear_pending_action(business["id"], f"wa:{phone}")
                     db.clear_pending_action(business["id"], phone)

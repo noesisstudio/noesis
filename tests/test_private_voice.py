@@ -9,7 +9,7 @@ from unittest.mock import patch
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
-from noesis import private_voice
+from noesis import config, private_voice
 from noesis.adapters import transcription
 
 
@@ -72,6 +72,42 @@ class PrivateVoiceTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 transcription.get_transcriber()
             groq.assert_not_called()
+
+    def test_the_language_of_the_business_reaches_the_transcriber(self):
+        """Decirle el idioma evita que lo adivine en cada nota.
+
+        Con audio corto o con ruido de obra, adivinar acaba en portugués o
+        italiano. El idioma ya estaba guardado por negocio y no se usaba.
+        """
+        from unittest.mock import MagicMock
+
+        from noesis.web import whatsapp
+
+        transcriptor = MagicMock()
+        transcriptor.transcribe.return_value = "hazme una factura"
+        with patch.object(transcription, "get_transcriber", return_value=transcriptor), \
+             patch.object(whatsapp, "_download_media", return_value=b"OggS"):
+            whatsapp._audio_to_text("123", language="ca")
+        self.assertEqual(transcriptor.transcribe.call_args.kwargs["language"], "ca")
+
+    def test_the_language_rules_are_explicit(self):
+        from noesis.adapters.transcription import idioma_efectivo
+
+        with patch.object(config, "WHISPER_LANGUAGE", ""):
+            # Por defecto manda el idioma del negocio.
+            self.assertEqual(idioma_efectivo("ca"), "ca")
+            self.assertEqual(idioma_efectivo("es"), "es")
+            # Un idioma que el producto no habla no se fuerza: un código
+            # inventado hace que el proveedor rechace la petición entera.
+            self.assertIsNone(idioma_efectivo("pt"))
+            self.assertIsNone(idioma_efectivo(None))
+        with patch.object(config, "WHISPER_LANGUAGE", "es"):
+            # La variable del servidor manda sobre el negocio.
+            self.assertEqual(idioma_efectivo("ca"), "es")
+        with patch.object(config, "WHISPER_LANGUAGE", "auto"):
+            # Y «auto» lo desactiva: es lo que conviene a quien dicta en dos
+            # idiomas, porque forzar uno estropea el otro.
+            self.assertIsNone(idioma_efectivo("ca"))
 
     def test_misconfigured_private_voice_does_not_break_whatsapp_webhook(self):
         from noesis.web import whatsapp

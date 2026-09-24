@@ -188,6 +188,19 @@ TOOLS: list[dict] = [
         },
     },
     {
+        "name": "entregar_factura",
+        "description": ("Entrega al cliente una factura YA EMITIDA por correo o "
+                        "WhatsApp. No emite: para eso está enviar_factura."),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "factura_id": {"type": "integer"},
+                "canal": {"type": "string", "enum": ["auto", "email", "whatsapp"]},
+            },
+            "required": ["factura_id"],
+        },
+    },
+    {
         "name": "crear_cliente",
         "description": "Crea o reutiliza un cliente por su nombre, sin generar documentos.",
         "input_schema": {
@@ -534,6 +547,21 @@ def prepare_invoice_delivery(
     }
 
 
+def _entregar_factura(business_id, factura_id, canal="auto"):
+    """Entrega al CLIENTE una factura ya emitida, por el canal que se pida.
+
+    Separada de `enviar_factura`, que emite: emitir pone número definitivo y
+    cuenta para Hacienda; entregar es mandársela a otra persona. Decir «envía la
+    factura 3 por correo» no encontraba ningún camino y acababa en el redactor de
+    correos, preguntando a qué cliente escribir.
+    """
+    try:
+        entrega = prepare_invoice_delivery(business_id, factura_id, channel=canal)
+    except ValueError as exc:
+        return {"ok": False, "error": str(exc)}
+    return {"ok": True, "entrega": entrega, "factura": entrega["factura"]}
+
+
 def _registrar_pago(business_id, factura_id):
     inv = db.get_invoice(factura_id, business_id)
     # Aislamiento: solo se puede operar sobre facturas del propio negocio.
@@ -672,6 +700,7 @@ _DISPATCH = {
     "preparar_factura_trabajo": _preparar_factura_trabajo,
     "crear_presupuesto": _crear_presupuesto,
     "enviar_factura": _enviar_factura,
+    "entregar_factura": _entregar_factura,
     "registrar_pago": _registrar_pago,
     "ver_cobros_pendientes": _ver_cobros_pendientes,
     "resumen_negocio": _resumen_negocio,

@@ -1,5 +1,47 @@
 ﻿# Registro de cambios
 
+## 2026-09-24 — «Envía la factura por correo», y el idioma del dictado
+
+**Entregar una factura al cliente, dicho hablando.** La maquinaria estaba entera
+—`prepare_invoice_delivery` genera el PDF, elige canal y encola de forma durable, y
+`process_email_outbox` adjunta el PDF regenerándolo desde el número de factura—
+pero **no había forma de pedirlo**: no era una herramienta del chat, solo se
+llamaba desde dentro. Y había una segunda causa, del tipo que más se repite: el
+redactor de mensajes se quedaba cualquier frase con la palabra «correo», así que
+«envía la factura 3 por correo» contestaba «dime a qué cliente escribimos» con la
+factura delante y numerada. Es el punto #3 del founder: una regla local
+interceptando por una coincidencia parcial.
+
+Ahora `entregar_factura` es una herramienta con su propia revisión, separada de
+`enviar_factura`, que **emite**. Un borrador no se entrega: se dice que hay que
+emitirlo y con qué palabras. Un cliente sin correo se dice por su nombre. Y la
+propuesta avisa de que **sale hacia el cliente, no hacia ti**.
+
+**El idioma del dictado.** A Whisper no se le decía en qué idioma se habla, así
+que lo adivinaba en cada nota: con audio corto o con ruido de obra eso acaba en
+portugués o italiano. Ahora se le pasa el idioma del negocio, que ya estaba
+guardado. La variable del servidor manda sobre él, y `NOESIS_WHISPER_LANGUAGE=auto`
+lo desactiva, que es lo que conviene a quien dicta en dos idiomas: forzar uno
+estropea el otro.
+
+**Una corrección al diagnóstico anterior.** Se dijo que el correo prometía un PDF
+adjunto y no lo llevaba. Era falso: `queue_email` no lleva adjuntos, pero
+`process_email_outbox` los añade al enviar, regenerando el PDF desde la factura.
+Se miró quién encola antes que quién envía.
+
+- **Áreas/archivos:** `src/noesis/tools.py`, `src/noesis/action_review.py`,
+  `src/noesis/nlu.py`, `src/noesis/internal_brain.py`,
+  `src/noesis/adapters/transcription.py`, `src/noesis/web/whatsapp.py`.
+- **Pruebas:** `tests/test_entrega_factura.py` (nuevo, 10 casos) y las reglas del
+  idioma en `tests/test_private_voice.py`.
+- **Límites externos:** **sin credenciales de correo no sale nada.** Hacen falta
+  `BREVO_API_KEY` o el trío `SMTP_HOST`/`SMTP_USER`/`SMTP_PASS`, y `SMTP_FROM`
+  para el remitente. Sin ellas el correo se queda en la cola reintentando y la
+  app dice «en camino» sin que llegue.
+- **Riesgo:** medio. Entregar sale hacia un tercero; por eso pasa por revisión y
+  la propuesta dice a quién y por dónde.
+- **Rollback:** sin migración; revertir los archivos basta.
+
 ## 2026-09-24 — Lo que escribe Whisper no es lo que escribiríamos nosotros
 
 El founder, después de probar el producto: «donde hay más fallos es en la voz».

@@ -1034,6 +1034,11 @@ def parse(text: str) -> tuple[str, dict] | None:
         norm)
     if entrega:
         numero = int(entrega.group(1))
+        # Si se dice el canal, no hay nada que preguntar: se quiere entregar.
+        canal = ("email" if re.search(r"\b(?:correo|email|e-?mail|mail)\b", norm)
+                 else "whatsapp" if "whatsapp" in norm else None)
+        if canal:
+            return ("entregar_factura", {"factura_id": numero, "canal": canal})
         return (NEED_REVIEW, {"reply": (
             f"¿Quieres **emitir** la factura {numero} o **entregársela al "
             f"cliente**? No es lo mismo: emitir le pone número definitivo y la "
@@ -1267,6 +1272,16 @@ def format_reply(tool: str, result: dict) -> str:
                 f"{f['id']}»; para entregarlo también, «emitir y enviar factura "
                 f"{f['id']}»."
                 + (f"\n\n⚠️ {aviso}" if aviso else ""))
+    if tool == "entregar_factura":
+        entrega = result.get("entrega") or {}
+        f = result.get("factura") or {}
+        if not entrega.get("queued"):
+            return (f"No he entregado la factura {f.get('number') or ''}: ese "
+                    "cliente no tiene un canal de contacto en su ficha. "
+                    "Añádele el correo o el teléfono en Clientes.")
+        return (f"📨 Factura {f.get('number')} en camino a "
+                f"{entrega.get('target')} por {entrega.get('channel')}. "
+                "Queda anotado en su historial.")
     if tool == "registrar_pago":
         return f"Cobro registrado en la factura #{result['factura']['id']}."
     if tool == "crear_cliente":
