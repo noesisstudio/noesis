@@ -1077,6 +1077,23 @@ _NO_ES_UN_NOMBRE = {"si", "no", "vale", "ok", "gracias", "nada", "espera",
                     "luego", "ninguno", "ninguna", "da igual", "olvidalo"}
 
 
+def _es_solo_consulta(message: str) -> bool:
+    """¿Este mensaje solo pregunta, sin cambiar nada?
+
+    Se exige que el cerebro local lo reconozca como una consulta de las suyas.
+    Ante la duda se responde que no: descartar una propuesta de más es molesto,
+    pero dejar viva una que ya no vale permitiría que un «sí» confirmara datos
+    viejos, y eso es dinero.
+    """
+    from .. import action_review
+
+    try:
+        entendido = nlu.parse(message)
+    except ValueError:
+        return False
+    return bool(entendido and entendido[0] in action_review.READS)
+
+
 def _motivo(error: str) -> str:
     """El motivo legible de un error de herramienta, sin el nombre interno."""
     limpio = re.sub(r"^Par[áa]metros inv[áa]lidos para \w+:\s*", "", str(error or ""))
@@ -1773,10 +1790,16 @@ def handle(
     result = seguido or ({"reply": turn["reply"], "source": "local", "needs_clarification": turn.get("needs_clarification", False)} if "reply" in turn else (
         action_review.respond(business_id, actor, message) if enabled else None))
     if result is None:
+        propuesta_viva = None
         if enabled:
-            # Cualquier nueva orden invalida la anterior, incluso si la corrección
-            # es incompleta. Un SÍ posterior nunca confirma datos antiguos.
-            db.clear_pending_action(business_id, actor)
+            # Una orden nueva invalida la anterior para que un SÍ posterior no
+            # confirme datos viejos. Una PREGUNTA no cambia nada: descartarla
+            # obligaba a repetir la factura entera por haber consultado algo en
+            # medio, que es lo más normal del mundo mientras se habla.
+            if _es_solo_consulta(message):
+                propuesta_viva = db.get_pending_action(business_id, actor)
+            else:
+                db.clear_pending_action(business_id, actor)
             if nlu._norm(message).startswith("corregir:"):
                 message = message.split(":", 1)[1].strip()
         state = {"actor": actor}
@@ -1817,6 +1840,13 @@ def handle(
                         result["invoice_ids"] = []
             if state.get("proposal"):
                 result = {**state["proposal"], "source": "local"}
+            elif propuesta_viva and not result.get("confirmation_required"):
+                # La propuesta ha sobrevivido a la pregunta, así que se recuerda:
+                # si no, se contesta la consulta y el borrador queda esperando en
+                # silencio, y nadie se acuerda de confirmarlo.
+                result["reply"] = (result.get("reply") or "") + (
+                    "\n\n_Sigue pendiente de confirmar lo anterior. "
+                    "Responde **sí** para hacerlo, o **no** para descartarlo._")
         finally:
             action_review.context.reset(token)
     from .. import local_invoice

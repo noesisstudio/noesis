@@ -2,7 +2,7 @@
   "state_date": "2026-09-24",
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
   "schema_version": 58,
-  "verified_test_count": 1178,
+  "verified_test_count": 1182,
   "validation_2026_09_21": "CI 35578171354 verde sobre 1dc65aa1a79a6bcacfd1057b1b2afd317d7734e5: 974 pruebas (402.446 s), seguridad, Node, migraciones SQLite y humos PostgreSQL con compatibilidad anterior/rollback. Railway b88619b7-6da0-4b68-83ab-fec3194a9897 SUCCESS; health/ready verifican release 1dc65aa1a79a y esquema 56. Cierre documental sin cambios de runtime.",
   "production": {
     "url": "https://bynoesis.com",

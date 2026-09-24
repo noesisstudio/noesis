@@ -1,5 +1,18 @@
 ﻿# Registro de QA
 
+## 2026-09-24 — Interrupciones en una propuesta viva
+
+- `tests/test_correcciones.py` sube a **15 casos**. Suite completa **1.182 en
+  verde**. Ruff OK. Node OK.
+- **Probado con varias preguntas seguidas**: la propuesta aguanta las tres y el
+  «sí» final la confirma.
+- **El contrapeso es el que importa**: una orden nueva sustituye la propuesta, así
+  que un «sí» después de «gasté 35 euros» registra el gasto y NO la factura
+  anterior. Si esto se rompiera, un «sí» confirmaría datos caducados.
+- **Y el recordatorio solo sale cuando hay algo pendiente**, para no ensuciar las
+  respuestas normales.
+
+
 ## 2026-09-24 — Entrega por correo e idioma del dictado
 
 - `tests/test_entrega_factura.py` (nuevo): **10 casos**. Suite completa **1.178 en

@@ -1,5 +1,30 @@
 ﻿# Registro de cambios
 
+## 2026-09-24 — Preguntar algo en medio ya no tira la propuesta
+
+Punto **#13** de la lista del founder. Se proponía una factura, se preguntaba
+«cuánto me deben» y el «sí» de después contestaba «no hay ninguna propuesta
+pendiente de confirmar»: había que repetir la orden entera por haber consultado
+algo, que es lo más normal del mundo mientras se habla.
+
+La causa era una regla correcta aplicada de más: *cualquier* mensaje que no fuera
+un sí o un no descartaba la propuesta. Para una **orden** eso es imprescindible —si
+no, un «sí» posterior confirmaría datos viejos— pero una **pregunta** no cambia
+nada. Ahora la propuesta sobrevive a una consulta y la respuesta lo recuerda, para
+que no se quede esperando en silencio.
+
+Distinguir pregunta de orden lo hace el propio cerebro: solo se conserva si
+reconoce la frase como una de sus consultas (`action_review.READS`). **Ante la duda
+se descarta**: molesta más, pero dejar viva una propuesta que ya no vale permitiría
+que un «sí» confirmara datos caducados, y eso es dinero.
+
+- **Áreas/archivos:** `src/noesis/web/chat.py`.
+- **Pruebas:** `tests/test_correcciones.py` gana la clase de interrupciones, con
+  el contrapeso: una orden nueva sigue sustituyendo la propuesta y el «sí»
+  confirma la nueva, no la vieja.
+- **Riesgo:** medio, y está en el contrapeso. Por eso la condición es estricta.
+- **Rollback:** sin migración; revertir el archivo basta.
+
 ## 2026-09-24 — «Envía la factura por correo», y el idioma del dictado
 
 **Entregar una factura al cliente, dicho hablando.** La maquinaria estaba entera

@@ -107,6 +107,44 @@ class OtrosCamposTests(_Base):
         self.assertIn("gasolina", revisada)
 
 
+class InterrupcionTests(_Base):
+    """Preguntar algo en medio no puede tirar la propuesta.
+
+    Era el punto #13 de la lista del founder y fallaba: se proponía una factura,
+    se preguntaba «cuánto me deben» y el «sí» de después contestaba «no hay
+    ninguna propuesta pendiente». Había que repetir la orden entera por haber
+    consultado algo, que es lo más normal del mundo mientras se habla.
+    """
+
+    def test_a_question_does_not_throw_away_the_proposal(self):
+        self.propuesta()
+        respuesta = self.wa("cuánto me deben")
+        self.assertIn("Sigue pendiente de confirmar", respuesta)
+        self.wa("sí")
+        self.assertEqual(len(db.list_invoices(self.bid)), 1)
+
+    def test_several_questions_in_a_row_keep_it_alive(self):
+        self.propuesta()
+        for pregunta in ("cuánto me deben", "qué tengo hoy", "cómo voy de impuestos"):
+            with self.subTest(pregunta=pregunta):
+                self.assertIn("Sigue pendiente", self.wa(pregunta))
+        self.wa("sí")
+        self.assertEqual(len(db.list_invoices(self.bid)), 1)
+
+    def test_a_new_order_still_replaces_it(self):
+        # El contrapeso, y es de dinero: si una orden nueva no sustituyera a la
+        # anterior, un «sí» podría confirmar datos viejos.
+        self.propuesta()
+        self.wa("gasté 35 euros en gasolina")
+        self.wa("sí")
+        self.assertEqual(db.list_invoices(self.bid), [])
+        self.assertEqual(len(db.list_expenses(self.bid)), 1)
+
+    def test_the_reminder_only_appears_when_something_is_pending(self):
+        respuesta = self.wa("cuánto me deben")
+        self.assertNotIn("Sigue pendiente", respuesta)
+
+
 class ContrapesoTests(_Base):
     """Entender más correcciones no puede romper lo que ya valía."""
 

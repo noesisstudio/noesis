@@ -1,5 +1,15 @@
 # Tareas vivas
 
+## Interrupciones — 24-sep
+
+- [x] Punto #13: una pregunta en medio ya no descarta la propuesta, y la
+  respuesta recuerda que sigue pendiente.
+- [ ] Siguiente por valor de la lista del founder: **#3 y #4** (no interceptar con
+  una coincidencia parcial). Hoy se ha visto otra vez con el redactor de correos
+  quedándose «envía la factura 3 por correo». Es la causa raíz de la mayoría de
+  lo corregido estos dos días, y se puede atacar por partes.
+
+
 ## Entrega por correo — 24-sep
 
 - [x] «Envía la factura 3 por correo» entrega la factura; ya no cae en el
