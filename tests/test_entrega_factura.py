@@ -39,7 +39,8 @@ class _Base(unittest.TestCase):
             config, DATABASE_URL="", DB_PATH=Path(self.temp.name) / "t.db",
             BACKUP_DIR=Path(self.temp.name) / "b",
             DOCS_PATH=Path(self.temp.name) / "d", ANTHROPIC_API_KEY="",
-            ASSISTANT_REVIEW_ENABLED=True, BREVO_API_KEY="xkeysib-pruebas")
+            ASSISTANT_REVIEW_ENABLED=True,
+            BREVO_API_KEY="xkeysib-pruebas")  # pragma: allowlist secret - credencial ficticia del fixture
         self.settings.start()
         self.canal_wa = patch.multiple(whatsapp, _TOKEN="token", _PHONE_ID="123")
         self.canal_wa.start()

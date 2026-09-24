@@ -2,6 +2,11 @@
 
 ## 2026-09-24 — Consolidación posterior a f38dd40
 
+CI 36012647171: PostgreSQL completo correcto. El escáner detectó la credencial
+ficticia `xkeysib-pruebas` del fixture de entrega introducido por el socio;
+excepción puntual comentada, sin relajar el escáner ni regenerar la baseline.
+Copia previa de producción creada y restauración verificada (4,588 s).
+
 65 pruebas dirigidas correctas: `test_local_invoice`, `test_rollback_pending`,
 `test_correcciones` y `test_invoice_conversation` (99,218 s). Cambio de cliente e
 IRPF conserva líneas; cambios globales ambiguos no aplanan ni confirman. Rollback

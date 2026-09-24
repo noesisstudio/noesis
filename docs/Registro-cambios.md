@@ -14,6 +14,8 @@
 - Rollback: revertir código conservando esquema; no bajar con borradores a medias.
   No ejecutar humos destructivos contra Railway.
 - Límites: pendientes Meta real, voz y Stripe; contratos locales del socio aparte.
+- CI detectó una clave ficticia del fixture `test_entrega_factura`; excepción
+  puntual documentada, sin excluir archivos ni desactivar detección de secretos.
 
 ## 2026-09-24 — Nunca decir «en camino» si no hay forma de enviar
 
