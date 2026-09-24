@@ -5816,13 +5816,19 @@ class WhatsappMediaTestCase(unittest.TestCase):
         anotado = db.integration_setting(business["id"], "voice")
         self.assertEqual(anotado["last_error"], whatsapp._VOZ_NO_ENTENDIDA)
 
-    def test_voice_money_order_requires_confirmation(self):
+    def test_an_irreversible_voice_order_requires_confirmation(self):
+        """Lo irreversible dicho por voz se confirma antes de ejecutarse.
+
+        Preparar un borrador ya no entra aquí (24-09): no tiene número, no sale
+        de la cuenta y se puede borrar, así que pedir un «sí» para eso sobraba.
+        Emitir, entregar, dar por cobrada y borrar sí siguen preguntando.
+        """
         business, _ = self._connected_business("Voz Dinero")
         replies = []
         handled = []
         with (
             patch.object(whatsapp, "_audio_to_text",
-                         return_value=("hazle una factura a Carlos de 100", None)),
+                         return_value=("la factura 7 está cobrada", None)),
             patch.object(whatsapp.chat, "handle",
                          side_effect=lambda bid, text, **kwargs:
                          handled.append(text) or {"reply": "hecho"}),
@@ -5840,9 +5846,26 @@ class WhatsappMediaTestCase(unittest.TestCase):
             whatsapp.handle_inbound({
                 "from": "34600111222", "id": "wamid-voz-2", "text": "vale",
             })
-            self.assertEqual(
-                handled, ["hazle una factura a Carlos de 100"]
-            )
+            self.assertEqual(handled, ["la factura 7 está cobrada"])
+
+    def test_preparing_a_draft_by_voice_goes_straight_through(self):
+        # El otro lado de la misma regla, y lo que pidió el founder para el
+        # vídeo: mandar un audio y que salga la factura sin contestar «sí».
+        business, _ = self._connected_business("Voz Directa")
+        handled = []
+        with (
+            patch.object(whatsapp, "_audio_to_text",
+                         return_value=("hazle una factura a Carlos de 100", None)),
+            patch.object(whatsapp.chat, "handle",
+                         side_effect=lambda bid, text, **kwargs:
+                         handled.append(text) or {"reply": "hecho"}),
+            patch.object(whatsapp, "send"),
+        ):
+            whatsapp.handle_inbound({
+                "from": "34600111222", "id": "wamid-voz-directa",
+                "audio_id": "audio-2",
+            })
+        self.assertEqual(handled, ["hazle una factura a Carlos de 100"])
 
     def test_sale_ticket_reuses_client_requires_issue_confirmation_and_feeds_numbers(self):
         business, _ = self._connected_business("Ticket WhatsApp")

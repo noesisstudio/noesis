@@ -787,8 +787,13 @@ def _audio_to_text(audio_id: str) -> tuple[str | None, str | None]:
 # ------------------------------------- Confirmaciones y mèdia entrante --
 _YES_WORDS = {"si", "sí", "ok", "vale", "d'acord", "dacord", "confirmo", "confirmar", "yes", "s", "va"}
 _NO_WORDS = {"no", "cancela", "cancelar", "anula", "anular", "n"}
-_MONEY_HINTS = ("factur", "gasto", "gastos", "cobr", "pagad", "presupuesto",
-                "borra", "elimina", "anula")
+# Lo que una nota de voz NO puede hacer sin confirmar: emitir (número definitivo
+# y cuenta para Hacienda), entregar al cliente, dar por cobrada y borrar. Preparar
+# un borrador o apuntar un gasto sí se hace directo: es lo que dice la regla de
+# oro del proyecto —Bynoesis prepara, el autónomo confirma lo irreversible— y un
+# borrador no tiene número, no sale de la cuenta y se puede borrar.
+_MONEY_HINTS = ("emit", "envia", "enviar", "manda", "remit", "entrega",
+                "cobr", "pagad", "borra", "elimina", "anula", "rectific")
 
 
 def _normalized_word(text: str) -> str:
@@ -804,9 +809,17 @@ def _is_no(text: str) -> bool:
 
 
 def _needs_confirmation(text: str) -> bool:
-    """Una orden hablada que mueve dinero se confirma antes de ejecutarse."""
-    lowered = (text or "").lower()
-    return any(hint in lowered for hint in _MONEY_HINTS)
+    """Una orden hablada IRREVERSIBLE se confirma antes de ejecutarse.
+
+    Antes entraba aquí cualquier frase con la palabra «factura», así que mandar
+    una nota de voz para preparar un borrador obligaba a contestar «sí» para algo
+    que no cambia nada de forma irreversible. Emitir, entregar, dar por cobrada y
+    borrar siguen preguntando.
+    """
+    # Sin quitar acentos, «envía» no coincidía con «envia» y una entrega hablada
+    # se ejecutaba sin preguntar. La tilde no puede decidir esto.
+    plegado = nlu._norm(text or "")
+    return any(hint in plegado for hint in _MONEY_HINTS)
 
 
 def _prepare_invoice_action(business: dict, phone: str, text: str) -> str | None:

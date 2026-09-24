@@ -226,6 +226,47 @@ class InvoiceConversationTestCase(unittest.TestCase):
         self.assertTrue(db.list_invoices(biz['id']))
         post.assert_not_called()
 
+    def test_a_voice_note_prepares_the_draft_and_its_pdf_without_asking(self):
+        """Preparar no es lo mismo que emitir.
+
+        Antes, cualquier nota de voz con la palabra «factura» pedía un «sí»
+        aunque solo fuera a preparar un borrador. La regla de oro del proyecto
+        dice que Bynoesis prepara y el autónomo confirma lo irreversible, y un
+        borrador no tiene número, no sale de la cuenta y se puede borrar.
+        """
+        from noesis import config
+
+        biz, _ = self.make_business('Voz directa')
+        db.set_whatsapp_status(biz['id'], 'conectado', phone='600111222')
+        db.add_client('Reformas Martinez', business_id=biz['id'])
+        dictado = ('hazme una factura a reformas martinez concepto ventana '
+                   'setecientos cincuenta euros')
+        with patch.object(config, 'ASSISTANT_REVIEW_ENABLED', False), \
+             patch.object(whatsapp, '_audio_to_text', return_value=(dictado, None)), \
+             patch.object(whatsapp, 'send'), \
+             patch.object(whatsapp, '_upload_owner_draft_pdf', return_value='9999'), \
+             patch.object(whatsapp, '_post_to_meta', return_value='wamid-voz') as post:
+            whatsapp.handle_inbound({'from': '34600111222', 'id': 'voz-directa-1',
+                                     'audio_id': 'audio-1'})
+        factura = db.list_invoices(biz['id'])[0]
+        self.assertEqual(factura['concept'], 'ventana')
+        self.assertEqual(factura['base'], 750.0)
+        self.assertEqual(factura['status'], 'borrador')
+        self.assertEqual(post.call_args.args[0]['document']['id'], '9999')
+
+    def test_a_voice_note_that_issues_or_delivers_still_asks(self):
+        # El contrapeso: lo irreversible sigue preguntando. Emitir pone número
+        # definitivo y cuenta para Hacienda; entregar no se puede deshacer.
+        for orden in ('emitir factura 3', 'envía la factura 3 al cliente',
+                      'la factura 3 está cobrada', 'borra la factura 3'):
+            with self.subTest(orden=orden):
+                self.assertTrue(whatsapp._needs_confirmation(orden), orden)
+        for orden in ('hazme una factura a Juan por obra 500 euros',
+                      'gasté 35 euros en gasolina',
+                      'hazme un presupuesto a Juan de 500 euros'):
+            with self.subTest(orden=orden):
+                self.assertFalse(whatsapp._needs_confirmation(orden), orden)
+
     def invoice(self, business, client, amount=100, issued=False):
         inv = db.add_invoice(client['id'], 'Reparación real', amount,
                              business_id=business['id'], invoice_type='F2')

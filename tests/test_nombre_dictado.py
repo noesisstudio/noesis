@@ -51,6 +51,17 @@ CORPUS_DICTADO = {
         ("reformas martinez", "ventana", 750.0),
     "factura a reformas martinez por 750 concepto cambio de ventana":
         ("reformas martinez", "cambio de ventana", 750.0),
+    # La frase del vídeo del founder (24-09): el importe va DELANTE del cliente
+    # y el concepto al final. Es el orden que más se dice al dictar de corrido.
+    "hazme una factura de 800 a reformas martinez concepto ventana":
+        ("reformas martinez", "ventana", 800.0),
+    "hazme una factura de 800 euros a reformas martinez concepto ventana":
+        ("reformas martinez", "ventana", 800.0),
+    # Y por si la transcripción escribe el importe en letra.
+    "hazme una factura de ochocientos euros a reformas martinez concepto ventana":
+        ("reformas martinez", "ventana", 800.0),
+    "hazme una factura a reformas martinez de 800 concepto ventana":
+        ("reformas martinez", "ventana", 800.0),
     # El concepto no se parte por su propio «de»: era «grifo» a secas.
     "factura a Juan concepto cambio de grifo 120 euros":
         ("Juan", "cambio de grifo", 120.0),

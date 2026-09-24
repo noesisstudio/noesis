@@ -1,5 +1,37 @@
 ﻿# Registro de cambios
 
+## 2026-09-24 — Preparar no es emitir: la voz deja de pedir permiso para todo
+
+Petición del founder para grabar un vídeo: mandar una nota de voz y que salga la
+factura con su PDF, sin contestar «sí». Mirado a fondo, no era un capricho de
+demostración: la regla de oro del proyecto dice que **Bynoesis prepara y el
+autónomo confirma lo irreversible**, y preparar un borrador entraba en la puerta
+de confirmación sin serlo.
+
+Una nota de voz pedía un «sí» si contenía «factur», «gasto» o «presupuesto». Un
+borrador no tiene número, no sale de la cuenta y se puede borrar. Ahora la puerta
+solo se cierra ante lo irreversible: emitir, entregar al cliente, dar por cobrada,
+borrar, anular y rectificar.
+
+**Un fallo serio encontrado por el camino.** La comprobación se hacía sobre el
+texto en minúsculas pero **sin quitar acentos**, así que «env**í**a» no coincidía
+con «envia»: *entregar una factura a un cliente por voz se ejecutaba sin
+preguntar*. Justo lo contrario de lo que pretendía la regla. Ya está cerrado.
+
+- **Áreas/archivos:** `src/noesis/web/whatsapp.py`.
+- **Pruebas:** `tests/test_invoice_conversation.py` (el circuito entero de la nota
+  de voz hasta el PDF, con la frase literal del vídeo) y `tests/test_backend.py`,
+  donde una prueba cambia a propósito: fijaba que preparar pidiera confirmación.
+- **Límites externos:** el envío del PDF sigue sin probarse contra Meta.
+- **Riesgo:** medio. Se abre una puerta de confirmación. Lo que la cruza es solo
+  la preparación de borradores y gastos, nunca lo irreversible, y está probado
+  por ambos lados.
+- **Nota para el founder:** esto por sí solo no basta para el vídeo. La otra
+  puerta es `NOESIS_ASSISTANT_REVIEW_ENABLED`, que en producción está en `true` y
+  hace que TODO se confirme. Para grabar hay que ponerla en `false` y **volver a
+  ponerla en `true` al terminar**.
+- **Rollback:** sin migración; revertir el archivo basta.
+
 ## 2026-09-24 — «Si el audio coge reforma, me hace un cliente nuevo»
 
 Caso real del founder por WhatsApp. Dicta una factura para «Reformas Martinez», la

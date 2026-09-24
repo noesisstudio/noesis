@@ -1,5 +1,17 @@
 # Tareas vivas
 
+## Vídeo: audio directo a PDF — 24-sep
+
+- [x] Una nota de voz que solo prepara (borrador, gasto, presupuesto) ya no pide
+  confirmación. Lo irreversible sigue pidiéndola.
+- [ ] Founder, **para grabar**: `NOESIS_ASSISTANT_REVIEW_ENABLED=false` en Railway.
+- [ ] Founder, **al terminar de grabar**: volver a `true`. Mientras esté en
+  `false`, cualquier orden que mueva dinero se ejecuta sin preguntar.
+- [ ] Founder, **antes de la toma buena**: comprobar en Clientes que solo hay una
+  ficha «Reformas Martinez», y hacer una toma de prueba para ver que el PDF llega
+  de verdad por WhatsApp. Esa parte no se ha podido probar contra Meta.
+
+
 ## Nombre cortado por el dictado — 24-sep
 
 - [x] «Reforma» encuentra a «Reformas Martinez»: se compara también contra los

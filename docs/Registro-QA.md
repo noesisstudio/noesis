@@ -1,5 +1,22 @@
 ﻿# Registro de QA
 
+## 2026-09-24 — Nota de voz directa a PDF
+
+- Suite completa **1.151 en verde**. Ruff OK.
+- **Probado el circuito entero simulado**: audio → factura → PDF adjunto, con la
+  frase literal que usará el founder («hazme una factura de 800 a reformas
+  martinez concepto ventana»), con el importe delante del cliente, y también con
+  el importe dictado en letra («ochocientos euros»).
+- **Los dos lados de la regla están probados**: preparar un borrador, un gasto o
+  un presupuesto pasa directo; emitir, entregar, dar por cobrada, borrar, anular
+  y rectificar siguen pidiendo confirmación.
+- **Un fallo encontrado al probarlo**: «envía» no coincidía con «envia» por la
+  tilde, así que entregar una factura a un cliente por voz se ejecutaba sin
+  preguntar. Era el riesgo contrario al que protegía la regla.
+- **No ejecutado:** el envío real del PDF por Meta. Es la pieza que el founder
+  tiene que probar en una toma de prueba antes de grabar la buena.
+
+
 ## 2026-09-24 — El nombre que el dictado corta
 
 - Suite completa **1.148 en verde**. Ruff OK.
