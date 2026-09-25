@@ -197,7 +197,7 @@ def _conversation_transport() -> None:
     first = next(r for r in claims if r)["id"]
     operator = db.create_user("recovery-ci@example.test", "unused", bid)
     with db.get_conn() as conn:
-        conn.execute("UPDATE users SET is_admin=1 WHERE id=?", (operator["id"],))
+        conn.execute("UPDATE users SET is_admin=TRUE WHERE id=?", (operator["id"],))
     db.finish_whatsapp_inbound(first, error_code="routing_changed")
     db.recover_whatsapp_inbound(bid, first, operator_id=operator["id"])
     assert db.claim_whatsapp_inbound()["id"] == first

@@ -2,7 +2,8 @@
 
 ## 2026-09-24 — Diagnóstico seguro de incidencias
 
-Actualización 25-sep: recuperación explícita de `routing_changed`, anterior al
+Actualización 25-sep: fixture PostgreSQL corregida (is_admin TRUE, no entero),
+tras fallo de la primera CI. Recuperación explícita de `routing_changed`, anterior al
 motor, con operador administrador y auditoría previa. Nunca reintenta fallos
 inciertos. Pruebas locales y PostgreSQL ampliadas; CI en rama aislada. Sin Meta,
 sin activar flags ni desplegar. Retirar comando para rollback, sin migración nueva.

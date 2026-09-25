@@ -49,7 +49,7 @@ class WhatsappInboxTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             db.recover_whatsapp_inbound(self.bid, row["id"], operator_id=user["id"])
         with db.get_conn() as conn:
-            conn.execute("UPDATE users SET is_admin=1 WHERE id=?", (user["id"],))
+            conn.execute("UPDATE users SET is_admin=TRUE WHERE id=?", (user["id"],))
         with self.assertRaises(ValueError):
             db.recover_whatsapp_inbound(self.bid + 1, row["id"], operator_id=user["id"])
         db.recover_whatsapp_inbound(self.bid, row["id"], operator_id=user["id"])
