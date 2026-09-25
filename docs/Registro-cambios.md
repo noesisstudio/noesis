@@ -1,5 +1,54 @@
 ﻿# Registro de cambios
 
+## 2026-09-28 — Que la factura salga desde el correo del autónomo
+
+Hasta hoy las facturas salían desde la dirección de Bynoesis. El cliente recibía
+su factura de un remitente que no conocía y, si contestaba, la respuesta no le
+llegaba a nadie: el remitente por defecto es un `no-reply`. El founder lo pidió
+así: «yo soy un cliente, me conecto y pongo mi correo; que haya alguna manera de
+vincularlo».
+
+Ahora cada autónomo puede **conectar su Gmail** desde Ajustes. A partir de ahí sus
+facturas salen desde su dirección, le quedan en su carpeta de Enviados y, si el
+cliente responde, le responde a él. Se pide **un solo permiso, `gmail.send`**:
+sirve para enviar y no para leer. Pedir además leer correo lo convertiría en un
+permiso «restringido» de Google, que exige auditoría de seguridad; enviar es
+«sensible», que es revisión de días.
+
+**Los tokens no tocan el disco en claro.** `secret_box.py` los cifra con una clave
+derivada de `NOESIS_SECRET`, así que quien tuviera una copia de la base de datos
+sin esa variable no puede escribir correo haciéndose pasar por ningún cliente. El
+precio hay que saberlo: **si se cambia `NOESIS_SECRET`, las conexiones guardadas
+dejan de poder leerse** y cada autónomo tendrá que reconectar. No se pierde dinero
+ni documentos, solo las conexiones.
+
+Si el autónomo retira el acceso, Google responde `invalid_grant`. Eso no es un
+fallo pasajero: la conexión se marca muerta, se le dice en Ajustes y **la factura
+sale por Bynoesis**, que es lo que importa. Esto **añade una vía, no sustituye la
+que ya funcionaba**.
+
+Dos cosas que aparecieron por el camino y valía la pena arreglar:
+
+* **Darse de baja no borraba los tokens de Google.** Lo cazó la prueba que exige
+  que toda tabla con datos del negocio esté en el borrado en cascada. Es una llave
+  de la cuenta de Google del autónomo, no un dato nuestro: ahora se va con él.
+* **El aviso de «no hay correo configurado» nombraba `BREVO_API_KEY`.** Exacto y
+  completamente inútil para un autónomo leyéndolo en WhatsApp. Ahora dice
+  «Conecta tu Gmail desde Ajustes», que es un camino que puede recorrer él solo.
+
+- **Áreas/archivos:** `src/noesis/secret_box.py` (nuevo),
+  `src/noesis/adapters/google_mail.py` (nuevo), `src/noesis/migrations.py`
+  (migración 61 `cuentas_conectadas`), `src/noesis/db.py`,
+  `src/noesis/config.py`, `src/noesis/web/routers/account.py`,
+  `src/noesis/web/routers/pages.py`, `src/noesis/web/scheduler.py`,
+  `src/noesis/web/templates/ajustes.html`, `pyproject.toml`.
+- **Pruebas:** `tests/test_correo_propio.py` (nuevo, 32 casos).
+- **Límites externos:** hace falta que el founder cree el cliente OAuth en Google
+  Cloud y ponga `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` en Railway. Sin eso la
+  tarjeta no aparece y todo sigue funcionando como hasta ahora. Y mientras la
+  aplicación esté en modo «pruebas» en Google, **el permiso caduca a los siete
+  días**: es una regla de Google, no un fallo nuestro.
+
 ## 2026-09-28 — Mapa visual de Bynoesis
 
 - Objetivo: un esquema con líneas de todo el sistema para leerlo sin abrir código.

@@ -507,11 +507,13 @@ def prepare_invoice_delivery(
         # Sin proveedor de correo no se encola nada: encolarlo hacía que la app
         # dijera «en camino» y el autónomo creyera que su cliente tenía la
         # factura. Un envío que no puede salir se dice, no se promete.
-        if not email_adapter.available():
+        from .adapters import google_mail
+
+        if not (email_adapter.available() or google_mail.disponible(business_id)):
             raise ValueError(
-                "El correo no está configurado en el servidor, así que no puedo "
-                "enviarla. Hacen falta BREVO_API_KEY, o SMTP_HOST, SMTP_USER y "
-                "SMTP_PASS. Mientras tanto, descarga el PDF y mándalo tú.")
+                "El correo no está configurado, así que no puedo enviarla. "
+                "Conecta tu Gmail desde Ajustes, o configura el correo del "
+                "servidor. Mientras tanto, descarga el PDF y mándalo tú.")
         email_adapter.queue_email(
             target,
             f"Factura {invoice['number']} — {business.get('name') or 'Bynoesis'}",

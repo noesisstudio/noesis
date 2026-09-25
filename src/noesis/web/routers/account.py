@@ -8,7 +8,7 @@ import json
 import logging
 import secrets
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from io import BytesIO
 from urllib import error as urlerror
 from urllib import parse as urlparse
@@ -1104,6 +1104,95 @@ def update_whatsapp_reports(
     return RedirectResponse(
         f"/b/{business_id}/ajustes#informes", status_code=303
     )
+
+
+# ------------------------------------------- Conectar el Gmail del negocio ---
+# El autónomo autoriza a Bynoesis a enviar SUS facturas desde SU dirección. Solo
+# se pide el permiso de enviar, nunca el de leer. El vaivén va firmado con un
+# `state` guardado en la sesión: sin él, cualquiera podría provocar la vuelta de
+# Google contra la cuenta de otro.
+
+
+@router.get("/b/{business_id}/integraciones/google/conectar")
+def conectar_google(business_id: int, request: Request):
+    from ...adapters import google_mail
+
+    if request.session.get("bid") != business_id:
+        return RedirectResponse("/login", status_code=303)
+    from ... import secret_box
+
+    if not secret_box.disponible():
+        return _volver_a_ajustes(
+            business_id, "Este servidor no tiene un secreto propio configurado, "
+            "así que no puedo guardar la conexión de forma segura.")
+    try:
+        estado = secrets.token_urlsafe(24)
+        destino = google_mail.url_de_autorizacion(business_id, estado)
+    except ValueError as exc:
+        return _volver_a_ajustes(business_id, str(exc))
+    request.session["gmail_state"] = estado
+    request.session["gmail_bid"] = business_id
+    return RedirectResponse(destino, status_code=303)
+
+
+@router.get("/integraciones/google/callback")
+def callback_google(request: Request):
+    from ...adapters import google_mail
+
+    business_id = request.session.get("gmail_bid")
+    esperado = request.session.pop("gmail_state", None)
+    request.session.pop("gmail_bid", None)
+    if not business_id or request.session.get("bid") != business_id:
+        return RedirectResponse("/login", status_code=303)
+    recibido = request.query_params.get("state")
+    if not esperado or recibido != esperado:
+        return _volver_a_ajustes(
+            business_id, "La vuelta de Google no coincide con la conexión que "
+            "se había empezado. No he guardado nada; inténtalo otra vez.")
+    if request.query_params.get("error"):
+        return _volver_a_ajustes(
+            business_id, "No se ha autorizado el acceso, así que las facturas "
+            "seguirán saliendo desde Bynoesis.")
+    codigo = request.query_params.get("code") or ""
+    if not codigo:
+        return _volver_a_ajustes(business_id, "Google no ha devuelto el permiso.")
+    try:
+        recibido_google = google_mail.canjear_codigo(codigo)
+        access = str(recibido_google.get("access_token") or "")
+        correo = google_mail.correo_de_la_cuenta(access) if access else ""
+        vence = (datetime.now() + timedelta(
+            seconds=int(recibido_google.get("expires_in", 3600)))
+        ).isoformat(timespec="seconds")
+        db.save_oauth_credentials(
+            business_id, "google", account_email=correo,
+            refresh_token=recibido_google.get("refresh_token"),
+            access_token=access, expires_at=vence,
+            scope=google_mail.SCOPE)
+    except Exception as exc:  # noqa: BLE001 - el motivo es lo único accionable
+        log.warning("No se pudo conectar Gmail para %s: %s", business_id, exc)
+        return _volver_a_ajustes(business_id, f"No he podido conectar la cuenta: {exc}")
+    db.record_product_event(business_id, "gmail_connected")
+    return _volver_a_ajustes(
+        business_id, f"Gmail conectado: {correo or 'tu cuenta'}. Las facturas "
+        "saldrán desde tu dirección.")
+
+
+@router.post("/b/{business_id}/integraciones/google/desconectar")
+def desconectar_google(business_id: int, request: Request):
+    if request.session.get("bid") != business_id:
+        return RedirectResponse("/login", status_code=303)
+    db.delete_oauth_credentials(business_id, "google")
+    db.record_product_event(business_id, "gmail_disconnected")
+    return _volver_a_ajustes(
+        business_id, "Gmail desconectado. Las facturas volverán a salir desde "
+        "Bynoesis.")
+
+
+def _volver_a_ajustes(business_id: int, mensaje: str):
+    """Vuelve a Ajustes contando qué ha pasado, en vez de a una página en blanco."""
+    return RedirectResponse(
+        f"/b/{business_id}/ajustes?aviso={urlparse.quote(mensaje)}#integraciones",
+        status_code=303)
 
 
 @router.post("/api/{business_id}/integrations/{integration_key}")

@@ -386,6 +386,15 @@ ACCESS_REQUESTS_EMAIL = os.getenv(
 # Envío de correo por API (HTTPS). Necesario en plataformas como Railway, que
 # bloquean la salida a los puertos de SMTP para evitar el envío de spam. Si hay
 # clave, se usa esta vía; si no, se cae al SMTP de siempre.
+# Conectar el Gmail del propio autónomo para que sus facturas salgan desde su
+# dirección. Se piden en Google Cloud (pantalla de consentimiento + ID de cliente
+# OAuth de aplicación web). Sin las dos, la tarjeta de Ajustes se ve apagada y no
+# se ofrece conectar nada.
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "").strip()
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "").strip()
+GOOGLE_REDIRECT_URI = os.getenv(
+    "GOOGLE_REDIRECT_URI", "").strip() or f"{BASE_URL}/integraciones/google/callback"
+
 BREVO_API_KEY = os.getenv("BREVO_API_KEY", "").strip()
 BREVO_API_URL = os.getenv(
     "BREVO_API_URL", "https://api.brevo.com/v3/smtp/email"

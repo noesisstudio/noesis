@@ -883,6 +883,16 @@ es una hipótesis de estimación, no altera contabilidad ni impuestos.
   puertos de SMTP—, adjuntos incluidos; sin ella usa SMTP, con SSL directo en el 465 y
   STARTTLS en el resto. Toda comunicación nueva se encola antes de salir para no
   perderla ante una caída del proveedor.
+- `src/noesis/adapters/google_mail.py` + `src/noesis/secret_box.py`: la tercera vía
+  de correo, y la única que sale desde la dirección del propio autónomo. Se pide un
+  único permiso, `gmail.send`; pedir además lectura lo convertiría en «restringido»
+  ante Google, con auditoría de seguridad. Los tokens se guardan en
+  `oauth_credentials` cifrados con una clave derivada de `NOESIS_SECRET`, así que
+  una copia de la base de datos no permite escribir en nombre de nadie —y cambiar
+  ese secreto tira todas las conexiones, que es el precio consciente. Un
+  `invalid_grant` marca la cuenta revocada y **no se reintenta**: se avisa en
+  Ajustes y el correo sale por Bynoesis. `process_email_outbox` elige la vía por
+  negocio; la del autónomo si está viva, la de Bynoesis si no.
 - `src/noesis/adapters/billing.py`: Checkout de suscripción propio sobre la API REST
   de Stripe. Además del precio y metadatos aislados por negocio, solicita dirección,
   NIF fiscal y `automatic_tax`. El catálogo traduce cada `price_id` mensual/anual al

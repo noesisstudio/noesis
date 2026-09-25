@@ -812,6 +812,33 @@
           onchange="saveAiPreference(this)">
       </label>
       <div id="ai-preference-msg" class="meta" role="status"></div>
+      {# Enviar las facturas desde el correo del propio autónomo. Sin esto salen
+         desde Bynoesis y el cliente no sabe quién le escribe. #}
+      {% if gmail_disponible %}
+      <div class="meta" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+        {% if gmail_cuenta and gmail_estado == 'active' %}
+          <b>Tus facturas salen desde {{ gmail_cuenta }}</b>, y te quedan en tu
+          carpeta de Enviados. Si tu cliente responde, te contesta a ti.
+          <form method="post" action="/b/{{ business.id }}/integraciones/google/desconectar"
+                style="margin-top:8px">
+            <button class="btn sm" type="submit">Desconectar</button>
+          </form>
+        {% elif gmail_estado == 'revoked' %}
+          ⚠️ <b>La conexión con tu Gmail ya no vale.</b>
+          {% if gmail_error %}<span class="muted">{{ gmail_error }}</span>{% endif %}
+          Mientras tanto las facturas salen desde Bynoesis.
+          <a class="btn sm" style="margin-top:8px"
+             href="/b/{{ business.id }}/integraciones/google/conectar">Volver a conectar</a>
+        {% else %}
+          Hoy tus facturas salen desde el correo de Bynoesis, así que tu cliente
+          no ve tu dirección y no puede responderte. Conecta tu Gmail y saldrán
+          desde el tuyo. Solo se pide permiso para <b>enviar</b>, nunca para leer
+          tu correo, y puedes quitarlo cuando quieras.
+          <a class="btn sm" style="margin-top:8px"
+             href="/b/{{ business.id }}/integraciones/google/conectar">Conectar mi Gmail</a>
+        {% endif %}
+      </div>
+      {% endif %}
       {% if ai_model %}
       <p class="meta" style="margin-top:8px">
         Modelo en uso: <b>{{ ai_model }}</b>.

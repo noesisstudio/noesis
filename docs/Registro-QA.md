@@ -1,5 +1,32 @@
 ﻿# Registro de QA
 
+## 2026-09-28 — Gmail del autónomo
+
+- Suite completa **1.216 en verde**. Ruff OK. Migración 61 con ciclo
+  arriba/abajo/arriba (era la 59; renumerada al rebasar sobre las 59/60 publicadas).
+- Al rebasar (28-sep): `cryptography` faltaba en `uv.lock` y `requirements.txt`
+  (la CI con `uv sync --locked` y Railway habrían fallado); añadida con `uv lock`,
+  solo entran cryptography, cffi y pycparser. `test_whatsapp_inbox` exigía versión
+  60 tras un rollback bloqueado; ahora exige la de antes. Claves ficticias del
+  fixture y el valor público de desarrollo marcados con `pragma: allowlist secret`.
+- **Probado con el proveedor simulado**, porque no hay cliente OAuth todavía: la
+  ida a Google, la vuelta con `state` correcto, la vuelta con `state` inventado,
+  el «no» del autónomo en la pantalla de Google, el token caducado que se renueva
+  solo y la cuenta revocada.
+- **Lo que de verdad importaba comprobar**, y está comprobado: la fila de la base
+  de datos **no contiene el token en claro**; leerla con otro `NOESIS_SECRET`
+  devuelve «no conectado» en vez de reventar; y renovar el token **no pisa** el
+  permiso duradero, que Google solo entrega una vez.
+- **Dos fallos encontrados por la suite, no por mí**: el borrado de cuenta no
+  incluía `oauth_credentials`, y el aviso de correo sin configurar nombraba una
+  variable de entorno en un mensaje de WhatsApp. Los dos arreglados.
+- **Una prueba existente cambia a propósito**: `test_entrega_factura` exigía que
+  el aviso nombrara `BREVO_API_KEY`. Ahora exige que nombre el camino que el
+  autónomo puede recorrer.
+- **No ejecutado:** ningún envío real por Gmail. Hace falta el cliente OAuth del
+  founder. Lo probado llega hasta la llamada a la API de Google, con el PDF ya
+  adjunto y el remitente puesto.
+
 ## 2026-09-24 — Diagnóstico y saturación (candidato)
 
 Cierre 25-sep: CI 36131891167 **SUCCESS**, 1223 tests en 555,019 s, controles

@@ -553,6 +553,14 @@ def page(request: Request, business_id: int, page: str):
         # Qué modelo hay puesto de verdad. Una variable de entorno del servidor
         # manda sobre el código, así que desde fuera no había forma de saberlo y
         # había que fiarse. Aquí se lee, que es la única manera de no dudar.
+        # Estado de la cuenta de Gmail conectada, para la tarjeta de Ajustes.
+        from ...adapters import google_mail
+
+        cuenta = db.get_oauth_credentials(business_id, "google") or {}
+        context["gmail_disponible"] = google_mail.configurado()
+        context["gmail_cuenta"] = cuenta.get("account_email")
+        context["gmail_estado"] = cuenta.get("status")
+        context["gmail_error"] = cuenta.get("last_error")
         context["ai_model"] = config.FALLBACK_MODEL
         context["ai_model_is_key_missing"] = not config.ANTHROPIC_API_KEY
         context["assistant_memories"] = db.list_memories(business_id)

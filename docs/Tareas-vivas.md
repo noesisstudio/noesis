@@ -1,5 +1,27 @@
 # Tareas vivas
 
+## Gmail del autónomo — 28-sep
+
+- [x] Tokens cifrados por negocio (`secret_box.py`, migración 61).
+- [x] Botón «Conectar mi Gmail» en Ajustes, con `state` firmado en la sesión.
+- [x] Renovación automática del token y aviso claro si el autónomo revoca.
+- [x] Envío por la API de Gmail con el PDF adjunto; Bynoesis como respaldo.
+- [x] Darse de baja se lleva la llave de Google.
+- [ ] Founder, **en Google Cloud** (es lo único que bloquea):
+  1. Crear un proyecto y **activar la Gmail API**.
+  2. Pantalla de consentimiento con `bynoesis.com`, `/privacidad` y `/terminos`.
+  3. **Un solo permiso**: `https://www.googleapis.com/auth/gmail.send`. Ni uno
+     más: añadir lectura lo convierte en «restringido» y trae auditoría.
+  4. Cliente OAuth de tipo web, con la URI de vuelta
+     `https://bynoesis.com/integraciones/google/callback`.
+  5. Poner `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` **directamente en
+     Railway**, nunca en un chat ni en el repositorio.
+- [ ] Founder: **publicar** la pantalla de consentimiento y pedir la revisión.
+  Mientras esté en «pruebas», el permiso caduca a los siete días y los autónomos
+  tendrán que reconectar. La revisión de un permiso sensible son días, no meses.
+- [ ] Founder: `NOESIS_SECRET` en Railway tiene que ser propio y **estable**. Si
+  se cambia, todas las conexiones de Gmail se caen y hay que rehacerlas.
+
 ## Candidato conversacional — 24-sep (sin publicar)
 
 - [x] Diagnóstico CLI de incidencias por negocio, sin mensajes ni teléfonos;
@@ -41,10 +63,8 @@
   3. Comprobar que llega **a bandeja de entrada** y que en «Mostrar original» el
      DKIM dice `bynoesis.com`. Aceptado por el proveedor no es lo mismo que
      entregado.
-- [ ] Decisión pendiente: el remitente por defecto es `no-reply@bynoesis.com`, así
-  que las respuestas de los clientes no llegan a nadie. El founder prefiere
-  enviar desde el correo del propio autónomo, lo que exige verificación de Google
-  (otra puerta como la de Meta) o guardar credenciales suyas.
+- [x] Decidido y hecho el 25-sep: cada autónomo conecta su Gmail y las facturas
+  salen desde su dirección. Ver abajo.
 
 
 ## Interrupciones — 24-sep

@@ -117,9 +117,11 @@ class WhatsappInboxTests(unittest.TestCase):
 
     def test_pending_queue_blocks_rollback(self):
         inbox.accept(self.payload())
+        antes = migrations.current_version()
         with self.assertRaisesRegex(ValueError, "pendiente"):
             migrations.downgrade(59)
-        self.assertEqual(migrations.current_version(), 60)
+        # Nada se revierte a medias, tampoco las migraciones posteriores a la 60.
+        self.assertEqual(migrations.current_version(), antes)
 
     def test_same_message_different_recipient_is_not_coalesced(self):
         inbox.accept({**self.payload(), "recipient_phone_id": "one"})

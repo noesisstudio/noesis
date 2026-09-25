@@ -1960,6 +1960,94 @@ def claim_ai_credit(business_id: int, provider: str = "external") -> dict:
     }
 
 
+# ------------------------------------------------- Cuentas conectadas ---
+# Un negocio puede conectar su Gmail para que las facturas salgan desde su propia
+# dirección. Los tokens se guardan cifrados: en claro, quien tuviera la base
+# podría escribir haciéndose pasar por todos los clientes a la vez.
+
+
+def save_oauth_credentials(
+    business_id: int, provider: str, *, account_email: str | None = None,
+    refresh_token: str | None = None, access_token: str | None = None,
+    expires_at: str | None = None, scope: str | None = None,
+) -> dict:
+    """Guarda o sustituye la cuenta conectada de un negocio.
+
+    Reconectar sustituye la fila, no acumula. Un `refresh_token` vacío conserva el
+    que ya hubiera: Google solo lo entrega la primera vez que se autoriza, así que
+    pisarlo con nada dejaría la conexión inservible al primer refresco.
+    """
+    from . import secret_box
+
+    if provider != "google":
+        raise ValueError("Proveedor de cuenta conectada no soportado.")
+    ahora = _now()
+    cifrado_refresh = secret_box.guardar(refresh_token) if refresh_token else None
+    cifrado_access = secret_box.guardar(access_token) if access_token else None
+    with get_conn() as conn:
+        conn.execute(
+            "INSERT INTO oauth_credentials (business_id, provider, account_email, "
+            "refresh_token, access_token, expires_at, scope, status, created_at, "
+            "updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?) "
+            "ON CONFLICT (business_id, provider) DO UPDATE SET "
+            "account_email=COALESCE(excluded.account_email, oauth_credentials.account_email), "
+            "refresh_token=COALESCE(excluded.refresh_token, oauth_credentials.refresh_token), "
+            "access_token=excluded.access_token, expires_at=excluded.expires_at, "
+            "scope=COALESCE(excluded.scope, oauth_credentials.scope), "
+            "status='active', last_error=NULL, updated_at=excluded.updated_at",
+            (business_id, provider, account_email, cifrado_refresh, cifrado_access,
+             expires_at, scope, ahora, ahora),
+        )
+    return get_oauth_credentials(business_id, provider) or {}
+
+
+def get_oauth_credentials(business_id: int, provider: str) -> dict | None:
+    """La cuenta conectada, con los tokens ya descifrados.
+
+    Si un token no se puede descifrar —porque cambió `NOESIS_SECRET`— se devuelve
+    `None` en ese campo en vez de fallar: quien llame lo verá como «hay que
+    volver a conectar», que es la verdad.
+    """
+    from . import secret_box
+
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM oauth_credentials WHERE business_id=? AND provider=?",
+            (business_id, provider)).fetchone()
+    if not row:
+        return None
+    cuenta = dict(row)
+    cuenta["refresh_token"] = secret_box.leer(cuenta.get("refresh_token"))
+    cuenta["access_token"] = secret_box.leer(cuenta.get("access_token"))
+    return cuenta
+
+
+def mark_oauth_credentials(business_id: int, provider: str, *, status: str,
+                           error: str | None = None) -> None:
+    """Anota que la conexión se revocó o falló, sin borrarla.
+
+    Se conserva la fila para poder decirle al autónomo qué pasó y cuándo, en vez
+    de que la cuenta desaparezca de Ajustes sin explicación.
+    """
+    if status not in {"active", "revoked", "error"}:
+        raise ValueError("Estado de cuenta conectada no válido.")
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE oauth_credentials SET status=?, last_error=?, updated_at=? "
+            "WHERE business_id=? AND provider=?",
+            (status, (str(error)[:300] if error else None), _now(),
+             business_id, provider))
+
+
+def delete_oauth_credentials(business_id: int, provider: str) -> bool:
+    """Desconecta la cuenta. El autónomo puede hacerlo cuando quiera."""
+    with get_conn() as conn:
+        fila = conn.execute(
+            "DELETE FROM oauth_credentials WHERE business_id=? AND provider=? "
+            "RETURNING business_id", (business_id, provider)).fetchone()
+    return bool(fila)
+
+
 def record_integration_result(
     business_id: int, integration_key: str, error: str | None = None
 ) -> None:
@@ -14823,6 +14911,10 @@ def delete_business_cascade(business_id) -> bool:
             # Permisos de soporte del titular y su solicitud de acceso: contienen
             # datos personales y no pueden sobrevivir a la cuenta que los creó.
             "support_access_grants", "access_requests",
+            # El permiso para enviar desde el Gmail del autónomo. Es lo primero
+            # que tiene que desaparecer al darse de baja: es una llave de su
+            # cuenta de Google, no un dato nuestro.
+            "oauth_credentials",
             "email_outbox", "privacy_requests",
             "inbound_email_messages", "inbound_email_routes",
             "verifactu_cancellation_outbox", "verifactu_outbox",

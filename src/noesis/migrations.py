@@ -4271,6 +4271,44 @@ def _downgrade_whatsapp_inbox(conn) -> None:
     # No borrar recibos de deduplicación; upgrade posterior reutiliza la tabla.
 
 
+def _upgrade_oauth_credentials(conn) -> None:
+    """Cuentas de terceros que un negocio conecta para que Bynoesis actúe por él.
+
+    Hoy solo Google, para enviar facturas desde el Gmail del propio autónomo. Los
+    dos campos de token van **cifrados** (`secret_box`): en claro, cualquiera con
+    acceso a la base podría escribir haciéndose pasar por todos los clientes.
+
+    Una fila por negocio y proveedor: reconectar sustituye, no acumula. `status`
+    distingue lo que funciona de lo que el usuario revocó desde su Google, que es
+    algo que pasa y hay que poder contar sin adivinar.
+    """
+    t = _types(conn.dialect)
+    conn.executescript(
+        f"""
+CREATE TABLE IF NOT EXISTS oauth_credentials (
+    business_id     {t["ref"]} NOT NULL REFERENCES businesses(id),
+    provider        TEXT NOT NULL,
+    account_email   TEXT,
+    refresh_token   TEXT,
+    access_token    TEXT,
+    expires_at      {t["timestamp"]},
+    scope           TEXT,
+    status          TEXT NOT NULL DEFAULT 'active',
+    last_error      TEXT,
+    created_at      {t["timestamp"]} NOT NULL,
+    updated_at      {t["timestamp"]} NOT NULL,
+    PRIMARY KEY (business_id, provider),
+    CHECK (provider IN ('google')),
+    CHECK (status IN ('active', 'revoked', 'error'))
+);
+"""
+    )
+
+
+def _downgrade_oauth_credentials(conn) -> None:
+    conn.execute("DROP TABLE IF EXISTS oauth_credentials")
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
     (2, "integridad_multiempresa", _upgrade_tenant_integrity, _downgrade_tenant_integrity),
@@ -4367,6 +4405,9 @@ MIGRATIONS: tuple[Migration, ...] = (
      _upgrade_conversation_actor, _downgrade_conversation_actor),
     (60, "entrada_whatsapp_durable",
      _upgrade_whatsapp_inbox, _downgrade_whatsapp_inbox),
+    (61, "cuentas_conectadas",
+     _upgrade_oauth_credentials,
+     _downgrade_oauth_credentials),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

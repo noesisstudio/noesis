@@ -579,7 +579,11 @@ def process_email_outbox(limit: int = 25) -> int:
         if not item:
             break
         try:
-            if not email_adapter.available():
+            from ..adapters import google_mail as _gmail
+
+            if not email_adapter.available() and not (
+                    item.get("business_id")
+                    and _gmail.disponible(item["business_id"])):
                 raise RuntimeError("SMTP no está configurado.")
             attachments = []
             if item.get("entity_type") == "invoice":
@@ -595,11 +599,25 @@ def process_email_outbox(limit: int = 25) -> int:
                 attachments.append(
                     (f"factura_{safe_number}.pdf", payload, "application", "pdf")
                 )
-            if not email_adapter.send_email(
-                item["to_email"], item["subject"], item["text_body"],
-                item.get("html_body"), attachments=attachments,
-            ):
-                raise RuntimeError("El servidor SMTP no confirmó el envío.")
+            # Si el negocio ha conectado su Gmail, la factura sale desde SU
+            # dirección y le queda en su carpeta de Enviados. Si no, por el
+            # proveedor de Bynoesis, como siempre.
+            from ..adapters import google_mail
+
+            propio = bool(item.get("business_id")) and google_mail.disponible(
+                item["business_id"])
+            if propio:
+                enviado = google_mail.enviar(
+                    item["business_id"], item["to_email"], item["subject"],
+                    item["text_body"], adjuntos=attachments)
+            else:
+                enviado = email_adapter.send_email(
+                    item["to_email"], item["subject"], item["text_body"],
+                    item.get("html_body"), attachments=attachments)
+            if not enviado:
+                raise RuntimeError(
+                    "El proveedor no confirmó el envío."
+                    if propio else "El servidor SMTP no confirmó el envío.")
         except Exception as exc:  # noqa: BLE001 - la cola debe sobrevivir al proveedor
             delay = min(
                 config.EMAIL_RETRY_MAX_SECONDS,

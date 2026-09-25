@@ -168,8 +168,10 @@ class SinProveedorTests(_Base):
         respuesta = self.wa("sí")
         self.assertNotIn("en camino", respuesta)
         self.assertIn("no está configurado", respuesta)
-        # Y nombra lo que falta, para poder arreglarlo sin adivinar.
-        self.assertIn("BREVO_API_KEY", respuesta)
+        # Y dice qué hacer. Antes nombraba la variable del servidor, que es
+        # exacta y no le sirve de nada a un autónomo leyéndolo en WhatsApp;
+        # ahora nombra el camino que sí puede recorrer él solo.
+        self.assertIn("Conecta tu Gmail desde Ajustes", respuesta)
         self.assertEqual(self.en_cola(), [])
 
     def test_it_offers_the_way_out_that_does_work(self):
