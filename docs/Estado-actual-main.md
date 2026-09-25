@@ -2,6 +2,12 @@
 
 ## 24-sep — Diagnóstico operativo local
 
+Actualización 25-sep: candidato subido solo a
+`codex/conversation-recovery-validation` (9357a39), no a main ni Railway.
+PostgreSQL CI 36131891167 correcto, incluida recuperación de errores anteriores
+al motor. Suite general todavía en ejecución. Los fallos de efectos inciertos
+no admiten reintento automático; Meta y flags permanecen intactos.
+
 `python -m noesis.whatsapp_diagnostics --business-id ID` lee incidencias sin
 contenido privado. La cola llena admite duplicados sin reejecutarlos. 25 pruebas
 dirigidas correctas. No es resolución automática; activación todavía pendiente.

@@ -10,7 +10,8 @@
 - [x] Reutilizar correcciones existentes para campos combinados y concepto/IVA
   por línea; bloquear coincidencias fiscales parciales y conservar confirmación.
 - [x] Suite completa local: 1197/1197 correctas.
-- [ ] Revisar candidato y CI PostgreSQL antes de publicarlo.
+- [x] CI PostgreSQL del candidato 9357a39 correcta (36131891167).
+- [ ] Revisar suite completa y candidato antes de fusionar/publicar en main.
 - [x] Implementar memoria persistente por actor/conversación con migración aditiva:
   no reasignar el historial antiguo a un usuario por suposición.
 - [x] Implementar entrada durable WhatsApp con acuse tras persistencia y orden

@@ -2,6 +2,9 @@
 
 ## Memoria y transporte — candidato 24-sep
 
+25-sep: `db.recover_whatsapp_inbound` valida administrador, audita intento y
+reencola únicamente errores anteriores al motor. CLI `--recover/--operator-id`.
+
 `whatsapp_diagnostics.py`: CLI operativo de solo lectura, exige negocio explícito.
 `db.whatsapp_ingress_diagnostics`: contadores e incidencias acotadas sin contenido;
 no añade rutas públicas ni administrativas ni cambia estados de la cola.

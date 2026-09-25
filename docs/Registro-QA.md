@@ -4,6 +4,9 @@
 
 25-sep: primera CI detectó un literal entero en el booleano de la fixture
 PostgreSQL; corregido a TRUE compatible con ambos motores. No era código runtime.
+CI 36131891167 sobre 9357a39: PostgreSQL verde, 36 rutas, migraciones, código
+anterior, aislamiento, concurrencia, rollback y recuperación. Suite general aún
+ejecutándose al registrar. Rama de revisión, sin merge ni despliegue.
 Regresión de recuperación: rechaza operador no administrador, otro negocio
 y efecto incierto; recupera error previo al motor y registra intento. 26 pruebas
 locales correctas en 15,312 s; Ruff y verdad documental correctos. Mismo caso

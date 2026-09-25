@@ -4,6 +4,11 @@ Registro de decisiones importantes y su porqué (las más recientes arriba).
 
 ## Recepción y memoria sin activación implícita (2026-09-24)
 
+25-sep: recuperación únicamente de `routing_changed` porque precede a cualquier
+ejecución del motor. El operador administrador queda auditado antes del cambio;
+se conserva FIFO y se revalida el vínculo al consumir. No equiparar un timeout
+a «no ejecutado»: `processing_failed` e `interrupted` siguen bloqueados.
+
 No inferir propietarios del historial antiguo. Atribuir los turnos nuevos desde
 el canal autenticado y activar lectura aislada con flag independiente.
 La cola previa al vínculo no es la bandeja comercial por negocio: conserva el
