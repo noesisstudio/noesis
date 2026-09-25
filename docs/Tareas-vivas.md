@@ -1,5 +1,25 @@
 # Tareas vivas
 
+## Candidato conversacional — 24-sep (sin publicar)
+
+- [x] Diagnóstico CLI de incidencias por negocio, sin mensajes ni teléfonos;
+  duplicados aceptados incluso con la cola llena.
+- [ ] Resolución segura: no liberar confirmaciones antiguas ni repetir efectos
+  inciertos; un trabajador marcado interrumpido puede seguir ejecutándose.
+
+- [x] Reutilizar correcciones existentes para campos combinados y concepto/IVA
+  por línea; bloquear coincidencias fiscales parciales y conservar confirmación.
+- [x] Suite completa local: 1197/1197 correctas.
+- [ ] Revisar candidato y CI PostgreSQL antes de publicarlo.
+- [x] Implementar memoria persistente por actor/conversación con migración aditiva:
+  no reasignar el historial antiguo a un usuario por suposición.
+- [x] Implementar entrada durable WhatsApp con acuse tras persistencia y orden
+  por conversación; reutiliza motor y outbox, se detiene ante efectos inciertos.
+- [ ] Activar por separado tras CI PostgreSQL, restauración y prueba real Meta;
+  completar procedimiento/herramienta de resolución de incidencias y retención.
+- [ ] Validar entrega real Meta y conciliación documental-financiera de extremo
+  a extremo. No confundir tests locales con comprobación de proveedores.
+
 ## Consolidación — 24-sep
 
 - [x] Hotfix de PostgreSQL, correcciones y rollback publicado como df113b1;
@@ -394,6 +414,19 @@
   el modelo base usa **18,1** (los 12 son solo del plan Autónomo; 18,1 es la media
   ponderada por la mezcla 55/35/10). A 5.000 cuentas eso son ~12 personas de soporte
   en vez de ~8. Decidir cuál vale y dejar los dos documentos diciendo lo mismo.
+
+## Contrato de suscripcion — 18-sep
+
+- [x] Borrador completo del contrato que firma el cliente al pagar:
+  `docs/05-legal-y-rgpd/contratos/Contrato-suscripcion.md`.
+- [ ] Founder: cerrar las decisiones 4, 6, 9, 10 y 12 (modo consulta, seguro, limites
+  de almacenamiento y usuario extra, preaviso de subencargado y SLA). Son suyas.
+- [ ] Abogado TIC: decisiones 2, 3, 5, 7 y 8, y revision del Anexo II.
+- [ ] Asesoria fiscal: Anexo III y el compromiso Veri*Factu de la clausula 6.4.
+- [ ] Rellenar la identidad legal del prestador; sin ella el contrato no se puede firmar.
+- [ ] Firmar los DPA de los subencargados antes de afirmar en el Anexo II.3 que existen.
+- [ ] Alinear `terminos.html` y `site_precios.html` con lo que se decida del modo consulta.
+- [ ] Numerar las paginas del PDF («pagina X de Y») antes de firmar con nadie: en un contrato de 45 paginas evita que se sustituya una hoja.
 
 ## Primeros clientes — 17-sep
 

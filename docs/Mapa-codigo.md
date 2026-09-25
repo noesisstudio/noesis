@@ -1,5 +1,25 @@
 # Mapa de código
 
+## Memoria y transporte — candidato 24-sep
+
+`whatsapp_diagnostics.py`: CLI operativo de solo lectura, exige negocio explícito.
+`db.whatsapp_ingress_diagnostics`: contadores e incidencias acotadas sin contenido;
+no añade rutas públicas ni administrativas ni cambia estados de la cola.
+
+`conversation_context.py` transporta identidad autenticada durante el turno.
+`db.list_conversation_messages` filtra negocio/actor con flag; historial antiguo
+permanece sin atribuir. `agent.py`, `web/chat.py` e historial HTTP lo consumen.
+`web/whatsapp_inbox.py` entrega al motor existente desde `whatsapp_ingress`;
+no sustituye `whatsapp_inbox` (bandeja comercial). Router firma antes del acuse,
+scheduler consume y `db` coordina FIFO/revisión. Esquemas 59/60 aditivos.
+
+## Correcciones conversacionales — candidato 24-sep
+
+`action_review._correccion` valida campos compuestos antes de renovar la propuesta
+existente; patrones fiscales completos evitan corregir a partir de una pregunta.
+`local_invoice.revise` añade concepto/IVA por número de línea sobre el mismo plan.
+Regresiones en `test_compound_corrections` y `test_local_invoice`. Sin nueva tabla.
+
 ## Hotfix de fiabilidad — 24-sep
 
 `action_review._correccion` conserva líneas; `db` convierte los operandos de

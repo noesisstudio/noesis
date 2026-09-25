@@ -1,5 +1,32 @@
 # Estado actual del producto
 
+## 24-sep — Diagnóstico operativo local
+
+`python -m noesis.whatsapp_diagnostics --business-id ID` lee incidencias sin
+contenido privado. La cola llena admite duplicados sin reejecutarlos. 25 pruebas
+dirigidas correctas. No es resolución automática; activación todavía pendiente.
+
+## 24-sep — Candidato local: memoria y recepción
+
+Esquemas 59/60, no publicados. El historial nuevo conserva actor; el anterior no
+se atribuye a nadie. Con aislamiento activado, contexto del modelo, referencias
+de cliente, agentes en caché e historial web se separan por conversación.
+La recepción durable guarda antes del acuse, consume en orden por conversación
+y reutiliza WhatsApp. Un fallo incierto bloquea esa conversación para revisión,
+sin repetir posibles escrituras. Flags apagados por defecto. Ver
+`02-tecnico/Conversaciones-y-recepcion.md` antes de activar.
+96 pruebas dirigidas y 460 backend/webhook correctas; PostgreSQL y Meta reales
+pendientes. No se han creado commits ni se ha desplegado este bloque.
+
+## 24-sep — Candidato local: correcciones completas
+
+Sin publicar. Se reutilizan `action_review` y `local_invoice`: varios cambios
+explícitos se revisan juntos antes de confirmar; una pregunta sobre IVA no cambia
+la propuesta por una coincidencia parcial. Concepto e IVA se pueden corregir por
+número de línea sin perder cantidades, precios ni las demás líneas.
+70 pruebas dirigidas y 1197 de la suite completa local correctas. No cambia
+esquema, proveedor, flags ni producción; falta CI PostgreSQL antes de publicar.
+
 ## 24-sep — Consolidación validada tras f38dd40
 
 Correcciones multilínea sin pérdida de detalle, consultas financieras compatibles

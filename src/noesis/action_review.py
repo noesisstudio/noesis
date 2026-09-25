@@ -190,10 +190,37 @@ def _correccion(text: str, tool: str, args: dict) -> dict | None:
         return None
     crudo = str(text or "").strip().strip(".!¡")
     norm = nlu._norm(crudo)
+    # No convertir una consulta fiscal en una corrección por encontrar «IVA».
+    if "?" in crudo or "¿" in crudo or re.match(r"^(?:que(?!\s+sean?\b)|cuanto|como|por que|quin|quant)\b", norm):
+        return None
+    # Separar solo ante un campo explícito: «Pedro y Ana» sigue siendo un nombre
+    # y la coma decimal nunca es un separador. Todo se valida antes de proponer.
+    separador = (r"\s*;\s*|(?:\s+(?:y|i)\s+|,\s+)(?="
+                 r"(?:el\s+)?(?:cliente|concepto|importe|iva|irpf)\b|"
+                 r"(?:es\s+)?para\b|(?:con\s+)?iva\b|"
+                 r"\d+(?:\s*%)(?:\s+de)?\s+(?:iva|irpf)\b)")
+    cortes = list(re.finditer(separador, norm))
+    if cortes:
+        partes, inicio = [], 0
+        for corte in cortes:
+            partes.append(crudo[inicio:corte.start()])
+            inicio = corte.end()
+        partes.append(crudo[inicio:])
+        if len(partes) > 6:
+            raise ValueError("Indica como máximo seis cambios en cada mensaje.")
+        revisado = dict(args)
+        for numero, parte in enumerate(partes):
+            cambio = _correccion(parte, tool, revisado)
+            if cambio is None:
+                if numero == 0:
+                    return None
+                raise ValueError("No he entendido todos los cambios. Indica cada campo y su valor.")
+            revisado = cambio
+        return revisado
     cambios: dict = {}
 
     # Importe: «no, eran 120», «mejor 120 euros», o la cifra a secas.
-    importe = (re.fullmatch(_ARRANQUE + rf"{_VERBO_CAMBIO}\s+({nlu._AMOUNT_RE})"
+    importe = (re.fullmatch(_ARRANQUE + rf"(?:{_VERBO_CAMBIO}|(?:el\s+)?importe\s*(?:es|:))\s+({nlu._AMOUNT_RE})"
                             r"\s*(?:€|euros?|eur)?", norm)
                or re.fullmatch(_ARRANQUE + rf"({nlu._AMOUNT_RE})\s*(?:€|euros?|eur)",
                                norm))
@@ -203,14 +230,15 @@ def _correccion(text: str, tool: str, args: dict) -> dict | None:
             cambios["importe" if tool == "registrar_gasto" else "base"] = valor
 
     # IVA e IRPF: «con IVA incluido», «ponle 10% de IVA», «15% de IRPF».
-    if re.search(r"\biva\s*(?:incluido|inclos|dentro)\b|\bcon\s+el\s+iva\b", norm):
+    if re.fullmatch(r"(?:con\s+(?:el\s+)?)?iva\s*(?:incluido|inclos|dentro)|con\s+el\s+iva", norm):
         cambios["importe_incluye_iva"] = True
-    tipo_iva = re.search(r"(?:iva\s*(?:del|al)?\s*(0|4|10|21)|(0|4|10|21)\s*%?\s*"
-                         r"(?:de\s+)?iva)\b", norm)
+    prefijo_tipo = _ARRANQUE + r"(?:(?:y|i|ponle|pon|con)\s+)?"
+    tipo_iva = re.fullmatch(prefijo_tipo + r"(?:iva\s*(?:del|al)?\s*(0|4|10|21)\s*%?|(0|4|10|21)\s*%?\s*"
+                         r"(?:de\s+)?iva)", norm)
     if tipo_iva:
         cambios["iva"] = float(tipo_iva.group(1) or tipo_iva.group(2))
-    tipo_irpf = re.search(r"(?:irpf\s*(?:del|al)?\s*(0|7|15)|(0|7|15)\s*%?\s*"
-                          r"(?:de\s+)?irpf)\b", norm)
+    tipo_irpf = re.fullmatch(prefijo_tipo + r"(?:irpf\s*(?:del|al)?\s*(0|7|15)\s*%?|(0|7|15)\s*%?\s*"
+                          r"(?:de\s+)?irpf)", norm)
     if tipo_irpf:
         cambios["irpf"] = float(tipo_irpf.group(1) or tipo_irpf.group(2))
 
@@ -239,8 +267,7 @@ def _correccion(text: str, tool: str, args: dict) -> dict | None:
         # un total o el IVA de varias líneas exige indicar cómo repartirlo.
         if any(key in cambios for key in ("base", "iva", "importe_incluye_iva", "concepto")):
             raise ValueError("La factura tiene varias líneas. Indica qué línea y "
-                             "precio o cantidad quieres corregir. Para cambiar "
-                             "conceptos o impuestos por línea, revísala en Facturas.")
+                             "precio, cantidad, concepto o IVA quieres corregir.")
         revisado["lineas"] = [dict(line) for line in args["lineas"]]
     return revisado
 

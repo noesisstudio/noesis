@@ -2,6 +2,16 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Recepción y memoria sin activación implícita (2026-09-24)
+
+No inferir propietarios del historial antiguo. Atribuir los turnos nuevos desde
+el canal autenticado y activar lectura aislada con flag independiente.
+La cola previa al vínculo no es la bandeja comercial por negocio: conserva el
+transporte firmado hasta entregarlo al motor actual. Una ejecución interrumpida
+puede haber escrito; no prometer exactly-once ni reintentar a ciegas. Se bloquea
+esa conversación, se alerta a operaciones y se exige revisión. Ambos flags
+apagados hasta CI PostgreSQL, recuperación operativa y piloto real.
+
 ## Sonnet en todo, fuera Haiku (2026-09-22)
 
 Decisión del founder. El agente principal pasa de `claude-sonnet-4-6` a

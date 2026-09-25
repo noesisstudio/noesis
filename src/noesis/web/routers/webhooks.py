@@ -97,6 +97,9 @@ async def whatsapp_inbound(request: Request):
     except (json.JSONDecodeError, UnicodeDecodeError):
         return JSONResponse({"error": "JSON inválido"}, status_code=400)
     try:
+        if config.WHATSAPP_INBOX_ENABLED:
+            from .. import whatsapp_inbox
+            return await run_in_threadpool(whatsapp_inbox.accept, payload)
         result = await run_in_threadpool(whatsapp.handle_inbound, payload)
     except whatsapp.WebhookInProgress:
         return JSONResponse(

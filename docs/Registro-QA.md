@@ -1,5 +1,49 @@
 ﻿# Registro de QA
 
+## 2026-09-24 — Diagnóstico y saturación (candidato)
+
+25-sep: regresión de recuperación: rechaza operador no administrador, otro negocio
+y efecto incierto; recupera error previo al motor y registra intento. 26 pruebas
+locales correctas en 15,312 s; Ruff y verdad documental correctos. Mismo caso
+añadido a smoke PostgreSQL. Validación de CI pendiente.
+
+25 pruebas de memoria/entrada correctas en 14,243 s; Ruff correcto. Incluyen
+diagnóstico aislado por negocio, sin datos privados y sin cambios, y 10.000
+entradas con duplicados aceptados y rechazo transaccional de nuevas entradas.
+No prueba PostgreSQL ni Meta. Docker, psql e initdb no están en PATH.
+
+## 2026-09-24 — Memoria y recepción (candidato)
+
+Primer bloque: 17 pruebas de aislamiento, entrada y rollback correctas (11,163 s).
+Batería dirigida: **96 correctas en 71,801 s**. Backend y webhook ampliados:
+**460 correctas en 397,517 s**, código de salida 0. Ruff, secretos y comprobador
+documental correctos. Log `%TEMP%/noesis-memoria-transporte-backend-20260924.log`.
+Última ampliación: **23 pruebas de memoria/entrada correctas en 13,152 s**,
+incluyendo historial HTTP desde sesión autenticada y downgrade 0/upgrade sobre
+base descartable. Ruff y verdad documental repetidos después, correctos.
+Cobertura: historial no atribuido, web/WhatsApp/actor/negocio,
+contexto vacío, referencias ambiguas, deduplicación, dos consumidores, bloqueo
+por conversación, interrupción sin replay, feature flags y migraciones.
+Firma HTTP inválida no persiste, acuse solo tras guardar, ruta síncrona con flag
+apagado, cambio de negocio bloqueado y PDF/contexto Meta preservados.
+Preparada prueba PostgreSQL en `tests/postgres_release_smoke.py`: reserva
+concurrente, deduplicación y rollback. No ejecutada aquí.
+Sin pruebas reales de Meta ni PostgreSQL local. La suite 1197 de debajo es la
+validación del bloque anterior, no evidencia de la nueva arquitectura.
+
+## 2026-09-24 — Candidato de correcciones conversacionales
+
+Sin publicación ni llamadas a Meta/proveedores. Regresiones nuevas: corrección
+compuesta cliente/importe/concepto/IVA/IRPF, coma decimal, nombres con conjunción,
+pregunta fiscal, fragmentos no interpretables, otro actor, concepto/IVA de una
+línea y rechazo de IVA no admitido sin confirmar datos antiguos.
+70 pruebas dirigidas correctas en 83,836 s. Ruff y diff-check correctos.
+Suite completa local: **1197 tests correctos en 1012,404 s**, salida 0.
+El último ajuste para interrogaciones explícitas se comprobó además con las
+6 regresiones compuestas (4,874 s). Secretos y verdad documental correctos.
+Evidencia: `%TEMP%/noesis-correcciones-tests-20260924.log`.
+No certifica entrega real de WhatsApp. No se ejecutó PostgreSQL ni se publicó.
+
 ## 2026-09-24 — Consolidación posterior a f38dd40
 
 CI 36012647171: PostgreSQL completo correcto. El escáner detectó la credencial

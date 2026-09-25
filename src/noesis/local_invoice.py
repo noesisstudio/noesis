@@ -109,6 +109,29 @@ def revise(message: str, arguments: dict) -> dict | None:
     """Corrige SOLO una propuesta pendiente; nunca busca ni edita una emitida."""
     text = normalized(message).strip().rstrip(".")
     text = re.sub(r"^no,?\s+", "", text)
+    detail = re.fullmatch(
+        r"(?:cambia|corrige|pon)\s+(?:la\s+)?linea\s+(\d{1,2})\s+"
+        r"(concepto|iva)\s+(?:a\s+)?(.+)", text)
+    if detail:
+        position, field, value = detail.groups()
+        lines = [dict(line) for line in arguments.get("lineas", [])]
+        index = int(position) - 1
+        if not 0 <= index < len(lines):
+            raise ValueError("Esa línea no está en la propuesta. Indica una línea existente.")
+        if field == "iva":
+            rate = re.fullmatch(r"(0|4|10|21)\s*%?", value)
+            if not rate:
+                raise ValueError("Indica un IVA de 0, 4, 10 o 21% para esa línea.")
+            lines[index]["vat_rate"] = int(rate.group(1))
+        else:
+            # Mantener mayúsculas y acentos del concepto dictado, no el texto normalizado.
+            original = re.sub(r"^no,?\s+", "", message.strip().rstrip("."), flags=re.I)
+            description = original[detail.start(3):].strip()
+            if not description or len(description) > 500 or any(c in description for c in "<>={}[];\n"):
+                raise ValueError("Indica un concepto de texto para una sola línea.")
+            lines[index]["description"] = description
+        return {**arguments, "lineas": lines,
+                "concepto": "; ".join(line["description"] for line in lines)}
     explicit = re.fullmatch(
         rf"(?:cambia|corrige|pon)\s+(?:la\s+)?linea\s+(\d{{1,2}})\s+"
         rf"(cantidad|precio)\s+(?:a\s+)?({NUMBER})(?:\s*(?:euros?|€|unidades?))?", text)

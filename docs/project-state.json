@@ -1,15 +1,19 @@
 {
-  "state_date": "2026-09-24",
+  "state_date": "2026-09-25",
+  "recovery_candidate_2026_09_25": "Recuperacion explicita de routing_changed con administrador, auditoria previa y orden conservado. processing_failed/interrupted no se reintentan por efectos inciertos. CI PostgreSQL pendiente en rama de revision; main/Meta/produccion intactos.",
+  "ingress_diagnostics_candidate_2026_09_24": "CLI por negocio, solo lectura sin payload/telefonos. Saturacion cuenta eventos nuevos, no duplicados. 25 pruebas dirigidas correctas (14.243 s), Ruff correcto. Sin publicar. Resolucion segura, retencion, PostgreSQL y Meta pendientes antes de activar.",
+  "conversation_corrections_candidate_2026_09_24": "Local, no publicado: campos compuestos sobre propuestas existentes, consultas fiscales sin coincidencias parciales, concepto e IVA por linea. 70 regresiones dirigidas y suite completa local de 1197 tests correctas (1012.404 s); ultimo ajuste de interrogacion revalidado con 6 casos. Ruff, secretos y verdad documental correctos. Sin migracion, dependencias, proveedores ni cambios de flags. Meta real y memoria por actor pendientes.",
   "reliability_hotfix_2026_09_24": "df113b1: fechas compatibles PostgreSQL, correcciones multilínea sin pérdida de detalle y rollback 58 aditivo bloqueado ante borradores incompletos. CI 36012914685 verde: 1189 tests en 352.518 s, 36 rutas PostgreSQL, rollback y seguridad. Sin cambios de flags ni proveedores.",
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
-  "schema_version": 58,
-  "verified_test_count": 1189,
+  "schema_version": 60,
+  "conversation_transport_candidate_2026_09_24": "Local no publicado: esquemas 59/60, memoria por actor y transporte previo a vinculacion. NOESIS_CONVERSATION_ISOLATION_ENABLED y NOESIS_WHATSAPP_INBOX_ENABLED false por defecto. FIFO, acuse tras commit, incidencias sin replay automatico. 96 pruebas dirigidas correctas (71.801 s) y 460 backend/webhook correctas (397.517 s); Ruff, secretos y verdad documental correctos. Suite completa 1197 corresponde al bloque previo. Requiere CI PostgreSQL, procedimiento de revision/retencion y Meta real antes de activar.",
+  "verified_test_count": 1197,
   "validation_2026_09_21": "CI 35578171354 verde sobre 1dc65aa1a79a6bcacfd1057b1b2afd317d7734e5: 974 pruebas (402.446 s), seguridad, Node, migraciones SQLite y humos PostgreSQL con compatibilidad anterior/rollback. Railway b88619b7-6da0-4b68-83ab-fec3194a9897 SUCCESS; health/ready verifican release 1dc65aa1a79a y esquema 56. Cierre documental sin cambios de runtime.",
   "production": {
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
-    "current_repository_candidate_deployed": true,
+    "current_repository_candidate_deployed": false,
     "pending_after_deploy": "Codigo df113b1fbe18 publicado el 24-sep tras CI 36012914685 verde (1189 tests); Railway b668b4c1-d161-4f7c-a0fb-a763ede45d2a SUCCESS, ready esquema 58. QA autenticada: summary, series, analysis, costs/breakdown, expenses e invoices 200; gasto 45 y borradores 120/95.40 conservados. Copia previa restaurada/verificada. Sin cambiar flags: revision y planificador ya estaban activos; aprendizaje apagado. Pendientes: Meta real, Stripe live, restauracion externa, legal y piloto. Contrato local del socio no incluido."
   },
   "pricing_eur_ex_vat": {

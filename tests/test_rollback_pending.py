@@ -27,6 +27,6 @@ class PendingRollbackTests(unittest.TestCase):
                          ('["importe"]', invoice["id"], business["id"]))
         with self.assertRaisesRegex(ValueError, "incompletos"):
             migrations.downgrade(57)
-        self.assertEqual(migrations.current_version(), 58)
+        self.assertEqual(migrations.current_version(), migrations.LATEST_VERSION)
         self.assertEqual(db.get_invoice(invoice["id"], business["id"])["pending_fields"],
                          '["importe"]')

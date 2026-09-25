@@ -112,6 +112,28 @@ class LocalInvoiceTests(unittest.TestCase):
         self.say("sí")
         self.assertEqual(db.list_invoices(self.bid)[0]["client_id"], other["id"])
 
+    def test_line_concept_and_tax_keep_other_line_and_require_confirmation(self):
+        self.enable()
+        self.say(ORDER)
+        self.say("cambia la línea 2 concepto a Válvula de presión")
+        revised = self.say("cambia la línea 2 IVA a 10%")
+        self.assertTrue(revised["confirmation_required"])
+        self.assertEqual(db.list_invoices(self.bid), [])
+        self.say("sí")
+        invoice = db.list_invoices(self.bid)[0]
+        lines = db.get_invoice_lines(invoice["id"], self.bid)
+        self.assertEqual(lines[1]["description"], "Válvula de presión")
+        self.assertEqual([line["vat_rate"] for line in lines], [21, 10])
+        self.assertEqual([line["quantity"] for line in lines], [2, 3])
+        self.assertEqual(invoice["total"], 125.95)
+
+    def test_invalid_line_tax_discards_stale_proposal(self):
+        self.enable()
+        self.say(ORDER)
+        self.say("cambia la línea 2 IVA a 13%")
+        self.say("sí")
+        self.assertEqual(db.list_invoices(self.bid), [])
+
     def test_unknown_customer_never_creates_a_customer(self):
         self.enable()
         self.say(ORDER.replace("Marta López", "Desconocida"))

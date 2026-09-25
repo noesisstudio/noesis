@@ -174,8 +174,45 @@ def _public_counters() -> None:
     print("Marketing PostgreSQL: visitas e interacciones separadas correctamente.")
 
 
+def _conversation_transport() -> None:
+    """Solo CI descartable: bloqueo entre réplicas y rollback sin pérdida."""
+    bid = db.create_business("Conversación CI", "conversation-ci@example.test")["id"]
+    db.add_assistant_message(bid, "user", "uno", actor="web:one")
+    db.add_assistant_message(bid, "user", "dos", actor="web:two")
+    with patch.object(config, "CONVERSATION_ISOLATION_ENABLED", True):
+        assert [r["content"] for r in db.list_conversation_messages(bid, actor="web:one")] == ["uno"]
+    events = [{"business_id": bid, "event_key": f"ci-ingress-{n}",
+               "conversation_key": "ci-ingress", "payload": {"id": str(n)}} for n in (1, 2)]
+    assert db.enqueue_whatsapp_inbound(events) == 2
+    assert db.enqueue_whatsapp_inbound(events) == 0
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        claims = list(pool.map(lambda _: db.claim_whatsapp_inbound(), range(2)))
+    assert sum(r is not None for r in claims) == 1
+    try:
+        migrations.downgrade(59)
+    except ValueError:
+        assert migrations.current_version() == migrations.LATEST_VERSION
+    else:
+        raise AssertionError("Se perdió una entrada aceptada al bajar versión.")
+    first = next(r for r in claims if r)["id"]
+    operator = db.create_user("recovery-ci@example.test", "unused", bid)
+    with db.get_conn() as conn:
+        conn.execute("UPDATE users SET is_admin=1 WHERE id=?", (operator["id"],))
+    db.finish_whatsapp_inbound(first, error_code="routing_changed")
+    db.recover_whatsapp_inbound(bid, first, operator_id=operator["id"])
+    assert db.claim_whatsapp_inbound()["id"] == first
+    db.finish_whatsapp_inbound(first)
+    db.finish_whatsapp_inbound(db.claim_whatsapp_inbound()["id"])
+    assert migrations.downgrade(58) == 58
+    assert migrations.upgrade() == migrations.LATEST_VERSION
+    with patch.object(config, "CONVERSATION_ISOLATION_ENABLED", True):
+        assert len(db.list_conversation_messages(bid, actor="web:one")) == 1
+    print("Conversación PostgreSQL: aislamiento, reserva, deduplicación y rollback OK.")
+
+
 if __name__ == "__main__":
     _guard()
     _rollback()
+    _conversation_transport()
     _public_counters()
     _privacy()

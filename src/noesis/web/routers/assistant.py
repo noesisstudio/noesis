@@ -14,8 +14,9 @@ router = APIRouter()
 
 
 @router.get("/api/{business_id}/chat/history")
-def api_chat_history(business_id: int, limit: int = 60):
-    return {"items": db.list_assistant_messages(business_id, limit=limit)}
+def api_chat_history(business_id: int, request: Request, limit: int = 60):
+    actor = f"web:{request.session.get('uid')}:{request.session.get('sv', 0)}"
+    return {"items": db.list_conversation_messages(business_id, limit=limit, actor=actor)}
 
 
 @router.get("/api/{business_id}/assistant/memories")

@@ -560,6 +560,11 @@ def process_whatsapp_outbox() -> None:
     whatsapp.process_outbox(limit=25)
 
 
+def process_whatsapp_inbox() -> None:
+    from . import whatsapp_inbox
+    whatsapp_inbox.process(limit=25)
+
+
 def process_email_outbox(limit: int = 25) -> int:
     """Entrega SMTP desde la cola durable con backoff e idempotencia."""
     from ..adapters import email as email_adapter
@@ -915,6 +920,10 @@ def start_scheduler() -> BackgroundScheduler:
         id="whatsapp-outbox",
         max_instances=1,
         coalesce=True,
+    )
+    scheduler.add_job(
+        process_whatsapp_inbox, "interval", seconds=2,
+        id="whatsapp-inbox", max_instances=1, coalesce=True,
     )
     scheduler.add_job(
         process_email_outbox,

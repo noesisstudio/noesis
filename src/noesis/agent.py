@@ -28,7 +28,9 @@ _MUTATING_TOOLS = {
 
 def _refresh_conversation(agent) -> None:
     """Incluye también los turnos resueltos localmente entre llamadas al modelo."""
-    history = db.list_assistant_messages(agent.business_id, limit=24)
+    history = db.list_conversation_messages(agent.business_id, limit=24)
+    if config.CONVERSATION_ISOLATION_ENABLED:
+        agent.messages = []
     if history:
         if history[-1].get("role") == "user":
             history = history[:-1]
@@ -161,7 +163,7 @@ class NoesisAgent:
         self.business = db.get_business(business_id) or {}
         self.business_name = self.business.get("name") or config.BUSINESS_NAME
         self.client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
-        history = db.list_assistant_messages(business_id, limit=24)
+        history = db.list_conversation_messages(business_id, limit=24)
         # Al crear el agente desde una petición, el wrapper ya ha persistido el
         # mensaje actual. Se añadirá con el contexto de página en ``send``.
         if history and history[-1].get("role") == "user":
@@ -304,7 +306,7 @@ class OpenAICompatibleNoesisAgent:
         self.input_usd_per_mtok = input_usd_per_mtok
         self.output_usd_per_mtok = output_usd_per_mtok
         self.business = db.get_business(business_id) or {}
-        history = db.list_assistant_messages(business_id, limit=24)
+        history = db.list_conversation_messages(business_id, limit=24)
         if history and history[-1].get("role") == "user":
             history = history[:-1]
         self.messages: list[dict] = [

@@ -1,5 +1,51 @@
 ﻿# Registro de cambios
 
+## 2026-09-24 — Diagnóstico seguro de incidencias
+
+Actualización 25-sep: recuperación explícita de `routing_changed`, anterior al
+motor, con operador administrador y auditoría previa. Nunca reintenta fallos
+inciertos. Pruebas locales y PostgreSQL ampliadas; CI en rama aislada. Sin Meta,
+sin activar flags ni desplegar. Retirar comando para rollback, sin migración nueva.
+
+- `db.whatsapp_ingress_diagnostics` y CLI `noesis.whatsapp_diagnostics`: lectura
+  acotada por negocio, sin mensajes, teléfonos ni claves de conversación.
+- Saturación cuenta inserciones nuevas, no duplicados; rechazo revierte el lote.
+- 25 pruebas dirigidas correctas y Ruff correcto. Sin producción ni push.
+- Riesgo limitado al transporte opcional apagado. Rollback: retirar diagnóstico;
+  no reejecutar incidencias ni liberar confirmaciones antiguas. La resolución
+  operativa, retención, PostgreSQL y Meta siguen pendientes antes de activar.
+
+## 2026-09-24 — Candidato: identidad conversacional y recepción durable
+
+- Memoria: `conversation_context`, `db`, `agent`, chat y router de historial.
+  Actor autenticado, sin reasignar mensajes antiguos; flags apagados.
+- Transporte: router firmado, consumidor scheduler, `whatsapp_ingress`, motor
+  existente y alerta admin sin contenido. No cambia bandeja comercial/outbox.
+- Esquemas 59/60: columna nullable e índice, tabla de transporte. Rollback conserva
+  atribución/recibos y bloquea ante entradas pendientes; apagar flags primero.
+- Pruebas: 96 dirigidas y 460 backend/webhook correctas; detalle en Registro-QA.
+  Ruff, secretos y estado documental correctos. No publicar antes de
+  CI PostgreSQL y validación de rollback/restauración. No se modifica producción.
+- Riesgo: efectos inciertos al caer un proceso. Se detienen para revisión, nunca
+  se reejecutan automáticamente. Queda habilitación operativa y validación Meta.
+- Datos: payload vaciado al completar; acceso interno, aislamiento en exportación
+  y borrado por negocio mediante FK. Retención de incidencias requiere revisión
+  antes de activar. Detalles en `02-tecnico/Conversaciones-y-recepcion.md`.
+
+## 2026-09-24 — Candidato: correcciones sin efectos parciales
+
+- Objetivo: reforzar lo existente, sin nuevo motor ni persistencia duplicada.
+- Archivos: `action_review.py`, `local_invoice.py` y sus regresiones.
+- Campos explícitos combinados se validan antes de renovar la propuesta;
+  una parte no entendida impide confirmar la versión antigua. Consultas fiscales
+  no cambian tipos por coincidencia parcial. Concepto/IVA por número de línea.
+- Pruebas: 70 dirigidas y suite local 1197/1197 correctas; Ruff, secretos,
+  verdad documental y diff-check correctos. Detalles en Registro-QA.
+- Riesgo: interpretación. Se conservan confirmación, aislamiento y flags.
+- Rollback: revertir código; no hay esquema, datos ni dependencias que migrar.
+- Límites: gramática acotada, no comprensión universal; Meta real, entrada
+  durable y memoria por actor pendientes. No push ni despliegue en esta tanda.
+
 ## 2026-09-24 — Finanzas PostgreSQL, correcciones multilínea y rollback
 
 - Objetivo: consolidar f38dd40 sin sustituir el chat ni tocar proveedores.
@@ -1158,6 +1204,35 @@ de caja mínima. Publicada en https://claude.ai/artifact/AduAVYaKUewQuCtqkroyfN.
   COMPROBACION que el script imprime al generarlo; si difieren, el fallo está en la
   fórmula, no en el supuesto.
 - **Rollback:** revertir el commit; el libro v3 sigue intacto.
+## 2026-09-18 — Contrato de suscripcion para firmar con los clientes
+
+Peticion del founder: un contrato elaborado que el cliente firme al pagar la
+suscripcion. Nuevo `docs/05-legal-y-rgpd/contratos/Contrato-suscripcion.md`: hoja de
+pedido firmable, 29 clausulas generales y seis anexos (planes y limites, encargado del
+tratamiento del art. 28 RGPD, mandato de expedicion de facturas del art. 5 del RD
+1619/2012, soporte, uso aceptable y consentimientos). Version para leer y compartir en
+https://claude.ai/artifact/ND5EUS5WdAWJQLvG1ddR7w.
+
+Junto al Markdown, que es la fuente, quedan `Contrato-suscripcion.html` y
+`Contrato-suscripcion.pdf` (45 paginas A4) para imprimir y firmar. El HTML se genera del
+Markdown con un conversor de stdlib y el PDF con Edge sin interfaz:
+`msedge --headless --no-pdf-header-footer --print-to-pdf=<destino> <fuente html>`. La hoja
+de estilo fuerza en impresion la paleta clara de marca, de modo que el PDF no depende del
+tema del visor. Falta numeracion de paginas: Chromium no admite contadores de pagina en
+CSS y el pie propio de Edge incluye la ruta del archivo.
+
+Redactado contra el codigo y los textos publicados, no contra una plantilla: recoge el
+«Bynoesis prepara, el cliente confirma», el modo consulta tras la baja, la suspension
+por impago que nunca cierra la consulta ni la exportacion, el no entrenar con el
+contenido del cliente, el preaviso de subencargados y el consentimiento anticipado para
+pasar a S.L. Las doce decisiones abiertas quedan marcadas en el propio texto y
+recapituladas al final, enlazadas con `Preguntas-abogado-TIC`.
+
+No se firma con nadie hasta cerrar cinco bloqueos, escritos en el documento: identidad
+legal del prestador, DPA firmados con los subencargados, revision del abogado TIC,
+criterio fiscal sobre el Anexo III y coherencia con `terminos.html` y
+`site_precios.html`. Solo documentacion; no toca `src/noesis/`.
+
 ## 2026-09-17 — Guía de primeros clientes, escalado a 5.000 y costes por etapa
 
 Objetivo: el founder quiere conseguir los primeros autónomos por boca a boca en su

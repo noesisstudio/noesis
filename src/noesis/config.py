@@ -50,6 +50,8 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 # Piloto explícito: revisión común antes de las escrituras conversacionales.
 ASSISTANT_REVIEW_ENABLED = env_bool("NOESIS_ASSISTANT_REVIEW_ENABLED", False)
 ASSISTANT_LEARNING_ENABLED = env_bool("NOESIS_ASSISTANT_LEARNING_ENABLED", False)
+CONVERSATION_ISOLATION_ENABLED = env_bool("NOESIS_CONVERSATION_ISOLATION_ENABLED", False)
+WHATSAPP_INBOX_ENABLED = env_bool("NOESIS_WHATSAPP_INBOX_ENABLED", False)
 # Piloto local: exige además revisión; no activa proveedores ni aprendizaje.
 LOCAL_PLANNER_ENABLED = env_bool("NOESIS_LOCAL_PLANNER_ENABLED", False)
 # Decisión del founder (2026-09-22): Sonnet en todo y fuera Haiku. Sonnet 5 es

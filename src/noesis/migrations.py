@@ -314,6 +314,7 @@ def _upgrade_initial(conn) -> None:
 
 def _downgrade_initial(conn) -> None:
     for table in (
+        "whatsapp_ingress",
         "documents", "copilot_recommendations", "portal_tokens",
         "scheduled_job_runs", "whatsapp_links", "product_events",
         "webhook_events", "document_sequences", "password_resets", "quotes",
@@ -4238,6 +4239,38 @@ def _downgrade_invoice_pending_fields(conn) -> None:
     # y permite volver a subir sin diferencias en los registros históricos.
 
 
+def _upgrade_conversation_actor(conn) -> None:
+    if "actor" not in _column_names(conn, "assistant_messages"):
+        conn.execute("ALTER TABLE assistant_messages ADD COLUMN actor TEXT")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_assistant_actor "
+                 "ON assistant_messages(business_id, actor, id)")
+
+
+def _downgrade_conversation_actor(conn) -> None:
+    # Aditiva: conserva la atribución para una futura reactivación. El código
+    # anterior ignora la columna. Desactivar el flag antes de revertir runtime.
+    conn.execute("DROP INDEX IF EXISTS idx_assistant_actor")
+
+
+def _upgrade_whatsapp_inbox(conn) -> None:
+    t = _types(conn.dialect)
+    conn.execute(f"""CREATE TABLE IF NOT EXISTS whatsapp_ingress (
+        id {t['id']}, business_id {t['ref']} REFERENCES businesses(id) ON DELETE CASCADE,
+        event_key TEXT NOT NULL UNIQUE, conversation_key TEXT NOT NULL,
+        payload TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'queued',
+        created_at TEXT NOT NULL, locked_at TEXT, completed_at TEXT,
+        error_code TEXT
+    )""")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_whatsapp_ingress_order "
+                 "ON whatsapp_ingress(conversation_key, status, id)")
+
+
+def _downgrade_whatsapp_inbox(conn) -> None:
+    if conn.execute("SELECT id FROM whatsapp_ingress WHERE status <> 'done' LIMIT 1").fetchone():
+        raise ValueError("Resuelve la entrada pendiente de WhatsApp antes de revertir.")
+    # No borrar recibos de deduplicación; upgrade posterior reutiliza la tabla.
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
     (2, "integridad_multiempresa", _upgrade_tenant_integrity, _downgrade_tenant_integrity),
@@ -4330,6 +4363,10 @@ MIGRATIONS: tuple[Migration, ...] = (
     (58, "factura_a_medias",
      _upgrade_invoice_pending_fields,
      _downgrade_invoice_pending_fields),
+    (59, "memoria_por_conversacion",
+     _upgrade_conversation_actor, _downgrade_conversation_actor),
+    (60, "entrada_whatsapp_durable",
+     _upgrade_whatsapp_inbox, _downgrade_whatsapp_inbox),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

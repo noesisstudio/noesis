@@ -19,9 +19,9 @@ from ..adapters import billing as billing_adapter
 from ..tools import run_tool
 
 # Agentes por negocio. El historial y el bloqueo nunca se comparten entre empresas.
-_agents: dict[int, object] = {}
-_local_agents: dict[int, object] = {}
-_compatible_agents: dict[int, object] = {}
+_agents: dict[int | tuple, object] = {}
+_local_agents: dict[int | tuple, object] = {}
+_compatible_agents: dict[int | tuple, object] = {}
 _agents_lock = threading.Lock()
 log = logging.getLogger("noesis.chat")
 
@@ -894,10 +894,18 @@ def _client_from_conversation(business_id: int) -> dict | None:
     if not clientes:
         return None
     plegados = [(db._fold_client_reference(c["name"]), c) for c in clientes]
-    for mensaje in reversed(db.list_assistant_messages(business_id, limit=20)):
+    for mensaje in reversed(db.list_conversation_messages(business_id, limit=20)):
+        if config.CONVERSATION_ISOLATION_ENABLED and mensaje.get("role") != "user":
+            continue
         texto = f" {db._fold_client_reference(mensaje.get('content'))} "
         vistos = [c for nombre, c in plegados if nombre and f" {nombre} " in texto]
         if vistos:
+            if config.CONVERSATION_ISOLATION_ENABLED:
+                # Un listado o dos clientes nombrados no constituyen un foco.
+                longest = max(vistos, key=lambda c: len(c["name"]))
+                folded = db._fold_client_reference(longest["name"])
+                if any(db._fold_client_reference(c["name"]) not in folded for c in vistos):
+                    return None
             return max(vistos, key=lambda c: len(c["name"]))
     return clientes[0] if len(clientes) == 1 else None
 
@@ -1556,10 +1564,11 @@ def _handle(
         from ..agent import LocalNoesisAgent, PartialAgentExecutionError
         try:
             with _agents_lock:
-                local_agent = _local_agents.get(business_id)
+                key = _conversation_agent_key(business_id)
+                local_agent = _local_agents.get(key)
                 if local_agent is None:
                     local_agent = LocalNoesisAgent(business_id)
-                    _local_agents[business_id] = local_agent
+                    _local_agents[key] = local_agent
             return {
                 "reply": local_agent.send(prefix + message),
                 "source": "ia_local",
@@ -1608,10 +1617,11 @@ def _handle(
             from ..agent import CompatibleNoesisAgent, PartialAgentExecutionError
             try:
                 with _agents_lock:
-                    compatible_agent = _compatible_agents.get(business_id)
+                    key = _conversation_agent_key(business_id)
+                    compatible_agent = _compatible_agents.get(key)
                     if compatible_agent is None:
                         compatible_agent = CompatibleNoesisAgent(business_id)
-                        _compatible_agents[business_id] = compatible_agent
+                        _compatible_agents[key] = compatible_agent
                 return {
                     "reply": compatible_agent.send(prefix + message),
                     "source": "ia_compatible",
@@ -1637,11 +1647,12 @@ def _handle(
         if config.ANTHROPIC_API_KEY:
             from ..agent import NoesisAgent, PartialAgentExecutionError
             with _agents_lock:
-                agent = _agents.get(business_id)
+                key = _conversation_agent_key(business_id)
+                agent = _agents.get(key)
                 if agent is None:
                     # Haiku paga solo lo que no resolvieron las capas anteriores.
                     agent = NoesisAgent(business_id, model=config.FALLBACK_MODEL)
-                    _agents[business_id] = agent
+                    _agents[key] = agent
             try:
                 return {"reply": agent.send(prefix + message), "source": "ia"}
             except Exception as exc:  # noqa: BLE001
@@ -1745,7 +1756,26 @@ def handle_read_only(
     return {"reply": _coach_reply(business_id, message), "source": "local"}
 
 
-def handle(
+def _conversation_agent_key(business_id: int):
+    from ..conversation_context import actor_for
+    return ((business_id, actor_for(business_id))
+            if config.CONVERSATION_ISOLATION_ENABLED else business_id)
+
+
+def handle(business_id: int, message: str, page: str | None = None, *,
+           channel: str = "web", actor_phone: str | None = None,
+           actor_id: str | None = None, voice: bool = False) -> dict:
+    from ..conversation_context import current
+    actor = f"wa:{actor_phone}" if channel == "whatsapp" else f"web:{actor_id or 'owner'}"
+    token = current.set((business_id, actor))
+    try:
+        return _handle_turn(business_id, message, page, channel=channel,
+                            actor_phone=actor_phone, actor_id=actor_id, voice=voice)
+    finally:
+        current.reset(token)
+
+
+def _handle_turn(
     business_id: int,
     message: str,
     page: str | None = None,

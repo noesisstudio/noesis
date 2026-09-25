@@ -2284,6 +2284,7 @@ def add_assistant_message(
     channel: str = "web",
     page: str | None = None,
     source: str | None = None,
+    actor: str | None = None,
 ) -> dict:
     """Guarda una intervención del usuario o de Bynoesis, aislada por negocio."""
     if role not in {"user", "assistant"}:
@@ -2297,12 +2298,16 @@ def add_assistant_message(
     content = content[:12_000]
     page = (page or "").strip()[:50] or None
     source = (source or "").strip()[:30] or None
+    from .conversation_context import actor_for
+    actor = actor if actor is not None else actor_for(business_id)
+    if actor is not None and (not actor or len(actor) > 200):
+        raise ValueError("Identidad de conversación no válida.")
     with get_conn() as conn:
         row = conn.execute(
             "INSERT INTO assistant_messages "
-            "(business_id, channel, role, content, page, source, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id",
-            (business_id, channel, role, content, page, source, _now()),
+            "(business_id, channel, role, content, page, source, created_at, actor) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
+            (business_id, channel, role, content, page, source, _now(), actor),
         ).fetchone()
         message_id = row["id"]
         saved = conn.execute(
@@ -2321,6 +2326,25 @@ def list_assistant_messages(business_id: int, limit: int = 60) -> list[dict]:
             "WHERE business_id=? ORDER BY id DESC LIMIT ?) recent "
             "ORDER BY id ASC",
             (business_id, limit),
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def list_conversation_messages(business_id: int, limit: int = 60, *,
+                               actor: str | None = None) -> list[dict]:
+    """Contexto operativo; nunca atribuye mensajes históricos sin identidad."""
+    if not config.CONVERSATION_ISOLATION_ENABLED:
+        return list_assistant_messages(business_id, limit)
+    from .conversation_context import actor_for
+    actor = actor if actor is not None else actor_for(business_id)
+    if not actor:
+        return []
+    limit = max(1, min(int(limit or 60), 200))
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT * FROM (SELECT * FROM assistant_messages "
+            "WHERE business_id=? AND actor=? ORDER BY id DESC LIMIT ?) recent "
+            "ORDER BY id ASC", (business_id, actor, limit),
         ).fetchall()
     return [dict(row) for row in rows]
 
@@ -11178,6 +11202,115 @@ def subscription_allows_access(business: dict | None) -> bool:
     return not ends or ends >= date.today().isoformat()
 
 
+def enqueue_whatsapp_inbound(events: list[dict]) -> int:
+    """Entrada de transporte interno autenticado; lote atómico antes del acuse.
+
+    Puede no tener negocio aún (alta por código). Nunca se expone por API cliente.
+    """
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        if conn.dialect == "postgres":
+            conn.execute("LOCK TABLE whatsapp_ingress IN SHARE ROW EXCLUSIVE MODE")
+        pending = conn.execute("SELECT COUNT(*) AS n FROM whatsapp_ingress WHERE status <> 'done'").fetchone()["n"]
+        inserted = 0
+        for event in events:
+            row = conn.execute(
+                "INSERT INTO whatsapp_ingress (business_id, event_key, conversation_key, payload, created_at) "
+                "VALUES (?, ?, ?, ?, ?) ON CONFLICT (event_key) DO NOTHING RETURNING id",
+                (event.get("business_id"), event["event_key"], event["conversation_key"],
+                 json.dumps(event["payload"], ensure_ascii=False), _now()),
+            ).fetchone()
+            inserted += int(row is not None)
+            if pending + inserted > 10000:
+                raise ValueError("Entrada de WhatsApp saturada; no se ha aceptado el lote.")
+        return inserted
+
+
+def whatsapp_ingress_diagnostics(business_id: int, *, limit: int = 50) -> dict:
+    """Diagnóstico por negocio, sin contenido, teléfonos ni claves de conversación.
+
+    No reserva mensajes, modifica estados ni ejecuta migraciones. Uso operativo;
+    cualquier futura ruta HTTP deberá exigir autorización administrativa.
+    """
+    limit = max(1, min(int(limit), 200))
+    with get_conn() as conn:
+        counts = conn.execute(
+            "SELECT status, COUNT(*) AS n FROM whatsapp_ingress "
+            "WHERE business_id=? GROUP BY status", (business_id,),
+        ).fetchall()
+        rows = conn.execute(
+            "SELECT q.id, q.status, q.created_at, q.locked_at, q.error_code, "
+            "(SELECT COUNT(*) FROM whatsapp_ingress p "
+            "WHERE p.business_id=q.business_id AND p.conversation_key=q.conversation_key "
+            "AND p.id>q.id AND p.status='queued') AS waiting_after "
+            "FROM whatsapp_ingress q WHERE q.business_id=? AND q.status='review' "
+            "ORDER BY q.id LIMIT ?", (business_id, limit),
+        ).fetchall()
+    return {"business_id": business_id, "counts": {r["status"]: r["n"] for r in counts},
+            "incidents": [dict(row) for row in rows], "limit": limit}
+
+
+def recover_whatsapp_inbound(business_id: int, row_id: int, *, operator_id: int) -> None:
+    """Reencola únicamente un fallo anterior a ejecutar el motor.
+
+    Los errores inciertos nunca son recuperables con este comando. Se conserva
+    el orden original: no se salta ninguna confirmación ni se cambia de negocio.
+    """
+    with get_conn() as conn:
+        operator = conn.execute("SELECT is_admin FROM users WHERE id=?", (operator_id,)).fetchone()
+        if not operator or not operator["is_admin"]:
+            raise ValueError("Se requiere un operador administrador registrado.")
+    # Registrar el intento antes de mutar: si falla la auditoría, no se recupera.
+    record_security_event("admin.whatsapp_recovery_requested", area="support",
+                          actor_user_id=operator_id, subject_business_id=business_id,
+                          metadata={"ingress_id": row_id})
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        if conn.dialect == "postgres":
+            conn.execute("LOCK TABLE whatsapp_ingress IN SHARE ROW EXCLUSIVE MODE")
+        row = conn.execute("SELECT status, error_code FROM whatsapp_ingress WHERE id=? AND business_id=?",
+                           (row_id, business_id)).fetchone()
+        if not row or row["status"] != "review" or row["error_code"] != "routing_changed":
+            raise ValueError("No recuperable: falta evidencia de que el motor no llegó a ejecutarse.")
+        conn.execute("UPDATE whatsapp_ingress SET status='queued', locked_at=NULL, error_code=NULL "
+                     "WHERE id=? AND business_id=?", (row_id, business_id))
+
+
+def claim_whatsapp_inbound() -> dict | None:
+    """FIFO por conversación entre procesos; lo incierto NO se vuelve a ejecutar."""
+    with get_conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        if conn.dialect == "postgres":
+            conn.execute("LOCK TABLE whatsapp_ingress IN SHARE ROW EXCLUSIVE MODE")
+        stale = (datetime.now() - timedelta(minutes=15)).isoformat(timespec="seconds")
+        conn.execute("UPDATE whatsapp_ingress SET status='review', error_code='interrupted' "
+                     "WHERE status='processing' AND locked_at<?", (stale,))
+        row = conn.execute(
+            "SELECT q.* FROM whatsapp_ingress q WHERE q.status='queued' AND NOT EXISTS "
+            "(SELECT 1 FROM whatsapp_ingress p WHERE p.conversation_key=q.conversation_key "
+            "AND p.id<q.id AND p.status<>'done') ORDER BY q.id LIMIT 1"
+        ).fetchone()
+        if not row:
+            return None
+        conn.execute("UPDATE whatsapp_ingress SET status='processing', locked_at=? WHERE id=?",
+                     (_now(), row["id"]))
+        return dict(row)
+
+
+def finish_whatsapp_inbound(row_id: int, *, error_code: str | None = None) -> None:
+    # No guardar textos de excepciones ni respuestas del proveedor.
+    error_code = error_code if error_code in {"processing_failed", "routing_changed"} else (
+        "processing_failed" if error_code else None)
+    with get_conn() as conn:
+        if error_code:
+            conn.execute("UPDATE whatsapp_ingress SET status='review', error_code=? "
+                         "WHERE id=? AND status='processing'", (error_code, row_id))
+        else:
+            conn.execute("UPDATE whatsapp_ingress SET status='done', payload='{}', completed_at=?, "
+                         "locked_at=NULL, error_code=NULL WHERE id=? AND status='processing'",
+                         (_now(), row_id))
+
+
 def claim_webhook_event(
     source: str,
     event_id: str,
@@ -12560,6 +12693,9 @@ def admin_alerts() -> list[dict]:
     """Alarmas operativas para el fundador: qué está fallando y dónde llamar."""
     alerts: list[dict] = []
     with get_conn() as conn:
+        inbound_review = conn.execute(
+            "SELECT COUNT(*) AS n FROM whatsapp_ingress WHERE status='review'"
+        ).fetchone()["n"]
         wa_failed = conn.execute(
             "SELECT COUNT(*) AS n FROM whatsapp_outbox WHERE status='failed' "
             "AND COALESCE(last_error, '')<>"
@@ -12580,6 +12716,9 @@ def admin_alerts() -> list[dict]:
             "SELECT id, name, owner_email FROM businesses "
             "WHERE subscription_status IN ('past_due','unpaid')"
         ).fetchall()]
+    if inbound_review:
+        alerts.append({"level": "rojo", "area": "WhatsApp",
+                       "text": f"{inbound_review} entrada(s) requieren revisión; no se han repetido automáticamente."})
     if wa_failed:
         alerts.append({
             "level": "rojo", "area": "WhatsApp",
@@ -14443,6 +14582,9 @@ def export_business_data(business_id) -> dict:
             business_id)],
         "assistant_messages": [dict(r) for r in _rows(
             "SELECT * FROM assistant_messages WHERE business_id=? ORDER BY id",
+            business_id)],
+        "whatsapp_ingress": [dict(r) for r in _rows(
+            "SELECT * FROM whatsapp_ingress WHERE business_id=? ORDER BY id",
             business_id)],
         "business_memories": [dict(r) for r in _rows(
             "SELECT * FROM business_memories WHERE business_id=? ORDER BY id",
