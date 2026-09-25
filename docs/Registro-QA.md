@@ -6,6 +6,12 @@ Cierre 25-sep: CI 36131891167 **SUCCESS**, 1223 tests en 555,019 s, controles
 estáticos/seguridad, migraciones SQLite, PostgreSQL y compatibilidad anterior.
 Código validado 9357a39; diferencias posteriores únicamente documentales.
 
+Publicación 0fd05e8: copia PostgreSQL creada, restauración verificada ok true
+(4,31 s). Railway f9210b88-2726-4f50-b701-36a86e8a9d0b SUCCESS; ready release
+0fd05e81ade2, esquema 60; health, ready, portada y login HTTP 200. Flags nuevos
+False False comprobados por SSH. No se enviaron mensajes Meta ni se probaron
+operaciones financieras reales. Cierre documental posterior sin cambios runtime.
+
 25-sep: primera CI detectó un literal entero en el booleano de la fixture
 PostgreSQL; corregido a TRUE compatible con ambos motores. No era código runtime.
 CI 36131891167 sobre 9357a39: PostgreSQL verde, 36 rutas, migraciones, código

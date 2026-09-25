@@ -12,7 +12,7 @@
 - [x] Suite completa local: 1197/1197 correctas.
 - [x] CI PostgreSQL del candidato 9357a39 correcta (36131891167).
 - [x] Suite completa y candidato: CI 36131891167 verde, 1223 tests y PostgreSQL.
-- [ ] Verificar ready del despliegue autorizado el 25-sep; no activar flags nuevos.
+- [x] Despliegue 0fd05e8 SUCCESS, ready esquema 60; flags nuevos False.
 - [x] Implementar memoria persistente por actor/conversación con migración aditiva:
   no reasignar el historial antiguo a un usuario por suposición.
 - [x] Implementar entrada durable WhatsApp con acuse tras persistencia y orden

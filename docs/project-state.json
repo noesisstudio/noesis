@@ -14,7 +14,8 @@
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
-    "current_repository_candidate_deployed": false,
+    "current_repository_candidate_deployed": true,
+    "verified_release_2026_09_25": "0fd05e81ade203b176837cd84ee086a1b94ae749 desplegado: Railway f9210b88-2726-4f50-b701-36a86e8a9d0b SUCCESS, ready esquema 60. health/ready/portada/login HTTP200. Copia PostgreSQL creada y restauracion comprobada (ok true, 4.31 s). Flags CONVERSATION_ISOLATION_ENABLED y WHATSAPP_INBOX_ENABLED verificados False. Meta sin modificar. Contratos locales del socio excluidos.",
     "pending_after_deploy": "Codigo df113b1fbe18 publicado el 24-sep tras CI 36012914685 verde (1189 tests); Railway b668b4c1-d161-4f7c-a0fb-a763ede45d2a SUCCESS, ready esquema 58. QA autenticada: summary, series, analysis, costs/breakdown, expenses e invoices 200; gasto 45 y borradores 120/95.40 conservados. Copia previa restaurada/verificada. Sin cambiar flags: revision y planificador ya estaban activos; aprendizaje apagado. Pendientes: Meta real, Stripe live, restauracion externa, legal y piloto. Contrato local del socio no incluido."
   },
   "pricing_eur_ex_vat": {

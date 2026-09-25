@@ -2,6 +2,12 @@
 
 ## 24-sep — Diagnóstico operativo local
 
+**Cierre 25-sep:** publicado 0fd05e8 en main y Railway, despliegue
+f9210b88-2726-4f50-b701-36a86e8a9d0b SUCCESS; `/ready` esquema 60 y release
+correcta, `/health`, portada y login 200. Copia previa restaurada/verificada.
+Ambos flags nuevos comprobados False. No se ha probado entrega real Meta.
+Las referencias a candidato sin publicar de las secciones inferiores son históricas.
+
 Actualización 25-sep: candidato subido solo a
 `codex/conversation-recovery-validation` (9357a39), no a main ni Railway.
 CI 36131891167 completa correcta: 1223 tests y PostgreSQL, incluida recuperación
