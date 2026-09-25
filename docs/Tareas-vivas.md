@@ -11,7 +11,8 @@
   por línea; bloquear coincidencias fiscales parciales y conservar confirmación.
 - [x] Suite completa local: 1197/1197 correctas.
 - [x] CI PostgreSQL del candidato 9357a39 correcta (36131891167).
-- [ ] Revisar suite completa y candidato antes de fusionar/publicar en main.
+- [x] Suite completa y candidato: CI 36131891167 verde, 1223 tests y PostgreSQL.
+- [ ] Verificar ready del despliegue autorizado el 25-sep; no activar flags nuevos.
 - [x] Implementar memoria persistente por actor/conversación con migración aditiva:
   no reasignar el historial antiguo a un usuario por suposición.
 - [x] Implementar entrada durable WhatsApp con acuse tras persistencia y orden

@@ -2,6 +2,10 @@
 
 ## 2026-09-24 — Diagnóstico y saturación (candidato)
 
+Cierre 25-sep: CI 36131891167 **SUCCESS**, 1223 tests en 555,019 s, controles
+estáticos/seguridad, migraciones SQLite, PostgreSQL y compatibilidad anterior.
+Código validado 9357a39; diferencias posteriores únicamente documentales.
+
 25-sep: primera CI detectó un literal entero en el booleano de la fixture
 PostgreSQL; corregido a TRUE compatible con ambos motores. No era código runtime.
 CI 36131891167 sobre 9357a39: PostgreSQL verde, 36 rutas, migraciones, código

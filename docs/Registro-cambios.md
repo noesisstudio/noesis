@@ -2,6 +2,10 @@
 
 ## 2026-09-24 — Diagnóstico seguro de incidencias
 
+Cierre 25-sep: autorizada publicación en main por el founder tras CI completa
+verde (36131891167, 1223 tests y PostgreSQL). No activar flags nuevos ni cambiar
+Meta. Criterio de despliegue: copia verificada previa y ready con esquema 60.
+
 Actualización 25-sep: fixture PostgreSQL corregida (is_admin TRUE, no entero),
 tras fallo de la primera CI. Segunda CI 36131891167: PostgreSQL verde; suite
 general aún en ejecución al registrar. Recuperación explícita de `routing_changed`, anterior al
