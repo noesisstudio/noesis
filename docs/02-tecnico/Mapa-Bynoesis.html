@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mapa de Bynoesis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400&family=Inter:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#f4f1e8; --panel:#fbf9f3; --surface:#ffffff;
+  --ink:#15211c; --muted:#5d6b66; --faint:#87918b;
+  --line:#9a988c; --border:#dcd6c6;
+  --brand:#14463b; --brand-2:#2e8b74; --brand-soft:#e4efe9; --brand-ink:#0f3d34; --on-brand:#ffffff;
+  --ok:#1f8a6d; --warn:#b07a16; --off:#7f8782;
+  --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --serif:"Fraunces","Iowan Old Style","Palatino Linotype",Georgia,serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#101915; --panel:#16211d; --surface:#1b2823;
+    --ink:#e7eee9; --muted:#a3b3ac; --faint:#7f8f88;
+    --line:#6f807a; --border:#2f403a;
+    --brand:#9ad8c2; --brand-2:#5cc0a2; --brand-soft:#1f3a31; --brand-ink:#cdeee2; --on-brand:#0f1d18;
+    --ok:#5fc49f; --warn:#e2b75e; --off:#9aa39e;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#101915; --panel:#16211d; --surface:#1b2823;
+  --ink:#e7eee9; --muted:#a3b3ac; --faint:#7f8f88;
+  --line:#6f807a; --border:#2f403a;
+  --brand:#9ad8c2; --brand-2:#5cc0a2; --brand-soft:#1f3a31; --brand-ink:#cdeee2; --on-brand:#0f1d18;
+  --ok:#5fc49f; --warn:#e2b75e; --off:#9aa39e;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1200px;margin:0 auto;padding-inline:20px;padding-block:44px 72px}
+.eyebrow{font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--brand-2)}
+h1{font-family:var(--serif);font-weight:500;font-size:clamp(32px,4.6vw,50px);line-height:1.08;letter-spacing:-.015em;color:var(--brand);margin:10px 0 14px;text-wrap:balance}
+h2{font-family:var(--serif);font-weight:500;font-size:clamp(23px,2.6vw,29px);line-height:1.2;color:var(--brand);margin:0 0 8px;text-wrap:balance}
+.lede{max-width:66ch;color:var(--muted);font-size:16.5px;margin:0}
+.lede b{color:var(--ink);font-weight:600}
+.meta{display:flex;flex-wrap:wrap;gap:22px;align-items:flex-start;margin-top:26px}
+.legend{display:flex;flex-wrap:wrap;gap:10px 22px;padding:14px 18px;border:1px solid var(--border);border-radius:12px;background:var(--panel);font-size:13.5px}
+.legend span{display:inline-flex;align-items:center;gap:9px;color:var(--ink)}
+.legend svg{flex:none}
+.sw-ok{stroke:var(--ok)} .sw-warn{stroke:var(--warn)} .sw-off{stroke:var(--off)} .sw-hot{stroke:var(--brand-2)}
+.toc{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.toc a{font-size:13.5px;font-weight:500;color:var(--brand-ink);text-decoration:none;padding:6px 12px;border-radius:999px;background:var(--brand-soft)}
+.toc a:hover{background:var(--brand-2);color:var(--on-brand)}
+.toc a:focus-visible{outline:2px solid var(--brand-2);outline-offset:2px}
+section{margin-top:60px;scroll-margin-top:20px}
+section > p{max-width:70ch;color:var(--muted);margin:0 0 4px}
+figure{margin:18px 0 0;background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.scroll svg{display:block;width:100%;min-width:var(--minw,920px);height:auto}
+figcaption{padding:12px 18px 15px;border-top:1px solid var(--border);color:var(--muted);font-size:13.5px;line-height:1.55}
+figcaption b{color:var(--ink);font-weight:600}
+.hint{display:none;font-size:12.5px;color:var(--faint);padding:8px 18px 0}
+@media (max-width:760px){.hint{display:block}}
+
+/* Dibujos */
+.dg{font-family:var(--sans)}
+.dg .box{fill:var(--surface);stroke:var(--border);stroke-width:1.2}
+.dg .ok .box{stroke:var(--ok);stroke-width:1.6}
+.dg .warn .box{stroke:var(--warn);stroke-width:1.6;stroke-dasharray:6 4}
+.dg .off .box{stroke:var(--off);stroke-width:1.6;stroke-dasharray:1.5 4;stroke-linecap:round}
+.dg .dot{fill:var(--faint)}
+.dg .ok .dot{fill:var(--ok)} .dg .warn .dot{fill:var(--warn)}
+.dg .off .dot{fill:none;stroke:var(--off);stroke-width:1.6}
+.dg .person .box,.dg .br .box{fill:var(--brand-soft);stroke:none}
+.dg .br .t{fill:var(--brand-ink)}
+.dg .root .box{fill:var(--brand);stroke:none}
+.dg .root .t{fill:var(--on-brand);font-family:var(--serif);font-size:19px;font-weight:600}
+.dg .root .s{fill:var(--on-brand);opacity:.8}
+.dg .grp{fill:none;stroke:var(--border);stroke-width:1.2;stroke-dasharray:4 4}
+.dg .mini{fill:var(--brand-soft);stroke:none}
+.dg .t{font-size:13px;font-weight:600;fill:var(--ink)}
+.dg .t12{font-size:12.5px;font-weight:600;fill:var(--ink)}
+.dg .s{font-size:11px;fill:var(--muted)}
+.dg .sw{font-size:11px;fill:var(--warn);font-weight:500}
+.dg .m{font-family:var(--mono);font-size:10.5px;fill:var(--muted)}
+.dg .mc{font-size:11.5px;font-weight:500;fill:var(--brand-ink)}
+.dg .col{font-size:10.5px;font-weight:600;letter-spacing:.09em;fill:var(--faint)}
+.dg .c{fill:none;stroke:var(--line);stroke-width:1.4}
+.dg .c.hot{stroke:var(--brand-2);stroke-width:2}
+.dg .c.dash{stroke-dasharray:5 4}
+.dg .u{fill:none;stroke:var(--line);stroke-width:1;opacity:.75}
+.dg .lb{font-size:10.5px;fill:var(--muted);paint-order:stroke;stroke:var(--panel);stroke-width:4px;stroke-linejoin:round}
+.dg .ah{fill:var(--line)}
+.dg .ahh{fill:var(--brand-2)}
+.dg .axis{stroke:var(--ink);stroke-width:1.3;fill:none}
+.dg .tick{stroke:var(--ink);stroke-width:1.1}
+.dg .ev{fill:var(--brand-2)}
+.dg .band{fill:var(--brand-2);opacity:.35}
+.dg .lead{stroke:var(--line);stroke-width:1;stroke-dasharray:2 3}
+.dg .rule{stroke:var(--border);stroke-width:1}
+
+table{width:100%;border-collapse:collapse;font-size:14px}
+.tablewrap{margin-top:18px;overflow-x:auto;border:1px solid var(--border);border-radius:14px;background:var(--panel)}
+th,td{text-align:left;padding:11px 16px;border-bottom:1px solid var(--border);vertical-align:top}
+th{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+tr:last-child td{border-bottom:none}
+td:first-child{font-weight:600;white-space:nowrap}
+td code{font-family:var(--mono);font-size:12.5px;color:var(--brand-ink);background:var(--brand-soft);padding:1px 5px;border-radius:5px}
+footer{margin-top:56px;color:var(--faint);font-size:13px;max-width:70ch}
+@media (prefers-reduced-motion:no-preference){.toc a{transition:background .15s,color .15s}}
+</style>
+</head>
+<body style="margin:0">
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Bynoesis · esquema completo · 28 de septiembre de 2026</div>
+  <h1>Cómo funciona Bynoesis, pieza a pieza</h1>
+  <p class="lede">Un autónomo escribe por WhatsApp o entra en la web. Bynoesis entiende lo que pide, lo prepara y <b>espera tu «sí» antes de tocar dinero, facturas o envíos</b>. Estos esquemas siguen ese recorrido por dentro: correo, cerebro, facturas, protección de datos, las ramas de la empresa y lo que ocurre solo cada día. Reflejan el código publicado en producción (esquema de base de datos 60).</p>
+  <div class="meta">
+    <div class="legend" role="list" aria-label="Leyenda de estados">
+      <span role="listitem"><svg width="34" height="12" aria-hidden="true"><line x1="1" y1="6" x2="33" y2="6" class="sw-ok" stroke-width="2.4"/></svg>En marcha en producción</span>
+      <span role="listitem"><svg width="34" height="12" aria-hidden="true"><line x1="1" y1="6" x2="33" y2="6" class="sw-warn" stroke-width="2.4" stroke-dasharray="6 4"/></svg>Construido; falta activarlo o probarlo en real</span>
+      <span role="listitem"><svg width="34" height="12" aria-hidden="true"><line x1="2" y1="6" x2="33" y2="6" class="sw-off" stroke-width="2.4" stroke-dasharray="1.5 4" stroke-linecap="round"/></svg>Hecho en local, sin subir</span>
+      <span role="listitem"><svg width="34" height="12" aria-hidden="true"><line x1="1" y1="6" x2="33" y2="6" class="sw-hot" stroke-width="2.6"/></svg>Camino normal de una petición</span>
+    </div>
+  </div>
+  <nav class="toc" aria-label="Apartados">
+    <a href="#general">Visión general</a>
+    <a href="#ramas">Ramas de la empresa</a>
+    <a href="#cerebro">Cerebro (chat)</a>
+    <a href="#facturas">Facturas</a>
+    <a href="#correo">Correo</a>
+    <a href="#rgpd">RGPD</a>
+    <a href="#reloj">Lo que pasa solo</a>
+    <a href="#encender">Qué falta encender</a>
+  </nav>
+</header>
+
+<!-- 1 · VISIÓN GENERAL -->
+<section id="general" aria-labelledby="h-general">
+  <h2 id="h-general">Visión general</h2>
+  <p>Seis tipos de persona entran por siete puertas. Todo pasa por el mismo control, se guarda en una sola base de datos y lo que tiene que salir hacia fuera espera en una cola.</p>
+  <figure>
+    <div class="hint">Desliza el esquema hacia los lados →</div>
+    <div class="scroll" style="--minw:1000px">
+<svg class="dg" viewBox="0 0 1180 596" role="img" aria-label="Personas, puertas de entrada, núcleo de Bynoesis, colas de salida, base de datos y servicios externos, con las líneas que los conectan.">
+  <defs>
+    <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0,0L10,5L0,10z"/></marker>
+    <marker id="h1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="ahh" d="M0,0L10,5L0,10z"/></marker>
+  </defs>
+  <text class="col" x="16" y="34">QUIÉN</text>
+  <text class="col" x="216" y="34">POR DÓNDE ENTRA</text>
+  <text class="col" x="480" y="34">NÚCLEO DE BYNOESIS</text>
+  <text class="col" x="1000" y="34">SERVICIOS EXTERNOS</text>
+
+  <!-- personas → puertas -->
+  <path class="u" d="M146,112L216,112 M146,112L216,232 M146,182L216,112 M146,182L216,292 M146,252L216,172 M146,252L216,292 M146,322L216,292 M146,322L216,352 M146,392L216,412 M146,462L216,472"/>
+
+  <g class="person"><rect class="box" x="16" y="90" width="130" height="44" rx="10"/><text class="t" x="81" y="116.5" text-anchor="middle">Autónomo</text></g>
+  <g class="person"><rect class="box" x="16" y="160" width="130" height="44" rx="10"/><text class="t" x="81" y="186.5" text-anchor="middle">Trabajador</text></g>
+  <g class="person"><rect class="box" x="16" y="230" width="130" height="44" rx="10"/><text class="t" x="81" y="256.5" text-anchor="middle">Cliente final</text></g>
+  <g class="person"><rect class="box" x="16" y="300" width="130" height="44" rx="10"/><text class="t" x="81" y="326.5" text-anchor="middle">Gestoría</text></g>
+  <g class="person"><rect class="box" x="16" y="370" width="130" height="44" rx="10"/><text class="t" x="81" y="396.5" text-anchor="middle">Visitante</text></g>
+  <g class="person"><rect class="box" x="16" y="440" width="130" height="44" rx="10"/><text class="t" x="81" y="466.5" text-anchor="middle">Founder</text></g>
+
+  <g class="ok"><rect class="box" x="216" y="90" width="210" height="44" rx="9"/><circle class="dot" cx="414" cy="102" r="4"/><text class="t" x="228" y="109">WhatsApp central</text><text class="s" x="228" y="125">número de Bynoesis, vía Meta</text></g>
+  <g class="warn"><rect class="box" x="216" y="150" width="210" height="44" rx="9"/><circle class="dot" cx="414" cy="162" r="4"/><text class="t" x="228" y="169">WhatsApp del negocio</text><text class="s" x="228" y="185">su propio número comercial</text></g>
+  <g class="ok"><rect class="box" x="216" y="210" width="210" height="44" rx="9"/><circle class="dot" cx="414" cy="222" r="4"/><text class="t" x="228" y="229">Panel web</text><text class="m" x="228" y="245">/b/{id}/…</text></g>
+  <g class="ok"><rect class="box" x="216" y="270" width="210" height="44" rx="9"/><circle class="dot" cx="414" cy="282" r="4"/><text class="t" x="228" y="289">Enlaces privados</text><text class="m" x="228" y="305">/p · /t · /g</text></g>
+  <g class="ok"><rect class="box" x="216" y="330" width="210" height="44" rx="9"/><circle class="dot" cx="414" cy="342" r="4"/><text class="t" x="228" y="349">Portal de gestorías</text><text class="m" x="228" y="365">/gestoria</text></g>
+  <g class="ok"><rect class="box" x="216" y="390" width="210" height="44" rx="9"/><circle class="dot" cx="414" cy="402" r="4"/><text class="t" x="228" y="409">Web pública</text><text class="m" x="228" y="425">bynoesis.com</text></g>
+  <g class="ok"><rect class="box" x="216" y="450" width="210" height="44" rx="9"/><circle class="dot" cx="414" cy="462" r="4"/><text class="t" x="228" y="469">Administración</text><text class="m" x="228" y="485">/admin</text></g>
+
+  <!-- bus de entrada -->
+  <path class="c" d="M426,112H450 M426,172H450 M426,232H450 M426,292H450 M426,352H450 M426,412H450 M426,472H450 M450,112V472"/>
+  <path class="c hot" d="M450,112H477" marker-end="url(#h1)"/>
+
+  <!-- núcleo -->
+  <g class="ok"><rect class="box" x="480" y="84" width="250" height="56" rx="9"/><circle class="dot" cx="718" cy="96" r="4"/><text class="t" x="492" y="106">Control de entrada</text><text class="s" x="492" y="123">firma · sesión · negocio · plan activo</text></g>
+  <path class="c" d="M492,140V367" marker-end="url(#a1)"/>
+  <text class="lb" x="506" y="258" text-anchor="middle" transform="rotate(-90 506 258)">pantallas y formularios</text>
+
+  <path class="c hot" d="M610,140V183" marker-end="url(#h1)"/>
+  <text class="lb" x="618" y="166">mensajes</text>
+  <g class="ok"><rect class="box" x="510" y="186" width="200" height="64" rx="9"/><circle class="dot" cx="698" cy="198" r="4"/><text class="t" x="522" y="206">Cerebro (chat)</text><text class="s" x="522" y="222">entiende y prepara</text><text class="s" x="522" y="238">reglas → IA privada → Claude</text></g>
+  <path class="c hot" d="M610,250V287" marker-end="url(#h1)"/>
+  <text class="lb" x="618" y="273">elige acción</text>
+  <g class="ok"><rect class="box" x="510" y="290" width="200" height="44" rx="9"/><circle class="dot" cx="698" cy="302" r="4"/><text class="t" x="522" y="309">Herramientas</text><text class="s" x="522" y="325">crear · consultar · preparar</text></g>
+  <path class="c hot" d="M610,334V367" marker-end="url(#h1)"/>
+  <text class="lb" x="618" y="355">ejecuta</text>
+
+  <g class="ok"><rect class="box" x="480" y="370" width="250" height="96" rx="9"/><circle class="dot" cx="718" cy="382" r="4"/><text class="t" x="492" y="389">Servicios del producto</text>
+    <rect class="mini" x="492" y="398" width="113" height="26" rx="6"/><text class="mc" x="548.5" y="415" text-anchor="middle">Facturas</text>
+    <rect class="mini" x="611" y="398" width="113" height="26" rx="6"/><text class="mc" x="667.5" y="415" text-anchor="middle">Documentos</text>
+    <rect class="mini" x="492" y="430" width="113" height="26" rx="6"/><text class="mc" x="548.5" y="447" text-anchor="middle">Gestoría</text>
+    <rect class="mini" x="611" y="430" width="113" height="26" rx="6"/><text class="mc" x="667.5" y="447" text-anchor="middle">Suscripción</text>
+  </g>
+
+  <!-- proveedores consultados en el momento -->
+  <path class="c" d="M710,200L997,106" marker-end="url(#a1)"/>
+  <text class="lb" x="850" y="146" text-anchor="middle">audio</text>
+  <path class="c" d="M710,216L997,162" marker-end="url(#a1)"/>
+  <text class="lb" x="850" y="207" text-anchor="middle">solo si el negocio lo permite</text>
+  <g class="warn"><rect class="box" x="1000" y="84" width="170" height="44" rx="9"/><circle class="dot" cx="1158" cy="96" r="4"/><text class="t" x="1012" y="103">Groq</text><text class="s" x="1012" y="119">voz a texto</text></g>
+  <g class="warn"><rect class="box" x="1000" y="140" width="170" height="44" rx="9"/><circle class="dot" cx="1158" cy="152" r="4"/><text class="t" x="1012" y="159">Claude (Anthropic)</text><text class="s" x="1012" y="175">IA avanzada</text></g>
+
+  <!-- colas -->
+  <rect class="grp" x="780" y="226" width="180" height="184" rx="12"/>
+  <text class="t" x="792" y="247">Colas de salida</text>
+  <text class="s" x="792" y="262">se vacían cada 15 s</text>
+  <g><rect class="box" x="792" y="270" width="156" height="36" rx="8"/><text class="t12" x="804" y="292">Cola WhatsApp</text></g>
+  <g><rect class="box" x="792" y="316" width="156" height="36" rx="8"/><text class="t12" x="804" y="338">Cola de correo</text></g>
+  <g><rect class="box" x="792" y="362" width="156" height="36" rx="8"/><text class="t12" x="804" y="384">Cola Veri*Factu</text></g>
+  <path class="c" d="M730,384H756V334H777" marker-end="url(#a1)"/>
+  <text class="lb" x="770" y="370" text-anchor="middle" transform="rotate(-90 770 370)">encola</text>
+  <path class="c" d="M948,288H997" marker-end="url(#a1)"/>
+  <path class="c" d="M948,334H997" marker-end="url(#a1)"/>
+  <path class="c" d="M948,380H997" marker-end="url(#a1)"/>
+
+  <g class="ok"><rect class="box" x="1000" y="268" width="170" height="40" rx="9"/><circle class="dot" cx="1158" cy="280" r="4"/><text class="t" x="1012" y="285">Meta</text><text class="s" x="1012" y="300">envía el WhatsApp</text></g>
+  <g class="warn"><rect class="box" x="1000" y="314" width="170" height="40" rx="9"/><circle class="dot" cx="1158" cy="326" r="4"/><text class="t" x="1012" y="331">Brevo</text><text class="s" x="1012" y="346">envía el correo</text></g>
+  <g class="warn"><rect class="box" x="1000" y="360" width="170" height="40" rx="9"/><circle class="dot" cx="1158" cy="372" r="4"/><text class="t" x="1012" y="377">AEAT (Hacienda)</text><text class="s" x="1012" y="392">recibe Veri*Factu</text></g>
+
+  <path class="c" d="M730,452H997" marker-end="url(#a1)"/>
+  <text class="lb" x="865" y="444" text-anchor="middle">pago de la suscripción</text>
+  <g class="warn"><rect class="box" x="1000" y="432" width="170" height="40" rx="9"/><circle class="dot" cx="1158" cy="444" r="4"/><text class="t" x="1012" y="449">Stripe</text><text class="s" x="1012" y="464">cobra las cuotas</text></g>
+
+  <!-- datos -->
+  <path class="c hot" d="M600,466V517" marker-end="url(#h1)"/>
+  <text class="lb" x="608" y="496">lee y escribe</text>
+  <g class="ok"><rect class="box" x="480" y="520" width="330" height="64" rx="9"/><circle class="dot" cx="798" cy="532" r="4"/><text class="t" x="492" y="540">Base de datos (Postgres)</text><text class="s" x="492" y="556">Railway · Ámsterdam (UE)</text><text class="s" x="492" y="572">cada fila lleva el negocio al que pertenece</text></g>
+  <g class="ok"><rect class="box" x="830" y="520" width="130" height="64" rx="9"/><circle class="dot" cx="948" cy="532" r="4"/><text class="t" x="842" y="540">Archivos</text><text class="s" x="842" y="556">documentos y PDF</text><text class="s" x="842" y="572">en Railway</text></g>
+  <path class="c" d="M960,552H997" marker-end="url(#a1)"/>
+  <text class="lb" x="979" y="544" text-anchor="middle">03:30</text>
+  <g class="warn"><rect class="box" x="1000" y="530" width="170" height="44" rx="9"/><circle class="dot" cx="1158" cy="542" r="4"/><text class="t" x="1012" y="549">Copia externa</text><text class="s" x="1012" y="565">fuera de Railway (S3)</text></g>
+</svg>
+    </div>
+    <figcaption><b>Cómo leerlo:</b> de izquierda a derecha, la petición entra, pasa por el control, el cerebro elige qué hacer y los servicios lo hacen contra la base de datos. Nada se envía directamente a Meta, Brevo o Hacienda: se guarda en una cola y un reloj interno lo manda cada 15 segundos, reintentando si falla. La copia de cada noche ya se hace y se restaura de prueba cada domingo dentro de Railway; lo que falta es la copia en otro proveedor. El WhatsApp central funciona con el límite de conversaciones de una cuenta sin verificar.</figcaption>
+  </figure>
+</section>
+
+<!-- 2 · RAMAS -->
+<section id="ramas" aria-labelledby="h-ramas">
+  <h2 id="h-ramas">Ramas de la empresa</h2>
+  <p>La empresa tiene cinco ramas. El producto ya funciona. Lo que frena cobrar está en la rama legal y depende de tener identidad jurídica.</p>
+  <figure>
+    <div class="hint">Desliza el esquema hacia los lados →</div>
+    <div class="scroll" style="--minw:860px">
+<svg class="dg" viewBox="0 0 1000 812" role="img" aria-label="Árbol de la empresa: Bynoesis se divide en producto, captación y marketing, dirección interna, legal fiscal y RGPD, e ingeniería y operación, cada una con sus partes y su estado.">
+  <!-- troncos -->
+  <path class="c" d="M166,406H196 M196,85V727 M196,85H226 M196,254H226 M196,423H226 M196,575H226 M196,727H226"/>
+  <path class="c" d="M446,85H476 M476,34V136 M476,34H506 M476,68H506 M476,102H506 M476,136H506"/>
+  <path class="c" d="M446,254H476 M476,186V322 M476,186H506 M476,220H506 M476,254H506 M476,288H506 M476,322H506"/>
+  <path class="c" d="M446,423H476 M476,372V474 M476,372H506 M476,406H506 M476,440H506 M476,474H506"/>
+  <path class="c" d="M446,575H476 M476,524V626 M476,524H506 M476,558H506 M476,592H506 M476,626H506"/>
+  <path class="c" d="M446,727H476 M476,676V778 M476,676H506 M476,710H506 M476,744H506 M476,778H506"/>
+
+  <g class="root"><rect class="box" x="16" y="378" width="150" height="56" rx="12"/><text class="t" x="91" y="403" text-anchor="middle">Bynoesis</text><text class="s" x="91" y="421" text-anchor="middle">empresa en fase piloto</text></g>
+
+  <g class="br"><rect class="box" x="226" y="61" width="220" height="48" rx="10"/><text class="t" x="240" y="81">Producto</text><text class="s" x="240" y="97">lo que usa el cliente</text></g>
+  <g class="br"><rect class="box" x="226" y="230" width="220" height="48" rx="10"/><text class="t" x="240" y="250">Captación y marketing</text><text class="s" x="240" y="266">cómo llegan los clientes</text></g>
+  <g class="br"><rect class="box" x="226" y="399" width="220" height="48" rx="10"/><text class="t" x="240" y="419">Dirección interna</text><text class="s" x="240" y="435">/admin, solo el founder</text></g>
+  <g class="br"><rect class="box" x="226" y="551" width="220" height="48" rx="10"/><text class="t" x="240" y="571">Legal, fiscal y RGPD</text><text class="s" x="240" y="587">lo que hoy impide cobrar</text></g>
+  <g class="br"><rect class="box" x="226" y="703" width="220" height="48" rx="10"/><text class="t" x="240" y="723">Ingeniería y operación</text><text class="s" x="240" y="739">cómo se construye y se vigila</text></g>
+
+  <!-- producto -->
+  <g class="ok"><rect class="box" x="506" y="20" width="478" height="28" rx="8"/><circle class="dot" cx="520" cy="34" r="4.5"/><text x="534" y="38.5"><tspan class="t12">Autónomo</tspan><tspan class="s" dx="8">panel web y WhatsApp: agenda, clientes, facturas y cobros</tspan></text></g>
+  <g class="ok"><rect class="box" x="506" y="54" width="478" height="28" rx="8"/><circle class="dot" cx="520" cy="68" r="4.5"/><text x="534" y="72.5"><tspan class="t12">Su equipo</tspan><tspan class="s" dx="8">fichajes y partes por enlace privado o por WhatsApp</tspan></text></g>
+  <g class="ok"><rect class="box" x="506" y="88" width="478" height="28" rx="8"/><circle class="dot" cx="520" cy="102" r="4.5"/><text x="534" y="106.5"><tspan class="t12">Sus clientes</tspan><tspan class="s" dx="8">aceptan presupuestos y descargan facturas en /p/</tspan></text></g>
+  <g class="ok"><rect class="box" x="506" y="122" width="478" height="28" rx="8"/><circle class="dot" cx="520" cy="136" r="4.5"/><text x="534" y="140.5"><tspan class="t12">Su gestoría</tspan><tspan class="s" dx="8">cartera de varias empresas y paquetes por trimestre</tspan></text></g>
+  <!-- captación -->
+  <g class="ok"><rect class="box" x="506" y="172" width="478" height="28" rx="8"/><circle class="dot" cx="520" cy="186" r="4.5"/><text x="534" y="190.5"><tspan class="t12">Web pública</tspan><tspan class="s" dx="8">14 páginas pensadas para buscadores</tspan></text></g>
+  <g class="ok"><rect class="box" x="506" y="206" width="478" height="28" rx="8"/><circle class="dot" cx="520" cy="220" r="4.5"/><text x="534" y="224.5"><tspan class="t12">Solicitar acceso</tspan><tspan class="s" dx="8">el founder aprueba cada alta a mano</tspan></text></g>
+  <g class="ok"><rect class="box" x="506" y="240" width="478" height="28" rx="8"/><circle class="dot" cx="520" cy="254" r="4.5"/><text x="534" y="258.5"><tspan class="t12">Llamada</tspan><tspan class="s" dx="8">reserva en Cal.com desde /contacto</tspan></text></g>
+  <g class="warn"><rect class="box" x="506" y="274" width="478" height="28" rx="8"/><circle class="dot" cx="520" cy="288" r="4.5"/><text x="534" y="292.5"><tspan class="t12">Facebook</tspan><tspan class="s" dx="8">publica solo cada 3 días; falta conectar la página</tspan></text></g>
+  <g class="ok"><rect class="box" x="506" y="308" width="478" height="28" rx="8"/><circle class="dot" cx="520" cy="322" r="4.5"/><text x="534" y="326.5"><tspan class="t12">CRM de la empresa</tspan><tspan class="s" dx="8">a quién llamar hoy, en /admin/crm</tspan></text></g>
+  <!-- dirección -->
+  <g class="ok"><rect class="box" x="506" y="358" width="478" height="28" rx="8"/><circle class="dot" cx="520" cy="372" r="4.5"/><text x="534" y="376.5"><tspan class="t12">Cuentas</tspan><tspan class="s" dx="8">activar, alargar la prueba o pasar a modo consulta</tspan></text></g>
+  <g class="ok"><rect class="box" x="506" y="392" width="478" height="28" rx="8"/><circle class="dot" cx="520" cy="406" r="4.5"/><text x="534" y="410.5"><tspan class="t12">Economía</tspan><tspan class="s" dx="8">coste por cuenta y los tres puntos de equilibrio</tspan></text></g>
+  <g class="ok"><rect class="box" x="506" y="426" width="478" height="28" rx="8"/><circle class="dot" cx="520" cy="440" r="4.5"/><text x="534" y="444.5"><tspan class="t12">Seguridad</tspan><tspan class="s" dx="8">bitácora encadenada y accesos de soporte con caducidad</tspan></text></g>
+  <g class="ok"><rect class="box" x="506" y="460" width="478" height="28" rx="8"/><circle class="dot" cx="520" cy="474" r="4.5"/><text x="534" y="478.5"><tspan class="t12">Soporte</tspan><tspan class="s" dx="8">por qué un correo o un WhatsApp no ha salido</tspan></text></g>
+  <!-- legal -->
+  <g class="warn"><rect class="box" x="506" y="510" width="478" height="28" rx="8"/><circle class="dot" cx="520" cy="524" r="4.5"/><text x="534" y="528.5"><tspan class="t12">Identidad legal</tspan><tspan class="s" dx="8">montar la S.L. cuando firmen tres pilotos</tspan></text></g>
+  <g class="warn"><rect class="box" x="506" y="544" width="478" height="28" rx="8"/><circle class="dot" cx="520" cy="558" r="4.5"/><text x="534" y="562.5"><tspan class="t12">Meta</tspan><tspan class="s" dx="8">verificación de empresa rechazada</tspan></text></g>
+  <g class="warn"><rect class="box" x="506" y="578" width="478" height="28" rx="8"/><circle class="dot" cx="520" cy="592" r="4.5"/><text x="534" y="596.5"><tspan class="t12">Cobrar</tspan><tspan class="s" dx="8">Veri*Factu y Stripe construidos y apagados</tspan></text></g>
+  <g class="warn"><rect class="box" x="506" y="612" width="478" height="28" rx="8"/><circle class="dot" cx="520" cy="626" r="4.5"/><text x="534" y="630.5"><tspan class="t12">RGPD</tspan><tspan class="s" dx="8">papeles escritos; falta la revisión del abogado</tspan></text></g>
+  <!-- ingeniería -->
+  <g class="ok"><rect class="box" x="506" y="662" width="478" height="28" rx="8"/><circle class="dot" cx="520" cy="676" r="4.5"/><text x="534" y="680.5"><tspan class="t12">Railway</tspan><tspan class="s" dx="8">web, Postgres y archivos en Ámsterdam</tspan></text></g>
+  <g class="ok"><rect class="box" x="506" y="696" width="478" height="28" rx="8"/><circle class="dot" cx="520" cy="710" r="4.5"/><text x="534" y="714.5"><tspan class="t12">GitHub</tspan><tspan class="s" dx="8">pruebas en cada cambio y chequeo de producción cada 6 h</tspan></text></g>
+  <g class="ok"><rect class="box" x="506" y="730" width="478" height="28" rx="8"/><circle class="dot" cx="520" cy="744" r="4.5"/><text x="534" y="748.5"><tspan class="t12">Agentes IA</tspan><tspan class="s" dx="8">Claude/Fable y Codex programan directamente sobre main</tspan></text></g>
+  <g class="ok"><rect class="box" x="506" y="764" width="478" height="28" rx="8"/><circle class="dot" cx="520" cy="778" r="4.5"/><text x="534" y="782.5"><tspan class="t12">Documentación</tspan><tspan class="s" dx="8">vault docs/ y registros obligatorios en cada cambio</tspan></text></g>
+</svg>
+    </div>
+    <figcaption><b>El orden de desbloqueo es lineal:</b> identidad legal, después verificación en Meta, después acceso avanzado de Meta para conectar el número de cada negocio, y por último Stripe y Veri*Factu para cobrar. Mientras tanto, un piloto puede usar casi todo el producto con la facturación fiscal apagada.</figcaption>
+  </figure>
+</section>
+
+<!-- 3 · CEREBRO -->
+<section id="cerebro" aria-labelledby="h-cerebro">
+  <h2 id="h-cerebro">Cerebro: qué pasa cuando escribes</h2>
+  <p>Cada mensaje sube por una escalera. Primero lo intentan las reglas locales, que no cuestan nada ni sacan datos del servidor. Solo si no lo entienden sube al siguiente escalón. Lo que mueve dinero o envía algo siempre acaba en una pregunta.</p>
+  <figure>
+    <div class="hint">Desliza el esquema hacia los lados →</div>
+    <div class="scroll" style="--minw:960px">
+<svg class="dg" viewBox="0 0 1130 590" role="img" aria-label="Recorrido de un mensaje: identificación, escalera de comprensión de reglas locales a Claude, herramienta, pregunta de confirmación y respuesta. Las fotos y PDF van por su propio camino a una propuesta.">
+  <defs>
+    <marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0,0L10,5L0,10z"/></marker>
+    <marker id="h3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="ahh" d="M0,0L10,5L0,10z"/></marker>
+  </defs>
+  <text class="col" x="510" y="28">ESCALERA DE COMPRENSIÓN</text>
+
+  <g class="ok"><rect class="box" x="20" y="40" width="170" height="80" rx="9"/><circle class="dot" cx="178" cy="52" r="4"/><text class="t" x="32" y="61">Llega un mensaje</text><text class="s" x="32" y="78">WhatsApp o chat web</text><text class="s" x="32" y="94">texto, voz o archivo</text></g>
+
+  <path class="c hot" d="M190,62H247" marker-end="url(#h3)"/>
+  <text class="lb" x="219" y="55" text-anchor="middle">texto</text>
+  <g class="ok"><rect class="box" x="250" y="40" width="190" height="56" rx="9"/><circle class="dot" cx="428" cy="52" r="4"/><text class="t" x="262" y="61">¿Quién escribe?</text><text class="s" x="262" y="78">teléfono → negocio y rol</text></g>
+
+  <path class="c" d="M190,100L247,140" marker-end="url(#a3)"/>
+  <text class="lb" x="208" y="136" text-anchor="middle">voz</text>
+  <g class="warn"><rect class="box" x="250" y="126" width="190" height="44" rx="9"/><circle class="dot" cx="428" cy="138" r="4"/><text class="t" x="262" y="145">Nota de voz</text><text class="s" x="262" y="160">Groq la pasa a texto</text></g>
+  <path class="c" d="M345,126V99" marker-end="url(#a3)"/>
+  <text class="lb" x="353" y="116">texto</text>
+
+  <path class="c" d="M105,120V218H247" marker-end="url(#a3)"/>
+  <text class="lb" x="113" y="178">archivo</text>
+  <g class="ok"><rect class="box" x="250" y="196" width="190" height="44" rx="9"/><circle class="dot" cx="428" cy="208" r="4"/><text class="t" x="262" y="215">Foto o PDF</text><text class="s" x="262" y="230">lectura local (OCR)</text></g>
+
+  <path class="c hot" d="M440,62H507" marker-end="url(#h3)"/>
+
+  <!-- escalera -->
+  <g class="ok"><rect class="box" x="510" y="40" width="240" height="44" rx="9"/><circle class="dot" cx="738" cy="52" r="4"/><text class="t" x="522" y="59">1 · Reglas locales</text><text class="s" x="522" y="74">gratis, no sale del servidor</text></g>
+  <g class="ok"><rect class="box" x="510" y="106" width="240" height="44" rx="9"/><circle class="dot" cx="738" cy="118" r="4"/><text class="t" x="522" y="125">2 · Redactor interno</text><text class="s" x="522" y="140">borradores con tus datos reales</text></g>
+  <g class="warn"><rect class="box" x="510" y="172" width="240" height="44" rx="9"/><circle class="dot" cx="738" cy="184" r="4"/><text class="t" x="522" y="191">3 · IA privada</text><text class="s" x="522" y="206">servidor propio, si existe</text></g>
+  <g class="warn"><rect class="box" x="510" y="238" width="240" height="44" rx="9"/><circle class="dot" cx="738" cy="250" r="4"/><text class="t" x="522" y="257">4 · IA externa compatible</text><text class="s" x="522" y="272">si está configurada</text></g>
+  <g class="warn"><rect class="box" x="510" y="304" width="240" height="44" rx="9"/><circle class="dot" cx="738" cy="316" r="4"/><text class="t" x="522" y="323">5 · Claude (Anthropic)</text><text class="s" x="522" y="338">solo con permiso del negocio</text></g>
+  <path class="c" d="M540,84V103" marker-end="url(#a3)"/>
+  <path class="c" d="M540,150V169" marker-end="url(#a3)"/>
+  <path class="c" d="M540,216V235" marker-end="url(#a3)"/>
+  <path class="c" d="M540,282V301" marker-end="url(#a3)"/>
+  <path class="c" d="M540,348V367" marker-end="url(#a3)"/>
+  <text class="lb" x="548" y="99">no lo resuelve</text>
+  <g><rect class="box" x="510" y="370" width="240" height="44" rx="9"/><text class="t" x="522" y="389">Nada lo entiende</text><text class="s" x="522" y="404">lo dice, sin inventar nada</text></g>
+
+  <path class="c hot" d="M750,62H780 M750,128H780 M750,194H780 M750,260H780 M750,326H780 M780,62V326"/>
+  <text class="lb" x="786" y="58">entendido</text>
+  <path class="c hot" d="M780,178H817" marker-end="url(#h3)"/>
+
+  <g class="ok"><rect class="box" x="820" y="150" width="260" height="56" rx="9"/><circle class="dot" cx="1068" cy="162" r="4"/><text class="t" x="832" y="171">Herramienta</text><text class="s" x="832" y="188">el servidor comprueba permisos y negocio</text></g>
+  <path class="c hot" d="M950,206V237" marker-end="url(#h3)"/>
+  <g><rect class="box" x="820" y="240" width="260" height="56" rx="9"/><text class="t" x="832" y="261">¿Mueve dinero o envía algo?</text><text class="s" x="832" y="278">facturar, cobrar, borrar o mandar</text></g>
+  <path class="c hot" d="M950,296V333" marker-end="url(#h3)"/>
+  <text class="lb" x="958" y="320">sí</text>
+  <g class="ok"><rect class="box" x="820" y="336" width="260" height="56" rx="9"/><circle class="dot" cx="1068" cy="348" r="4"/><text class="t" x="832" y="357">Propuesta</text><text class="s" x="832" y="374">«¿Lo hago?» y espera SÍ o NO</text></g>
+  <path class="c hot" d="M950,392V429" marker-end="url(#h3)"/>
+  <text class="lb" x="958" y="416">SÍ del titular</text>
+  <g class="ok"><rect class="box" x="820" y="432" width="260" height="48" rx="9"/><circle class="dot" cx="1068" cy="444" r="4"/><text class="t" x="832" y="452">Se hace y queda registrado</text><text class="s" x="832" y="468">en el historial de acciones</text></g>
+  <path class="c" d="M1080,268H1100V456H1083" marker-end="url(#a3)"/>
+  <text class="lb" x="1112" y="362" text-anchor="middle" transform="rotate(-90 1112 362)">no, solo consulta</text>
+  <path class="c hot" d="M950,480V505" marker-end="url(#h3)"/>
+  <g class="ok"><rect class="box" x="820" y="508" width="260" height="44" rx="9"/><circle class="dot" cx="1068" cy="520" r="4"/><text class="t" x="832" y="527">Respuesta</text><text class="s" x="832" y="542">por la cola de WhatsApp o en la web</text></g>
+
+  <path class="c dash" d="M345,240V570H800V364H817" marker-end="url(#a3)"/>
+  <text class="lb" x="572" y="566" text-anchor="middle">propone el gasto o la factura recibida</text>
+</svg>
+    </div>
+    <figcaption><b>Qué protege este diseño:</b> la IA nunca decide permisos ni a qué negocio pertenece un dato; eso lo comprueba el servidor en cada herramienta. Un número de teléfono desconocido no recibe respuesta en nombre de otro negocio. Por WhatsApp, emitir una factura pide una segunda confirmación, porque una nota de voz se puede oír mal. Una foto mal leída nunca entra sola en las cuentas: primero es un borrador que confirmas.</figcaption>
+  </figure>
+</section>
+
+<!-- 4 · FACTURAS -->
+<section id="facturas" aria-labelledby="h-facturas">
+  <h2 id="h-facturas">Facturas: del «hazme una factura» al cobro</h2>
+  <p>Una factura nace como borrador, que se puede cambiar libremente. Al emitirla se vuelve inmutable en un solo paso: recibe número, congela sus líneas y queda lista para enviar. Corregirla después significa hacer otra, nunca tocar la original.</p>
+  <figure>
+    <div class="hint">Desliza el esquema hacia los lados →</div>
+    <div class="scroll" style="--minw:980px">
+<svg class="dg" viewBox="0 0 1150 480" role="img" aria-label="Ciclo de una factura: cuatro orígenes, borrador, pregunta de datos que faltan, confirmación, emisión atómica con número y total, PDF, envío por WhatsApp, correo o portal, remisión a Hacienda y, después, cobros, recordatorios, rectificativas y paquete a la gestoría.">
+  <defs>
+    <marker id="a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0,0L10,5L0,10z"/></marker>
+    <marker id="h4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="ahh" d="M0,0L10,5L0,10z"/></marker>
+  </defs>
+  <g class="ok"><rect class="box" x="20" y="30" width="210" height="40" rx="9"/><text class="t" x="32" y="47">Chat o WhatsApp</text><text class="s" x="32" y="62">«factura a Marta, 860 € + IVA»</text></g>
+  <g class="ok"><rect class="box" x="20" y="82" width="210" height="40" rx="9"/><text class="t" x="32" y="99">Pantalla Facturas</text><text class="s" x="32" y="114">a mano, línea a línea</text></g>
+  <g class="ok"><rect class="box" x="20" y="134" width="210" height="40" rx="9"/><text class="t" x="32" y="151">Trabajo o proyecto</text><text class="s" x="32" y="166">al darlo por terminado</text></g>
+  <g class="ok"><rect class="box" x="20" y="186" width="210" height="40" rx="9"/><text class="t" x="32" y="203">Factura recurrente</text><text class="s" x="32" y="218">crea el borrador sola</text></g>
+  <path class="c" d="M230,50H258 M230,102H258 M230,154H258 M230,206H258 M258,50V206"/>
+  <path class="c hot" d="M258,128H287" marker-end="url(#h4)"/>
+
+  <g><rect class="box" x="290" y="96" width="180" height="64" rx="9"/><text class="t" x="302" y="117">Borrador</text><text class="s" x="302" y="133">editable y reversible</text><text class="s" x="302" y="149">no cuenta para Hacienda</text></g>
+  <path class="c" d="M330,160V207" marker-end="url(#a4)"/>
+  <text class="lb" x="324" y="188" text-anchor="end">faltan datos</text>
+  <path class="c" d="M430,210V163" marker-end="url(#a4)"/>
+  <text class="lb" x="438" y="188">completa</text>
+  <g><rect class="box" x="290" y="210" width="180" height="48" rx="9"/><text class="t" x="302" y="229">Pregunta lo que falta</text><text class="s" x="302" y="245">NIF, dirección, tipo de IVA…</text></g>
+
+  <path class="c hot" d="M470,128H517" marker-end="url(#h4)"/>
+  <g class="ok"><rect class="box" x="520" y="96" width="150" height="64" rx="9"/><circle class="dot" cx="658" cy="108" r="4"/><text class="t" x="532" y="117">Tú confirmas</text><text class="s" x="532" y="133">revisas el total</text><text class="s" x="532" y="149">SÍ o NO</text></g>
+  <path class="c hot" d="M670,128H707" marker-end="url(#h4)"/>
+  <text class="lb" x="689" y="120" text-anchor="middle">SÍ</text>
+
+  <g class="ok"><rect class="box" x="710" y="40" width="250" height="176" rx="10"/><circle class="dot" cx="948" cy="52" r="4"/>
+    <text class="t" x="724" y="63">Emisión: todo o nada</text>
+    <text class="s" x="724" y="86">Número correlativo: <tspan class="m">F-2026-0042</tspan></text>
+    <text class="s" x="724" y="105">Líneas y datos fiscales congelados</text>
+    <text class="s" x="724" y="124">Total = base + IVA − IRPF</text>
+    <text class="m" x="724" y="143">860,00 + 180,60 = 1.040,60 €</text>
+    <line class="rule" x1="724" y1="160" x2="946" y2="160"/>
+    <text class="s" x="724" y="180">Registro Veri*Factu encadenado</text>
+    <text class="sw" x="724" y="197">apagado hasta tener la S.L.</text>
+  </g>
+  <path class="c hot" d="M960,128H997" marker-end="url(#h4)"/>
+  <g class="ok"><rect class="box" x="1000" y="96" width="140" height="64" rx="9"/><circle class="dot" cx="1128" cy="108" r="4"/><text class="t" x="1012" y="117">PDF</text><text class="s" x="1012" y="133">plantilla y logo</text><text class="s" x="1012" y="149">del negocio</text></g>
+
+  <path class="c" d="M1008,160V326"/>
+  <path class="c" d="M1008,222H1017" marker-end="url(#a4)"/>
+  <path class="c" d="M1008,274H1017" marker-end="url(#a4)"/>
+  <path class="c" d="M1008,326H1017" marker-end="url(#a4)"/>
+  <g class="ok"><rect class="box" x="1020" y="200" width="120" height="44" rx="9"/><circle class="dot" cx="1128" cy="212" r="4"/><text class="t" x="1032" y="219">WhatsApp</text><text class="s" x="1032" y="234">le llega el PDF</text></g>
+  <g class="warn"><rect class="box" x="1020" y="252" width="120" height="44" rx="9"/><circle class="dot" cx="1128" cy="264" r="4"/><text class="t" x="1032" y="271">Correo</text><text class="s" x="1032" y="286">PDF adjunto</text></g>
+  <g class="ok"><rect class="box" x="1020" y="304" width="120" height="44" rx="9"/><circle class="dot" cx="1128" cy="316" r="4"/><text class="t" x="1032" y="323">Portal</text><text class="m" x="1032" y="338">/p/ descarga</text></g>
+
+  <path class="c dash" d="M835,216V249" marker-end="url(#a4)"/>
+  <text class="lb" x="843" y="238">su cola</text>
+  <g class="warn"><rect class="box" x="710" y="252" width="250" height="48" rx="9"/><circle class="dot" cx="948" cy="264" r="4"/><text class="t" x="724" y="272">Hacienda (AEAT)</text><text class="s" x="724" y="288">remisión con certificado, reintentable</text></g>
+
+  <path class="c" d="M710,196H690V372 M390,372H1040"/>
+  <text class="lb" x="684" y="300" text-anchor="end">después de emitir</text>
+  <path class="c" d="M390,372V397" marker-end="url(#a4)"/>
+  <path class="c" d="M610,372V397" marker-end="url(#a4)"/>
+  <path class="c" d="M830,372V397" marker-end="url(#a4)"/>
+  <path class="c" d="M1040,372V397" marker-end="url(#a4)"/>
+  <g class="ok"><rect class="box" x="290" y="400" width="200" height="64" rx="9"/><circle class="dot" cx="478" cy="412" r="4"/><text class="t" x="302" y="421">Cobros</text><text class="s" x="302" y="437">pagos parciales en su libro</text><text class="s" x="302" y="453">el pendiente se calcula solo</text></g>
+  <g class="warn"><rect class="box" x="510" y="400" width="200" height="64" rx="9"/><circle class="dot" cx="698" cy="412" r="4"/><text class="t" x="522" y="421">Recordatorio 09:00</text><text class="s" x="522" y="437">si vence y sigue sin pagar</text><text class="s" x="522" y="453">con tu permiso y plantilla</text></g>
+  <g class="ok"><rect class="box" x="730" y="400" width="200" height="64" rx="9"/><circle class="dot" cx="918" cy="412" r="4"/><text class="t" x="742" y="421">Rectificativa</text><text class="s" x="742" y="437">nueva factura R1 a R5</text><text class="s" x="742" y="453">el original no se toca</text></g>
+  <g class="ok"><rect class="box" x="940" y="400" width="200" height="64" rx="9"/><circle class="dot" cx="1128" cy="412" r="4"/><text class="t" x="952" y="421">Gestoría</text><text class="s" x="952" y="437">paquete por periodo</text><text class="s" x="952" y="453">días 1 a 5, a las 09:30</text></g>
+</svg>
+    </div>
+    <figcaption><b>Reglas que no se rompen:</b> la numeración es correlativa por negocio, serie y año; una factura emitida no se borra ni se renumera; los cobros se apuntan en un libro aparte y el estado «pagada» sale de ahí, nunca se escribe a mano. El ejemplo del importe usa el IVA del 21 %. La remisión a Hacienda está construida pero espera al NIF de la empresa y al certificado.</figcaption>
+  </figure>
+</section>
+
+<!-- 5 · CORREO -->
+<section id="correo" aria-labelledby="h-correo">
+  <h2 id="h-correo">Correo: lo que sale y lo que entra</h2>
+  <p>Ningún correo se envía mientras la persona espera en la página. Se guarda en una cola y el reloj lo manda después, por la primera vía que esté lista. Hoy ninguna vía de salida está encendida en producción: falta poner la clave de Brevo en Railway.</p>
+  <figure>
+    <div class="hint">Desliza el esquema hacia los lados →</div>
+    <div class="scroll" style="--minw:960px">
+<svg class="dg" viewBox="0 0 1120 456" role="img" aria-label="Correo saliente: seis orígenes entran en una cola que el reloj vacía cada 15 segundos por Gmail del autónomo, Brevo o SMTP, con reintentos. Correo entrante: un buzón único lee cada 60 segundos, identifica el negocio y convierte el adjunto en borrador.">
+  <defs>
+    <marker id="a5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0,0L10,5L0,10z"/></marker>
+    <marker id="h5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="ahh" d="M0,0L10,5L0,10z"/></marker>
+  </defs>
+  <text class="col" x="20" y="26">LO QUE SALE</text>
+  <g><rect class="box" x="20" y="40" width="230" height="34" rx="8"/><text class="t12" x="32" y="61.5">Formulario de acceso</text></g>
+  <g><rect class="box" x="20" y="82" width="230" height="34" rx="8"/><text class="t12" x="32" y="103.5">Invitación y recuperar clave</text></g>
+  <g><rect class="box" x="20" y="124" width="230" height="34" rx="8"/><text class="t12" x="32" y="145.5">Factura con su PDF</text></g>
+  <g><rect class="box" x="20" y="166" width="230" height="34" rx="8"/><text class="t12" x="32" y="187.5">Paquete para la gestoría</text></g>
+  <g><rect class="box" x="20" y="208" width="230" height="34" rx="8"/><text class="t12" x="32" y="229.5">Avisos de privacidad</text></g>
+  <g><rect class="box" x="20" y="250" width="230" height="34" rx="8"/><text class="t12" x="32" y="271.5">Mensajes que redacta el cerebro</text></g>
+  <path class="c" d="M250,57H272 M250,99H272 M250,141H272 M250,183H272 M250,225H272 M250,267H272 M272,57V267"/>
+  <path class="c hot" d="M272,168H297" marker-end="url(#h5)"/>
+
+  <g class="ok"><rect class="box" x="300" y="40" width="190" height="44" rx="9"/><circle class="dot" cx="478" cy="52" r="4"/><text class="t" x="312" y="59">Reloj · cada 15 s</text><text class="s" x="312" y="74">recoge lo pendiente</text></g>
+  <path class="c" d="M395,84V123" marker-end="url(#a5)"/>
+  <g class="ok"><rect class="box" x="300" y="126" width="190" height="84" rx="9"/><circle class="dot" cx="478" cy="138" r="4"/><text class="t" x="312" y="147">Cola de correo</text><text class="s" x="312" y="164">se guarda antes de salir</text><text class="s" x="312" y="180">nadie espera al proveedor</text><text class="m" x="312" y="198">email_outbox</text></g>
+  <path class="c hot" d="M490,168H537" marker-end="url(#h5)"/>
+  <g><rect class="box" x="540" y="128" width="170" height="80" rx="9"/><text class="t" x="552" y="150">¿Por dónde sale?</text><text class="s" x="552" y="167">prueba en este orden</text><text class="s" x="552" y="183">la primera vía lista</text></g>
+
+  <path class="c" d="M710,160L767,90" marker-end="url(#a5)"/>
+  <path class="c" d="M710,168H767" marker-end="url(#a5)"/>
+  <path class="c" d="M710,176L767,246" marker-end="url(#a5)"/>
+  <g class="off"><rect class="box" x="770" y="66" width="200" height="44" rx="9"/><circle class="dot" cx="958" cy="78" r="4"/><text class="t" x="782" y="85">1 · Gmail del autónomo</text><text class="s" x="782" y="100">sin subir; solo sus facturas</text></g>
+  <g class="warn"><rect class="box" x="770" y="146" width="200" height="44" rx="9"/><circle class="dot" cx="958" cy="158" r="4"/><text class="t" x="782" y="165">2 · Brevo (API web)</text><text class="s" x="782" y="180">falta la clave y el DKIM</text></g>
+  <g class="warn"><rect class="box" x="770" y="226" width="200" height="44" rx="9"/><circle class="dot" cx="958" cy="238" r="4"/><text class="t" x="782" y="245">3 · SMTP</text><text class="s" x="782" y="260">respaldo; Railway lo bloquea</text></g>
+  <path class="c" d="M970,88L997,158" marker-end="url(#a5)"/>
+  <path class="c" d="M970,168H997" marker-end="url(#a5)"/>
+  <path class="c" d="M970,248L997,178" marker-end="url(#a5)"/>
+  <g><rect class="box" x="1000" y="140" width="110" height="56" rx="9"/><text class="t" x="1012" y="163">Bandeja</text><text class="s" x="1012" y="180">del destinatario</text></g>
+
+  <path class="c dash" d="M870,270V295" marker-end="url(#a5)"/>
+  <text class="lb" x="878" y="287">falla</text>
+  <g><rect class="box" x="770" y="298" width="200" height="40" rx="9"/><text class="t" x="782" y="315">Reintenta más tarde</text><text class="s" x="782" y="330">agotado: aviso en /admin</text></g>
+
+  <path class="c" d="M625,208V237" marker-end="url(#a5)"/>
+  <text class="lb" x="633" y="226">ninguna</text>
+  <g><rect class="box" x="540" y="240" width="170" height="64" rx="9"/><text class="t" x="552" y="260">Ninguna vía lista</text><text class="s" x="552" y="276">no dice «en camino»</text><text class="s" x="552" y="292">ofrece bajar el PDF</text></g>
+
+  <text class="col" x="20" y="360">LO QUE ENTRA · APAGADO POR DEFECTO</text>
+  <g class="warn"><rect class="box" x="20" y="372" width="230" height="64" rx="9"/><circle class="dot" cx="238" cy="384" r="4"/><text class="t" x="32" y="392">Te mandan una factura</text><text class="s" x="32" y="408">a la dirección privada</text><text class="s" x="32" y="424">de tu negocio</text></g>
+  <g class="warn"><rect class="box" x="300" y="372" width="190" height="64" rx="9"/><circle class="dot" cx="478" cy="384" r="4"/><text class="t" x="312" y="392">Buzón (Hostinger)</text><text class="s" x="312" y="408">el reloj lo lee</text><text class="s" x="312" y="424">cada 60 s</text></g>
+  <g class="warn"><rect class="box" x="540" y="372" width="170" height="64" rx="9"/><circle class="dot" cx="698" cy="384" r="4"/><text class="t" x="552" y="392">¿De qué negocio es?</text><text class="s" x="552" y="408">1 dirección = 1 negocio</text><text class="s" x="552" y="424">si duda, no entra</text></g>
+  <g class="warn"><rect class="box" x="770" y="372" width="200" height="64" rx="9"/><circle class="dot" cx="958" cy="384" r="4"/><text class="t" x="782" y="392">Documentos</text><text class="s" x="782" y="408">valida, antivirus y OCR</text><text class="s" x="782" y="424">igual que al subirlo a mano</text></g>
+  <g class="warn"><rect class="box" x="1000" y="372" width="110" height="64" rx="9"/><circle class="dot" cx="1098" cy="384" r="4"/><text class="t" x="1012" y="392">Borrador</text><text class="s" x="1012" y="408">tú lo</text><text class="s" x="1012" y="424">confirmas</text></g>
+  <path class="c" d="M250,404H297" marker-end="url(#a5)"/>
+  <path class="c" d="M490,404H537" marker-end="url(#a5)"/>
+  <path class="c" d="M710,404H767" marker-end="url(#a5)"/>
+  <path class="c" d="M970,404H997" marker-end="url(#a5)"/>
+</svg>
+    </div>
+    <figcaption><b>Para encender la salida:</b> poner <code style="font-family:var(--mono)">BREVO_API_KEY</code> y <code style="font-family:var(--mono)">SMTP_FROM</code> en Railway y añadir el DKIM de Brevo y su <code style="font-family:var(--mono)">include</code> al SPF que ya existe. La vía de Gmail (cada factura sale desde el correo del propio autónomo) está programada en tu ordenador, pero no se ha subido. En la entrada, el correo nunca crea un gasto solo: acaba en un borrador que confirmas.</figcaption>
+  </figure>
+</section>
+
+<!-- 6 · RGPD -->
+<section id="rgpd" aria-labelledby="h-rgpd">
+  <h2 id="h-rgpd">Protección de datos (RGPD)</h2>
+  <p>Bynoesis tiene dos papeles distintos según el dato. Encima se sigue la vida de un dato personal, de izquierda a derecha. Debajo, lo que protege todo el tiempo y los papeles que faltan cerrar.</p>
+  <figure>
+    <div class="hint">Desliza el esquema hacia los lados →</div>
+    <div class="scroll" style="--minw:1000px">
+<svg class="dg" viewBox="0 0 1140 490" role="img" aria-label="RGPD: Bynoesis responsable de sus cuentas y encargado de los datos de cada autónomo; seis etapas de un dato personal, de la recogida al borrado; protecciones de fondo y papeles pendientes.">
+  <defs>
+    <marker id="h6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="ahh" d="M0,0L10,5L0,10z"/></marker>
+  </defs>
+  <g class="br"><rect class="box" x="20" y="20" width="546" height="56" rx="10"/><text class="t" x="34" y="42">Responsable: decide Bynoesis</text><text class="s" x="34" y="60">sus propias cuentas: titulares, cuotas, web pública y formularios</text></g>
+  <g class="br"><rect class="box" x="576" y="20" width="546" height="56" rx="10"/><text class="t" x="590" y="42">Encargado: trata por cuenta del autónomo</text><text class="s" x="590" y="60">lo que guarda cada negocio: sus clientes, facturas y documentos</text></g>
+
+  <g class="ok"><rect class="box" x="20" y="110" width="172" height="150" rx="10"/><circle class="dot" cx="180" cy="122" r="4"/><text class="t" x="32" y="134">1 · Se recoge</text><text class="s" x="32" y="160">con permiso y su versión</text><text class="s" x="32" y="180">cookies solo si aceptas</text><text class="s" x="32" y="200">Analytics tras «Aceptar»</text><text class="s" x="32" y="220">casilla en cada formulario</text></g>
+  <g class="ok"><rect class="box" x="206" y="110" width="172" height="150" rx="10"/><circle class="dot" cx="366" cy="122" r="4"/><text class="t" x="218" y="134">2 · Se guarda</text><text class="s" x="218" y="160">Railway, Ámsterdam (UE)</text><text class="s" x="218" y="180">cada fila con su negocio</text><text class="s" x="218" y="200">claves con PBKDF2</text><text class="s" x="218" y="220">copia cada noche</text></g>
+  <g class="ok"><rect class="box" x="392" y="110" width="172" height="150" rx="10"/><circle class="dot" cx="552" cy="122" r="4"/><text class="t" x="404" y="134">3 · Se usa</text><text class="s" x="404" y="160">primero en el servidor</text><text class="s" x="404" y="180">IA externa: con permiso</text><text class="s" x="404" y="200">y solo el trozo justo</text><text class="s" x="404" y="220">memoria visible y borrable</text></g>
+  <g class="warn"><rect class="box" x="578" y="110" width="172" height="150" rx="10"/><circle class="dot" cx="738" cy="122" r="4"/><text class="t" x="590" y="134">4 · Se comparte</text><text class="s" x="590" y="160">solo con encargados:</text><text class="s" x="590" y="180">Meta, Brevo, Groq,</text><text class="s" x="590" y="200">Anthropic, Stripe…</text><text class="sw" x="590" y="220">sus DPA sin archivar</text></g>
+  <g class="ok"><rect class="box" x="764" y="110" width="172" height="150" rx="10"/><circle class="dot" cx="924" cy="122" r="4"/><text class="t" x="776" y="134">5 · Derechos</text><text class="s" x="776" y="160">acceso, rectificar,</text><text class="s" x="776" y="180">suprimir, limitar,</text><text class="s" x="776" y="200">portar y oponerse</text><text class="s" x="776" y="220">cada petición, registrada</text></g>
+  <g class="warn"><rect class="box" x="950" y="110" width="172" height="150" rx="10"/><circle class="dot" cx="1110" cy="122" r="4"/><text class="t" x="962" y="134">6 · Fin</text><text class="s" x="962" y="160">la baja lo borra todo</text><text class="s" x="962" y="180">menos facturas y fichajes,</text><text class="s" x="962" y="200">que la ley exige guardar</text><text class="sw" x="962" y="220">purga: espera al abogado</text></g>
+  <path class="c hot" d="M192,185H203" marker-end="url(#h6)"/>
+  <path class="c hot" d="M378,185H389" marker-end="url(#h6)"/>
+  <path class="c hot" d="M564,185H575" marker-end="url(#h6)"/>
+  <path class="c hot" d="M750,185H761" marker-end="url(#h6)"/>
+  <path class="c hot" d="M936,185H947" marker-end="url(#h6)"/>
+
+  <rect class="grp" x="20" y="290" width="1102" height="100" rx="12"/>
+  <text class="t" x="34" y="312">De fondo, siempre</text>
+  <g class="ok"><rect class="box" x="34" y="324" width="260" height="52" rx="9"/><circle class="dot" cx="282" cy="336" r="4"/><text class="t" x="46" y="344">Bitácora encadenada</text><text class="s" x="46" y="362">accesos sensibles, sin su contenido</text></g>
+  <g class="ok"><rect class="box" x="304" y="324" width="260" height="52" rx="9"/><circle class="dot" cx="552" cy="336" r="4"/><text class="t" x="316" y="344">Copias</text><text class="s" x="316" y="362">03:30 cada día · simulacro dom. 04:30</text></g>
+  <g class="ok"><rect class="box" x="574" y="324" width="260" height="52" rx="9"/><circle class="dot" cx="822" cy="336" r="4"/><text class="t" x="586" y="344">Brechas</text><text class="s" x="586" y="362">aviso a la AEPD en 72 h si procede</text></g>
+  <g class="warn"><rect class="box" x="844" y="324" width="264" height="52" rx="9"/><circle class="dot" cx="1096" cy="336" r="4"/><text class="t" x="856" y="344">Copia fuera de Railway</text><text class="s" x="856" y="362">S3: falta proveedor y restaurarla</text></g>
+
+  <g class="warn"><rect class="box" x="20" y="410" width="1102" height="64" rx="10"/><circle class="dot" cx="1110" cy="422" r="4"/><text class="t" x="34" y="431">Papeles</text><text class="s" x="34" y="449">Escritos: registro de actividades (art. 30), evaluación de impacto, matriz de proveedores y procedimientos de derechos y de brechas.</text><text class="s" x="34" y="465">Falta: firmar el DPA de Railway, archivar el de cada proveedor y la revisión de un abogado.</text></g>
+</svg>
+    </div>
+    <figcaption><b>Por qué dos papeles:</b> como <b>responsable</b>, Bynoesis responde de los datos de sus propios clientes (los autónomos). Como <b>encargado</b>, solo trata los datos de los clientes de cada autónomo según sus instrucciones; ahí el responsable es el autónomo. La baja de una cuenta queda registrada con una referencia y conserva lo que la ley fiscal o laboral obliga a guardar.</figcaption>
+  </figure>
+</section>
+
+<!-- 7 · RELOJ -->
+<section id="reloj" aria-labelledby="h-reloj">
+  <h2 id="h-reloj">Lo que pasa solo, a lo largo del día</h2>
+  <p>El reloj interno funciona en hora de Madrid. Todo lo que envía algo comprueba antes que la cuenta esté activa y que el titular lo haya permitido. Si hay varias copias del servidor, una tabla impide que la misma tarea se haga dos veces.</p>
+  <figure>
+    <div class="hint">Desliza el esquema hacia los lados →</div>
+    <div class="scroll" style="--minw:920px">
+<svg class="dg" viewBox="0 0 1100 310" role="img" aria-label="Línea de 24 horas con las tareas programadas: copia a las 03:30, simulacro los domingos a las 04:30, parte a las 08:00, recordatorios a las 09:00, paquete a la gestoría a las 09:30, propuestas a las 10:00, cierre del día de 17:05 a 21:05 y resumen semanal el domingo a las 18:00; debajo, las tareas continuas.">
+  <!-- eje a escala: 1 h = 41,667 px desde x=60 -->
+  <path class="axis" d="M60,170H1060"/>
+  <path class="tick" d="M60,170V177 M185,170V177 M310,170V177 M435,170V177 M560,170V177 M685,170V177 M810,170V177 M935,170V177 M1060,170V177"/>
+  <g class="s" text-anchor="middle">
+    <text x="60" y="191">00:00</text><text x="185" y="191">03:00</text><text x="310" y="191">06:00</text><text x="435" y="191">09:00</text><text x="560" y="191">12:00</text><text x="685" y="191">15:00</text><text x="810" y="191">18:00</text><text x="935" y="191">21:00</text><text x="1060" y="191">24:00</text>
+  </g>
+
+  <!-- mañana, por encima -->
+  <path class="lead" d="M393.3,165V38 M435,165V62 M455.8,165V86 M476.7,165V110"/>
+  <circle class="ev" cx="393.3" cy="170" r="4.5"/><circle class="ev" cx="435" cy="170" r="4.5"/><circle class="ev" cx="455.8" cy="170" r="4.5"/><circle class="ev" cx="476.7" cy="170" r="4.5"/>
+  <text x="399" y="38"><tspan class="t12">08:00</tspan><tspan class="s" dx="6">parte del día al titular</tspan></text>
+  <text x="441" y="62"><tspan class="t12">09:00</tspan><tspan class="s" dx="6">recordatorios de cobro · lunes: resumen al founder</tspan></text>
+  <text x="462" y="86"><tspan class="t12">09:30</tspan><tspan class="s" dx="6">paquete a la gestoría (días 1 a 5)</tspan></text>
+  <text x="483" y="110"><tspan class="t12">10:00</tspan><tspan class="s" dx="6">propuestas de recobro · enero, abril, julio y octubre: aviso de impuestos</tspan></text>
+
+  <!-- tarde -->
+  <rect class="band" x="771.8" y="164" width="165.6" height="12" rx="3"/>
+  <path class="lead" d="M771.8,164V138"/>
+  <text x="778" y="138"><tspan class="t12">17:05 a 21:05</tspan><tspan class="s" dx="6">cierre del día, cada hora</tspan></text>
+  <circle class="ev" cx="810" cy="170" r="4.5"/>
+  <path class="lead" d="M810,175V208"/>
+  <text x="816" y="212"><tspan class="t12">18:00</tspan><tspan class="s" dx="6">domingo: resumen semanal</tspan></text>
+
+  <!-- madrugada, por debajo -->
+  <circle class="ev" cx="205.8" cy="170" r="4.5"/><circle class="ev" cx="247.5" cy="170" r="4.5"/>
+  <path class="lead" d="M247.5,175V208 M205.8,175V230"/>
+  <text x="253.5" y="212"><tspan class="t12">04:30</tspan><tspan class="s" dx="6">domingo: simulacro de restauración</tspan></text>
+  <text x="211.8" y="234"><tspan class="t12">03:30</tspan><tspan class="s" dx="6">copia de seguridad</tspan></text>
+
+  <!-- continuo -->
+  <g class="ok"><rect class="box" x="60" y="260" width="334" height="34" rx="17"/><circle class="dot" cx="80" cy="277" r="4"/><text x="92" y="281.5"><tspan class="t12">cada 15 s</tspan><tspan class="s" dx="6">colas de WhatsApp, correo y Veri*Factu</tspan></text></g>
+  <g class="ok"><rect class="box" x="408" y="260" width="300" height="34" rx="17"/><circle class="dot" cx="428" cy="277" r="4"/><text x="440" y="281.5"><tspan class="t12">cada hora, minuto 2</tspan><tspan class="s" dx="6">facturas recurrentes</tspan></text></g>
+  <g class="warn"><rect class="box" x="722" y="260" width="338" height="34" rx="17"/><circle class="dot" cx="742" cy="277" r="4"/><text x="754" y="281.5"><tspan class="t12">cada 60 s</tspan><tspan class="s" dx="6">correo entrante (apagado por defecto)</tspan></text></g>
+</svg>
+    </div>
+    <figcaption><b>A escala:</b> cada punto está en su hora real sobre una línea de 24 horas. Los recordatorios de cobro solo salen si el titular eligió el modo automático y con la cadencia que aprobó; si no, se quedan como propuesta. La copia de las 03:30 incluye la base de datos y los archivos, ambos comprobados con huellas.</figcaption>
+  </figure>
+</section>
+
+<!-- 8 · QUÉ FALTA -->
+<section id="encender" aria-labelledby="h-encender">
+  <h2 id="h-encender">Qué falta para encender cada caja discontinua</h2>
+  <p>Casi todo depende de una variable en Railway o de un papel. El código ya está.</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Pieza</th><th>Qué falta</th><th>Depende de</th></tr></thead>
+      <tbody>
+        <tr><td>Correo saliente</td><td><code>BREVO_API_KEY</code> y <code>SMTP_FROM</code> en Railway; DKIM de Brevo y su <code>include</code> en el SPF actual</td><td>Founder, 20 min</td></tr>
+        <tr><td>Notas de voz</td><td>Confirmar que <code>GROQ_API_KEY</code> sigue en Railway y archivar el DPA de Groq</td><td>Founder</td></tr>
+        <tr><td>IA avanzada</td><td>Probar el respaldo con Claude en real y archivar el contrato con Anthropic</td><td>Founder</td></tr>
+        <tr><td>WhatsApp del negocio</td><td>Identidad legal, verificación de empresa en Meta y acceso avanzado</td><td>S.L.</td></tr>
+        <tr><td>Cobrar cuotas</td><td>Stripe con titular verificado y los seis precios creados</td><td>S.L.</td></tr>
+        <tr><td>Veri*Factu</td><td>NIF de productor, certificado y prueba en el entorno de la AEAT</td><td>S.L. y asesoría</td></tr>
+        <tr><td>Copia externa</td><td>Elegir proveedor S3 en la UE y hacer una restauración real</td><td>Founder</td></tr>
+        <tr><td>Correo entrante</td><td>Buzón catch-all en Hostinger y un piloto real por IMAP</td><td>Founder</td></tr>
+        <tr><td>Facebook</td><td>Secretos <code>FACEBOOK_PAGE_ID</code> y <code>FACEBOOK_PAGE_TOKEN</code> en GitHub</td><td>Founder, 15 min</td></tr>
+        <tr><td>Gmail del autónomo</td><td>Terminar el rebase y subir el commit (migración 61, lock con <code>cryptography</code>); después, cliente OAuth en Google Cloud</td><td>Nosotros y founder</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<footer>Hecho a partir de la documentación del proyecto (<code>docs/</code>) y del código publicado en <code>origin/main</code> el 28 de septiembre de 2026. Las cifras que cambian a menudo, como precios y pruebas, viven en <code>docs/project-state.json</code>.</footer>
+</div>
+</body>
+</html>

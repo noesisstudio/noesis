@@ -46,6 +46,9 @@ Documento nuevo: al tema que le toque, nunca suelto en la raíz. Los enlaces
 - [[Investigación]] — hallazgos de research (mercado, diseño, coste IA).
 - [[Benchmark_SaaS]] — patrones de SaaS profesionales usados para orientar la UX.
 - [[Arquitectura]] — cómo está construido el sistema.
+- [`Mapa-Bynoesis.html`](02-tecnico/Mapa-Bynoesis.html) — el sistema entero en
+  esquemas con líneas: entradas, cerebro, facturas, correo, RGPD, ramas de la
+  empresa y lo que pasa solo cada día, con el estado real de cada pieza.
 - [`Permisos-y-acceso.pdf`](04-seguridad-y-datos/Permisos-y-acceso.pdf) — las cuatro identidades, qué
   puede hacer cada una, cómo se da y se quita acceso, y cómo cumple el RGPD.
 - [[Seguridad-operativa]] — amenazas, controles, secretos, incidentes y puerta de

@@ -1,5 +1,17 @@
 ﻿# Registro de cambios
 
+## 2026-09-28 — Mapa visual de Bynoesis
+
+- Objetivo: un esquema con líneas de todo el sistema para leerlo sin abrir código.
+- `docs/02-tecnico/Mapa-Bynoesis.html` (nuevo): visión general, ramas de la
+  empresa, cerebro, facturas, correo, RGPD y tareas programadas, con el estado de
+  cada pieza (en marcha, falta activar, sin subir) y qué falta para encenderla.
+  Enlazado desde `Inicio.md`.
+- Fuente: documentación y código de `origin/main` a 10938a6 (esquema 60).
+- Pruebas: SVG validados como XML y revisión visual de las siete figuras a 1280 px.
+- Riesgo: ninguno; solo documentación, sin código ni esquema.
+- Rollback: borrar el archivo y la línea de `Inicio.md`.
+
 ## 2026-09-24 — Diagnóstico seguro de incidencias
 
 Cierre 25-sep: autorizada publicación en main por el founder tras CI completa
