@@ -145,6 +145,57 @@ class IntegrationCheckTestCase(unittest.TestCase):
 
         self.assertEqual(result.status, "blocker")
 
+    def _gmail(self, **overrides):
+        values = {
+            "GOOGLE_CLIENT_ID": "123-abc.apps.googleusercontent.com",
+            "GOOGLE_CLIENT_SECRET": "gmail-secret",  # pragma: allowlist secret - credencial ficticia del fixture
+            "GOOGLE_REDIRECT_URI": "https://bynoesis.com/integraciones/google/callback",
+            "BASE_URL": "https://bynoesis.com",
+            "SECRET_KEY": "un-secreto-propio-y-largo-de-verdad-para-pruebas",  # pragma: allowlist secret - credencial ficticia del fixture
+        }
+        values.update(overrides)
+        with patch.multiple(config, **values):
+            return integration_check._check_gmail_send(network=False)
+
+    def test_gmail_is_skipped_until_configured(self):
+        result = self._gmail(GOOGLE_CLIENT_ID="", GOOGLE_CLIENT_SECRET="")
+        self.assertEqual(result.status, "skipped")
+
+    def test_gmail_half_configured_is_a_blocker(self):
+        self.assertEqual(self._gmail(GOOGLE_CLIENT_SECRET="").status, "blocker")
+
+    def test_gmail_callback_must_match_this_site(self):
+        result = self._gmail(
+            GOOGLE_REDIRECT_URI="https://otra-web.example/integraciones/google/callback")
+        self.assertEqual(result.status, "blocker")
+        self.assertIn("vuelta", result.summary)
+
+    def test_gmail_refuses_the_development_secret(self):
+        result = self._gmail(SECRET_KEY="dev-secret-cambiar-en-produccion")  # pragma: allowlist secret
+        self.assertEqual(result.status, "blocker")
+
+    def test_gmail_coherent_configuration_waits_for_a_human_test(self):
+        self.assertEqual(self._gmail().status, "warning")
+
+    def test_inbound_mailbox_half_configured_is_a_blocker(self):
+        with patch.multiple(config, INBOUND_EMAIL_ENABLED=True,
+                            INBOUND_EMAIL_USER="entrada@bynoesis.com",
+                            INBOUND_EMAIL_PASSWORD=""):
+            result = integration_check._check_inbound_email(network=False)
+        self.assertEqual(result.status, "blocker")
+
+    def test_inbound_login_failure_never_shows_the_password(self):
+        exposed = "clave-del-buzon-que-no-debe-salir"
+        with (
+            patch.multiple(config, INBOUND_EMAIL_ENABLED=True,
+                           INBOUND_EMAIL_USER="entrada@bynoesis.com",
+                           INBOUND_EMAIL_PASSWORD=exposed),
+            patch("imaplib.IMAP4_SSL", side_effect=OSError(exposed)),
+        ):
+            result = integration_check._check_inbound_email(network=True)
+        self.assertEqual(result.status, "blocker")
+        self.assertNotIn(exposed, json.dumps(result.__dict__))
+
     def test_report_never_contains_credentials(self):
         exposed = "credential-that-must-not-appear"
         with (

@@ -2,7 +2,7 @@
 
 El doctor verifica presencia y coherencia local. Este comando da el siguiente paso:
 consulta, sin crear cargos ni enviar mensajes, los catálogos de Stripe, Brevo y
-Groq. Google solo permite verificar el proveedor y la forma de la configuración;
+Groq, y como mucho inicia sesión (solo lectura) en el buzón de entrada. Google solo permite verificar el proveedor y la forma de la configuración;
 la credencial OAuth necesita siempre una prueba humana de inicio de sesión.
 """
 
@@ -118,6 +118,131 @@ def _check_google(*, network: bool) -> IntegrationCheck:
         "google", "warning",
         "Proveedor OpenID accesible y credenciales con formato coherente.",
         "Pendiente la prueba humana: alta nueva, cuenta existente, cancelación y state inválido.",
+    )
+
+
+def _check_gmail_send(*, network: bool) -> IntegrationCheck:
+    """Enviar desde el Gmail del autónomo: todo lo que se puede ver sin una cuenta."""
+    client_id = config.GOOGLE_CLIENT_ID
+    secret = config.GOOGLE_CLIENT_SECRET
+    if not client_id and not secret:
+        return IntegrationCheck(
+            "gmail", "skipped",
+            "Enviar desde el Gmail del autónomo no está configurado; sale por Bynoesis.",
+            "Crea el cliente OAuth con gmail.send y pon GOOGLE_CLIENT_ID y "
+            "GOOGLE_CLIENT_SECRET.",
+        )
+    if not (client_id and secret):
+        return IntegrationCheck(
+            "gmail", "blocker", "Gmail está configurado a medias.",
+            "Pon GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en el mismo entorno.",
+        )
+    if not client_id.endswith(".apps.googleusercontent.com"):
+        return IntegrationCheck(
+            "gmail", "blocker", "GOOGLE_CLIENT_ID no tiene el formato de Google.",
+            "Copia el identificador de un cliente OAuth de aplicación web.",
+        )
+    from . import secret_box
+
+    if not secret_box.disponible():
+        return IntegrationCheck(
+            "gmail", "blocker",
+            "El servidor usa el secreto de desarrollo: no puede guardar conexiones.",
+            "Pon un NOESIS_SECRET propio y estable antes de conectar cuentas.",
+        )
+    redirect = urlsplit(config.GOOGLE_REDIRECT_URI)
+    expected_host = urlsplit(config.BASE_URL).hostname
+    if (redirect.scheme != "https" and config.IS_PRODUCTION) or (
+            redirect.path != "/integraciones/google/callback"
+            or redirect.hostname != expected_host):
+        return IntegrationCheck(
+            "gmail", "blocker",
+            "La dirección de vuelta de Google no coincide con esta web.",
+            f"Usa {config.BASE_URL}/integraciones/google/callback, igual aquí "
+            "y en Google Cloud.",
+        )
+    if not network:
+        return IntegrationCheck(
+            "gmail", "warning", "Configuración local coherente; red no comprobada.",
+            "Ejecuta con --network y después conecta una cuenta de prueba.",
+        )
+    try:
+        discovery = _json_get(
+            "https://accounts.google.com/.well-known/openid-configuration"
+        )
+    except RuntimeError as exc:
+        return IntegrationCheck(
+            "gmail", "blocker", f"Google no respondió ({exc}).",
+            "Revisa DNS/salida HTTPS del despliegue.",
+        )
+    if not discovery.get("userinfo_endpoint"):
+        return IntegrationCheck(
+            "gmail", "blocker", "La configuración de Google recibida está incompleta.",
+            "Repite la prueba antes de ofrecer la conexión.",
+        )
+    return IntegrationCheck(
+        "gmail", "warning",
+        "Credenciales coherentes y Google accesible.",
+        "Pendiente la prueba humana: conectar un Gmail, enviar una factura y "
+        "verla en su carpeta de Enviados.",
+    )
+
+
+def _check_inbound_email(*, network: bool) -> IntegrationCheck:
+    """Buzón que recibe las facturas reenviadas. Con red: solo inicia sesión."""
+    from .documents import inbound_email
+
+    user, password = config.INBOUND_EMAIL_USER, config.INBOUND_EMAIL_PASSWORD
+    if not config.INBOUND_EMAIL_ENABLED and not user and not password:
+        return IntegrationCheck(
+            "correo_entrante", "skipped", "La recepción de facturas por correo está apagada.",
+            "Crea el buzón catch-all y pon NOESIS_INBOUND_EMAIL_USER y _PASSWORD.",
+        )
+    if not (user and password):
+        return IntegrationCheck(
+            "correo_entrante", "blocker", "El buzón de entrada está configurado a medias.",
+            "Pon NOESIS_INBOUND_EMAIL_USER y NOESIS_INBOUND_EMAIL_PASSWORD juntos.",
+        )
+    if not network:
+        state = "encendida" if inbound_email.configured() else "preparada, sin encender"
+        return IntegrationCheck(
+            "correo_entrante", "warning", f"Recepción {state}; buzón no comprobado.",
+            "Ejecuta con --network para iniciar sesión en el buzón.",
+        )
+    import imaplib
+    import ssl
+
+    try:
+        connection = imaplib.IMAP4_SSL(
+            config.INBOUND_EMAIL_HOST, config.INBOUND_EMAIL_PORT,
+            ssl_context=ssl.create_default_context(), timeout=20,
+        )
+        try:
+            connection.login(user, password)
+            status, _data = connection.select(config.INBOUND_EMAIL_MAILBOX, readonly=True)
+        finally:
+            try:
+                connection.logout()
+            except (imaplib.IMAP4.error, OSError):
+                pass
+    except (imaplib.IMAP4.error, OSError, ssl.SSLError) as exc:
+        return IntegrationCheck(
+            "correo_entrante", "blocker",
+            f"No se pudo entrar en el buzón ({type(exc).__name__}).",
+            "Revisa usuario, contraseña, host y puerto del buzón de Hostinger.",
+        )
+    if status != "OK":
+        return IntegrationCheck(
+            "correo_entrante", "blocker", "El buzón existe pero no se pudo abrir la carpeta.",
+            "Revisa NOESIS_INBOUND_EMAIL_MAILBOX (normalmente INBOX).",
+        )
+    if not config.INBOUND_EMAIL_ENABLED:
+        return IntegrationCheck(
+            "correo_entrante", "warning", "Buzón accesible; la recepción sigue apagada.",
+            "Haz la prueba de reenvío y después NOESIS_INBOUND_EMAIL_ENABLED=true.",
+        )
+    return IntegrationCheck(
+        "correo_entrante", "ok", "Buzón accesible y recepción encendida.",
     )
 
 
@@ -337,6 +462,8 @@ def collect_checks(*, network: bool = False) -> dict:
         _check_ocr(),
         _check_brevo(network=network),
         _check_google(network=network),
+        _check_gmail_send(network=network),
+        _check_inbound_email(network=network),
         _check_stripe(network=network),
         _check_groq(network=network),
         _check_backups(),

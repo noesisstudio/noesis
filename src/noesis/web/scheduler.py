@@ -579,11 +579,17 @@ def process_email_outbox(limit: int = 25) -> int:
         if not item:
             break
         try:
-            from ..adapters import google_mail as _gmail
+            from ..adapters import google_mail
 
-            if not email_adapter.available() and not (
-                    item.get("business_id")
-                    and _gmail.disponible(item["business_id"])):
+            # Sale desde el Gmail del autónomo solo lo que va a SUS clientes y si
+            # lo tiene conectado. Lo demás (avisos al propio autónomo, gestoría,
+            # recuperar la contraseña) sale de Bynoesis como siempre.
+            propio = (
+                item.get("entity_type") in google_mail.TIPOS_PROPIOS
+                and bool(item.get("business_id"))
+                and google_mail.disponible(item["business_id"])
+            )
+            if not propio and not email_adapter.available():
                 raise RuntimeError("SMTP no está configurado.")
             attachments = []
             if item.get("entity_type") == "invoice":
@@ -599,13 +605,8 @@ def process_email_outbox(limit: int = 25) -> int:
                 attachments.append(
                     (f"factura_{safe_number}.pdf", payload, "application", "pdf")
                 )
-            # Si el negocio ha conectado su Gmail, la factura sale desde SU
-            # dirección y le queda en su carpeta de Enviados. Si no, por el
-            # proveedor de Bynoesis, como siempre.
-            from ..adapters import google_mail
-
-            propio = bool(item.get("business_id")) and google_mail.disponible(
-                item["business_id"])
+            # Con Gmail conectado, la factura sale desde SU dirección y le queda
+            # en su carpeta de Enviados. Si no, por el proveedor de Bynoesis.
             if propio:
                 enviado = google_mail.enviar(
                     item["business_id"], item["to_email"], item["subject"],

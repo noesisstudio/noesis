@@ -1167,10 +1167,17 @@ def callback_google(request: Request):
             business_id, "google", account_email=correo,
             refresh_token=recibido_google.get("refresh_token"),
             access_token=access, expires_at=vence,
-            scope=google_mail.SCOPE)
-    except Exception as exc:  # noqa: BLE001 - el motivo es lo único accionable
+            scope=str(recibido_google.get("scope") or google_mail.SCOPE))
+    except (google_mail.PermisoIncompleto, google_mail.CuentaRevocada,
+            RuntimeError) as exc:
+        # Los mensajes de estas excepciones son nuestros y dicen qué hacer.
         log.warning("No se pudo conectar Gmail para %s: %s", business_id, exc)
-        return _volver_a_ajustes(business_id, f"No he podido conectar la cuenta: {exc}")
+        return _volver_a_ajustes(business_id, f"No he podido conectar la cuenta. {exc}")
+    except Exception:  # noqa: BLE001 - lo inesperado no se enseña en bruto
+        log.exception("Fallo inesperado conectando Gmail para %s.", business_id)
+        return _volver_a_ajustes(
+            business_id, "No he podido conectar la cuenta. Inténtalo de nuevo en "
+            "unos minutos; si se repite, escríbenos.")
     db.record_product_event(business_id, "gmail_connected")
     return _volver_a_ajustes(
         business_id, f"Gmail conectado: {correo or 'tu cuenta'}. Las facturas "

@@ -1,5 +1,38 @@
 ﻿# Registro de cambios
 
+## 2026-09-28 — Correo del autónomo revisado a fondo antes de publicarlo
+
+Revisión completa de «enviar desde su Gmail» y «recibir facturas por correo» con los
+casos reales que las pruebas simuladas no cubrían. Fallos corregidos:
+
+- **Conectar Gmail habría fallado siempre.** La dirección de la cuenta se pedía con
+  `users.getProfile`, que según la documentación de Google no admite `gmail.send`.
+  Ahora se piden además `openid email` (básicos, sin revisión extra) y se lee por
+  OpenID `userinfo`, exigiendo `email_verified`.
+- **Casilla desmarcada:** Google deja quitar el permiso de enviar; se guardaba igual y
+  cada envío habría fallado. Ahora se comprueba el `scope` concedido al conectar.
+- **Un 401 desconectaba la cuenta.** Ahora renueva el token y reintenta una vez; solo
+  `invalid_grant` o un 403 sin permiso la dan por retirada.
+- **Por su Gmail salía todo lo del negocio**, incluido recuperar la contraseña. Ahora
+  solo `google_mail.TIPOS_PROPIOS` (`invoice` y el nuevo `client_message` de los
+  mensajes que redacta el cerebro para clientes); `db.enqueue_email_message` lo acepta.
+- Errores de Google sin respuesta en bruto en pantalla ni en `/admin`; los cortes de
+  red se reintentan. Remitente con el nombre del negocio.
+- **Recepción:** logos, iconos y píxeles (imágenes incrustadas o con `Content-ID` de
+  menos de 30 KB) ya no se vuelven documentos ni hacen rechazar el correo por
+  «demasiados adjuntos»; los reenvíos automáticos de Gmail se enrutan por
+  `X-Forwarded-To`; la confirmación de reenvío se acepta salvo que la primera
+  `Authentication-Results` diga que la firma de Google falla.
+- Nuevo: `noesis-integrations-check` comprueba `gmail` y `correo_entrante` (IMAP de
+  solo lectura); `inbound_email --inspect archivo.eml` analiza un correo real sin base
+  de datos ni red; `/privacidad` explica el uso de Gmail con la declaración de uso
+  limitado de Google, solo cuando está configurado.
+- Guía: `docs/03-whatsapp-e-integraciones/Conectar-Gmail-y-recibir-facturas.md`.
+- Pruebas: 23 nuevas (`test_correo_propio`, `test_inbound_email`,
+  `test_integration_check`). Sin esquema nuevo ni dependencias.
+- Riesgo: bajo; nada cambia en producción hasta poner las variables de Google y
+  Hostinger. Rollback: revertir el commit.
+
 ## 2026-09-28 — Guías por área para revisar el código
 
 - Objetivo: que quien revise o cambie código (persona, Claude o Codex) tenga en dos

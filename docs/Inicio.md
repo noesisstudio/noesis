@@ -97,6 +97,8 @@ Documento nuevo: al tema que le toque, nunca suelto en la raíz. Los enlaces
   paso a paso para dejar la página publicando sola: por qué hay dos tokens, qué
   copiar de Meta, dónde guardarlo y cómo probarlo sin publicar nada. Vive junto a
   la automatización, en `facebook/`, con su fuente en Markdown al lado.
+- [[Conectar-Gmail-y-recibir-facturas]] — puesta en marcha paso a paso de las dos
+  funciones de correo del autónomo: enviar desde su Gmail y recibir facturas solas.
 - [[Conectar-APIs]] — guía única de credenciales, callbacks, variables y pruebas
   externas para conectar producción sin confundir código con servicio activo.
 - [[Demo-comercial]] — dos accesos dentro del SaaS real, portal de cliente,

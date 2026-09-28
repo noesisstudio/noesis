@@ -21,6 +21,9 @@ import unittest
 from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import patch
+import io
+import urllib.error
+import urllib.parse
 from urllib.parse import unquote
 
 from noesis import config, db, secret_box
@@ -182,6 +185,39 @@ class PermisoTests(_Base):
         self.assertIn("prompt=consent", url)
         self.assertIn("state=estado-123", url)
 
+    def test_only_basic_identity_is_added_to_know_which_address_it_is(self):
+        url = google_mail.url_de_autorizacion(self.bid, "estado-123")
+        scope = urllib.parse.parse_qs(urllib.parse.urlsplit(url).query)["scope"][0]
+        self.assertEqual(set(scope.split()),
+                         {"openid", "email", google_mail.SCOPE})
+
+    def test_unticking_the_send_permission_is_caught_when_connecting(self):
+        """La pantalla de Google deja quitar la casilla; guardarlo así fallaría siempre."""
+        with patch.object(google_mail, "_peticion", return_value={
+                "access_token": "a", "refresh_token": "r", "expires_in": 3600,
+                "scope": "openid https://www.googleapis.com/auth/userinfo.email"}):
+            with self.assertRaises(google_mail.PermisoIncompleto) as caso:
+                google_mail.canjear_codigo("codigo")
+        self.assertIn("enviar correo", str(caso.exception))
+
+    def test_the_connected_address_comes_from_openid_not_from_gmail(self):
+        """users.getProfile exige permiso de lectura: con gmail.send fallaría siempre."""
+        llamadas = []
+
+        def falso(url, **kwargs):
+            llamadas.append(url)
+            return {"email": "Autonomo@Gmail.com", "email_verified": True}
+
+        with patch.object(google_mail, "_peticion", side_effect=falso):
+            correo = google_mail.correo_de_la_cuenta("token")
+        self.assertEqual(correo, "autonomo@gmail.com")
+        self.assertEqual(llamadas, [google_mail.USERINFO])
+
+    def test_an_unconfirmed_address_is_not_shown(self):
+        with patch.object(google_mail, "_peticion",
+                          return_value={"email": "x@gmail.com", "email_verified": False}):
+            self.assertEqual(google_mail.correo_de_la_cuenta("token"), "")
+
     def test_without_server_credentials_it_says_what_is_missing(self):
         with patch.multiple(config, GOOGLE_CLIENT_ID="", GOOGLE_CLIENT_SECRET=""):
             self.assertFalse(google_mail.configurado())
@@ -225,7 +261,8 @@ class EnvioTests(_Base):
         self.assertTrue(enviado)
         crudo = json.loads(llamadas[-1][1]["cuerpo"])["raw"]
         mensaje = base64.urlsafe_b64decode(crudo).decode(errors="replace")
-        self.assertIn("From: autonomo@gmail.com", mensaje)
+        # El cliente ve el nombre del negocio junto a la dirección de Gmail.
+        self.assertIn("From: Reformas Prueba <autonomo@gmail.com>", mensaje)
         self.assertIn("To: cliente@ejemplo.com", mensaje)
         self.assertIn("factura.pdf", mensaje)
 
@@ -247,6 +284,65 @@ class EnvioTests(_Base):
         # Y el nuevo queda guardado, cifrado, para no renovar en cada correo.
         self.assertEqual(db.get_oauth_credentials(self.bid, "google")["access_token"],
                          "nuevo")
+
+    def test_a_rejected_hourly_token_is_renewed_and_sent_once_more(self):
+        """Un 401 no es un acceso retirado: desconectar por eso sería un error grave."""
+        self.conectar()
+        respuestas = [google_mail._TokenRechazado("401"),
+                      {"access_token": "nuevo", "expires_in": 3600},
+                      {"id": "msg-2"}]
+        llamadas = []
+
+        def falso(url, **kwargs):
+            llamadas.append(url)
+            siguiente = respuestas.pop(0)
+            if isinstance(siguiente, Exception):
+                raise siguiente
+            return siguiente
+
+        with patch.object(google_mail, "_peticion", side_effect=falso):
+            self.assertTrue(google_mail.enviar(self.bid, "c@ejemplo.com", "A", "B"))
+        self.assertEqual(llamadas, [google_mail.ENVIAR, google_mail.TOKEN,
+                                    google_mail.ENVIAR])
+        self.assertEqual(db.get_oauth_credentials(self.bid, "google")["status"],
+                         "active")
+
+    def test_a_token_rejected_twice_is_a_dead_connection(self):
+        self.conectar()
+        respuestas = [google_mail._TokenRechazado("401"),
+                      {"access_token": "nuevo", "expires_in": 3600},
+                      google_mail._TokenRechazado("401")]
+
+        def falso(url, **kwargs):
+            siguiente = respuestas.pop(0)
+            if isinstance(siguiente, Exception):
+                raise siguiente
+            return siguiente
+
+        with patch.object(google_mail, "_peticion", side_effect=falso):
+            with self.assertRaises(google_mail.CuentaRevocada):
+                google_mail.enviar(self.bid, "c@ejemplo.com", "A", "B")
+        self.assertEqual(db.get_oauth_credentials(self.bid, "google")["status"],
+                         "revoked")
+
+    def test_googles_raw_answer_never_reaches_the_message(self):
+        error = urllib.error.HTTPError(
+            google_mail.ENVIAR, 500, "x", {},
+            io.BytesIO(b'{"error": {"message": "backendError detalle interno"}}'))
+        with patch("urllib.request.urlopen", side_effect=error):
+            with self.assertRaises(RuntimeError) as caso:
+                google_mail._peticion(google_mail.ENVIAR, cuerpo=b"{}")
+        self.assertNotIn("backendError", str(caso.exception))
+        self.assertIn("reintentará", str(caso.exception))
+
+    def test_missing_send_permission_is_a_dead_connection_not_a_retry(self):
+        error = urllib.error.HTTPError(
+            google_mail.ENVIAR, 403, "x", {},
+            io.BytesIO(b'{"error": {"status": "PERMISSION_DENIED", '
+                       b'"errors": [{"reason": "insufficientPermissions"}]}}'))
+        with patch("urllib.request.urlopen", side_effect=error):
+            with self.assertRaises(google_mail.CuentaRevocada):
+                google_mail._peticion(google_mail.ENVIAR, cuerpo=b"{}")
 
     def test_when_the_freelancer_withdraws_the_access_it_is_written_down(self):
         self.conectar()
@@ -290,6 +386,17 @@ class RutasTests(_Base):
         ida = http.get(f"/b/{self.negocio['id']}/integraciones/google/conectar",
                        follow_redirects=False)
         return ida, ida.headers["location"].split("state=")[1].split("&")[0]
+
+    def test_the_privacy_policy_explains_gmail_only_when_it_is_offered(self):
+        """Google no aprueba gmail.send sin esta explicación en la política."""
+        with self._http() as http:
+            con = http.get("/privacidad").text
+            with patch.multiple(config, GOOGLE_CLIENT_ID="", GOOGLE_CLIENT_SECRET=""):
+                sin = http.get("/privacidad").text
+        self.assertIn("Si conectas tu Gmail", con)
+        self.assertIn("requisitos de uso limitado", con)
+        self.assertIn("No leemos, no guardamos", con)
+        self.assertNotIn("Si conectas tu Gmail", sin)
 
     def test_a_stranger_cannot_start_a_connection_for_someone_elses_business(self):
         with self._http() as http:
@@ -392,6 +499,35 @@ class ColaDeCorreoTests(_Base):
         self.assertEqual(len(adjuntos), 1)
         self.assertTrue(adjuntos[0][0].endswith(".pdf"))
         self.assertTrue(adjuntos[0][1].startswith(b"%PDF"))
+
+    def test_messages_to_the_freelancer_himself_never_go_through_his_gmail(self):
+        """Recuperar la contraseña o avisos internos salen de Bynoesis siempre."""
+        self.conectar()
+        db.enqueue_email_message(
+            business_id=self.bid, to_email="a@example.com",
+            subject="Restablecer tu contraseña de Bynoesis",
+            text_body="Enlace", idempotency_key="password-reset:1:abc")
+        with (
+            patch.multiple(config, BREVO_API_KEY="xkeysib-pruebas"),  # pragma: allowlist secret - credencial ficticia del fixture
+            patch("noesis.adapters.email.send_email", return_value=True) as bynoesis,
+            patch.object(google_mail, "enviar") as propio,
+        ):
+            scheduler.process_email_outbox()
+        self.assertTrue(bynoesis.called)
+        self.assertFalse(propio.called)
+
+    def test_a_message_the_brain_wrote_for_a_client_goes_through_his_gmail(self):
+        self.conectar()
+        db.enqueue_email_message(
+            business_id=self.bid, to_email="juan@ejemplo.com",
+            subject="Recordatorio", text_body="Hola Juan",
+            idempotency_key="internal-email:x", entity_type="client_message",
+            entity_id=self.cliente["id"])
+        with patch.object(google_mail, "enviar", return_value=True) as propio, \
+                patch("noesis.adapters.email.send_email") as bynoesis:
+            scheduler.process_email_outbox()
+        self.assertTrue(propio.called)
+        self.assertFalse(bynoesis.called)
 
     def test_without_gmail_it_still_goes_out_from_bynoesis_as_always(self):
         """El contrapeso: esto añade una vía, no sustituye la que funcionaba."""

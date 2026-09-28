@@ -590,6 +590,9 @@ def deliver_confirmed(business_id: int, payload: dict) -> str:
                 f"internal-email:{business_id}:{draft.intent}:"
                 f"{draft.entity_id or draft.client_id or 0}:{date.today().isoformat()}"
             ),
+            # Va a un cliente del negocio: si tiene Gmail conectado, sale de ahí.
+            entity_type="client_message",
+            entity_id=draft.entity_id or draft.client_id,
         )
         queued = delivered
     elif draft.channel == "whatsapp_template" and draft.template_name:

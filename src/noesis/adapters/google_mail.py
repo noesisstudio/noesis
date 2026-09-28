@@ -20,6 +20,13 @@ Lo que hay que saber para operarlo:
   devolvería una conexión que deja de funcionar en una hora.
 * Si el autónomo retira el acceso, Google responde `invalid_grant`. Eso no es un
   error pasajero: la conexión está muerta y hay que decírselo, no reintentar.
+* Un 401 al enviar NO significa lo mismo: suele ser un permiso de una hora que ha
+  caducado antes de tiempo. Se renueva y se reintenta una vez.
+* La pantalla de Google deja desmarcar cada permiso. Si el autónomo quita el de
+  enviar, se le dice al conectar, no en el primer envío fallido.
+* Solo salen por aquí los correos a **sus clientes** (`TIPOS_PROPIOS`). Los avisos de
+  Bynoesis al propio autónomo, como recuperar la contraseña, siguen saliendo de
+  Bynoesis: mandárselos desde su propio Gmail a sí mismo no tendría sentido.
 """
 from __future__ import annotations
 
@@ -31,6 +38,7 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta
 from email.message import EmailMessage
+from email.utils import formataddr
 
 from .. import config, db
 
@@ -39,15 +47,30 @@ log = logging.getLogger(__name__)
 AUTORIZAR = "https://accounts.google.com/o/oauth2/v2/auth"
 TOKEN = "https://oauth2.googleapis.com/token"
 ENVIAR = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send"
-PERFIL = "https://gmail.googleapis.com/gmail/v1/users/me/profile"
-# El único permiso que se pide. Pedir además leer correo convertiría esto en un
+# Qué dirección se ha conectado. `gmail.send` no deja leer ni el perfil de Gmail
+# (users.getProfile exige un permiso de lectura), así que se pregunta a OpenID.
+USERINFO = "https://openidconnect.googleapis.com/v1/userinfo"
+# El único permiso sobre el correo. Pedir además leerlo lo convertiría en un
 # permiso «restringido», que exige auditoría de seguridad y meses de revisión.
 SCOPE = "https://www.googleapis.com/auth/gmail.send"
+# `openid` y `email` solo sirven para saber la dirección conectada; son permisos
+# básicos que no añaden revisión de Google.
+SCOPES = ("openid", "email", SCOPE)
+# Correos que salen desde el Gmail del autónomo: los dirigidos a sus clientes.
+TIPOS_PROPIOS = frozenset({"invoice", "client_message"})
 _MARGEN = timedelta(minutes=5)
 
 
 class CuentaRevocada(RuntimeError):
     """El autónomo retiró el acceso: no tiene sentido reintentar."""
+
+
+class PermisoIncompleto(RuntimeError):
+    """Se autorizó la cuenta, pero sin marcar el permiso de enviar correo."""
+
+
+class _TokenRechazado(RuntimeError):
+    """Google no aceptó el permiso de una hora: se renueva y se reintenta una vez."""
 
 
 def configurado() -> bool:
@@ -64,7 +87,7 @@ def url_de_autorizacion(business_id: int, estado: str) -> str:
         "client_id": config.GOOGLE_CLIENT_ID,
         "redirect_uri": config.GOOGLE_REDIRECT_URI,
         "response_type": "code",
-        "scope": SCOPE,
+        "scope": " ".join(SCOPES),
         # Sin estos dos no llega `refresh_token` y la conexión moriría en una hora.
         "access_type": "offline",
         "prompt": "consent",
@@ -76,7 +99,16 @@ def url_de_autorizacion(business_id: int, estado: str) -> str:
 
 def _peticion(url: str, *, datos: dict | None = None,
               cabeceras: dict | None = None, cuerpo: bytes | None = None) -> dict:
-    """Una llamada a Google. Traduce `invalid_grant` a cuenta revocada."""
+    """Una llamada a Google, con los fallos traducidos a lo que hay que hacer.
+
+    * `invalid_grant` al renovar → la conexión está muerta (`CuentaRevocada`).
+    * 403 por falta de permiso → también: sin él no se podrá enviar nunca.
+    * 401 → permiso de una hora rechazado (`_TokenRechazado`): se renueva.
+    * Cualquier otra cosa, incluida la red, es pasajera y se reintenta después.
+
+    La respuesta en bruto de Google va al log, nunca al mensaje: puede acabar en
+    una pantalla o en `/admin` y no le dice nada útil a un autónomo.
+    """
     if datos is not None:
         cuerpo = urllib.parse.urlencode(datos).encode()
         cabeceras = {**(cabeceras or {}),
@@ -87,14 +119,30 @@ def _peticion(url: str, *, datos: dict | None = None,
         with urllib.request.urlopen(peticion, timeout=20) as respuesta:
             return json.loads(respuesta.read(1_000_000) or b"{}")
     except urllib.error.HTTPError as exc:
-        detalle = exc.read().decode(errors="replace")[:500]
-        if "invalid_grant" in detalle or exc.code == 401:
+        detalle = exc.read(2000).decode(errors="replace")
+        log.warning("Google respondió %s en %s: %s", exc.code,
+                    urllib.parse.urlsplit(url).path, detalle[:300])
+        if "invalid_grant" in detalle:
             raise CuentaRevocada(
                 "Google ya no acepta esta conexión. Lo normal es que se haya "
                 "retirado el acceso desde la cuenta de Google, o que haya "
                 "caducado por estar la aplicación en modo de pruebas."
             ) from exc
-        raise RuntimeError(f"Google respondió {exc.code}: {detalle}") from exc
+        if exc.code == 403 and ("insufficient" in detalle.lower()
+                                or "ACCESS_TOKEN_SCOPE" in detalle):
+            raise CuentaRevocada(
+                "La cuenta de Google no tiene el permiso de enviar correo. "
+                "Vuelve a conectarla y deja marcada la casilla de enviar."
+            ) from exc
+        if exc.code == 401:
+            raise _TokenRechazado("Google no aceptó el permiso temporal.") from exc
+        raise RuntimeError(
+            f"Google no ha podido atenderlo ahora (código {exc.code}). "
+            "Se reintentará solo.") from exc
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        raise RuntimeError(
+            "No se ha podido hablar con Google (red). Se reintentará solo."
+        ) from exc
 
 
 def canjear_codigo(code: str) -> dict:
@@ -112,17 +160,36 @@ def canjear_codigo(code: str) -> dict:
         raise RuntimeError(
             "Google no ha devuelto un permiso duradero. Entra en tu cuenta de "
             "Google, quita el acceso de Bynoesis y vuelve a conectarla.")
+    concedidos = set(str(recibido.get("scope") or "").split())
+    if SCOPE not in concedidos:
+        # La pantalla de Google deja desmarcar cada permiso. Guardarlo así daría
+        # una conexión «buena» que fallaría en cada envío.
+        raise PermisoIncompleto(
+            "Google ha conectado la cuenta, pero sin el permiso de enviar correo. "
+            "Vuelve a conectarla y deja marcada la casilla «Enviar correo "
+            "electrónico en tu nombre».")
     return recibido
 
 
 def correo_de_la_cuenta(access_token: str) -> str:
-    """Qué dirección ha conectado, para poder enseñarla en Ajustes."""
-    perfil = _peticion(PERFIL, cabeceras={"Authorization": f"Bearer {access_token}"})
-    return str(perfil.get("emailAddress") or "")
+    """Qué dirección ha conectado, para enseñarla en Ajustes y firmar el remitente.
+
+    Si Google no la confirma se devuelve vacío: Gmail envía igualmente desde la
+    cuenta autorizada, solo que no se podrá mostrar cuál es.
+    """
+    try:
+        perfil = _peticion(USERINFO,
+                           cabeceras={"Authorization": f"Bearer {access_token}"})
+    except (RuntimeError, CuentaRevocada):
+        return ""
+    correo = str(perfil.get("email") or "").strip().lower()
+    if perfil.get("email_verified") not in {True, "true"} or "@" not in correo:
+        return ""
+    return correo
 
 
-def _access_token_vigente(business_id: int) -> tuple[str, str]:
-    """Devuelve `(access_token, correo)`, renovándolo si hace falta."""
+def _access_token_vigente(business_id: int, *, forzar: bool = False) -> tuple[str, str]:
+    """Devuelve `(access_token, correo)`, renovándolo si hace falta o si se fuerza."""
     cuenta = db.get_oauth_credentials(business_id, "google")
     if not cuenta or cuenta.get("status") != "active":
         raise CuentaRevocada("No hay ninguna cuenta de Google conectada.")
@@ -131,7 +198,7 @@ def _access_token_vigente(business_id: int) -> tuple[str, str]:
             "La conexión guardada ya no se puede leer. Vuelve a conectar la "
             "cuenta de Google desde Ajustes.")
     caduca = str(cuenta.get("expires_at") or "")
-    if cuenta.get("access_token") and caduca:
+    if not forzar and cuenta.get("access_token") and caduca:
         try:
             if datetime.fromisoformat(caduca) - _MARGEN > datetime.now():
                 return cuenta["access_token"], cuenta.get("account_email") or ""
@@ -171,28 +238,45 @@ def enviar(business_id: int, destino: str, asunto: str, cuerpo: str,
     """
     try:
         access, remitente = _access_token_vigente(business_id)
-    except CuentaRevocada as exc:
-        db.mark_oauth_credentials(business_id, "google", status="revoked",
-                                  error=str(exc))
-        raise
-    mensaje = EmailMessage()
-    mensaje["To"] = destino
-    mensaje["Subject"] = asunto
-    if remitente:
-        mensaje["From"] = remitente
-    mensaje.set_content(cuerpo)
-    for nombre, datos, tipo, subtipo in adjuntos or []:
-        mensaje.add_attachment(datos, maintype=tipo, subtype=subtipo,
-                               filename=nombre)
-    crudo = base64.urlsafe_b64encode(mensaje.as_bytes()).decode("ascii")
-    try:
-        respuesta = _peticion(
-            ENVIAR,
-            cuerpo=json.dumps({"raw": crudo}).encode(),
-            cabeceras={"Authorization": f"Bearer {access}",
-                       "Content-Type": "application/json"})
+        crudo = _mensaje_crudo(business_id, remitente, destino, asunto, cuerpo, adjuntos)
+        try:
+            respuesta = _enviar_crudo(access, crudo)
+        except _TokenRechazado:
+            # Permiso de una hora rechazado antes de tiempo: se pide otro y se
+            # reintenta una sola vez. Si el nuevo también falla, no es pasajero.
+            access, _ = _access_token_vigente(business_id, forzar=True)
+            try:
+                respuesta = _enviar_crudo(access, crudo)
+            except _TokenRechazado as exc:
+                raise CuentaRevocada(
+                    "Google rechaza el permiso incluso recién renovado. Vuelve a "
+                    "conectar la cuenta de Google desde Ajustes.") from exc
     except CuentaRevocada as exc:
         db.mark_oauth_credentials(business_id, "google", status="revoked",
                                   error=str(exc))
         raise
     return bool(respuesta.get("id"))
+
+
+def _mensaje_crudo(business_id: int, remitente: str, destino: str, asunto: str,
+                   cuerpo: str, adjuntos) -> str:
+    mensaje = EmailMessage()
+    mensaje["To"] = destino
+    mensaje["Subject"] = asunto
+    if remitente:
+        # El cliente ve el nombre del negocio, no solo una dirección de Gmail.
+        nombre = str((db.get_business(business_id) or {}).get("name") or "").strip()
+        mensaje["From"] = formataddr((nombre, remitente)) if nombre else remitente
+    mensaje.set_content(cuerpo)
+    for nombre_adjunto, datos, tipo, subtipo in adjuntos or []:
+        mensaje.add_attachment(datos, maintype=tipo, subtype=subtipo,
+                               filename=nombre_adjunto)
+    return base64.urlsafe_b64encode(mensaje.as_bytes()).decode("ascii")
+
+
+def _enviar_crudo(access: str, crudo: str) -> dict:
+    return _peticion(
+        ENVIAR,
+        cuerpo=json.dumps({"raw": crudo}).encode(),
+        cabeceras={"Authorization": f"Bearer {access}",
+                   "Content-Type": "application/json"})

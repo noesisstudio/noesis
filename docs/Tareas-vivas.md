@@ -1,40 +1,33 @@
 # Tareas vivas
 
-## Recibir facturas por correo — 28-sep
+## Correo del autónomo: enviar desde su Gmail y recibir facturas — 28-sep
 
-- [x] La confirmación de reenvío de Gmail llega al titular por correo, solo si
-  viene firmada por Google.
-- [ ] Founder, en Hostinger: crear el buzón receptor (p. ej. `entrada@bynoesis.com`)
-  y activar el catch-all del dominio hacia él.
-- [ ] Founder, en Railway: `NOESIS_INBOUND_EMAIL_USER`, `NOESIS_INBOUND_EMAIL_PASSWORD`
-  y, tras la prueba de la tarea «Entrada documental Hostinger»,
+Todo el código está hecho, revisado y probado. Lo que falta es del founder y está
+paso a paso en [`Conectar-Gmail-y-recibir-facturas`](03-whatsapp-e-integraciones/Conectar-Gmail-y-recibir-facturas.md).
+
+- [x] Conectar Gmail: permisos `openid`, `email` y `gmail.send` (nunca lectura),
+  tokens cifrados (`secret_box.py`, migración 61), `state` en la sesión, comprobación
+  de que el permiso de enviar se concedió, dirección leída por OpenID.
+- [x] Envío: renueva y reintenta una vez ante un 401; solo `invalid_grant` o un 403
+  sin permiso desconectan; remitente con el nombre del negocio; solo salen por su
+  Gmail los correos a sus clientes; Bynoesis como respaldo.
+- [x] Recepción: logos e iconos no se vuelven documentos; reenvíos de Gmail por
+  `X-Forwarded-To`; confirmación de reenvío al titular; `--inspect` para probar un
+  `.eml` sin base de datos.
+- [x] `noesis-integrations-check` con líneas `gmail` y `correo_entrante`.
+- [x] `/privacidad` explica el uso de Gmail (con la declaración de uso limitado de
+  Google) cuando está configurado.
+- [ ] Founder, parte A: Google Cloud (API, marca, 3 permisos, usuarios de prueba,
+  cliente web con la URI de vuelta) y `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` en
+  Railway. Prueba real A5.
+- [ ] Abogado: revisar el apartado «Si conectas tu Gmail» de `/privacidad` antes de
+  pedir la verificación a Google (A6).
+- [ ] Founder, parte B: buzón `entrada@` y catch-all en Hostinger, variables
+  `NOESIS_INBOUND_EMAIL_USER`/`_PASSWORD`, prueba B3 con `--inspect` y solo entonces
   `NOESIS_INBOUND_EMAIL_ENABLED=true`.
-- [ ] Prueba real: en un Gmail propio, «Reenviar a» la dirección privada de un
-  negocio de prueba y comprobar que llega el correo con el código. Si no llega,
-  mirar en `/admin` si el mensaje quedó como `no_attachments`: significará que
-  Hostinger no anota `Authentication-Results`.
-
-## Gmail del autónomo — 28-sep
-
-- [x] Tokens cifrados por negocio (`secret_box.py`, migración 61).
-- [x] Botón «Conectar mi Gmail» en Ajustes, con `state` firmado en la sesión.
-- [x] Renovación automática del token y aviso claro si el autónomo revoca.
-- [x] Envío por la API de Gmail con el PDF adjunto; Bynoesis como respaldo.
-- [x] Darse de baja se lleva la llave de Google.
-- [ ] Founder, **en Google Cloud** (es lo único que bloquea):
-  1. Crear un proyecto y **activar la Gmail API**.
-  2. Pantalla de consentimiento con `bynoesis.com`, `/privacidad` y `/terminos`.
-  3. **Un solo permiso**: `https://www.googleapis.com/auth/gmail.send`. Ni uno
-     más: añadir lectura lo convierte en «restringido» y trae auditoría.
-  4. Cliente OAuth de tipo web, con la URI de vuelta
-     `https://bynoesis.com/integraciones/google/callback`.
-  5. Poner `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` **directamente en
-     Railway**, nunca en un chat ni en el repositorio.
-- [ ] Founder: **publicar** la pantalla de consentimiento y pedir la revisión.
-  Mientras esté en «pruebas», el permiso caduca a los siete días y los autónomos
-  tendrán que reconectar. La revisión de un permiso sensible son días, no meses.
-- [ ] Founder: `NOESIS_SECRET` en Railway tiene que ser propio y **estable**. Si
-  se cambia, todas las conexiones de Gmail se caen y hay que rehacerlas.
+- [ ] Founder: añadir `include:spf.brevo.com` al SPF existente.
+- [ ] `NOESIS_SECRET` en Railway propio y **estable**: si cambia, todas las
+  conexiones de Gmail se caen.
 
 ## Candidato conversacional — 24-sep (sin publicar)
 

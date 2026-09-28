@@ -102,6 +102,9 @@
       {% if google_oauth_enabled %}
       <tr><td>Google</td><td>Inicio de sesión opcional mediante OAuth</td><td>Según la configuración y condiciones de Google</td></tr>
       {% endif %}
+      {% if gmail_send_enabled %}
+      <tr><td>Google (Gmail)</td><td>Enviar las facturas y mensajes a tus clientes desde tu propio Gmail, solo si lo conectas en Ajustes</td><td>Según las condiciones de Google</td></tr>
+      {% endif %}
       {% if backup_provider_name %}
       <tr><td>{{ backup_provider_name }}</td><td>Copia de seguridad externa cifrada</td><td>{{ backup_provider_region }}</td></tr>
       {% endif %}
@@ -120,6 +123,26 @@
       se exige un mecanismo válido para la transferencia, como una decisión de adecuación
       o cláusulas contractuales tipo, según corresponda. La lista de subencargados está en el
       <a href="/encargado-tratamiento">Contrato de Encargado del Tratamiento</a>.</p>
+
+    {% if gmail_send_enabled %}
+    <h3 id="gmail">Si conectas tu Gmail</h3>
+    <p>Puedes conectar tu cuenta de Gmail para que las facturas y los mensajes a tus
+      clientes salgan desde tu dirección. Para eso Google nos da <b>solo</b> el permiso de
+      enviar correo en tu nombre y la dirección de la cuenta conectada, para enseñártela
+      en Ajustes. <b>No leemos, no guardamos y no tenemos acceso a tus correos</b>, ni a
+      tus contactos ni a ningún otro dato de tu cuenta de Google.</p>
+    <p>Guardamos cifrado el permiso que entrega Google y lo usamos únicamente para
+      enviar lo que tú pides enviar. No se usa para publicidad, no se vende, no se cede a
+      terceros ni se usa para entrenar modelos de inteligencia artificial. Puedes
+      retirarlo cuando quieras desde Ajustes («Desconectar») o desde
+      <a href="https://myaccount.google.com/permissions" rel="noopener">la página de permisos de tu cuenta de Google</a>;
+      al darte de baja se borra.</p>
+    <p>El uso y la transferencia a cualquier otra aplicación de la información recibida
+      de las API de Google por parte de Bynoesis se ajustará a la
+      <a href="https://developers.google.com/terms/api-services-user-data-policy" rel="noopener">Política
+      de datos de usuario de los servicios de las API de Google</a>, incluidos los
+      requisitos de uso limitado.</p>
+    {% endif %}
 
     <h2>6. Tus derechos</h2>
     <p>Puedes ejercer en cualquier momento tus derechos de <b>acceso, rectificación,

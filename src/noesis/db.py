@@ -8371,8 +8371,12 @@ def enqueue_email_message(
         raise ValueError("El contenido HTML es demasiado grande.")
     created_at = now or _now()
     entity_type = (entity_type or "").strip().lower() or None
-    if entity_type not in {None, "invoice"}:
+    # `client_message`: un mensaje a un cliente del negocio, sin adjunto. Marca que
+    # puede salir desde el Gmail del autónomo si lo tiene conectado.
+    if entity_type not in {None, "invoice", "client_message"}:
         raise ValueError("El tipo de adjunto del correo no es válido.")
+    if entity_type == "client_message" and business_id is None:
+        raise ValueError("Un mensaje a un cliente necesita su negocio.")
     if entity_type == "invoice":
         if business_id is None or entity_id is None or not get_invoice(
             int(entity_id), business_id

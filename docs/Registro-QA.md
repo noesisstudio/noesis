@@ -1,5 +1,16 @@
 ﻿# Registro de QA
 
+## 2026-09-28 — Correo del autónomo revisado
+
+- Suite completa **1281 correctas** (317,3 s), JavaScript 3/3, ruff y escáner de
+  secretos correctos.
+- Contrastado con la documentación oficial de Google: `users.getProfile` no admite
+  `gmail.send`; `users.messages.send` sí.
+- `--inspect` ejecutado sobre un `.eml` de reenvío generado: enruta por
+  `X-Forwarded-To` y conserva solo el PDF.
+- No probado: una cuenta de Google real (falta el cliente OAuth), el buzón de
+  Hostinger y la verificación de Google. Pasos en `Conectar-Gmail-y-recibir-facturas`.
+
 ## 2026-09-28 — Confirmación de reenvío de Gmail
 
 - `test_inbound_email`: 12 correctas, 3 nuevas. Ruff y escáner de secretos OK.

@@ -57,15 +57,16 @@ class InboundEmailTestCase(unittest.TestCase):
         return message.as_bytes()
 
     @staticmethod
-    def _gmail_forwarding(to_address: str, *, signed: bool = True,
+    def _gmail_forwarding(to_address: str, *, signed: bool | None = True,
                           link: str = "https://mail-settings.google.com/mail/vf-%5BANGjdJ9x%5D-Qm4") -> bytes:
         message = EmailMessage()
         message["From"] = "Gmail Team <forwarding-noreply@google.com>"
         message["To"] = to_address
         message["Subject"] = "(#123456789) Gmail Forwarding Confirmation"
-        if signed:
+        if signed is not None:
             message["Authentication-Results"] = (
-                "mx.hostinger.com; dkim=pass header.d=google.com; spf=pass"
+                f"mx.hostinger.com; dkim={'pass' if signed else 'fail'} "
+                "header.d=google.com; spf=pass"
             )
         message.set_content(
             "carlos.fontaneria@gmail.com has requested to automatically forward "
@@ -96,7 +97,7 @@ class InboundEmailTestCase(unittest.TestCase):
         self.assertEqual(notify.call_args.kwargs["business_id"], self.business["id"])
 
     def test_forged_forwarding_request_is_not_relayed(self):
-        """Cualquiera puede escribir el From: sin la firma de Google no se reenvía nada."""
+        """Cualquiera puede escribir el From: si la firma de Google falla, no se reenvía."""
         route = inbound_email.ensure_route(self.business["id"])
         with patch("noesis.adapters.email.queue_email") as notify:
             result = inbound_email.process_raw_message(
@@ -104,6 +105,77 @@ class InboundEmailTestCase(unittest.TestCase):
             )
         notify.assert_not_called()
         self.assertEqual(result["code"], "no_attachments")
+
+    def test_a_mailbox_that_says_nothing_about_dkim_still_relays_the_google_link(self):
+        route = inbound_email.ensure_route(self.business["id"])
+        with patch("noesis.adapters.email.queue_email", return_value=True) as notify:
+            result = inbound_email.process_raw_message(
+                self._gmail_forwarding(route["address"], signed=None)
+            )
+        self.assertEqual(result["status"], "gmail_forwarding")
+        notify.assert_called_once()
+
+    def test_only_the_top_authentication_line_is_trusted(self):
+        """Una línea «pass» escrita más abajo por el remitente no tapa un fallo."""
+        route = inbound_email.ensure_route(self.business["id"])
+        raw = self._gmail_forwarding(route["address"], signed=False)
+        raw = raw.replace(
+            b"Authentication-Results:",
+            b"Authentication-Results: mx.hostinger.com; dkim=fail header.d=google.com\n"
+            b"Authentication-Results:", 1).replace(b"dkim=fail header.d=google.com; spf",
+                                                   b"dkim=pass header.d=google.com; spf", 1)
+        message = inbound_email.BytesParser(policy=inbound_email.policy.default).parsebytes(raw)
+        self.assertIsNone(inbound_email.gmail_forwarding_request(message))
+
+    def test_a_gmail_auto_forward_is_routed_by_x_forwarded_to(self):
+        """Al reenviar, Gmail deja en el To la dirección del autónomo, no la nuestra."""
+        route = inbound_email.ensure_route(self.business["id"])
+        raw = self._message("carlos.fontaneria@gmail.com").replace(
+            b"To: carlos.fontaneria@gmail.com",
+            b"To: carlos.fontaneria@gmail.com\nX-Forwarded-To: "
+            + route["address"].encode(), 1)
+        result = inbound_email.process_raw_message(raw)
+        self.assertEqual(result["business_id"], self.business["id"])
+        self.assertEqual(len(result["documents"]), 1)
+
+    def test_logos_and_signature_icons_do_not_become_documents(self):
+        route = inbound_email.ensure_route(self.business["id"])
+        message = EmailMessage()
+        message["From"] = "facturas@proveedor.example"
+        message["To"] = route["address"]
+        message["Subject"] = "Tu factura"
+        message.set_content("Adjuntamos la factura.")
+        message.add_alternative("<p>Adjuntamos la factura.</p><img src='cid:logo'>",
+                                subtype="html")
+        html_part = message.get_payload()[1]
+        html_part.add_related(b"\x89PNG" + b"0" * 2000, maintype="image",
+                              subtype="png", cid="<logo>", filename="logo.png")
+        for index in range(9):
+            message.add_attachment(b"\x89PNG" + b"1" * 800, maintype="image",
+                                   subtype="png", filename=f"icono{index}.png",
+                                   disposition="inline")
+        message.add_attachment(b"%PDF-1.4\n" + b"0" * 40_000,
+                               maintype="application", subtype="pdf",
+                               filename="factura.pdf")
+        parsed = inbound_email.BytesParser(
+            policy=inbound_email.policy.default).parsebytes(message.as_bytes())
+        names = [name for name, _payload in inbound_email._attachments(parsed)]
+        # Los diez adornos no cuentan (y no hacen rechazar el correo por «demasiados»).
+        self.assertEqual(names, ["factura.pdf"])
+
+    def test_inspect_explains_a_forward_without_touching_the_database(self):
+        route = inbound_email.ensure_route(self.business["id"])
+        lost = inbound_email.inspect_raw_message(self._message("carlos@gmail.com"))
+        self.assertEqual(lost["route_tokens"], [])
+        self.assertIn("no conserva el destinatario", lost["verdict"])
+        kept = inbound_email.inspect_raw_message(self._message(route["address"]))
+        self.assertEqual(len(kept["route_tokens"]), 1)
+        self.assertTrue(kept["route_tokens"][0].endswith("…"))
+        self.assertIn("Correcto", kept["verdict"])
+        confirmation = inbound_email.inspect_raw_message(
+            self._gmail_forwarding(route["address"]))
+        self.assertTrue(confirmation["gmail_forwarding"])
+        self.assertEqual(confirmation["google_signature"], "pass")
 
     def test_only_google_confirmation_links_are_relayed(self):
         route = inbound_email.ensure_route(self.business["id"])

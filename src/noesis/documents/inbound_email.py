@@ -45,8 +45,8 @@ _GMAIL_FORWARDING_SENDER = "forwarding-noreply@google.com"
 _GMAIL_CONFIRM_LINK = re.compile(r"https://mail(?:-settings)?\.google\.com/mail/[^\s\"'<>]+")
 _GMAIL_CONFIRM_CODE = re.compile(r"(?<![\d-])(\d{9})(?![\d-])")
 _EMAIL_ADDRESS = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
-_GOOGLE_DKIM_PASS = re.compile(
-    r"\bdkim=pass\b[^;]*\bheader\.(?:d|i)=@?(?:[a-z0-9-]+\.)*google\.com\b"
+_GOOGLE_DKIM = re.compile(
+    r"\bdkim=(\w+)\b[^;]*\bheader\.(?:d|i)=@?(?:[a-z0-9-]+\.)*google\.com\b"
 )
 
 
@@ -84,7 +84,10 @@ def _header_addresses(message: Message) -> list[str]:
     # Hostinger puede conservar el sobre en una de estas cabeceras. ``To`` y
     # ``Cc`` sirven en el piloto, pero el token aleatorio y la confirmación siguen
     # siendo las barreras reales frente a mensajes falsificados.
-    for header in ("delivered-to", "x-original-to", "envelope-to", "to", "cc"):
+    # ``x-forwarded-to`` lo añade Gmail al reenviar automáticamente: el ``To``
+    # conserva la dirección original del autónomo, no la nuestra.
+    for header in ("delivered-to", "x-original-to", "envelope-to", "x-forwarded-to",
+                   "to", "cc"):
         values.extend(message.get_all(header, []))
     return [address.strip().lower() for _name, address in getaddresses(values)]
 
@@ -111,6 +114,20 @@ def _safe_filename(filename: str | None, index: int) -> str:
     return name or f"adjunto-{index}.bin"
 
 
+# Logos, iconos de redes, firmas y píxeles de seguimiento llegan como imágenes
+# incrustadas. Una foto de un ticket pesa mucho más; por debajo de esto, una
+# imagen incrustada es decoración. Lo adjuntado como archivo entra siempre.
+_INLINE_IMAGE_MIN_BYTES = 30_000
+
+
+def _decorative(part: Message, payload: bytes) -> bool:
+    # ``Content-ID`` significa que el HTML la pinta dentro del mensaje, aunque
+    # algunos programas la marquen además como adjunto.
+    embedded = part.get_content_disposition() != "attachment" or bool(part["content-id"])
+    return (part.get_content_maintype() == "image" and embedded
+            and len(payload) < _INLINE_IMAGE_MIN_BYTES)
+
+
 def _attachments(message: Message) -> list[tuple[str, bytes]]:
     attachments: list[tuple[str, bytes]] = []
     for part in message.walk():
@@ -120,29 +137,36 @@ def _attachments(message: Message) -> list[tuple[str, bytes]]:
         if not filename and part.get_content_disposition() != "attachment":
             continue
         payload = part.get_payload(decode=True)
-        if payload is None:
+        if payload is None or _decorative(part, payload):
             continue
         attachments.append((_safe_filename(filename, len(attachments) + 1), payload))
     return attachments
 
 
-def _signed_by_google(message: Message) -> bool:
-    """Solo se cree al remitente si el servidor de correo verificó la firma de Google.
+def _google_signature(message: Message) -> bool | None:
+    """Lo que dice el buzón receptor de la firma DKIM de Google.
 
-    El ``From`` se puede falsificar; la línea ``Authentication-Results`` la añade
-    el buzón receptor tras comprobar DKIM. Sin ella no se reenvía ningún enlace.
+    Solo cuenta la primera ``Authentication-Results`` (la que añade nuestro buzón;
+    las de más abajo las puede haber escrito cualquiera). ``True`` firma válida,
+    ``False`` firma que falla, ``None`` si el buzón no dice nada.
     """
-    return any(
-        _GOOGLE_DKIM_PASS.search(str(value).lower())
-        for value in message.get_all("authentication-results", [])
-    )
+    values = message.get_all("authentication-results", [])
+    if not values:
+        return None
+    match = _GOOGLE_DKIM.search(str(values[0]).lower())
+    if not match:
+        return None
+    return match.group(1) == "pass"
 
 
 def gmail_forwarding_request(message: Message) -> dict | None:
     """Datos de una petición de reenvío de Gmail auténtica, o ``None``."""
     senders = [address.strip().lower()
                for _name, address in getaddresses(message.get_all("from", []))]
-    if senders != [_GMAIL_FORWARDING_SENDER] or not _signed_by_google(message):
+    # Una firma que falla descarta el mensaje. Si el buzón no dice nada se acepta:
+    # el enlace solo puede ser de Google y, como mucho, confirmaría un reenvío hacia
+    # una dirección que ya recibe correo de cualquiera.
+    if senders != [_GMAIL_FORWARDING_SENDER] or _google_signature(message) is False:
         return None
     part = message.get_body(preferencelist=("plain", "html"))
     try:
@@ -404,6 +428,37 @@ def poll_mailbox(limit: int | None = None) -> dict:
                 pass
 
 
+def inspect_raw_message(raw: bytes) -> dict:
+    """Qué haría Bynoesis con un ``.eml``, sin base de datos ni red.
+
+    Sirve para la prueba de puesta en marcha: descargar del webmail un correo
+    reenviado y comprobar que el buzón conserva la dirección de destino.
+    """
+    message = BytesParser(policy=policy.default).parsebytes(raw)
+    tokens = sorted(_route_tokens(message))
+    request = gmail_forwarding_request(message)
+    signature = _google_signature(message)
+    kept = [name for name, _payload in _attachments(message)]
+    if not tokens:
+        verdict = ("No aparece ninguna dirección docs.… de este dominio: el buzón no "
+                   "conserva el destinatario. No enciendas la recepción.")
+    elif len(tokens) > 1:
+        verdict = "Aparecen dos direcciones de negocio: se rechazaría por ambiguo."
+    elif request:
+        verdict = "Confirmación de reenvío de Gmail: se enviaría al titular."
+    elif kept:
+        verdict = f"Correcto: entraría en el negocio con {len(kept)} documento(s)."
+    else:
+        verdict = "Llega al negocio, pero sin adjuntos útiles: se descartaría."
+    return {
+        "route_tokens": [f"{token[:6]}…" for token in tokens],
+        "gmail_forwarding": bool(request),
+        "google_signature": {True: "pass", False: "fail", None: "sin dato"}[signature],
+        "attachments_kept": kept,
+        "verdict": verdict,
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Prueba segura del buzón documental catch-all de Bynoesis."
@@ -412,6 +467,9 @@ def main() -> None:
     parser.add_argument("--create-route", action="store_true")
     parser.add_argument("--rotate-route", action="store_true")
     parser.add_argument("--file", type=Path)
+    parser.add_argument(
+        "--inspect", type=Path,
+        help="Analiza un .eml sin base de datos ni red (prueba de puesta en marcha).")
     parser.add_argument("--network", action="store_true")
     parser.add_argument("--limit", type=int)
     args = parser.parse_args()
@@ -422,6 +480,10 @@ def main() -> None:
             ensure_route(args.business_id, rotate=args.rotate_route),
             ensure_ascii=False, default=str,
         ))
+        return
+    if args.inspect:
+        print(json.dumps(inspect_raw_message(args.inspect.read_bytes()),
+                         ensure_ascii=False, indent=2))
         return
     if args.file:
         print(json.dumps(

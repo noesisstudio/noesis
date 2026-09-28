@@ -104,6 +104,10 @@ def _legal_context(request: Request) -> dict:
         "anthropic_enabled": bool(config.ANTHROPIC_API_KEY),
         "groq_enabled": bool(config.GROQ_API_KEY),
         "google_oauth_enabled": config.google_oauth_available(),
+        # Enviar desde el Gmail del autónomo: Google exige explicarlo en la
+        # política antes de aprobar el permiso gmail.send.
+        "gmail_send_enabled": bool(
+            config.GOOGLE_CLIENT_ID and config.GOOGLE_CLIENT_SECRET),
         "stripe_enabled": bool(config.STRIPE_SECRET_KEY),
         "backup_provider_name": config.BACKUP_S3_PROVIDER_NAME,
         "backup_provider_region": config.BACKUP_S3_DATA_REGION,

@@ -588,8 +588,11 @@ es una hipótesis de estimación, no altera contabilidad ni impuestos.
   defecto. Resuelve una única ruta opaca, no conserva cuerpo/remitente/asunto,
   deduplica el mensaje y entrega cada adjunto al servicio documental común. Incluye
   CLI de configuración, prueba `.eml` y sondeo de red sin mostrar credenciales.
-  La confirmación de reenvío de Gmail (sin adjuntos) se reenvía al titular solo
-  si el buzón verificó la firma DKIM de Google.
+  La confirmación de reenvío de Gmail (sin adjuntos) se reenvía al titular salvo
+  que la firma de Google falle; ignora imágenes decorativas; lee `X-Forwarded-To`;
+  `--inspect` analiza un `.eml` sin base de datos.
+- `src/noesis/integration_check.py`: además de Stripe, Brevo y Groq, comprueba el
+  envío por Gmail (`gmail`) y el buzón de entrada (`correo_entrante`).
 - `src/noesis/verifactu.py`: huellas de alta y anulación, QR y XML nativos validados
   contra los XSD AEAT.
 - `src/noesis/verifactu_client.py`: SOAP/mTLS directo, endpoints oficiales para
@@ -886,15 +889,17 @@ es una hipótesis de estimación, no altera contabilidad ni impuestos.
   STARTTLS en el resto. Toda comunicación nueva se encola antes de salir para no
   perderla ante una caída del proveedor.
 - `src/noesis/adapters/google_mail.py` + `src/noesis/secret_box.py`: la tercera vía
-  de correo, y la única que sale desde la dirección del propio autónomo. Se pide un
-  único permiso, `gmail.send`; pedir además lectura lo convertiría en «restringido»
-  ante Google, con auditoría de seguridad. Los tokens se guardan en
+  de correo, y la única que sale desde la dirección del propio autónomo. Sobre el
+  correo se pide un único permiso, `gmail.send` (más `openid email` para saber qué
+  cuenta es: `getProfile` no funciona con `gmail.send`); pedir además lectura lo
+  convertiría en «restringido» ante Google, con auditoría de seguridad. Los tokens se guardan en
   `oauth_credentials` cifrados con una clave derivada de `NOESIS_SECRET`, así que
   una copia de la base de datos no permite escribir en nombre de nadie —y cambiar
   ese secreto tira todas las conexiones, que es el precio consciente. Un
-  `invalid_grant` marca la cuenta revocada y **no se reintenta**: se avisa en
-  Ajustes y el correo sale por Bynoesis. `process_email_outbox` elige la vía por
-  negocio; la del autónomo si está viva, la de Bynoesis si no.
+  `invalid_grant` (o un 403 sin permiso) marca la cuenta revocada y **no se
+  reintenta**: se avisa en Ajustes y el correo sale por Bynoesis; un 401 renueva el
+  token y reintenta una vez. `process_email_outbox` usa el Gmail del autónomo solo
+  para `TIPOS_PROPIOS` (facturas y mensajes a sus clientes) y si está vivo.
 - `src/noesis/adapters/billing.py`: Checkout de suscripción propio sobre la API REST
   de Stripe. Además del precio y metadatos aislados por negocio, solicita dirección,
   NIF fiscal y `automatic_tax`. El catálogo traduce cada `price_id` mensual/anual al
