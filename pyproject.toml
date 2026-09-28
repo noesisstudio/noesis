@@ -34,7 +34,7 @@ dependencies = [
     # Cifra los permisos de terceros (el Gmail de cada autónomo) antes de que
     # toquen el disco. Sin esto, quien tuviera la base de datos podría escribir
     # correo haciéndose pasar por cualquier cliente.
-    "cryptography>=43.0.0,<48",
+    "cryptography>=50.0.0,<51",
 ]
 
 [project.optional-dependencies]
