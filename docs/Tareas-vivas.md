@@ -1,5 +1,19 @@
 # Tareas vivas
 
+## Recibir facturas por correo — 28-sep
+
+- [x] La confirmación de reenvío de Gmail llega al titular por correo, solo si
+  viene firmada por Google.
+- [ ] Founder, en Hostinger: crear el buzón receptor (p. ej. `entrada@bynoesis.com`)
+  y activar el catch-all del dominio hacia él.
+- [ ] Founder, en Railway: `NOESIS_INBOUND_EMAIL_USER`, `NOESIS_INBOUND_EMAIL_PASSWORD`
+  y, tras la prueba de la tarea «Entrada documental Hostinger»,
+  `NOESIS_INBOUND_EMAIL_ENABLED=true`.
+- [ ] Prueba real: en un Gmail propio, «Reenviar a» la dirección privada de un
+  negocio de prueba y comprobar que llega el correo con el código. Si no llega,
+  mirar en `/admin` si el mensaje quedó como `no_attachments`: significará que
+  Hostinger no anota `Authentication-Results`.
+
 ## Gmail del autónomo — 28-sep
 
 - [x] Tokens cifrados por negocio (`secret_box.py`, migración 61).

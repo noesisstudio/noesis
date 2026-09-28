@@ -588,6 +588,8 @@ es una hipótesis de estimación, no altera contabilidad ni impuestos.
   defecto. Resuelve una única ruta opaca, no conserva cuerpo/remitente/asunto,
   deduplica el mensaje y entrega cada adjunto al servicio documental común. Incluye
   CLI de configuración, prueba `.eml` y sondeo de red sin mostrar credenciales.
+  La confirmación de reenvío de Gmail (sin adjuntos) se reenvía al titular solo
+  si el buzón verificó la firma DKIM de Google.
 - `src/noesis/verifactu.py`: huellas de alta y anulación, QR y XML nativos validados
   contra los XSD AEAT.
 - `src/noesis/verifactu_client.py`: SOAP/mTLS directo, endpoints oficiales para

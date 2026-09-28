@@ -1,5 +1,12 @@
 ﻿# Registro de QA
 
+## 2026-09-28 — Confirmación de reenvío de Gmail
+
+- `test_inbound_email`: 12 correctas, 3 nuevas. Ruff y escáner de secretos OK.
+- Suite completa con los dos commits: **1258 correctas** (289,8 s); pruebas Node 3/3.
+- No probado: un reenvío real de Gmail contra el buzón de Hostinger. Falta crear el
+  catch-all y comprobar que Hostinger añade `Authentication-Results` con DKIM.
+
 ## 2026-09-28 — Gmail del autónomo
 
 - Suite completa **1.216 en verde**. Ruff OK. Migración 61 con ciclo

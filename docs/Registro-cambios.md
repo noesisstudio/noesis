@@ -1,5 +1,27 @@
 ﻿# Registro de cambios
 
+## 2026-09-28 — Recibir facturas por correo: confirmar el reenvío de Gmail
+
+- Objetivo: que las facturas de proveedores que llegan al Gmail del autónomo entren
+  solas en Bynoesis. El camino sin permisos «restringidos» de Google es un filtro de
+  Gmail que reenvía a la dirección privada del negocio. Para activarlo, Gmail manda
+  antes un correo sin adjuntos con un enlace y un código; hasta hoy se descartaba
+  como `no_attachments` y el reenvío no se podía activar nunca.
+- `documents/inbound_email.py`: si el correo sin adjuntos es de
+  `forwarding-noreply@google.com` **y** el buzón anotó `dkim=pass` de google.com
+  en `Authentication-Results`, se extraen el enlace (solo de `mail.google.com` o
+  `mail-settings.google.com`), el código y la cuenta que lo pide, y se encolan por
+  correo al titular del negocio. Sin firma verificada se descarta como antes: un
+  `From` falso no puede colar enlaces. No se guarda el mensaje.
+- `templates/documentos.html`: la tarjeta de la dirección privada explica cómo
+  hacerlo automático con un filtro de Gmail.
+- Pruebas: tres regresiones nuevas en `test_inbound_email` (petición auténtica,
+  falsificada y enlace ajeno). Sin esquema ni dependencias.
+- Límites: requiere el catch-all de Hostinger y `NOESIS_INBOUND_EMAIL_*` en
+  Railway (hoy no están) y que Hostinger anote `Authentication-Results`; si no lo
+  hace, la confirmación se descarta y hay que activarlo a mano.
+- Rollback: revertir el commit; los correos de confirmación vuelven a descartarse.
+
 ## 2026-09-28 — Que la factura salga desde el correo del autónomo
 
 Hasta hoy las facturas salían desde la dirección de Bynoesis. El cliente recibía

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import html
 import imaplib
 import json
 import logging
@@ -35,6 +36,18 @@ _PERMANENT_REJECTIONS = {
     "too_many_attachments",
     "attachments_too_large",
 }
+
+
+# Gmail no activa un reenvío automático sin antes mandar un correo, sin adjuntos,
+# a la dirección de destino. Si se descartara, el autónomo nunca vería el código y
+# el reenvío de sus facturas no llegaría a funcionar.
+_GMAIL_FORWARDING_SENDER = "forwarding-noreply@google.com"
+_GMAIL_CONFIRM_LINK = re.compile(r"https://mail(?:-settings)?\.google\.com/mail/[^\s\"'<>]+")
+_GMAIL_CONFIRM_CODE = re.compile(r"(?<![\d-])(\d{9})(?![\d-])")
+_EMAIL_ADDRESS = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
+_GOOGLE_DKIM_PASS = re.compile(
+    r"\bdkim=pass\b[^;]*\bheader\.(?:d|i)=@?(?:[a-z0-9-]+\.)*google\.com\b"
+)
 
 
 class InboundEmailError(RuntimeError):
@@ -113,6 +126,84 @@ def _attachments(message: Message) -> list[tuple[str, bytes]]:
     return attachments
 
 
+def _signed_by_google(message: Message) -> bool:
+    """Solo se cree al remitente si el servidor de correo verificó la firma de Google.
+
+    El ``From`` se puede falsificar; la línea ``Authentication-Results`` la añade
+    el buzón receptor tras comprobar DKIM. Sin ella no se reenvía ningún enlace.
+    """
+    return any(
+        _GOOGLE_DKIM_PASS.search(str(value).lower())
+        for value in message.get_all("authentication-results", [])
+    )
+
+
+def gmail_forwarding_request(message: Message) -> dict | None:
+    """Datos de una petición de reenvío de Gmail auténtica, o ``None``."""
+    senders = [address.strip().lower()
+               for _name, address in getaddresses(message.get_all("from", []))]
+    if senders != [_GMAIL_FORWARDING_SENDER] or not _signed_by_google(message):
+        return None
+    part = message.get_body(preferencelist=("plain", "html"))
+    try:
+        text = html.unescape(part.get_content()) if part is not None else ""
+    except (LookupError, ValueError):
+        return None
+    link = _GMAIL_CONFIRM_LINK.search(text)
+    code = _GMAIL_CONFIRM_CODE.search(text)
+    if not link and not code:
+        return None
+    own_domain = f"@{config.INBOUND_EMAIL_DOMAIN}".lower()
+    requester = next(
+        (address for address in _EMAIL_ADDRESS.findall(text)
+         if address.lower() != _GMAIL_FORWARDING_SENDER
+         and not address.lower().endswith(own_domain)
+         and not address.lower().endswith("@google.com")),
+        None,
+    )
+    return {
+        "link": link.group(0).rstrip(".,)") if link else None,
+        "code": code.group(1) if code else None,
+        "requester": requester,
+    }
+
+
+def _notify_forwarding_request(business_id: int, request: dict, fingerprint: str) -> bool:
+    """Hace llegar al titular el enlace o código que pide Gmail."""
+    from ..adapters import email as email_adapter
+
+    business = db.get_business(business_id) or {}
+    owner = str(business.get("owner_email") or "").strip()
+    if not owner:
+        return False
+    lines = [
+        "Hola:",
+        "",
+        "Gmail pide confirmar que quieres reenviar correos a tu dirección privada de",
+        f"Bynoesis{' desde ' + request['requester'] if request.get('requester') else ''}.",
+        "",
+    ]
+    if request.get("link"):
+        lines += ["Para activarlo, abre este enlace de Google:", request["link"], ""]
+    if request.get("code"):
+        lines += [
+            f"O escribe este código en Gmail (Ajustes → Reenvío): {request['code']}",
+            "",
+        ]
+    lines += [
+        "Si no has sido tú, no hagas nada: sin tu confirmación no se reenvía nada.",
+        "",
+        "El equipo de Bynoesis",
+    ]
+    return email_adapter.queue_email(
+        owner,
+        "Confirma el reenvío de Gmail a Bynoesis",
+        "\n".join(lines),
+        business_id=business_id,
+        idempotency_key=f"gmail-forwarding:{business_id}:{fingerprint}",
+    )
+
+
 def _reject(code: str) -> dict:
     return {
         "ok": False,
@@ -151,6 +242,28 @@ def process_raw_message(raw: bytes) -> dict:
 
     attachments = _attachments(message)
     if not attachments:
+        request = gmail_forwarding_request(message)
+        if request:
+            try:
+                delivered = _notify_forwarding_request(business_id, request, fingerprint)
+            except Exception as exc:  # noqa: BLE001 - se reintenta sin marcar el IMAP
+                db.finish_inbound_email_message(
+                    claimed["id"], business_id, status="failed",
+                    attachment_count=0, document_count=0, error_code=type(exc).__name__,
+                )
+                raise InboundEmailError("No se pudo avisar del reenvío de Gmail.") from exc
+            db.finish_inbound_email_message(
+                claimed["id"], business_id, status="processed",
+                attachment_count=0, document_count=0,
+                error_code="gmail_forwarding" if delivered else "gmail_forwarding_no_owner",
+            )
+            return {
+                "ok": delivered,
+                "status": "gmail_forwarding",
+                "business_id": business_id,
+                "documents": [],
+                "permanent": True,
+            }
         db.finish_inbound_email_message(
             claimed["id"], business_id, status="rejected",
             attachment_count=0, document_count=0, error_code="no_attachments",

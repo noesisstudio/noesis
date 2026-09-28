@@ -56,6 +56,68 @@ class InboundEmailTestCase(unittest.TestCase):
         )
         return message.as_bytes()
 
+    @staticmethod
+    def _gmail_forwarding(to_address: str, *, signed: bool = True,
+                          link: str = "https://mail-settings.google.com/mail/vf-%5BANGjdJ9x%5D-Qm4") -> bytes:
+        message = EmailMessage()
+        message["From"] = "Gmail Team <forwarding-noreply@google.com>"
+        message["To"] = to_address
+        message["Subject"] = "(#123456789) Gmail Forwarding Confirmation"
+        if signed:
+            message["Authentication-Results"] = (
+                "mx.hostinger.com; dkim=pass header.d=google.com; spf=pass"
+            )
+        message.set_content(
+            "carlos.fontaneria@gmail.com has requested to automatically forward "
+            f"mail to your email address {to_address}.\n"
+            "Confirmation code: 123456789\n\n"
+            "To allow carlos.fontaneria@gmail.com to automatically forward mail "
+            "to your address, please click the link below to confirm the request:\n\n"
+            f"{link}\n"
+        )
+        return message.as_bytes()
+
+    def test_gmail_forwarding_confirmation_reaches_the_owner(self):
+        """Sin esto el autónomo nunca ve el código y el reenvío no se activa."""
+        route = inbound_email.ensure_route(self.business["id"])
+        with patch("noesis.adapters.email.queue_email", return_value=True) as notify:
+            result = inbound_email.process_raw_message(
+                self._gmail_forwarding(route["address"])
+            )
+        self.assertEqual(result["status"], "gmail_forwarding")
+        self.assertTrue(result["permanent"])
+        self.assertEqual(result["documents"], [])
+        notify.assert_called_once()
+        to, _subject, body = notify.call_args.args[:3]
+        self.assertEqual(to, "norte@example.com")
+        self.assertIn("https://mail-settings.google.com/mail/vf-%5BANGjdJ9x%5D-Qm4", body)
+        self.assertIn("123456789", body)
+        self.assertIn("carlos.fontaneria@gmail.com", body)
+        self.assertEqual(notify.call_args.kwargs["business_id"], self.business["id"])
+
+    def test_forged_forwarding_request_is_not_relayed(self):
+        """Cualquiera puede escribir el From: sin la firma de Google no se reenvía nada."""
+        route = inbound_email.ensure_route(self.business["id"])
+        with patch("noesis.adapters.email.queue_email") as notify:
+            result = inbound_email.process_raw_message(
+                self._gmail_forwarding(route["address"], signed=False)
+            )
+        notify.assert_not_called()
+        self.assertEqual(result["code"], "no_attachments")
+
+    def test_only_google_confirmation_links_are_relayed(self):
+        route = inbound_email.ensure_route(self.business["id"])
+        raw = self._gmail_forwarding(
+            route["address"], link="https://mail.google.com.evil.example/mail/vf-x"
+        )
+        message = inbound_email.BytesParser(
+            policy=inbound_email.policy.default
+        ).parsebytes(raw)
+        request = inbound_email.gmail_forwarding_request(message)
+        # El código de Google sigue siendo útil; el enlace ajeno nunca se envía.
+        self.assertIsNone(request["link"])
+        self.assertEqual(request["code"], "123456789")
+
     def test_catch_all_routes_one_message_to_one_business_and_deduplicates(self):
         route = inbound_email.ensure_route(self.business["id"])
         raw = self._message(route["address"])
