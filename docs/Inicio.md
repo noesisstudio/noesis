@@ -46,6 +46,9 @@ Documento nuevo: al tema que le toque, nunca suelto en la raíz. Los enlaces
 - [[Investigación]] — hallazgos de research (mercado, diseño, coste IA).
 - [[Benchmark_SaaS]] — patrones de SaaS profesionales usados para orientar la UX.
 - [[Arquitectura]] — cómo está construido el sistema.
+- [`areas/`](areas/README.md) — **una guía por apartado** (visión general, ramas,
+  cerebro, facturas, correo, RGPD y lo automático): archivos, reglas que no se
+  rompen, estado real y qué comprobar al revisar código. Léela antes de tocar la zona.
 - [`Mapa-Bynoesis.html`](02-tecnico/Mapa-Bynoesis.html) — el sistema entero en
   esquemas con líneas: entradas, cerebro, facturas, correo, RGPD, ramas de la
   empresa y lo que pasa solo cada día, con el estado real de cada pieza.

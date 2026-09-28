@@ -17,6 +17,11 @@ están en `docs/`, empezando por [`docs/Inicio.md`](docs/Inicio.md).
 > [`docs/design/STYLE_TOKENS.json`](docs/design/STYLE_TOKENS.json). Bynoesis da el
 > parte del día; no es un dashboard fintech.
 
+> **Antes de revisar o cambiar código, lee la guía de su área** en
+> [`docs/areas/`](docs/areas/README.md) (tabla en [§3](#guías-por-área)). Cada una dice
+> qué archivos forman la zona, qué reglas no se pueden romper y qué comprobar al
+> revisar. Si tu cambio contradice una guía, actualiza la guía en el mismo commit.
+
 ## 1. Qué es Bynoesis
 
 Copiloto de negocio por WhatsApp para autónomos de servicios: fontanería,
@@ -65,6 +70,21 @@ Archivos clave:
 - `facebook/`: automatización que promociona Noesis en Facebook y
   publica sola cada 3 días. No es producto, no se despliega y no importa nada de
   `src/noesis/`; su manual es `facebook/README.md`.
+
+### Guías por área
+
+Siguen el [mapa visual](docs/02-tecnico/Mapa-Bynoesis.html). Léela antes de revisar
+o cambiar algo de esa zona; si el cambio la contradice, actualízala en el mismo commit.
+
+| Si el cambio toca… | Guía |
+|---|---|
+| Varias zonas, `web/server.py`, `web/deps.py`, `db.py` en general, `migrations.py`, `config.py` | [01 · Visión general](docs/areas/01-vision-general.md) |
+| `web/routers/pages.py`, `portal.py`, `gestoria*.py`, `admin.py`, `account.py` (alta y sesión), `web/templates/`, `web/static/`, `sales.py`, `economics*.py` | [02 · Ramas de la empresa](docs/areas/02-ramas-de-la-empresa.md) |
+| `web/chat.py`, `nlu.py`, `agent.py`, `tools.py`, `action_review.py`, `internal_brain.py`, `learning.py`, `local_invoice.py`, `intent_safety.py`, `web/whatsapp*.py`, `adapters/ai.py`, `adapters/transcription.py`, `adapters/extraction.py`, `documents/` (salvo `inbound_email.py`) | [03 · Cerebro](docs/areas/03-cerebro.md) |
+| Facturas, presupuestos, cobros, series: `web/routers/invoicing.py`, `web/invoice_pdf.py`, `verifactu*.py`, `fiscal_validation.py`, `trades.py`, `adapters/invoicing.py` | [04 · Facturas](docs/areas/04-facturas.md) |
+| `adapters/email.py`, `adapters/google_mail.py`, `secret_box.py`, `documents/inbound_email.py`, cualquier `queue_email` | [05 · Correo](docs/areas/05-correo.md) |
+| Datos personales, bajas, exportación, consentimiento, cookies, `web/auth.py`, `security_center.py`, proveedores nuevos | [06 · RGPD y seguridad](docs/areas/06-rgpd-y-seguridad.md) |
+| `web/scheduler.py`, colas `*_outbox`, `web/backups.py`, `production_check.py` | [07 · Lo automático](docs/areas/07-lo-automatico.md) |
 
 ## 4. Reglas de oro
 

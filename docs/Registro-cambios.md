@@ -1,5 +1,20 @@
 ﻿# Registro de cambios
 
+## 2026-09-28 — Guías por área para revisar el código
+
+- Objetivo: que quien revise o cambie código (persona, Claude o Codex) tenga en dos
+  minutos el contexto de la zona: qué archivos la forman, qué reglas no se rompen,
+  estado real, pruebas y lista de comprobación.
+- `docs/areas/` (nuevo): índice y siete guías con el orden del mapa visual (visión
+  general, ramas de la empresa, cerebro, facturas, correo, RGPD y seguridad, lo
+  automático). Las rutas, funciones y pruebas citadas se han comprobado contra el
+  código; los enlaces internos, también.
+- `AGENTS.md`: aviso al inicio y tabla «Guías por área» (carpeta → guía) en §3. Regla
+  nueva: si un cambio contradice una guía, se actualiza en el mismo commit.
+- `docs/Inicio.md`: enlace a `areas/`.
+- Riesgo: ninguno en producción; solo documentación. Rollback: borrar `docs/areas/`
+  y revertir las líneas de `AGENTS.md` e `Inicio.md`.
+
 ## 2026-09-28 — Recibir facturas por correo: confirmar el reenvío de Gmail
 
 - Objetivo: que las facturas de proveedores que llegan al Gmail del autónomo entren
