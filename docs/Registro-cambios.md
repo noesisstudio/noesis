@@ -1,5 +1,11 @@
 ﻿# Registro de cambios
 
+## 2026-09-30 (noche, 4) — Archivos locales del founder
+
+- Sube `.claude/settings.json` (plugins `pyright-lsp` y `hookify`), la bóveda de
+  Obsidian `Bynoesis/` (nota de bienvenida y un `.base` vacío; su `.obsidian/` sigue
+  ignorado) y `docs/2026-09-30.md` (vacío). Sin cambios de código. Rollback: revertir.
+
 ## 2026-09-30 (noche, 3) — NIF inválido, voz con tildes y correo dictado
 
 - **No se emite con un NIF español inválido** (`fiscal_validation.problema_nif_cliente`,
