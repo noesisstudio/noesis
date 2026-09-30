@@ -9,6 +9,7 @@ local para lo rutinario, IA solo para lo complejo.
 
 from __future__ import annotations
 
+import json
 import re
 import unicodedata
 from datetime import date, datetime, timedelta
@@ -455,6 +456,11 @@ def _agenda_client(text: str) -> str | None:
         text, re.I,
     ):
         candidate = _limpiar_cliente(match.group(1))
+        # «a la Marta», «amb en Joan»: en catalán el nombre lleva artículo.
+        personal = re.match(r"^(?:la|el|en|na)\s+([A-ZÁÉÍÓÚÀÈÒÏÜÇ][\w'·-]+(?:\s+[A-ZÁÉÍÓÚÀÈÒÏÜÇ][\w'·-]+)*)$",
+                            candidate)
+        if personal:
+            candidate = personal.group(1)
         folded = _norm(candidate)
         if not candidate or len(candidate) > 60 or not folded:
             continue
@@ -475,7 +481,8 @@ def _agenda_description(text: str, cliente: str | None) -> str:
         r"(?=\s+para\b|\s+en\s+|[,;]|$"
         r"|\s+(?:hoy|mañana|demà|pasado|a\s+las\b|por\s+la\b"
         r"|el\s+(?:lunes|martes|mi[ée]rcoles|jueves|viernes|s[áa]bado|domingo))\b)")
-    for match in re.finditer(r"\b(?:para|de)\s+(.+?)" + _HASTA_LA_FECHA, text, re.I):
+    for match in re.finditer(r"\b(?:para|de|per(?=\s+[a-zàèéíòóú]+(?:ar|er|ir|re)\b))\s+(.+?)"
+                             + _HASTA_LA_FECHA, text, re.I):
         value = match.group(1).strip().rstrip(".!?¿¡;")
         folded = _norm(value)
         if (not value or value == cliente or len(value) > 200
@@ -1013,7 +1020,7 @@ def parse_partial_invoice(text: str) -> dict:
 _TELEFONO_RE = re.compile(r"(\+?\d[\d\s.\-]{7,}\d)")
 # Lo que viene detrás del nombre cuando alguien dicta la ficha entera de un tirón.
 _DATO_DE_CONTACTO = re.compile(
-    r"\b(?:tel[eé]fono|telf?|m[oó]vil|whatsapp|correo|email|e-mail|nif|cif|dni|"
+    r"\b(?:tel[eéè]fono?|telf?|m[oóò]vil|m[oò]bil|whatsapp|correo|correu|email|e-mail|nif|cif|dni|adre[çc]a|"
     r"direcci[oó]n|domicilio|calle|avenida|zona)\b", re.I)
 
 
@@ -1029,9 +1036,9 @@ _CLAVE_DIRECCION = re.compile(
     r"camino|ronda|traves[ií]a|urbanizaci[oó]n)\s)", re.I)
 # Un móvil o fijo español dictado con o sin espacios, con o sin prefijo.
 _MOVIL_SUELTO = re.compile(r"(?<![\w+])((?:\+?34[\s.\-]?)?[6789](?:[\s.\-]?\d){8})(?!\d)")
-_CLAVE_TELEFONO = re.compile(r"\b(?:tel[eé]fono|telf?|tlf|m[oó]vil|whatsapp|n[uú]mero)\b"
+_CLAVE_TELEFONO = re.compile(r"\b(?:tel[eéè]fono?|telf?|tlf|m[oóò]vil|m[oò]bil|whatsapp|n[uú]mero)\b"
                              r"\s*(?:es\s+(?:el\s+)?)?:?\s*", re.I)
-_CLAVE_EMAIL = re.compile(r"\b(?:correo(?:\s+electr[oó]nico)?|email|e-mail|mail)\b"
+_CLAVE_EMAIL = re.compile(r"\b(?:correo(?:\s+electr[oó]nico)?|correu|email|e-mail|mail)\b"
                           r"\s*(?:es\s+)?:?\s*", re.I)
 
 
@@ -1107,7 +1114,7 @@ def parse_party_name(raw: str) -> tuple[str | None, str | None]:
     if inicio > 0:
         # «Laura Gimeno tel 612 34 56 78» o «Laura Gimeno laura@x.es»: el nombre
         # acaba donde empiezan los datos, con o sin «con» delante.
-        texto = re.sub(r"(?:[\s,;:]+(?:y|con|i|amb|su|sus|es|de|el|la|que|tiene))*[\s,;:]*$",
+        texto = re.sub(r"(?:[\s,;:]+(?:y|con|i|amb|su|sus|es|de|el|la|que|tiene|seu|té))*[\s,;:]*$",
                        "", texto[:inicio], flags=re.I).strip()
         texto = _recortar(texto) if texto else texto
         if not texto:
@@ -1223,6 +1230,38 @@ _CAMPO_A_ARG = (("nif", "nif"), ("cif", "nif"), ("dni", "nif"), ("nie", "nif"),
                 ("mail", "email"), ("direccion", "direccion"), ("domicilio", "direccion"))
 
 
+def _pregunta_por_cliente(text: str, norm: str) -> tuple[str, dict] | None:
+    """«Dame el teléfono de X», «¿cuál es el NIF de X?», «¿qué facturas tiene X?»."""
+    campos = {"telefono": "telefono", "movil": "telefono", "numero": "telefono",
+              "correo": "email", "email": "email", "mail": "email", "nif": "nif",
+              "cif": "nif", "dni": "nif", "direccion": "direccion",
+              "domicilio": "direccion", "datos": None, "ficha": None,
+              "facturas": "facturas", "historial": "facturas"}
+    claves = "|".join(campos)
+    m = re.match(
+        rf"^(?:y\s+)?(?:dame|dime|pasame|ensename|muestrame|cual es|que|cual|ver|mira|busca|"
+        rf"tienes|tengo)?\s*(?:el|la|los|las|su|sus)?\s*({claves})\s+(?:de|del|de la)\s+"
+        r"(?:client[ea]\s+)?(.+?)\s*\??$", norm)
+    if not m:
+        m2 = re.match(r"^(?:y\s+)?(?:que|cuantas|quines|quantes)\s+(?:facturas|factures)\s+"
+                      r"(?:tiene|te|le he hecho a|tengo con|tinc amb|le he hecho|le hice a|hay de)\s+"
+                      r"(?:el\s+cliente\s+|el\s+client\s+)?(.+?)\s*\??$", norm)
+        if not m2:
+            return None
+        campo, nombre_norm = "facturas", m2.group(1)
+    else:
+        campo, nombre_norm = campos[m.group(1)], m.group(2)
+    if re.search(r"\b(?:factura|presupuesto|ticket|mes|semana|ano|trimestre)\b", nombre_norm) \
+            or re.match(r"^(?:hoy|manana|este|esta|mis|los|las)\b", nombre_norm):
+        return None
+    crudo = text.strip().rstrip("?¿!. ")
+    nombre = crudo[len(crudo) - len(nombre_norm):] if len(crudo) >= len(nombre_norm) else nombre_norm
+    nombre = _limpiar_cliente(nombre)
+    if not nombre:
+        return None
+    return ("ver_cliente", {"cliente": nombre, **({"dato": campo} if campo else {})})
+
+
 def _dato_de_cliente(text: str) -> tuple[str, dict] | None:
     """«El NIF de Laura Gimeno es 12345678Z» completa la ficha que ya existe.
 
@@ -1234,7 +1273,7 @@ def _dato_de_cliente(text: str) -> tuple[str, dict] | None:
         # «el NIF de Laura es X», «el teléfono del cliente Laura Gimeno es X»
         rf"^(?:(?:cambia|cambiar|actualiza|corrige)\s+)?(?:el|la|su)?\s*{_CAMPO_FICHA}\s+"
         r"(?:de|del|de\s+la)\s+(?:client[ea]\s+)?(?P<cliente>.+?)\s+"
-        r"(?:es|será|sera|a|por|:)\s*(?:el\s+|la\s+)?(?P<valor>.+)$",
+        r"(?:es|és|será|sera|a|por|:)\s*(?:el\s+|la\s+)?(?P<valor>.+)$",
         # «añade el correo X a Laura», «pon el NIF X al cliente Laura»
         rf"^(?:añade|anade|agrega|pon|ponle|guarda|apunta|mete)\s+(?:el|la|su)?\s*{_CAMPO_FICHA}"
         r"\s*:?\s+(?P<valor>.+?)\s+(?:a|al|para|de|del)\s+(?:client[ea]\s+)?(?P<cliente>.+)$",
@@ -1324,6 +1363,7 @@ def _consulta_de_agenda(text: str, norm: str) -> tuple[str, dict] | None:
         r"^(?:y\s+)?(?:que|q)\s+(?:tengo|hay|tenemos|me toca|toca)\b|"
         r"^(?:y\s+)?(?:que|cuantos|cuantas)\s+(?:trabajos|citas|visitas)\b|"
         r"^(?:tengo|tenemos)\s+(?:algo|trabajo|citas?|visitas?)\b|"
+        r"^(?:tinc|tenim)\s+(?:feina|res|alguna\s+cosa|visites?)\b|"
         r"^(?:estoy|estamos)\s+libres?\b|"
         r"^(?:mi|la|ver|ensename|muestrame|dime|pasame)\s+(?:la\s+)?agenda\b|"
         r"^agenda\s+(?:de|del|para|per)\s+(?:hoy|manana|la\s+semana|esta|el|la|este|"
@@ -1372,6 +1412,30 @@ def _consulta_de_gastos(norm: str) -> tuple[str, dict] | None:
     return ("ver_gastos", {})
 
 
+_MESES_DEL_ANIO = ("enero", "febrero", "marzo", "abril", "mayo", "junio", "julio",
+                   "agosto", "septiembre", "octubre", "noviembre", "diciembre")
+
+
+def _periodo_del_resumen(norm: str) -> dict:
+    """«Este año», «el mes pasado», «en agosto»: antes siempre era el mes en curso."""
+    hoy = date.today()
+    anio = re.search(r"\b(?:en|de|del)\s+(20\d\d)\b", norm)
+    if re.search(r"\b(?:este|aquest)\s+(?:ano|any)\b|\bel ano\b|\ben lo que va de ano\b", norm):
+        return {"anio": hoy.year}
+    if re.search(r"\b(?:el\s+)?ano\s+pasado\b", norm):
+        return {"anio": hoy.year - 1}
+    if re.search(r"\b(?:el\s+)?mes\s+(?:pasado|anterior)\b|\bmes passat\b", norm):
+        previo = (hoy.replace(day=1) - timedelta(days=1))
+        return {"mes": previo.strftime("%Y-%m")}
+    for numero, nombre in enumerate(_MESES_DEL_ANIO, start=1):
+        if re.search(rf"\b(?:en|de|del mes de)\s+{nombre}\b", norm):
+            year = int(anio.group(1)) if anio else (hoy.year if numero <= hoy.month else hoy.year - 1)
+            return {"mes": f"{year}-{numero:02d}"}
+    if anio:
+        return {"anio": int(anio.group(1))}
+    return {}
+
+
 def _party_intent(papel: str, nombre: str) -> tuple[str, dict]:
     """Alta de cliente o proveedor con el nombre ya separado de sus datos."""
     tipo = "cliente" if _norm(papel).startswith("client") else "proveedor"
@@ -1401,6 +1465,7 @@ def _party_intent(papel: str, nombre: str) -> tuple[str, dict]:
 _PALABRAS_CLAVE = ("factura", "presupuesto", "cliente", "concepto")
 _FORMAS_VALIDAS = {
     "factura", "facturas", "facturar", "facturame", "facturo", "facturado",
+    "facturamos", "facturaste", "facturaron", "facturaba",
     "facturada", "facturadas", "facturados", "facturacion",
     "presupuesto", "presupuestos", "presupuestar", "presupuestame", "presupuestado",
     "cliente", "clientes", "clienta", "clientas", "concepto", "conceptos",
@@ -1451,8 +1516,8 @@ def _corrige_palabra(match: re.Match) -> str:
 
     palabra = match.group(0)
     plegada = _strip_accents(palabra.lower())
-    if plegada in _FORMAS_VALIDAS or len(plegada) < 6:
-        return palabra
+    if plegada in _FORMAS_VALIDAS or len(plegada) < 6 or palabra.lower().endswith("é"):
+        return palabra  # «facturé», «presupuesté»: pasado dicho a propósito
     plural = plegada.endswith("s") and plegada[:-1] not in _FORMAS_VALIDAS
     raiz = plegada[:-1] if plural else plegada
     parecida = get_close_matches(raiz, _PALABRAS_CLAVE, n=1, cutoff=0.8)
@@ -1474,6 +1539,9 @@ def _erratas(text: str) -> str:
     sin_muletilla = _MULETILLA_INICIAL.sub("", text.strip())
     if sin_muletilla.strip(" ,.…!¡?¿"):
         text = sin_muletilla
+    # «¿Cuánto facture…?», «ya facture…»: pasado sin tilde, no una errata de factura.
+    pasado = re.compile(r"\b(cu[aá]nto|qu[eé]|lo que|ya|no|si|cuando|cu[aá]ndo)\s+(facture)\b", re.I)
+    text = pasado.sub(lambda m: f"{m.group(1)} factur\u00e9", text)
     text = re.sub(r"[^\W\d_]{6,}", _corrige_palabra, text)
     for patron, correcto in _ABREVIATURAS:
         text = patron.sub(correcto, text)
@@ -1522,7 +1590,82 @@ def ordenes_extra(text: str) -> list[str]:
     return [t for t, o in ordenes if o is None or o != hecha]
 
 
+_IVA_DICHO = (
+    (re.compile(r"[\s,]+(?:con\s+(?:el\s+|un\s+)?|al\s+|a\s+)?(0|4|10|21)\s*(?:%|por\s*ciento)\s*"
+                r"(?:de\s+)?iva\b", re.I), None),
+    (re.compile(r"[\s,]+(?:con\s+(?:el\s+)?)?iva\s*(?:del|al|de|:)?\s*(0|4|10|21)\s*%?(?!\w)", re.I), None),
+    (re.compile(r"[\s,]+(?:con\s+(?:el\s+)?)?iva\s+(super\s*reducido|superreducido)\b", re.I), 4.0),
+    (re.compile(r"[\s,]+(?:con\s+(?:el\s+)?)?iva\s+reducido\b", re.I), 10.0),
+    (re.compile(r"[\s,]+(?:exento|exenta)\s+de\s+iva\b", re.I), 0.0),
+)
+_IRPF_DICHO = (
+    re.compile(r"[\s,]+(?:y\s+|con\s+)?(?:el\s+|la\s+|un\s+|una\s+)?(?:irpf|retenci[oó]n)\s*"
+               r"(?:del|de|al|:)?\s*(0|7|15)\s*(?:%|por\s*ciento)?(?!\w)", re.I),
+    re.compile(r"[\s,]+(?:y\s+|con\s+)?(?:el\s+|un\s+)?(0|7|15)\s*(?:%|por\s*ciento)\s*(?:de\s+)?"
+               r"(?:irpf|retenci[oó]n)\b", re.I),
+)
+
+
+def _extraer_impuestos(text: str) -> tuple[str, dict]:
+    """Quita «al 10 % de IVA», «con retención del 15 %», «IVA reducido»… y los devuelve.
+
+    Detrás del importe se colaban en el cliente o el concepto: «factura a Juan por
+    grifo 95 euros al 10% de IVA» daba el concepto «al 10%» y el IVA seguía al 21.
+    """
+    impuestos: dict = {}
+    for patron, fijo in _IVA_DICHO:
+        m = patron.search(text)
+        if m:
+            impuestos["iva"] = fijo if fijo is not None else float(m.group(1))
+            text = text[:m.start()] + text[m.end():]
+            break
+    for patron in _IRPF_DICHO:
+        m = patron.search(text)
+        if m:
+            impuestos["irpf"] = float(m.group(1))
+            text = text[:m.start()] + text[m.end():]
+            break
+    # «sin IVA» dice que el importe es la base, que ya es lo que se entiende.
+    text = re.sub(r"[\s,]+sin\s+iva\b", "", text, flags=re.I)
+    return text, impuestos
+
+
+# «Factura 2026/0001»: número visible con año. Sin esto «2026» se leía como el
+# id interno y se proponía cobrar o emitir otra factura.
+_NUMERO_VISIBLE = re.compile(
+    r"\b((?:factura|ticket|tiquet|fra)\s*(?:n[ºo.]?\s*|n[uú]mero\s+)?#?\s*)"
+    r"([A-Za-z]{0,3}\d{4}\s*[/-]\s*\d{1,6})\b", re.I)
+_ID_CENTINELA = 987654321
+
+
 def parse(text: str) -> tuple[str, dict] | None:
+    visible = _NUMERO_VISIBLE.search(text or "")
+    if visible:
+        numero = re.sub(r"\s+", "", visible.group(2)).replace("-", "/").upper()
+        resultado = _parse_sin_numero(_NUMERO_VISIBLE.sub(
+            lambda m: f"{m.group(1)}{_ID_CENTINELA}", text, count=1))
+        if resultado and resultado[1].get("factura_id") == _ID_CENTINELA:
+            args = {k: v for k, v in resultado[1].items() if k != "factura_id"}
+            return (resultado[0], {**args, "factura_numero": numero})
+        if resultado and str(_ID_CENTINELA) in json.dumps(resultado[1], ensure_ascii=False):
+            return _parse_sin_numero(text)
+        return resultado
+    return _parse_sin_numero(text)
+
+
+def _parse_sin_numero(text: str) -> tuple[str, dict] | None:
+    limpio, impuestos = _extraer_impuestos(text)
+    if impuestos or limpio != text:
+        resultado = _parse(limpio)
+        if resultado and resultado[0] in {"crear_factura", "crear_presupuesto",
+                                          PARTIAL_INVOICE}:
+            return (resultado[0], {**resultado[1], **impuestos})
+        if resultado and resultado[0] not in {NEED_REVIEW}:
+            return resultado
+    return _parse(text)
+
+
+def _parse(text: str) -> tuple[str, dict] | None:
     # Lo primero: pasar a cifras los importes dictados en letra. Todo lo que
     # viene detrás busca números, y una nota de voz los trae escritos.
     # «El 21 por ciento» es como se dice un porcentaje hablando. Sin traducirlo,
@@ -1555,6 +1698,22 @@ def parse(text: str) -> tuple[str, dict] | None:
     gastos = _consulta_de_gastos(norm)
     if gastos:
         return gastos
+    # «Me han pagado 300», «ya me pagó Reformas Martínez»: un cobro sin decir de
+    # qué factura. Se enseña lo pendiente para que diga cuál; antes iba a la IA.
+    cobro = re.match(r"^(?:ya\s+)?(?:me\s+(?:han|ha)\s+pagado|me\s+pag(?:o|aron)|he\s+cobrado|"
+                     r"cobre|ya\s+he\s+cobrado)\b(.*)$", norm)
+    if cobro and not re.search(r"\bfactura\s*#?\s*\d", norm):
+        resto = re.sub(rf"\b(?:{_AMOUNT_RE})\s*(?:€|euros?|eur)?", " ", cobro.group(1))
+        resto = re.sub(r"\b(?:ya|hoy|ayer|la|el|factura|de|del|a|por|todo|toda)\b", " ", resto)
+        nombre = " ".join(resto.split())
+        crudo = text.strip().rstrip("?¿!. ")
+        cliente = crudo[len(crudo) - len(nombre):] if nombre and len(crudo) >= len(nombre) else ""
+        return ("ver_cobros_pendientes", {"tras_cobro": True,
+                                          **({"cliente": _limpiar_cliente(cliente)} if cliente else {})})
+    # «¿Qué facturas tengo pendientes?» se quedaba sin respuesta local.
+    if (re.search(r"^(?:y\s+)?(?:que|cuales|cuantas|ver|mis|dime)\b.*\bfacturas?\b.*\bpendientes?\b", norm)
+            and not re.search(r"\b(?:emitir|borrador\w*|sin emitir|de enviar|facturar)\b", norm)):
+        return ("ver_cobros_pendientes", {})
     # Se compara contra `norm`, sin acentos: contra el texto crudo, «qué trabajos
     # tengo mañana» no encajaba con «que.*trabajos» por la tilde y la orden se
     # perdía entera.
@@ -1604,6 +1763,9 @@ def parse(text: str) -> tuple[str, dict] | None:
     dato_cliente = _dato_de_cliente(text)
     if dato_cliente:
         return dato_cliente
+    pregunta_cliente = _pregunta_por_cliente(text, norm)
+    if pregunta_cliente:
+        return pregunta_cliente
     _PAPEL = r"(client[ea]s?|client|proveedor[a]?|prove[ïi]dor[a]?)"
     _VERBO_ALTA = (r"(?:crea\w*|crear|cre[ao]|anade\w*|añade\w*|agrega\w*|agregar|"
                    r"apunta\w*|registra\w*|guarda\w*|mete\w*|afegeix\w*|fes|"
@@ -1824,10 +1986,15 @@ def parse(text: str) -> tuple[str, dict] | None:
                     r"anotame|anade|anademe|añade|pon|ponme|mete|meteme)")
     _NOMBRE_GASTO = (r"(?:gastos?\b|gaste\b|he gastado\b|me he gastado\b|"
                      r"compre\b|he comprado\b|ticket\b|tiquet\b|recibo\b|"
+                     # «He pagado 60 de seguro», «pagué la gasolina, 55 euros».
+                     # «Me han pagado» no entra: empieza por «me han».
+                     r"he pagado\b|pague\b|"
                      # Catalán: «he gastat 35 euros» no registraba nada.
                      r"despesa\b|he gastat\b|m'he gastat\b|he comprat\b|rebut\b)")
+    # «Hoy he gastado 45…», «ayer compré…»: el cuándo delante tapaba la orden.
+    _CUANDO = r"(?:(?:hoy|ayer|antes|esta manana|esta tarde|esta mañana)\s*,?\s+)?"
     es_gasto = bool(
-        re.match(rf"(?:{_VERBO_GASTO}\s+(?:un[oa]?\s+)?)?{_NOMBRE_GASTO}", norm)
+        re.match(rf"{_CUANDO}(?:{_VERBO_GASTO}\s+(?:un[oa]?\s+)?)?{_NOMBRE_GASTO}", norm)
         # «apunta 20 euros de material»: con el verbo y el importe basta, no hace
         # falta decir «gasto». No se toma por gasto si la frase habla de facturar
         # o de citas, que son otras cosas con importe.
@@ -1836,6 +2003,9 @@ def parse(text: str) -> tuple[str, dict] | None:
                               r"cobr\w+|trabajo\w*|cita\w*|agenda\w*)\b", norm))
     )
     if es_gasto:
+        # Sin el «hoy/ayer» delante, para que el concepto no sea «compré tornillos».
+        text = re.sub(r"^\s*(?:hoy|ayer|antes|esta\s+ma[ñn]ana|esta\s+tarde)\s*,?\s+", "",
+                      text, flags=re.I)
         amount = _parse_amount(text)
         if amount is not None:
             cm = re.search(r"(?:en|de|por)\s+([a-záéíóúñ ]+)", text, re.I)
@@ -1849,6 +2019,8 @@ def parse(text: str) -> tuple[str, dict] | None:
                 medio = re.match(rf"\s*\w+\s+(.+?)\s+(?:por|de|en)?\s*{_AMOUNT_RE}",
                                  text, re.I)
                 concepto = _limpiar_concepto(medio.group(1)) if medio else ""
+            concepto = re.sub(r"\s+(?:hoy|ayer|esta\s+ma[ñn]ana|esta\s+tarde)$", "",
+                              concepto, flags=re.I).strip()
             concepto = concepto or "Gasto"
             args = {"concepto": concepto, "importe": amount}
             if re.search(r"\biva\b", norm):
@@ -1943,12 +2115,12 @@ def parse(text: str) -> tuple[str, dict] | None:
         return ("ver_impuestos", args)
 
     # --- Resumen / ingresos
-    if re.search(r"(cuanto.*facturad|ingresos|resumen|como va|como voy|que tal va|"
+    if re.search(r"(cuanto.*factur(?:ad|e\b|amos|aste|o\b)|ingresos|resumen|como va|como voy|que tal va|"
                  r"balance|beneficio|facturacion|este mes|mis numeros|cuanto llevo|"
                  # Catalán: «quant he facturat», «com va», «aquest mes».
                  r"quant.*facturat|ingressos|com va|com vaig|com anem|benefici|"
                  r"facturacio|aquest mes|els meus numeros|quant porto)", norm):
-        return ("resumen_negocio", {})
+        return ("resumen_negocio", _periodo_del_resumen(norm))
 
     # --- Clientes
     if re.search(r"\bclients?\b|\bclientes\b", norm):
@@ -2022,7 +2194,10 @@ def format_reply(tool: str, result: dict) -> str:
                 f"{entrega.get('target')} por {entrega.get('channel')}. "
                 "Queda anotado en su historial.")
     if tool == "registrar_pago":
-        return f"Cobro registrado en la factura #{result['factura']['id']}."
+        f = result["factura"]
+        return (f"✅ Cobro registrado: la factura {f.get('number') or '#' + str(f['id'])}"
+                f"{' de ' + f['client_name'] if f.get('client_name') else ''} "
+                f"({_eur(f.get('total') or 0)}) ya consta como cobrada.")
     if tool == "crear_cliente":
         client = result["cliente"]
         suffix = " Ya existía; he reutilizado su ficha." if result.get("existing") else ""
@@ -2050,6 +2225,38 @@ def format_reply(tool: str, result: dict) -> str:
                                    if not ok)
                       + ": dímelo («el NIF de " + client["name"] + " es …») o añádelo en Clientes.")
         return texto
+    if tool == "ver_cliente":
+        if not result.get("ok"):
+            return (result.get("error") or "No encuentro ese cliente.") + \
+                " Dime el nombre como lo tienes en Clientes."
+        c = result["cliente"]
+        etiquetas = {"telefono": ("phone", "teléfono"), "email": ("email", "correo"),
+                     "nif": ("nif", "NIF"), "direccion": ("address", "dirección")}
+        dato = result.get("dato")
+        if dato in etiquetas:
+            columna, nombre = etiquetas[dato]
+            if c.get(columna):
+                return f"El {nombre} de **{c['name']}** es {c[columna]}."
+            ejemplo = {"phone": "612 34 56 78", "email": "correo@ejemplo.es",
+                       "nif": "12345678Z", "address": "Calle Mayor 3, Valencia"}[columna]
+            return (f"No tengo el {nombre} de **{c['name']}**. Dímelo así y lo guardo: "
+                    f"«el {nombre} de {c['name']} es {ejemplo}».")
+        lines = [f"📇 **{c['name']}** · ficha #{c['id']}"]
+        for columna, nombre in (("phone", "Teléfono"), ("email", "Correo"), ("nif", "NIF"),
+                                ("address", "Dirección")):
+            lines.append(f"{nombre}: {c.get(columna) or '—'}")
+        if result["n_facturas"]:
+            lines.append(f"\n{_cuenta(result['n_facturas'], 'factura', 'facturas')}"
+                         + (f", pendiente de cobro **{_eur(result['pendiente'])}**"
+                            if result["pendiente"] else ", nada pendiente de cobro") + ":")
+            for f in result["facturas"]:
+                estado = {"borrador": "borrador", "enviada": "sin cobrar", "parcial": "cobro parcial",
+                          "cobrada": "cobrada"}.get(f.get("status"), f.get("status") or "")
+                lines.append(f"• {f.get('number') or '#' + str(f['id'])} · {f.get('concept') or ''}"
+                             f" · {_eur(f.get('total') or 0)} · {estado}")
+        else:
+            lines.append("\nTodavía no le has hecho ninguna factura.")
+        return "\n".join(lines)
     if tool == "actualizar_cliente":
         client = result["cliente"]
         etiquetas = {"phone": "teléfono", "email": "correo", "nif": "NIF",
@@ -2143,6 +2350,19 @@ def format_reply(tool: str, result: dict) -> str:
             lines.append(f"• {h} {j.get('client_name') or ''} — {j['description']}")
         lines.append("Al cerrar cada trabajo, deja la factura preparada. Ahí se escapa mucho dinero.")
         return "\n".join(lines)
+    if tool == "ver_cobros_pendientes" and result.get("tras_cobro"):
+        if not result["facturas"]:
+            return ("No tengo ninguna factura pendiente de cobro"
+                    + (f" de {result['cliente']}" if result.get("cliente") else "")
+                    + ", así que no hay nada que marcar. Si el cobro es de una factura "
+                      "que aún no has emitido, emítela primero.")
+        lines = ["¿Qué factura te han pagado? Estas siguen pendientes:"]
+        for p in result["facturas"][:8]:
+            numero = p.get("number") or f"#{p.get('id')}"
+            lines.append(f"• {numero} · {p.get('client_name') or ''} · {_eur(p['total'])}")
+        ejemplo = result["facturas"][0].get("number") or result["facturas"][0].get("id")
+        lines.append(f"\nDímelo así: «la factura {ejemplo} está cobrada». No he marcado nada.")
+        return "\n".join(lines)
     if tool == "ver_cobros_pendientes" and result.get("cliente"):
         quien = result["cliente"]
         if result.get("sin_ficha"):
@@ -2170,6 +2390,19 @@ def format_reply(tool: str, result: dict) -> str:
         return "\n".join(lines)
     if tool == "resumen_negocio":
         r = result
+        if r.get("anio"):
+            periodo = (f"{r['anio']}" if r.get("hasta_mes") == 12
+                       else f"{r['anio']} (hasta {_MESES_DEL_ANIO[max(r.get('hasta_mes', 1), 1) - 1]})")
+            return (f"📊 Lectura de {periodo}: facturado **{_eur(r['invoiced'])}**, cobrado "
+                    f"{_eur(r['collected'])}, pendiente {_eur(r['pending'])}, gastos "
+                    f"{_eur(r['expenses'])}.\n\nBeneficio estimado: **{_eur(r['estimated_profit'])}**.")
+        mes = str(r.get("month") or "")
+        if mes and mes != date.today().strftime("%Y-%m"):
+            nombre = _MESES_DEL_ANIO[int(mes[5:7]) - 1]
+            etiqueta = nombre if mes[:4] == str(date.today().year) else f"{nombre} de {mes[:4]}"
+            return (f"📊 Lectura de {etiqueta}: facturado **{_eur(r['invoiced'])}**, cobrado "
+                    f"{_eur(r['collected'])}, pendiente {_eur(r['pending'])}, gastos "
+                    f"{_eur(r['expenses'])}.\n\nBeneficio estimado: **{_eur(r['estimated_profit'])}**.")
         return (f"📊 Lectura del mes: facturado **{_eur(r['invoiced'])}**, cobrado {_eur(r['collected'])}, "
                 f"pendiente {_eur(r['pending'])}, gastos {_eur(r['expenses'])}.\n\n"
                 f"Beneficio estimado: **{_eur(r['estimated_profit'])}**."

@@ -1,5 +1,16 @@
 ﻿# Registro de QA
 
+## 2026-09-30 (noche, 2)
+
+- Producción con `00a6767` probada en el WhatsApp real: semana, gastos del mes,
+  deuda de un cliente y «Oye, apúntame un gasto…» correctos.
+- No verificado: el gasto «gasolina 45 €» de hoy que aparece en producción. La
+  propuesta de esta sesión se descartó con NO; en el código la IA no puede escribir
+  sin tarjeta (sin hilos que pierdan el contexto). Probablemente de una prueba
+  anterior del día: el founder puede revisarlo en Costes.
+- App web en local (demo sembrada, revisión encendida): 15 páginas del panel sin
+  errores y chat web con semana, cobros, gastos y resumen anual. Suite **1333**.
+
 ## 2026-09-30 (noche) — Clientes, voz y agenda
 
 - WhatsApp real del founder (Chrome): cobros, crear cliente, gasto con corrección y

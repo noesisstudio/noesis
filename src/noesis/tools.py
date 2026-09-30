@@ -163,10 +163,12 @@ TOOLS: list[dict] = [
     },
     {
         "name": "resumen_negocio",
-        "description": "Cifras del mes: facturado, cobrado, pendiente, IVA, gastos, beneficio.",
+        "description": ("Cifras del mes (o del año con «anio»): facturado, cobrado, "
+                        "pendiente, IVA, gastos, beneficio."),
         "input_schema": {
             "type": "object",
-            "properties": {"mes": {"type": "string", "description": "YYYY-MM"}},
+            "properties": {"mes": {"type": "string", "description": "YYYY-MM"},
+                           "anio": {"type": "integer"}},
         },
     },
     {
@@ -254,6 +256,15 @@ TOOLS: list[dict] = [
         "name": "listar_clientes",
         "description": "Lista los clientes guardados.",
         "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "ver_cliente",
+        "description": ("Ficha de un cliente: teléfono, correo, NIF, dirección y sus "
+                        "últimas facturas con lo pendiente de cobro."),
+        "input_schema": {"type": "object", "properties": {
+            "cliente": {"type": "string"},
+            "dato": {"type": "string", "description": "telefono|email|nif|direccion|facturas"}},
+            "required": ["cliente"]},
     },
     {
         "name": "ver_perfil_cliente",
@@ -369,11 +380,30 @@ def _agendar_trabajo(business_id, cliente, descripcion, fecha_hora, zona=None,
     return {"ok": True, "trabajo": job, "cliente": c}
 
 
+def ficha_para_alta(nombre: str, business_id: int) -> dict | None:
+    """La ficha que ya es este cliente, para no duplicarla al darlo de alta.
+
+    Primero la del mismo nombre exacto (sin mayúsculas ni tildes); si no, la que
+    encaje sin ambigüedad. Si encajan varias —«Prueba Claude» con «Lucia Prueba
+    Claude» y «Pedro Prueba Claude»— ninguna es este cliente: antes el alta se
+    bloqueaba pidiendo «el nombre completo» cuando ya lo era.
+    """
+    from .nlu import _norm
+    buscado = _norm(nombre or "").strip()
+    for ficha in db.list_clients(business_id):
+        if _norm(ficha.get("name") or "").strip() == buscado:
+            return ficha
+    try:
+        return db.resolve_client_reference(nombre, business_id)
+    except ValueError:
+        return None
+
+
 def _crear_cliente(business_id, nombre, telefono=None, email=None, nif=None,
                   direccion=None):
     datos, avisos = datos_de_cliente_validos(
         {"telefono": telefono, "email": email, "nif": nif, "direccion": direccion})
-    before = db.resolve_client_reference(nombre, business_id)
+    before = ficha_para_alta(nombre, business_id)
     client = before or db.add_client(nombre, business_id=business_id, **datos)
     nuevos = {k: v for k, v in datos.items() if v and before and not before.get(k)}
     if nuevos:
@@ -691,7 +721,7 @@ def _registrar_pago(business_id, factura_id):
     return {"ok": True, "factura": paid}
 
 
-def _ver_cobros_pendientes(business_id, cliente=None):
+def _ver_cobros_pendientes(business_id, cliente=None, tras_cobro=False):
     pend = db.pending_payments(business_id)
     if cliente:
         try:
@@ -700,15 +730,31 @@ def _ver_cobros_pendientes(business_id, cliente=None):
             ficha = None
         if not ficha:
             return {"n": 0, "total_pendiente": 0, "facturas": [],
-                    "cliente": cliente, "sin_ficha": True}
+                    "cliente": cliente, "sin_ficha": True,
+                    **({"tras_cobro": True} if tras_cobro else {})}
         pend = [p for p in pend if p.get("client_id") == ficha["id"]]
         cliente = ficha["name"]
     total = round(sum(p["total"] for p in pend), 2)
     return {"n": len(pend), "total_pendiente": total, "facturas": pend,
-            **({"cliente": cliente} if cliente else {})}
+            **({"cliente": cliente} if cliente else {}),
+            **({"tras_cobro": True} if tras_cobro else {})}
 
 
-def _resumen_negocio(business_id, mes=None):
+def _resumen_negocio(business_id, mes=None, anio=None):
+    if anio:
+        hoy = date.today()
+        anio = int(anio)
+        ultimo = hoy.month if anio == hoy.year else 12
+        if anio > hoy.year:
+            ultimo = 0
+        claves = ("invoiced", "collected", "pending", "expenses", "estimated_profit",
+                  "vat_estimated")
+        total = {k: 0.0 for k in claves}
+        for m in range(1, ultimo + 1):
+            cifras = db.month_billing(f"{anio}-{m:02d}", business_id=business_id)
+            for k in claves:
+                total[k] += float(cifras.get(k) or 0)
+        return {"anio": anio, "hasta_mes": ultimo, **{k: round(v, 2) for k, v in total.items()}}
     return db.month_billing(mes, business_id=business_id)
 
 
@@ -728,6 +774,21 @@ def _registrar_gasto(
                                                 category=categoria,
                                                 project_id=proyecto_id,
                                                 business_id=business_id)}
+
+
+def _ver_cliente(business_id, cliente, dato=None):
+    try:
+        ficha = db.resolve_client_reference(cliente, business_id)
+    except ValueError as exc:
+        return {"ok": False, "error": str(exc)}
+    if not ficha:
+        return {"ok": False, "error": f"No tengo ficha de cliente «{cliente}»."}
+    facturas = [f for f in db.list_invoices(business_id, client_id=ficha["id"], limit=50)
+                if f.get("status") != "anulada"]
+    return {"ok": True, "cliente": ficha, "dato": dato, "facturas": facturas[:5],
+            "n_facturas": len(facturas),
+            "pendiente": round(sum(float(f.get("remaining_amount") or 0) for f in facturas
+                                   if f.get("status") in {"enviada", "parcial"}), 2)}
 
 
 def _listar_clientes(business_id):
@@ -836,6 +897,7 @@ _DISPATCH = {
     "ver_impuestos": _ver_impuestos,
     "registrar_gasto": _registrar_gasto,
     "listar_clientes": _listar_clientes,
+    "ver_cliente": _ver_cliente,
     "ver_perfil_cliente": _ver_perfil_cliente,
     "ver_proyectos": _ver_proyectos,
     "ver_proyecto": _ver_proyecto,
@@ -884,6 +946,25 @@ def run_tool(
             },
             ensure_ascii=False,
         )
+    if "factura_numero" in (tool_input or {}):
+        # «La factura 2026/0001»: se resuelve por su número visible, nunca por
+        # las cifras sueltas del año.
+        tool_input = dict(tool_input)
+        numero = str(tool_input.pop("factura_numero") or "").strip().upper()
+        plegado = re.sub(r"[^A-Z0-9]", "", numero)
+        coinciden = [f for f in db.list_invoices(business_id)
+                     if f.get("number") and (
+                         str(f["number"]).upper() == numero
+                         or re.sub(r"[^A-Z0-9]", "", str(f["number"]).upper()).endswith(plegado))]
+        if len(coinciden) != 1:
+            return json.dumps({"error": (
+                f"No encuentro una única factura con el número {numero}. "
+                "Dime el número tal como sale en Facturas."
+                if not coinciden else
+                f"Hay varias facturas que acaban en {numero}: "
+                + ", ".join(str(f["number"]) for f in coinciden[:5]) + ". Dime cuál.")},
+                ensure_ascii=False)
+        tool_input["factura_id"] = coinciden[0]["id"]
     try:
         from . import action_review
         proposed = action_review.propose(business_id, name, tool_input)

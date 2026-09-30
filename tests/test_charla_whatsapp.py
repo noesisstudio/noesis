@@ -152,7 +152,9 @@ class CharlaWhatsappTestCase(unittest.TestCase):
             nlu.parse("Factura a cliente Maria Antonia por 350 + iva concepto: reformas"),
             ("crear_factura", {"cliente": "Maria Antonia", "concepto": "reformas",
                                "base": 350.0, "tipo_factura": "F1"}))
-        self.assertEqual(nlu.parse("¿qué facturas tiene el cliente Juan?"), None)
+        # Una pregunta, no una factura: desde el 30-sep se contesta con la ficha.
+        self.assertEqual(nlu.parse("¿qué facturas tiene el cliente Juan?"),
+                         ("ver_cliente", {"cliente": "Juan", "dato": "facturas"}))
         self.assertEqual(
             nlu.parse("factura a Juan por cambio de grifo 95 euros")[1]["cliente"], "Juan")
 
@@ -429,6 +431,128 @@ class CharlaWhatsappTestCase(unittest.TestCase):
         self.assertIn(f"{client['name']} te debe **121,00 €**", deuda)
         self.assertIn("No tengo ficha de cliente «Pepito»", nadie)
         self.assertIn("No tienes trabajos agendados entre hoy", semana)
+
+    # --- Segunda ronda (30-sep, noche)
+
+    def test_impuestos_dichos_detras_del_importe(self):
+        casos = {
+            "factura a Juan García por grifo 95 euros al 10% de IVA": {"iva": 10.0},
+            "factura a Juan por grifo 95 euros con el 10% de iva": {"iva": 10.0},
+            "factura a Juan por reforma 1000 euros con retención del 15%": {"irpf": 15.0},
+            "factura a Juan por reforma 1000 euros, IVA reducido": {"iva": 10.0},
+            "presupuesto a Ana por baño 2000 euros con el 10 por ciento de iva": {"iva": 10.0},
+        }
+        for texto, impuestos in casos.items():
+            with self.subTest(texto=texto):
+                orden, datos = nlu.parse(texto)
+                self.assertIn(orden, {"crear_factura", "crear_presupuesto"})
+                self.assertNotIn("%", datos["concepto"])
+                self.assertNotIn(" por ", f" {datos['cliente']} ")
+                for clave, valor in impuestos.items():
+                    self.assertEqual(datos[clave], valor)
+        self.assertEqual(nlu.parse("factura a Juan por reforma 1000 euros iva del 7")[0],
+                         nlu.NEED_REVIEW)
+
+    def test_borrador_a_medias_se_completa_hablando_y_con_irpf(self):
+        business, _ = self.make_business("Borrador hablado")
+        db.add_client("Juan García", business_id=business["id"])
+        _, cliente, concepto, importe = self.charla(
+            business, "hazme una factura", "a Juan García", "por cambio de grifo", "95 euros")
+        self.assertIn("para **Juan García**", cliente)
+        self.assertIn("falta **el importe**", concepto)
+        self.assertIn("completo", importe)
+        self.charla(business, "hazme una factura",
+                    "factura a Juan García por grifo 95 euros con IRPF del 15")
+        totales = sorted(f["total"] for f in db.list_invoices(business["id"]))
+        self.assertEqual(totales, [100.7, 114.95])
+
+    def test_no_se_cobra_un_borrador_y_el_numero_visible_manda(self):
+        business, client = self.make_business("Cobros claros")
+        borrador = db.add_invoice(client["id"], "Grifo", 80, business_id=business["id"])
+        emitida = db.add_invoice(client["id"], "Pintura", 100, business_id=business["id"])
+        emitida = db.issue_invoice(emitida["id"], business["id"])
+        self.assertEqual(nlu.parse(f"la factura {emitida['number']} está cobrada"),
+                         ("registrar_pago", {"factura_numero": emitida["number"]}))
+        with patch.object(config, "ASSISTANT_REVIEW_ENABLED", True):
+            (no_emitida,) = self.charla(business, f"la factura {borrador['id']} está pagada")
+            tarjeta, hecho = self.charla(
+                business, f"la factura {emitida['number']} está cobrada", "sí")
+            (inexistente,) = self.charla(business, "la factura 2026/0999 está cobrada")
+        self.assertIn("todavía es un borrador", no_emitida)
+        self.assertIn(f"Factura {emitida['number']}", tarjeta)
+        self.assertIn("ya consta como cobrada", hecho)
+        self.assertIn("No encuentro una única factura", inexistente)
+
+    def test_preguntas_sobre_un_cliente_y_cobros_sin_factura(self):
+        business, client = self.make_business("Ficha por WhatsApp")
+        db.update_client(client["id"], business_id=business["id"], phone="612345678")
+        factura = db.add_invoice(client["id"], "Pintura", 100, business_id=business["id"])
+        factura = db.issue_invoice(factura["id"], business["id"])
+        telefono, correo, historial, cobro = self.charla(
+            business, f"dame el teléfono de {client['name']}",
+            f"cuál es el correo de {client['name']}?",
+            f"qué facturas tiene {client['name']}?", "me han pagado 121 euros")
+        self.assertIn("612345678", telefono)
+        self.assertIn("No tengo el correo", correo)
+        self.assertIn(factura["number"], historial)
+        self.assertIn("¿Qué factura te han pagado?", cobro)
+        self.assertIn(f"«la factura {factura['number']} está cobrada»", cobro)
+        self.assertEqual(db.get_invoice(factura["id"], business["id"])["status"], "enviada")
+
+    def test_resumen_del_ano_y_del_mes_pasado(self):
+        self.assertEqual(nlu.parse("cuánto he facturado este año?"),
+                         ("resumen_negocio", {"anio": date.today().year}))
+        self.assertEqual(nlu.parse(nlu.corregir_erratas("cuanto facture el mes pasado"))[0],
+                         "resumen_negocio")
+        self.assertEqual(nlu.parse(nlu.corregir_erratas("facture a juan por pintar 100"))[0],
+                         "crear_factura")
+        business, client = self.make_business("Resumen anual")
+        factura = db.add_invoice(client["id"], "Pintura", 100, business_id=business["id"])
+        db.issue_invoice(factura["id"], business["id"])
+        (anual,) = self.charla(business, "cuánto he facturado este año?")
+        self.assertIn(f"Lectura de {date.today().year}", anual)
+        self.assertIn("121,00 €", anual)
+
+    def test_gastos_con_cuando_delante_y_pagos(self):
+        casos = {"hoy he gastado 45 euros en gasolina": ("gasolina", 45.0),
+                 "ayer compré tornillos por 8,40": ("tornillos", 8.4),
+                 "he pagado 60 euros de seguro de la furgoneta": ("seguro de la furgoneta", 60.0),
+                 "pagué la gasolina, 55 euros": ("la gasolina", 55.0)}
+        for texto, (concepto, importe) in casos.items():
+            with self.subTest(texto=texto):
+                self.assertEqual(nlu.parse(texto),
+                                 ("registrar_gasto", {"concepto": concepto, "importe": importe}))
+        self.assertNotEqual((nlu.parse("me han pagado 300 euros") or ("",))[0], "registrar_gasto")
+
+    def test_alta_de_un_nombre_contenido_en_otros(self):
+        """Caso real: «Prueba Claude» con «Lucia Prueba Claude» y «Pedro Prueba
+        Claude» pedía «el nombre completo» y no dejaba darlo de alta."""
+        business, _ = self.make_business("Nombres parecidos")
+        for nombre in ("Lucia Prueba Claude", "Pedro Prueba Claude"):
+            db.add_client(nombre, business_id=business["id"])
+        with patch.object(config, "ASSISTANT_REVIEW_ENABLED", True):
+            tarjeta, hecho = self.charla(business, "crea el cliente Prueba Claude", "sí")
+        self.assertIn("Guardar cliente", tarjeta)
+        self.assertIn("Cliente guardado: **Prueba Claude**", hecho)
+        self.assertEqual(db.resolve_client_reference("prueba claude", business["id"])["name"],
+                         "Prueba Claude")
+
+    def test_catalan_de_la_ronda(self):
+        casos = {
+            "crea el client Joan Puig amb telèfon 612345678":
+                ("crear_cliente", {"nombre": "Joan Puig", "telefono": "612345678"}),
+            "el NIF de Joan Puig és 12345678Z":
+                ("actualizar_cliente", {"cliente": "Joan Puig", "nif": "12345678Z"}),
+            "quines factures té Joan Puig?":
+                ("ver_cliente", {"cliente": "Joan Puig", "dato": "facturas"}),
+        }
+        for texto, esperado in casos.items():
+            with self.subTest(texto=texto):
+                self.assertEqual(nlu.parse(texto), esperado)
+        cita = nlu.parse("agenda a la Marta dijous a les 10 per revisar la caldera")
+        self.assertEqual((cita[0], cita[1]["cliente"], cita[1]["descripcion"]),
+                         ("agendar_trabajo", "Marta", "revisar la caldera"))
+        self.assertEqual(nlu.parse("tinc feina demà?")[0], "ver_agenda")
 
     # --- Mensajes sin texto
 

@@ -1,5 +1,29 @@
 ﻿# Registro de cambios
 
+## 2026-09-30 (noche, 2) — Cobros por número, ficha del cliente e impuestos dichos
+
+- **Grave, anterior**: «la factura 2026/0001 está cobrada» proponía cobrar la factura
+  con **id 2026**. Sin revisión la habría marcado como cobrada. El número visible se
+  detecta (`nlu._NUMERO_VISIBLE`) y `tools.run_tool` lo resuelve por `number`.
+- Cobrar un **borrador** enseñaba la tarjeta y fallaba al confirmar: ahora se dice
+  que hay que emitirlo antes; una ya cobrada se dice sin tarjeta.
+- «al 10 % de IVA», «con retención del 15 %», «IVA reducido» detrás del importe se
+  metían en cliente o concepto (`nlu._extraer_impuestos`).
+- Borrador a medias: «a Juan García», «por cambio de grifo» lo completan; IVA e IRPF
+  dichos al completar se aplican (`db.complete_invoice_fields`). Arreglado un nombre
+  reutilizado en `chat._complete_from_message` que perdía la clave del borrador.
+- Nuevas consultas locales: `ver_cliente` («dame el teléfono de X», «¿qué facturas
+  tiene X?»), «¿qué facturas tengo pendientes?», resumen del año / mes pasado /
+  «en agosto», «me han pagado 300» (enseña lo pendiente y pide cuál).
+- Gastos con «hoy/ayer» delante, «he pagado…», «pagué…».
+- Alta de «Prueba Claude» con «Lucia/Pedro Prueba Claude» existentes: ya no pide
+  «el nombre completo» (`tools.ficha_para_alta`).
+- Catalán: «amb telèfon», «a la Marta … per revisar», «el NIF de X és», «quines
+  factures té X», «tinc feina demà».
+- Chat de solo lectura (demo y modo consulta): «no», «gracias» sueltos ya no dan el
+  parte entero; también corrige erratas.
+- Suite 1333 correctas. Rollback: revertir el commit.
+
 ## 2026-09-30 (noche) — Clientes, voz, agenda y mensajes sin texto
 
 Ronda en el WhatsApp real del founder y simulación de notas de voz con frases como

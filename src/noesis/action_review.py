@@ -15,7 +15,7 @@ from . import config, db, nlu, local_invoice
 context: ContextVar[dict | None] = ContextVar("action_review", default=None)
 READS = {
     "ver_agenda", "ver_gastos", "ver_cobros_pendientes", "resumen_negocio", "ver_impuestos",
-    "listar_clientes", "ver_perfil_cliente", "ver_proyectos", "ver_proyecto",
+    "listar_clientes", "ver_cliente", "ver_perfil_cliente", "ver_proyectos", "ver_proyecto",
     "ver_equipo", "ver_documentos_pendientes", "ver_solicitudes_gestoria",
     "ver_control_noesis",
 }
@@ -87,7 +87,8 @@ def _preview(bid: int, tool: str, args: dict) -> tuple[str, dict]:
                         aviso = " ⚠️ no es válido: no lo guardaré"
                 lines.append(f"{etiqueta}: {args[clave]}{aviso}")
         if tool == "crear_cliente":
-            existing = db.resolve_client_reference(name, bid)
+            from .tools import ficha_para_alta
+            existing = ficha_para_alta(name, bid)
             if existing:
                 args["nombre"] = existing["name"]
                 snapshot["client"] = {k: existing.get(k) for k in ("id", "name", "nif")}
@@ -191,8 +192,18 @@ def _preview(bid: int, tool: str, args: dict) -> tuple[str, dict]:
         snapshot["lines"] = db.get_invoice_lines(invoice["id"], bid)
         client = db.get_client(invoice["client_id"], bid)
         snapshot["client"] = client
-        lines.extend([f"Factura #{invoice['id']} · {invoice.get('client_name')}", f"Total: {nlu._eur(invoice['total'])}", f"Estado: {invoice['status']}"])
+        referencia = invoice.get("number") or f"#{invoice['id']}"
+        lines.extend([f"Factura {referencia} · {invoice.get('client_name')}", f"Total: {nlu._eur(invoice['total'])}", f"Estado: {invoice['status']}"])
         if tool == "registrar_pago":
+            if invoice.get("status") == "borrador" or not invoice.get("number"):
+                # Se enseñaba la tarjeta «Estado: borrador» y el SÍ acababa en error.
+                raise ValueError(
+                    f"La factura #{invoice['id']} todavía es un borrador: no se puede "
+                    "cobrar lo que no se ha emitido. Emítela primero con «emitir "
+                    f"factura {invoice['id']}» y después dime que está cobrada.")
+            if invoice.get("status") == "cobrada":
+                raise ValueError(f"La factura {invoice.get('number')} ya consta como "
+                                 "cobrada. No he cambiado nada.")
             lines.append("Registraré todo el saldo que falta. Si el pago es parcial, usa Facturas.")
     return "\n".join(lines), snapshot
 

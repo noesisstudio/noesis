@@ -6062,11 +6062,21 @@ def create_partial_invoice(business_id: int, *, client_id=None, client_name=None
 
 
 def complete_invoice_fields(invoice_id: int, business_id: int, *, client_id=None,
-                            client_name=None, concept=None, base=None) -> dict:
-    """Rellena lo que falte. Al completarse el último dato, se valida entera."""
+                            client_name=None, concept=None, base=None,
+                            vat_rate=None, irpf_rate=None) -> dict:
+    """Rellena lo que falte. Al completarse el último dato, se valida entera.
+
+    IVA e IRPF dichos al completar («… con IRPF del 15») se aplican: antes se
+    ignoraban y la factura salía con el tipo por defecto."""
     invoice = get_invoice(invoice_id, business_id)
     if not invoice:
         raise ValueError("Factura no encontrada.")
+    if vat_rate is not None or irpf_rate is not None:
+        invoice = dict(invoice)
+        if vat_rate is not None:
+            invoice["vat_rate"] = float(vat_rate)
+        if irpf_rate is not None:
+            invoice["irpf_rate"] = float(irpf_rate)
     if invoice["status"] != "borrador" or invoice.get("number"):
         raise ValueError("Una factura emitida no puede editarse.")
     if client_id is not None and not get_client(client_id, business_id):
@@ -6084,7 +6094,8 @@ def complete_invoice_fields(invoice_id: int, business_id: int, *, client_id=None
             invoice_id, business_id, client_id=nuevo_cliente,
             lines=[{"description": nuevo_concepto, "quantity": 1,
                     "unit_price": nuevo_importe, "discount_rate": 0,
-                    "vat_rate": invoice.get("vat_rate") or config.DEFAULT_VAT_RATE}],
+                    "vat_rate": (invoice.get("vat_rate") if invoice.get("vat_rate")
+                                 is not None else config.DEFAULT_VAT_RATE)}],
             irpf_rate=invoice.get("irpf_rate") or 0,
         )
         with get_conn() as conn:
@@ -6098,11 +6109,13 @@ def complete_invoice_fields(invoice_id: int, business_id: int, *, client_id=None
     with get_conn() as conn:
         conn.execute(
             "UPDATE invoices SET client_id=?, concept=?, base=?, vat_amount=?, "
-            "irpf_amount=?, total=?, recipient_name=?, pending_fields=? "
+            "irpf_amount=?, total=?, recipient_name=?, pending_fields=?, "
+            "vat_rate=?, irpf_rate=? "
             "WHERE id=? AND business_id=? AND status='borrador'",
             (nuevo_cliente, nuevo_concepto or PENDING_CONCEPT, totals["base"],
              totals["vat_amount"], totals["irpf_amount"], totals["total"],
              None if nuevo_cliente else nombre, json.dumps(pendientes),
+             invoice.get("vat_rate"), invoice.get("irpf_rate"),
              invoice_id, business_id))
     return get_invoice(invoice_id, business_id)
 

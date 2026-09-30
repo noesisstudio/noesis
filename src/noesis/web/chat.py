@@ -1043,6 +1043,18 @@ def _parse_invoice_completion(message: str, faltan: list[str]) -> dict:
         valor = nlu._amount_value(m.group(1))
         if valor > 0:
             datos["base"] = valor
+    # Contestar a «¿a quién? ¿por qué?» como se habla: «a Juan García», «por
+    # cambio de grifo», o las dos cosas y el importe juntos. Antes soltaba el parte.
+    if not datos and re.match(r"^(?:a|para|per\s+a|por|per)\s+\S", texto, re.I):
+        trozo = nlu.parse_partial_invoice("factura " + texto)
+        if "cliente" in trozo and "cliente" not in faltan:
+            trozo.pop("cliente")
+        if re.match(r"^(?:por|per)\s", texto, re.I) and "cliente" in trozo \
+                and "concepto" not in trozo:
+            trozo["concepto"] = trozo.pop("cliente")
+        if (trozo.get("cliente") and not re.search(r"\d", trozo["cliente"])
+                and len(trozo["cliente"].split()) <= 5) or trozo.get("concepto"):
+            datos.update({k: v for k, v in trozo.items() if k in {"cliente", "concepto", "base"}})
     return {k: v for k, v in datos.items() if v}
 
 
@@ -1109,18 +1121,24 @@ def _complete_from_message(business_id: int, message: str, actor: str | None,
         if _choca_con_borrador(business_id, invoice, orden[1]):
             return None
         campo_de = {"cliente": "cliente", "concepto": "concepto", "importe": "base"}
+        # `campo`, no `clave`: reutilizar el nombre pisaba la clave del borrador
+        # pendiente y, con un dato aún por llegar, el borrador dejaba de esperar.
         for falta in faltan:
-            clave = campo_de.get(falta)
-            valor = orden[1].get(clave) if clave else None
+            campo = campo_de.get(falta)
+            valor = orden[1].get(campo) if campo else None
             if valor and valor != "Servicio":
-                datos.setdefault(clave, valor)
+                datos.setdefault(campo, valor)
+        for tipo in ("iva", "irpf"):
+            if orden[1].get(tipo) is not None:
+                datos.setdefault(tipo, orden[1][tipo])
     if not datos:
         return None
     campos = _client_args(business_id, datos.get("cliente"))
     try:
         invoice = db.complete_invoice_fields(
             invoice_id, business_id, concept=datos.get("concepto"),
-            base=datos.get("base"), **campos)
+            base=datos.get("base"), vat_rate=datos.get("iva"),
+            irpf_rate=datos.get("irpf"), **campos)
     except ValueError as exc:
         return {"reply": f"No he podido completar el borrador #{invoice_id}: {exc}",
                 "source": "local"}
@@ -1791,6 +1809,7 @@ _READ_ONLY_TOOLS = {
     "ver_control_noesis",
     "ver_agenda",
     "ver_gastos",
+    "ver_cliente",
     "ver_cobros_pendientes",
     "ver_proyectos",
     "ver_equipo",
@@ -1854,9 +1873,11 @@ def handle_read_only(
             return lectura(briefing)
     if any(fragment in norm for fragment in (
         "sin facturar", "pendiente de facturar", "por facturar",
-        "que me falta facturar", "trabajos sin cobrar",
+        "que me falta facturar", "trabajos sin cobrar", "que tengo que facturar",
+        "que me queda facturar", "que falta facturar",
     )):
         return lectura(_unbilled_reply(business_id))
+    message = nlu.corregir_erratas(message)
     if any(fragment in norm for fragment in (
         "que harias", "prioridad", "aconsej", "recomiend", "diagnostico",
         "como lo ves", "mente", "piensa", "plan", "que hago",
@@ -1904,6 +1925,10 @@ def handle_read_only(
             ),
             "source": "local",
         }
+    # «gracias», «no», «vale» sueltos: una frase corta, no el parte entero.
+    social = _social_reply(message)
+    if social:
+        return {"reply": social, "source": "local"}
     return lectura(_coach_reply(business_id, message, solo_lectura=True))
 
 
