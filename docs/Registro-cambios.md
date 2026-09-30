@@ -1,5 +1,23 @@
 ﻿# Registro de cambios
 
+## 2026-09-30 (tarde) — Clientes con tilde y orden repetida con borrador abierto
+
+Casos reales del founder por WhatsApp (producción con `ASSISTANT_REVIEW_ENABLED`):
+
+- «factura a cliente reformas martinez por 800 euros + iva concepto parque» con la
+  ficha «reformas martínez» preguntaba «No tengo ficha de cliente reformas
+  martinez». Era código anterior (la palabra «cliente» se colaba en el nombre;
+  `_limpiar_cliente` ya la quita). Comprobado con revisión encendida: tilde,
+  mayúsculas, «Martines» y «reformas» a secas encuentran la ficha sin duplicarla.
+- Con el borrador #62 a medias, «Factura a Maria Antonia por 350 + iva concepto
+  reformas» solo apuntaba el concepto. `_complete_from_message` usa también la orden
+  entera (`nlu.parse`) para rellenar lo que falta; el «Servicio» por defecto no cuenta.
+- Tarjeta de revisión: «IVA 21 %» en vez de «IVA 21.0% · IRPF 0.0%» (el IRPF se ve si
+  se aplica o si el negocio suele aplicarlo) y «Cuándo: mañana a las 10:00».
+- Pruebas: 2 nuevas en `test_charla_whatsapp` con la revisión encendida como en
+  producción; ajustado el formato en `test_correcciones` y `test_conversation_safety`.
+- Riesgo: bajo. Rollback: revertir el commit.
+
 ## 2026-09-30 — WhatsApp probado hablando con el bot: modo consulta y conversación
 
 Encontrado probando el WhatsApp real del founder (cuenta caducada) y después una

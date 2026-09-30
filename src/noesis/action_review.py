@@ -29,6 +29,14 @@ LABELS = {
 }
 
 
+
+def _muestra_irpf(bid: int, irpf) -> bool:
+    """El IRPF se enseña si se aplica o si el negocio suele aplicarlo: un 0 % que
+    se aparta de lo habitual es un dato; un 0 % de siempre es ruido."""
+    if float(irpf or 0):
+        return True
+    return bool(float((db.get_business(bid) or {}).get("default_irpf") or 0))
+
 def _preview(bid: int, tool: str, args: dict) -> tuple[str, dict]:
     if tool not in LABELS:
         raise ValueError("Esta acción todavía requiere revisión desde su apartado en la app.")
@@ -94,7 +102,7 @@ def _preview(bid: int, tool: str, args: dict) -> tuple[str, dict]:
         if tool == "crear_presupuesto":
             args.pop("importe_incluye_iva", None)
             args["base"] = float(base)
-        lines.extend([f"Concepto: {args.get('concepto', 'Servicio')}", f"Base: {nlu._eur(base)} · IVA {vat}% · IRPF {irpf}%", f"Total: {nlu._eur(total)}"])
+        lines.extend([f"Concepto: {args.get('concepto', 'Servicio')}", f"Base: {nlu._eur(base)} · IVA {float(vat):g} %" + (f" · IRPF {float(irpf):g} %" if _muestra_irpf(bid, irpf) else ""), f"Total: {nlu._eur(total)}"])
     if tool == "registrar_gasto":
         if args.get("proyecto_id"):
             raise ValueError("Para asignar el gasto a un proyecto, revisa primero el proyecto en Costes. No he asignado nada.")
@@ -103,7 +111,7 @@ def _preview(bid: int, tool: str, args: dict) -> tuple[str, dict]:
             raise ValueError("El gasto debe tener un importe positivo.")
         lines.extend([f"Concepto: {args.get('concepto') or 'Gasto'}", f"Importe: {nlu._eur(amount)}", "Destino: gastos generales del negocio; sin asignación a cliente."])
     if tool == "agendar_trabajo":
-        lines.extend([f"Trabajo: {args.get('descripcion') or 'Trabajo'}", f"Cuándo: {args.get('fecha_hora')}", f"Lugar: {args.get('zona') or 'sin especificar'}"])
+        lines.extend([f"Trabajo: {args.get('descripcion') or 'Trabajo'}", f"Cuándo: {nlu.dia_humano(args.get('fecha_hora')) or 'sin día'}", f"Lugar: {args.get('zona') or 'sin especificar'}"])
     if tool == "entregar_factura":
         invoice = db.get_invoice(int(args.get("factura_id", 0)), bid)
         if not invoice:

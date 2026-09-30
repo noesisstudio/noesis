@@ -1,5 +1,13 @@
 ﻿# Registro de QA
 
+## 2026-09-30 (tarde) — Clientes con tilde y borrador abierto
+
+- Simulación con `ASSISTANT_REVIEW_ENABLED=true` (como producción): las simulaciones
+  de la mañana se hicieron con la revisión apagada y no cubrían ese camino.
+- Suite completa **1308 correctas** (320 s). Ruff correcto.
+- No verificado aquí: el despliegue en Railway (consultar producción no estaba
+  permitido en esta sesión); lo confirmó el founder desde su móvil.
+
 ## 2026-09-30 — WhatsApp probado hablando con el bot
 
 - Prueba real: WhatsApp Web del founder (Chrome) con el chat de Bynoesis. Cuenta en

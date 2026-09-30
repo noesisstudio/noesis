@@ -1076,6 +1076,18 @@ def _complete_from_message(business_id: int, message: str, actor: str | None,
         db.clear_pending_action(business_id, clave)
         return None
     datos = _parse_invoice_completion(message, faltan)
+    # Con el borrador a medias, repetir la orden entera («factura a María por
+    # 350 + iva concepto reformas») también lo completa: antes solo se leían los
+    # datos con etiqueta y el cliente dicho con «a María» se perdía. Solo rellena
+    # lo que falta; el «Servicio» por defecto no es un concepto dicho.
+    orden = nlu.parse(message)
+    if orden and orden[0] in {"crear_factura", nlu.PARTIAL_INVOICE}:
+        campo_de = {"cliente": "cliente", "concepto": "concepto", "importe": "base"}
+        for falta in faltan:
+            clave = campo_de.get(falta)
+            valor = orden[1].get(clave) if clave else None
+            if valor and valor != "Servicio":
+                datos.setdefault(clave, valor)
     if not datos:
         return None
     campos = _client_args(business_id, datos.get("cliente"))

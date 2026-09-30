@@ -57,7 +57,7 @@ class ConversationSafetyTests(unittest.TestCase):
         with db.get_conn() as conn:
             conn.execute("UPDATE businesses SET default_irpf=15 WHERE id=?", (self.bid,))
         reply = self.say("ticket de venta a Marta López 121 euros por revisión")
-        self.assertIn("IRPF 0%", reply["reply"])
+        self.assertIn("IRPF 0 %", reply["reply"])
         self.say("sí")
         ticket = next(inv for inv in db.list_invoices(self.bid) if inv["invoice_type"] == "F2")
         self.assertEqual(float(ticket["total"]), 121)

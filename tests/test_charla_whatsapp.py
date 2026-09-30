@@ -8,7 +8,7 @@ import unittest
 from datetime import date
 from unittest.mock import patch
 
-from noesis import db, nlu
+from noesis import config, db, nlu
 from noesis.web import chat, whatsapp
 from tests import test_backend as fixtures
 
@@ -27,8 +27,10 @@ class CharlaWhatsappTestCase(unittest.TestCase):
                           side_effect=lambda phone, text, **kw:
                           respuestas.append(text) or True), \
              patch.object(whatsapp, "_attach_new_invoice_pdf"):
-            for i, texto in enumerate(textos):
-                whatsapp.handle_inbound({"id": f"wamid.charla.{i}",
+            for texto in textos:
+                # Cada mensaje con su id: WhatsApp descarta los repetidos.
+                self._enviados = getattr(self, "_enviados", 0) + 1
+                whatsapp.handle_inbound({"id": f"wamid.charla.{self._enviados}",
                                          "from": TELEFONO, "text": texto})
         return respuestas
 
@@ -109,6 +111,43 @@ class CharlaWhatsappTestCase(unittest.TestCase):
         self.assertEqual((factura["client_id"], factura["concept"]),
                          (maria["id"], "reformas"))
         self.assertIn("completo", respuesta)
+
+    def test_cliente_con_tilde_y_palabra_cliente_con_revision_como_en_produccion(self):
+        """Caso real 30-sep, 10:37: «factura a cliente reformas martinez…»."""
+        business, _ = self.make_business("Tildes")
+        ficha = db.add_client("reformas martínez", business_id=business["id"])
+        with patch.object(config, "ASSISTANT_REVIEW_ENABLED", True):
+            for texto in ("factura a cliente reformas martinez por 800 euros + iva "
+                          "concepto parque",
+                          "factura a cliente reformas martínez por 800 euros + iva "
+                          "concepto parque",
+                          "factura a REFORMAS MARTINES por parque 800 euros"):
+                with self.subTest(texto=texto):
+                    tarjeta, hecho = self.charla(business, texto, "sí")
+                    self.assertIn(f"reformas martínez · ficha #{ficha['id']}", tarjeta)
+                    self.assertIn("IVA 21 %", tarjeta)
+                    self.assertNotIn("No tengo ficha", tarjeta)
+                    self.assertIn("preparada para reformas martínez (parque)", hecho)
+        # Ninguna ficha duplicada de la misma empresa.
+        self.assertEqual(
+            [c["id"] for c in db.list_clients(business["id"])
+             if "reformas" in nlu._norm(c["name"])], [ficha["id"]])
+
+    def test_repetir_la_orden_entera_completa_el_borrador(self):
+        """Caso real 30-sep, 11:04: con el #62 a medias, la orden con «a María»."""
+        business, _ = self.make_business("Orden repetida")
+        maria = db.add_client("María Antonia", business_id=business["id"])
+        for revision in (False, True):
+            with self.subTest(revision=revision), \
+                    patch.object(config, "ASSISTANT_REVIEW_ENABLED", revision):
+                _, respuesta = self.charla(
+                    business, "hazme una factura de 350 euros",
+                    "Factura a Maria Antonia por 350 + iva concepto reformas")
+                self.assertIn("completo para *María Antonia*",
+                              whatsapp.whatsapp_markup(respuesta))
+        for factura in db.list_invoices(business["id"]):
+            self.assertEqual((factura["client_id"], factura["concept"], factura["total"]),
+                             (maria["id"], "reformas", 423.5))
 
     # --- Contestar sin inventar
 

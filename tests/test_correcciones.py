@@ -97,8 +97,8 @@ class OtrosCamposTests(_Base):
 
     def test_correcting_the_tax_rates(self):
         self.propuesta()
-        self.assertIn("IVA 10.0%", self.wa("ponle 10% de IVA"))
-        self.assertIn("IRPF 15.0%", self.wa("y 15% de IRPF"))
+        self.assertIn("IVA 10 %", self.wa("ponle 10% de IVA"))
+        self.assertIn("IRPF 15 %", self.wa("y 15% de IRPF"))
 
     def test_an_expense_can_be_corrected_too(self):
         self.wa("gasté 35 euros en gasolina")
