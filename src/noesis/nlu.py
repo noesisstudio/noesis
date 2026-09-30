@@ -117,12 +117,35 @@ def _cifras_dictadas(text: str) -> str:
     «por» y delante de un conector, nunca de otra palabra: así «Tres Torres» o
     «Cien Montaditos» siguen siendo nombres y no se convierten en números.
     """
+    # Whisper escribe «veintitrés» y «dieciséis» con tilde; la tabla va sin ella.
+    text = re.sub(r"\b(?:dieciséis|veintidós|veintitrés|veintiséis|veintiún)\b",
+                  lambda m: _strip_accents(m.group(0)), text, flags=re.I)
+    palabra = "|".join(sorted(_PALABRA_NUMERO, key=len, reverse=True))
+
+    def con_centimos(match: re.Match) -> str:
+        valor = _numero_en_letra(_norm(match.group("cifra")).split())
+        sueltos = _numero_en_letra(_norm(match.group("centimos")).split())
+        if not valor or sueltos is None or not 0 < sueltos < 100:
+            return match.group(0)
+        return f"{valor},{sueltos:02d}{match.group('unidad')}"
+
+    # «veintitrés con cincuenta euros»: los céntimos van antes de la unidad.
+    text = re.sub(
+        rf"\b(?P<cifra>(?:(?:{palabra})\s+)*(?:{palabra}))\s+(?:con|amb)\s+"
+        rf"(?P<centimos>(?:(?:{palabra})\s+)*(?:{palabra}))"
+        rf"(?P<unidad>\s*(?:€|euros?|eur\b))",
+        con_centimos, text, flags=re.I)
     palabras_sueltas = "|".join(sorted(_PALABRA_NUMERO, key=len, reverse=True))
     text = re.sub(
-        rf"(?<=\b)(?P<marca>(?:de|por|importe|precio|son|es)\s+)"
+        # «He gastado veintitrés con cincuenta en el parking»: tras el verbo del
+        # gasto la cifra es el importe aunque no se diga «euros».
+        rf"(?<=\b)(?P<marca>(?:de|por|importe|precio|son|es|gastado|gaste|gasté|"
+        rf"pagado|pague|pagué|gastat)\s+)"
         rf"(?P<cifra>(?:(?:{palabras_sueltas})\s+)*(?:{palabras_sueltas}))"
         rf"(?:\s+(?:con|amb)\s+(?P<centimos>(?:(?:{palabras_sueltas})\s*)+?))?"
-        rf"(?=\s+(?:a|para|per|con|y|i)\b|\s*[,.;]|$)",
+        # «y» cierra la cifra solo si no sigue otra cifra: «treinta y cinco» es una.
+        rf"(?=\s+(?:a|para|per|con|en)\b|\s+(?:y|i)\s+(?!(?:{palabras_sueltas})\b)"
+        rf"|\s*[,.;]|$)",
         _sin_euros, text, flags=re.I)
     if not re.search(r"\b(?:euros?|eur|€)\b", text, re.I):
         return text
@@ -486,6 +509,8 @@ def _agenda_description(text: str, cliente: str | None) -> str:
         value = match.group(1).strip().rstrip(".!?¿¡;")
         folded = _norm(value)
         if (not value or value == cliente or len(value) > 200
+                # «de la mañana» dejaba el trabajo en «la».
+                or folded in {"la", "el", "los", "las", "un", "una", "lo"}
                 or re.match(_AGENDA_NOT_A_TASK, folded)
                 or re.search(_AGENDA_NOUN, folded)
                 or (cliente and _norm(value) == _norm(cliente))):
@@ -1042,6 +1067,22 @@ _CLAVE_EMAIL = re.compile(r"\b(?:correo(?:\s+electr[oó]nico)?|correu|email|e-ma
                           r"\s*(?:es\s+)?:?\s*", re.I)
 
 
+def correo_dictado(texto: str) -> str:
+    """«juan punto garcia arroba gmail punto com» → «juan.garcia@gmail.com»."""
+    if not re.search(r"\barroba\b", texto or "", re.I):
+        return texto
+    def une(m: re.Match) -> str:
+        trozo = m.group(0)
+        trozo = re.sub(r"\s*\barroba\b\s*", "@", trozo, flags=re.I)
+        trozo = re.sub(r"\s*\bpunto\b\s*", ".", trozo, flags=re.I)
+        trozo = re.sub(r"\s*\bgui[oó]n\s+bajo\b\s*", "_", trozo, flags=re.I)
+        trozo = re.sub(r"\s*\bgui[oó]n\b\s*", "-", trozo, flags=re.I)
+        return trozo.replace(" ", "").lower()
+    # Solo el tramo que forma el correo: palabras sueltas unidas por punto/arroba.
+    return re.sub(r"[\w.+-]+(?:\s+(?:punto|gui[oó]n(?:\s+bajo)?)\s+[\w+-]+)*\s+arroba\s+"
+                  r"[\w-]+(?:\s+punto\s+[\w-]+)+", une, texto, flags=re.I)
+
+
 def datos_de_ficha(texto: str) -> tuple[int, dict]:
     """Datos de contacto dictados con el nombre: teléfono, correo, NIF y dirección.
 
@@ -1049,7 +1090,7 @@ def datos_de_ficha(texto: str) -> tuple[int, dict]:
     correo o el NIF acababan pegados al nombre o perdidos sin avisar; justo lo
     que luego hace falta para emitir y enviar la factura.
     """
-    texto = str(texto or "")
+    texto = correo_dictado(str(texto or ""))
     datos: dict = {}
     inicios: list[int] = []
     correo = _EMAIL_RE.search(texto)
@@ -1268,7 +1309,7 @@ def _dato_de_cliente(text: str) -> tuple[str, dict] | None:
     También «añade el correo x@y.es a Laura», «ponle a Laura el teléfono …» y
     «cambia el teléfono de Laura a …». Antes soltaba el parte del día.
     """
-    t = text.strip().rstrip(".!")
+    t = correo_dictado(text.strip().rstrip(".!"))
     formas = (
         # «el NIF de Laura es X», «el teléfono del cliente Laura Gimeno es X»
         rf"^(?:(?:cambia|cambiar|actualiza|corrige)\s+)?(?:el|la|su)?\s*{_CAMPO_FICHA}\s+"
@@ -2244,11 +2285,25 @@ def format_reply(tool: str, result: dict) -> str:
         lines = [f"📇 **{c['name']}** · ficha #{c['id']}"]
         for columna, nombre in (("phone", "Teléfono"), ("email", "Correo"), ("nif", "NIF"),
                                 ("address", "Dirección")):
-            lines.append(f"{nombre}: {c.get(columna) or '—'}")
+            aviso = ""
+            if columna == "nif" and c.get("nif"):
+                from .fiscal_validation import valid_spanish_tax_id
+                if not valid_spanish_tax_id(c["nif"]):
+                    aviso = " ⚠️ no parece un NIF válido: revísalo antes de emitir"
+            lines.append(f"{nombre}: {c.get(columna) or '—'}{aviso}")
         if result["n_facturas"]:
-            lines.append(f"\n{_cuenta(result['n_facturas'], 'factura', 'facturas')}"
+            borradores = result.get("n_borradores") or 0
+            emitidas = result["n_facturas"] - borradores
+            partes = []
+            if emitidas:
+                partes.append(_cuenta(emitidas, "emitida", "emitidas"))
+            if borradores:
+                partes.append(_cuenta(borradores, "borrador sin emitir", "borradores sin emitir"))
+            lines.append(f"\n{_cuenta(result['n_facturas'], 'factura', 'facturas')} ("
+                         + " y ".join(partes) + ")"
                          + (f", pendiente de cobro **{_eur(result['pendiente'])}**"
-                            if result["pendiente"] else ", nada pendiente de cobro") + ":")
+                            if result["pendiente"] else
+                            ", nada pendiente de cobro" if emitidas else "") + ":")
             for f in result["facturas"]:
                 estado = {"borrador": "borrador", "enviada": "sin cobrar", "parcial": "cobro parcial",
                           "cobrada": "cobrada"}.get(f.get("status"), f.get("status") or "")

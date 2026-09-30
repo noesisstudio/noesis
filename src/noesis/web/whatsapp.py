@@ -879,6 +879,14 @@ def _prepare_invoice_action(business: dict, phone: str, text: str) -> str | None
                 (client.get("address"), "domicilio del cliente"),
             ))
         missing = [label for value, label in required if not str(value or "").strip()]
+        from ..fiscal_validation import problema_nif_cliente
+        nif_malo = (problema_nif_cliente(client.get("nif"))
+                    if invoice.get("invoice_type") != "F2" else None)
+        if nif_malo and not missing:
+            return (f"El borrador #{invoice['id']} aún no se puede emitir: {nif_malo}. "
+                    f"Corrígelo diciéndome «el NIF de {client.get('name')} es …» o en "
+                    f"Clientes: {config.BASE_URL}/b/{business['id']}/clientes\n\n"
+                    "No he cambiado la factura.")
         if missing:
             # Por WhatsApp no se completan fichas: se dice dónde hacerlo, con enlace.
             del_negocio = [m for m in missing if m.endswith("del negocio")]

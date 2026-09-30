@@ -22,7 +22,7 @@ from tests.fixtures import TINY_JPEG, TINY_PNG
 
 TEST_PASSWORD = "password-segura-123"  # pragma: allowlist secret
 ISSUER_NIF = "A12345678"  # pragma: allowlist secret
-CLIENT_NIF = "B12345678"  # pragma: allowlist secret
+CLIENT_NIF = "B12345674"  # pragma: allowlist secret  (CIF con control válido)
 PRODUCER_NIF = "B87654321"  # pragma: allowlist secret
 ALTERNATIVE_NIF = "A99999999"  # pragma: allowlist secret
 SUPPLIER_NIF = "B22222222"  # pragma: allowlist secret

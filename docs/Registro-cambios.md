@@ -1,5 +1,18 @@
 ﻿# Registro de cambios
 
+## 2026-09-30 (noche, 3) — NIF inválido, voz con tildes y correo dictado
+
+- **No se emite con un NIF español inválido** (`fiscal_validation.problema_nif_cliente`,
+  en WhatsApp y en la tarjeta de revisión). Caso real: la ficha de producción
+  «reformas martínez» tiene «481234129L». Los NIF extranjeros no se juzgan.
+- La ficha del cliente avisa del NIF inválido y separa emitidas de borradores
+  (13 borradores salían como «nada pendiente de cobro»).
+- Voz: «veintitrés», «dieciséis» con tilde; «he gastado veintitrés con cincuenta en
+  el parking» sin «euros»; «doce con treinta euros»; correo dictado («juan punto
+  garcia arroba gmail punto com»); «de la mañana» ya no deja el trabajo en «la».
+- Pruebas: el CIF de ejemplo del cliente en `test_backend` era inválido
+  (B12345678); ahora B12345674. Suite 1335 correctas. Rollback: revertir el commit.
+
 ## 2026-09-30 (noche, 2) — Cobros por número, ficha del cliente e impuestos dichos
 
 - **Grave, anterior**: «la factura 2026/0001 está cobrada» proponía cobrar la factura

@@ -537,6 +537,41 @@ class CharlaWhatsappTestCase(unittest.TestCase):
         self.assertEqual(db.resolve_client_reference("prueba claude", business["id"])["name"],
                          "Prueba Claude")
 
+    def test_voz_cifras_con_tilde_y_correo_dictado(self):
+        self.assertEqual(nlu.parse("He gastado veintitrés con cincuenta en el parking."),
+                         ("registrar_gasto", {"concepto": "el parking", "importe": 23.5}))
+        self.assertEqual(nlu._cifras_dictadas("gasté doce con treinta euros en pan"),
+                         "gasté 12,30 euros en pan")
+        self.assertEqual(nlu._cifras_dictadas("veintitrés con cincuenta euros"), "23,50 euros")
+        self.assertEqual(
+            nlu.parse("Ponle a Juan García el correo juan punto garcia arroba gmail punto com."),
+            ("actualizar_cliente", {"cliente": "Juan García", "email": "juan.garcia@gmail.com"}))
+        self.assertEqual(nlu.parse("crea el cliente Ana Ruiz con correo ana guion bajo ruiz "
+                                   "arroba hotmail punto es")[1]["email"], "ana_ruiz@hotmail.es")
+        cita = nlu.parse(nlu.corregir_erratas(
+            "Apunta una cita con Marta López pasado mañana a las nueve y media de la mañana "
+            "para mirar una fuga."))
+        self.assertEqual((cita[1]["descripcion"], cita[1]["fecha_hora"][11:]),
+                         ("mirar una fuga", "09:30"))
+
+    def test_no_se_emite_con_un_nif_espanol_invalido(self):
+        """Caso real: la ficha «reformas martínez» tenía el NIF «481234129L»."""
+        from noesis.fiscal_validation import problema_nif_cliente
+        self.assertIsNotNone(problema_nif_cliente("481234129L"))
+        self.assertIsNone(problema_nif_cliente("12345678Z"))
+        self.assertIsNone(problema_nif_cliente("FR12345678901"))
+        business, _ = self.make_business("NIF malo")
+        malo = db.add_client("Cliente Malo", nif="481234129L", address="Calle 1",
+                             business_id=business["id"])
+        borrador = db.add_invoice(malo["id"], "Obra", 100, business_id=business["id"])
+        (respuesta,) = self.charla(business, f"emitir factura {borrador['id']}")
+        self.assertIn("no es válido", respuesta)
+        self.assertIn("«el NIF de Cliente Malo es …»", respuesta)
+        self.assertEqual(db.get_invoice(borrador["id"], business["id"])["status"], "borrador")
+        (ficha,) = self.charla(business, "ficha de Cliente Malo")
+        self.assertIn("no parece un NIF válido", ficha)
+        self.assertIn("1 borrador sin emitir", ficha)
+
     def test_catalan_de_la_ronda(self):
         casos = {
             "crea el client Joan Puig amb telèfon 612345678":

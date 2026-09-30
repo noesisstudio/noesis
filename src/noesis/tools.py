@@ -787,6 +787,7 @@ def _ver_cliente(business_id, cliente, dato=None):
                 if f.get("status") != "anulada"]
     return {"ok": True, "cliente": ficha, "dato": dato, "facturas": facturas[:5],
             "n_facturas": len(facturas),
+            "n_borradores": sum(1 for f in facturas if f.get("status") == "borrador"),
             "pendiente": round(sum(float(f.get("remaining_amount") or 0) for f in facturas
                                    if f.get("status") in {"enviada", "parcial"}), 2)}
 

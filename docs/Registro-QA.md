@@ -1,5 +1,11 @@
 ﻿# Registro de QA
 
+## 2026-09-30 (noche, 3)
+
+- Producción con `da110fc` en el WhatsApp real: ficha y facturas de un cliente,
+  cobrar un borrador (rechazado bien) y resumen anual correctos.
+- Suite completa **1335 correctas**. Ruff correcto.
+
 ## 2026-09-30 (noche, 2)
 
 - Producción con `00a6767` probada en el WhatsApp real: semana, gastos del mes,

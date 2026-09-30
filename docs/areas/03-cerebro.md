@@ -64,7 +64,8 @@ chat.handle() → _handle_turn()
    **pregunta** no la descarta, para no perder una factura a medias por consultar algo.
 3. **La IA no puede decir que hizo algo que no hizo.** Si la respuesta de una IA dice
    «factura creada» sin recibo de ejecución en ese turno, `_handle_turn()` la
-   sustituye por un mensaje honesto.
+   sustituye por un mensaje honesto. Lo mismo si imita una tarjeta de revisión
+   («Responde SÍ…») sin propuesta guardada detrás (30-sep).
 4. **Si una IA falla después de ejecutar una herramienta, no se reintenta con otra**
    (`PartialAgentExecutionError`): se pide revisar la actividad, para no duplicar.
 5. **IA externa solo con permiso del negocio** (`db.integration_enabled(…,
@@ -102,7 +103,8 @@ Cerebro y memoria: `test_internal_brain`, `test_learning`, `test_ai_model_config
 Documentos: `test_document_reading`, `test_pdf_batch`, `test_received_invoices`.
 WhatsApp y voz: `test_whatsapp_multichannel`, `test_whatsapp_documents`,
 `test_whatsapp_inbox`, `test_conversation_isolation`, `test_voice_feedback`,
-`test_private_voice`.
+`test_private_voice`, `test_charla_whatsapp` (conversación real: faltas de móvil,
+notas de voz como las escribe Whisper, clientes, agenda y mensajes sin texto).
 
 ## Al revisar código de esta zona
 

@@ -43,6 +43,23 @@ def valid_spanish_tax_id(value: str | None) -> bool:
     return tax_id[-1] in {control_digit, control_letter}
 
 
+def problema_nif_cliente(value: str | None) -> str | None:
+    """Motivo para no emitir con este NIF, o `None` si vale o no es español.
+
+    Un NIF español mal copiado («481234129L», un dígito de más) acaba impreso en una
+    factura emitida que ya no se puede cambiar. Los identificadores extranjeros
+    («FR…», «DE…») no se juzgan aquí.
+    """
+    tax_id = _clean_identifier(value)
+    if not tax_id or re.match(r"^[A-Z]{2}", tax_id):
+        return None
+    parece_espanol = bool(re.fullmatch(r"\d{7,9}[A-Z]?|[XYZ]\d{6,8}[A-Z]?|"
+                                       r"[ABCDEFGHJNPQRSUVW]\d{6,8}[0-9A-J]?", tax_id))
+    if parece_espanol and not valid_spanish_tax_id(tax_id):
+        return f"el NIF del cliente ({value}) no es válido"
+    return None
+
+
 def _decimal(value) -> Decimal | None:
     if value is None or value == "":
         return None

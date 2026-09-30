@@ -192,6 +192,13 @@ def _preview(bid: int, tool: str, args: dict) -> tuple[str, dict]:
         snapshot["lines"] = db.get_invoice_lines(invoice["id"], bid)
         client = db.get_client(invoice["client_id"], bid)
         snapshot["client"] = client
+        if tool == "enviar_factura" and invoice.get("status") == "borrador" \
+                and invoice.get("invoice_type") != "F2":
+            from .fiscal_validation import problema_nif_cliente
+            nif_malo = problema_nif_cliente((client or {}).get("nif"))
+            if nif_malo:
+                raise ValueError(f"No la emito: {nif_malo}. Corrígelo con «el NIF de "
+                                 f"{(client or {}).get('name')} es …» o en Clientes.")
         referencia = invoice.get("number") or f"#{invoice['id']}"
         lines.extend([f"Factura {referencia} · {invoice.get('client_name')}", f"Total: {nlu._eur(invoice['total'])}", f"Estado: {invoice['status']}"])
         if tool == "registrar_pago":
