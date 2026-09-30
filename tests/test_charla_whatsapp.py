@@ -263,6 +263,8 @@ class CharlaWhatsappTestCase(unittest.TestCase):
             "invoiced": 0, "collected": 0, "pending": 0, "expenses": 0,
             "estimated_profit": 0, "vat_estimated": 0})
         self.assertNotIn("Aparta", vacio)
+        self.assertIn("Lo encontrarás", nlu.format_reply("ver_documentos_pendientes", {"n": 1}))
+        self.assertIn("Los encontrarás", nlu.format_reply("ver_documentos_pendientes", {"n": 2}))
 
     def test_parte_de_la_manana_en_castellano(self):
         from noesis.agent import daily_summary_text

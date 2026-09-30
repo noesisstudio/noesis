@@ -5,6 +5,11 @@
 - Simulación con `ASSISTANT_REVIEW_ENABLED=true` (como producción): las simulaciones
   de la mañana se hicieron con la revisión apagada y no cubrían ese camino.
 - Suite completa **1308 correctas** (320 s). Ruff correcto.
+- WhatsApp real del founder (Chrome, programa nuevo ya desplegado): tilde y «cliente»
+  delante, borrador a medias completado con la orden entera, ayuda, agenda, gasto,
+  presupuesto, aceptar presupuesto, recordatorio sin deuda, «gracias/sí/dale», cliente
+  nuevo con etiquetas, resumen, IVA, gestoría y clientes: correctos. Corregido «Los
+  encontrarás» con un solo documento.
 - No verificado aquí: el despliegue en Railway (consultar producción no estaba
   permitido en esta sesión); lo confirmó el founder desde su móvil.
 

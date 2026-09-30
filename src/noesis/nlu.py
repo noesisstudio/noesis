@@ -1600,7 +1600,7 @@ def format_reply(tool: str, result: dict) -> str:
             "📎 No tienes documentos pendientes de revisar."
             if not result.get("n") else
             f"📎 Hay {_cuenta(result['n'], 'documento', 'documentos')} esperando tu confirmación. "
-            "Los encontrarás en Documentos."
+            f"{'Lo' if result['n'] == 1 else 'Los'} encontrarás en Documentos."
         )
     if tool == "ver_solicitudes_gestoria":
         return (
