@@ -99,6 +99,32 @@ class CharlaWhatsappTestCase(unittest.TestCase):
         facturas = {i["concept"]: i["total"] for i in db.list_invoices(business["id"])}
         self.assertEqual(facturas, {"pintura": 0.0, "reparacion grifo": 242.0})
 
+    def test_varias_ordenes_en_un_mensaje_no_se_pierden(self):
+        """Caso real: los dos gastos se perdían sin avisar."""
+        business, client = self.make_business("Varias órdenes")
+        with patch.object(config, "ASSISTANT_REVIEW_ENABLED", True):
+            (respuesta,) = self.charla(
+                business, "hoy he gastado 30 en material y 15 de parking, y hazle una "
+                f"factura a {client['name']} de 100 por revision")
+        self.assertIn("solo he preparado una", respuesta)
+        self.assertIn("«hoy he gastado 30 en material y 15 de parking»", respuesta)
+        self.assertEqual(nlu.ordenes_extra("factura a Juan por reforma de baño y cocina 800 euros"), [])
+        self.assertEqual(nlu.ordenes_extra("quién me debe y qué tengo hoy"), [])
+
+    def test_lo_que_no_se_hace_por_whatsapp_dice_donde_hacerlo(self):
+        self.assertIn("**Facturas**", nlu.parse("borra la factura 67")[1]["reply"])
+        self.assertIn("**Facturas**",
+                      nlu.parse("cambia el importe de la factura 67 a 100 euros")[1]["reply"])
+        business, fiscal = self.make_business("Sin proyectos")
+        with patch.object(config, "ASSISTANT_REVIEW_ENABLED", True):
+            proyecto, cliente, _, ticket = self.charla(
+                business, "crea un proyecto reforma cocina con presupuesto de 8000 euros",
+                "crea el cliente Pedro Prueba con telefono 600 11 22 33", "no",
+                f"ticket de venta a {fiscal['name']} por desplazamiento 36,30 euros")
+        self.assertIn(f"/b/{business['id']}/proyectos", proyecto)
+        self.assertIn("Teléfono: 600112233", cliente)
+        self.assertTrue(ticket.startswith("Preparar ticket de venta borrador"), ticket)
+
     def test_la_gestoria_se_pregunta_en_cualquier_orden(self):
         self.assertEqual(nlu.parse("¿Qué me pide la gestoría?")[0], "ver_solicitudes_gestoria")
 

@@ -10,7 +10,7 @@ import re
 from contextvars import ContextVar
 from decimal import Decimal, ROUND_HALF_UP
 
-from . import db, nlu, local_invoice
+from . import config, db, nlu, local_invoice
 
 context: ContextVar[dict | None] = ContextVar("action_review", default=None)
 READS = {
@@ -30,6 +30,14 @@ LABELS = {
 
 
 
+# Dónde se hace en la web lo que por WhatsApp aún no se prepara.
+_SECCION_DE_TOOL = {
+    "crear_proyecto": ("Proyectos", "proyectos"),
+    "crear_tarea_proyecto": ("Proyectos", "proyectos"),
+    "preparar_factura_trabajo": ("Facturas", "facturas"),
+}
+
+
 def _muestra_irpf(bid: int, irpf) -> bool:
     """El IRPF se enseña si se aplica o si el negocio suele aplicarlo: un 0 % que
     se aparta de lo habitual es un dato; un 0 % de siempre es ruido."""
@@ -39,8 +47,13 @@ def _muestra_irpf(bid: int, irpf) -> bool:
 
 def _preview(bid: int, tool: str, args: dict) -> tuple[str, dict]:
     if tool not in LABELS:
-        raise ValueError("Esta acción todavía requiere revisión desde su apartado en la app.")
+        nombre, ruta = _SECCION_DE_TOOL.get(tool, ("Inicio", "resumen"))
+        raise ValueError(
+            f"Esto todavía no lo preparo por WhatsApp. Hazlo en la web, en {nombre}: "
+            f"{config.BASE_URL}/b/{bid}/{ruta}. No he cambiado nada.")
     lines = [LABELS[tool]]
+    if tool == "crear_factura" and args.get("tipo_factura") == "F2":
+        lines[0] = "Preparar ticket de venta borrador"
     snapshot = {}
     if tool in {"crear_factura", "crear_presupuesto", "agendar_trabajo"}:
         name = str(args.get("cliente") or "").strip()
@@ -62,6 +75,11 @@ def _preview(bid: int, tool: str, args: dict) -> tuple[str, dict]:
         if not name or len(name) > 160 or any(x in nlu._norm(name) for x in ("telefono", "nif", "correo", "@")):
             raise ValueError("Indica solo el nombre. Los datos de contacto se revisan en la ficha.")
         lines.append(f"Nombre: {name}")
+        # Lo dictado junto al nombre también se guarda: que se vea en la tarjeta.
+        for clave, etiqueta in (("telefono", "Teléfono"), ("email", "Correo"),
+                                ("nif", "NIF"), ("direccion", "Dirección")):
+            if args.get(clave):
+                lines.append(f"{etiqueta}: {args[clave]}")
         if tool == "crear_cliente":
             existing = db.resolve_client_reference(name, bid)
             if existing:

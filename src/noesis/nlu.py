@@ -413,6 +413,23 @@ def _agenda_description(text: str, cliente: str | None) -> str:
     return "Trabajo"
 
 
+def _seccion_web(norm: str) -> str:
+    """Dónde se hace en la web lo que por WhatsApp no se hace: «su apartado» no
+    le decía a nadie adónde ir."""
+    for palabras, seccion in (
+        (("factura", "ticket", "tiquet"), "Facturas"),
+        (("presupuest", "pressupost"), "Presupuestos"),
+        (("gasto", "despesa"), "Costes"),
+        (("cita", "trabajo", "visita", "agenda", "feina"), "Trabajos"),
+        (("proyecto", "projecte", "obra"), "Proyectos"),
+        (("cliente", "client"), "Clientes"),
+        (("cobro", "pago"), "Cobros"),
+    ):
+        if any(palabra in norm for palabra in palabras):
+            return seccion
+    return "el apartado correspondiente"
+
+
 def safety_refusal(text: str) -> str | None:
     """Una orden negativa o destructiva nunca se interpreta como un alta."""
     risk = inspect_money_intent(text)
@@ -424,10 +441,12 @@ def safety_refusal(text: str) -> str | None:
         r"\b(borr(?:a|ar|ame|alo|ala|alos|alas|ad)|elimin(?:a|ar|ame|alo|ala|alos|alas|ad)|"
         r"anul(?:a|ar|alo|ala|ad)|cancel(?:a|ar|ame|alo|ala|ad)|esborr(?:a|ar|eu)|"
         r"suprim(?:e|ir|elo|ela|id))\b", norm):
-        return ("No he cambiado nada. Para borrar, anular o cancelar un registro, "
-                "ábrelo en su apartado y revisa la acción concreta.")
+        return ("Borrar, anular o cancelar no lo hago por WhatsApp: es difícil de "
+                f"deshacer y prefiero que lo veas tú. Hazlo en la web, en "
+                f"**{_seccion_web(norm)}**. No he cambiado nada.")
     if re.search(r"^(?:por favor[, ]+)?(cambia\w*|modifica\w*|mueve|reprograma\w*|rectifica\w*)\b", norm):
-        return "Para modificar un registro existente, ábrelo en su apartado y revisa los nuevos datos. No he creado ni cambiado nada."
+        return ("Cambiar algo que ya está guardado no lo hago por WhatsApp. Hazlo en la "
+                f"web, en **{_seccion_web(norm)}**. No he creado ni cambiado nada.")
     if re.search(r"\b(transferencia|transfiere|transferir|devolucion|devuelve)\b", norm):
         return "No puedo mover dinero ni hacer transferencias o devoluciones. No he ejecutado ninguna operación."
     if re.search(r"\b(no|nunca)\b.*\b(cre\w*|ha\w*|registr\w*|factur\w*|apunt\w*|anad\w*|envi\w*|gast\w*|paga\w*)\b", norm):
@@ -1047,6 +1066,44 @@ def _erratas(text: str) -> str:
 
 
 corregir_erratas = _erratas
+
+
+_ORDENES_DE_ACCION = {
+    "crear_factura", "crear_presupuesto", "registrar_gasto", "agendar_trabajo",
+    "crear_cliente", "crear_proveedor", "crear_proyecto", "crear_factura_a_medias",
+}
+# Se corta donde empieza otra orden: «…, y hazle una factura…», «…; agenda…».
+_CORTE_DE_ORDEN = re.compile(
+    r"[;\n]|\.\s+|,?\s+y\s+(?:luego\s+|despues\s+|después\s+|ademas\s+|además\s+|"
+    r"tambien\s+|también\s+)?(?=(?:haz\w*|crea\w*|agenda\w*|apunta\w*|anota\w*|"
+    r"registra\w*|factura\w*|presupuest\w*|gast\w*|he\s+gastado|compr\w*)\b)",
+    re.I)
+
+
+def ordenes_extra(text: str) -> list[str]:
+    """Órdenes de un mismo mensaje que no son la que se ha preparado.
+
+    «He gastado 30 en material y hazle una factura a Pedro» solo preparaba la
+    factura y el gasto se perdía sin decir nada. Esto no ejecuta nada: devuelve
+    los trozos para pedir que se manden por separado.
+    """
+    trozos = [t.strip(" ,.") for t in _CORTE_DE_ORDEN.split(_erratas(text or ""))]
+    trozos = [t for t in trozos if t]
+    if len(trozos) < 2:
+        return []
+    ordenes = []
+    for trozo in trozos:
+        orden = parse(trozo)
+        # «He gastado 30 en material y 15 de parking» no se entiende sola (dos
+        # importes), pero es una orden: también cuenta, para no perderla.
+        pide_algo = re.search(r"\b(?:gast\w*|compr\w*|factur\w*|presupuest\w*|agend\w*|"
+                              r"apunt\w*|anot\w*)\b", _norm(trozo))
+        if (orden and orden[0] in _ORDENES_DE_ACCION) or (not orden and pide_algo):
+            ordenes.append((trozo, orden))
+    if len(ordenes) < 2:
+        return []
+    hecha = parse(text)
+    return [t for t, o in ordenes if o is None or o != hecha]
 
 
 def parse(text: str) -> tuple[str, dict] | None:

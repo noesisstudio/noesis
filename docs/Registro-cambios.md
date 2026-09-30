@@ -1,5 +1,22 @@
 ﻿# Registro de cambios
 
+## 2026-09-30 (tarde, 4) — Varias órdenes, negativas con destino y tarjetas completas
+
+Ronda en el WhatsApp real del founder:
+
+- «hoy he gastado 30 en material y 15 de parking, y hazle una factura a Pedro…» solo
+  preparaba la factura y los gastos se perdían sin avisar. `nlu.ordenes_extra` corta el
+  mensaje donde empieza otra orden; el turno avisa de las que no ha preparado y pide
+  mandarlas por separado (no ejecuta nada más).
+- Borrar/cambiar decía «ábrelo en su apartado»: ahora nombra la sección (Facturas,
+  Presupuestos…). Crear un proyecto con la revisión encendida decía «requiere revisión
+  desde su apartado»: ahora da el enlace a Proyectos.
+- Tarjeta de revisión: «Preparar ticket de venta borrador» para tickets y el teléfono
+  dictado al crear un cliente.
+- La salvaguarda de la IA («No tengo una ejecución verificada…») ahora dice «No he
+  preparado ninguna factura con ese mensaje…» con un ejemplo.
+- Suite 1313 correctas. Rollback: revertir el commit.
+
 ## 2026-09-30 (tarde, 3) — Otra factura no completa el borrador a medias
 
 - En producción, con el #67 a medias («pintura», sin importe), «hazme una factra a

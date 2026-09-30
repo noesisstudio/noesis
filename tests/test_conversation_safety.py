@@ -203,7 +203,9 @@ class ConversationSafetyTests(unittest.TestCase):
         token = action_review.context.set({"actor": "web:owner"})
         try:
             result = json.loads(run_tool("crear_proyecto", {"nombre": "Obra", "presupuesto": 500}, self.bid))
-            self.assertIn("requiere revisión", result["reply"])
+            self.assertIn("todavía no lo preparo", result["reply"])
+            self.assertIn("No he cambiado nada", result["reply"])
+            self.assertEqual(db.list_projects(self.bid), [])
         finally:
             action_review.context.reset(token)
 

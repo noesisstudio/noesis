@@ -1,5 +1,9 @@
 ﻿# Registro de QA
 
+## 2026-09-30 (tarde, 4)
+
+- WhatsApp real: faltas de móvil, catalán, PDF, ticket, cliente con teléfono, borrar/cambiar, proyecto y varias órdenes. Suite **1313 correctas**.
+
 ## 2026-09-30 (tarde, 3)
 
 - Suite completa **1311 correctas**; la prueba de Gmail que fallaba a ratos pasa 25/25.

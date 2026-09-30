@@ -1996,8 +1996,9 @@ def _handle_turn(
                         r"preparad[oa]|preparat|registrad[oa]|registrat)\b", reply_norm
                     ) and not receipts:
                         result["reply"] = (
-                            "No tengo una ejecución verificada de esa factura o ticket en este turno. "
-                            "Indica su número para consultarlo, o cliente, concepto e importe para preparar un borrador."
+                            "No he preparado ninguna factura con ese mensaje. Dímela con "
+                            "cliente, concepto e importe, por ejemplo «factura a Juan por "
+                            "pintura 200 euros», o dime su número si quieres consultar una."
                         )
                         result["invoice_ids"] = []
             if state.get("proposal"):
@@ -2024,6 +2025,22 @@ def _handle_turn(
             result = learning.finish(business_id, actor, turn, result)
         except Exception:  # noqa: BLE001 - un fallo al aprender jamás reintenta el negocio
             log.warning("No se pudo completar el aprendizaje; no se repite la operación.")
+    # Varias órdenes en un mensaje: se prepara una y el resto se pide aparte,
+    # en vez de perderlo sin decir nada.
+    original = turn.get("original") or message
+    try:
+        extra = nlu.ordenes_extra(original)
+        hecha = nlu.parse(original) if extra else None
+    except Exception:  # noqa: BLE001 - el aviso nunca tumba la respuesta
+        extra, hecha = [], None
+    if extra and result.get("reply"):
+        preparada = bool(hecha and hecha[0] in nlu._ORDENES_DE_ACCION)
+        result["reply"] += (
+            ("\n\n⚠️ Tu mensaje traía más de una orden y solo he preparado una. "
+             "Mándame el resto por separado, una en cada mensaje:\n" if preparada else
+             "\n\n⚠️ Tu mensaje traía varias órdenes. Mándamelas por separado, una "
+             "en cada mensaje:\n")
+            + "\n".join(f"• «{orden}»" for orden in extra))
     try:
         db.add_assistant_message(
             business_id, "assistant", result.get("reply") or "",

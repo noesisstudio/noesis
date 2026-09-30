@@ -335,7 +335,7 @@ class InvoiceConversationTestCase(unittest.TestCase):
             'source': 'ia', 'reply': 'Tíquet F2 preparat per Jana. Guardat al sistema.'
         }):
             result = chat.handle(biz['id'], 'la segona opcio del tiquet')
-        self.assertIn('No tengo una ejecución verificada', result['reply'])
+        self.assertIn('No he preparado ninguna factura', result['reply'])
         self.assertEqual(db.list_invoices(biz['id']), [])
         def model(*args, **kwargs):
             tools.run_tool('crear_factura', {'cliente': client['name'], 'concepto': 'Grifo',
