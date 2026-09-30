@@ -1,5 +1,74 @@
 ﻿# Registro de cambios
 
+## 2026-09-30 — WhatsApp probado hablando con el bot: modo consulta y conversación
+
+Encontrado probando el WhatsApp real del founder (cuenta caducada) y después una
+conversación larga, simulada de punta a punta con `whatsapp.handle_inbound`, sin
+red y con base temporal. Solo se cubre el cerebro local: con IA configurada en
+producción, lo que no resuelven las reglas puede contestarse distinto.
+
+**Modo consulta (cuenta sin plan)**
+- Antes cualquier mensaje recibía «tu cuenta está en modo consulta» y nada más.
+  Ahora `web/whatsapp.py` pasa el texto a `chat.handle_read_only(...,
+  activation_url=...)`, el camino local y sin agentes de la demo: las preguntas
+  (cobros, agenda, resumen, proyectos) se contestan; crear, emitir o enviar se
+  rechaza sin guardar nada; fotos y PDF no se guardan; «sí»/«no» dicen que no se ha
+  ejecutado lo pendiente. Salen con `business_id=None` porque la cola bloquea los
+  envíos de cuentas sin plan. Cumple `Decisiones` 2026-07-15 («conserva lectura»).
+- Todo aviso de modo consulta lleva el enlace `BASE_URL/b/<id>/suscripcion`.
+
+**Conversación (cuenta activa)**
+- «¿Qué puedes hacer?» devolvía el parte del negocio: la lista de ayuda solo se veía
+  en la demo. `nlu.pide_capacidades()` separa la pregunta del saludo suelto, que
+  sigue dando el parte. «Hola, ¿qué puedes hacer?» y «Buenas tardes. ¿En qué me
+  puedes ayudar?» ya no se pierden.
+- El parte sugería «ver orden», «ver facturas» o «ver agenda», que no se entendían
+  («ver agenda» incluso pedía datos para crear una cita). `_ATAJOS_DEL_PLAN` solo
+  sugiere frases que el cerebro contesta.
+- «Sí», «vale», «dale», «no» y «gracias» sin nada pendiente soltaban el parte entero
+  (o gastaban una consulta de IA). `chat._social_reply` contesta corto y sin afirmar
+  nada falso: solo dice «no hay nada pendiente» con palabras que sí confirman.
+- Recordatorios de cobro: «recuérdale a X que me pague», «reclama la factura 3» y
+  «prepara un recordatorio para X» (si X debe algo) llegan a `internal_brain`; por
+  WhatsApp siempre se ofrece enviarlo con SÍ/NO si hay contacto, y si no, se dice por
+  qué. A quien no debe nada se le dice así, en vez de «dime el cliente».
+- «¿Cuánto me debe X?» es una pregunta de cobros. «¿Qué me pide la gestoría?»
+  se entiende. Erratas de móvil («fatura», «facutra», «presupesto») se corrigen.
+- Aceptar o convertir un presupuesto por WhatsApp no existe: ahora se dice y se
+  remite a Presupuestos en la web, en vez de pedir otra vez cliente e importe.
+- «Proyecto X con presupuesto 20000» ya no se llama «X con».
+- No se puede emitir: dice qué falta con artículos, enlaza a Clientes o Ajustes y
+  ofrece el ticket si cabe (≤ 400 €), sin el confuso «Es una factura completa».
+
+**Facturas con datos etiquetados (caso real del founder, 30-sep)**
+- «Hazme una factura de 350€ + iva concepto: reformad habitación a clinte: Maria
+  Antionia» dejaba un borrador sin cliente ni concepto; «… concepto: reformas el
+  cliente es: Maria Antionia» sin borrador pendiente creaba una factura para el
+  cliente «+ iva»; y «Maria antonia es el cliente» no completaba nada (la IA contestó
+  «no tengo una ejecución verificada…»). `nlu.campos_etiquetados` lee «concepto:»,
+  «cliente:», «el cliente es(:)» y «X es el cliente», en cualquier orden, cada valor
+  hasta la siguiente etiqueta; lo usan el parser (con etiquetas mandan ellas) y el
+  completado del borrador a medias. Erratas «clinte», «concetpo» y similares.
+- Se mantiene la decisión del 23-sep: completar un borrador con un cliente sin
+  ficha no crea la ficha solo; lo pide.
+
+**Textos**
+- Concordancia: «Factura #60 preparad**a**… **La** dejo… correct**a**… entregar**la**»;
+  el ticket sigue en masculino. El borrador enseña su concepto («(Servicio)» si no se
+  dijo) y el presupuesto su número.
+- Fechas humanas (`nlu.dia_humano`, `nlu.fecha_larga`): «mañana a las 10:00», «el
+  jueves 8 de octubre», en agenda, citas y el parte de la mañana (antes ISO).
+- Plurales sin «(s)» en respuestas de WhatsApp, parte de la mañana y resumen diario;
+  importes del parte con coma decimal (`968,00 €`, antes `968.00 €`). No se dice
+  «aparta 0,00 € de IVA».
+
+- Pruebas: `tests/test_charla_whatsapp.py` (20), 2 en `test_backend.py` y la de la
+  demo que dependía de la fecha. Sin
+  esquema ni flags nuevos.
+- Riesgo: medio-bajo. Cambia el texto de muchas respuestas y el orden de algunas
+  reglas del parser (presupuestos y recordatorios antes que cobros). Las acciones
+  irreversibles siguen pidiendo SÍ. Rollback: revertir el commit.
+
 ## 2026-09-28 — Correo del autónomo revisado a fondo antes de publicarlo
 
 Revisión completa de «enviar desde su Gmail» y «recibir facturas por correo» con los

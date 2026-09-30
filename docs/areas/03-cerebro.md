@@ -39,7 +39,7 @@ chat.handle() → _handle_turn()
 
 | Archivo | Responsabilidad |
 |---|---|
-| `web/chat.py` | `handle()` es la entrada única de web y WhatsApp; `_handle()` es la escalera; `handle_read_only()` sirve las demos |
+| `web/chat.py` | `handle()` es la entrada única de web y WhatsApp; `_handle()` es la escalera; `handle_read_only()` sirve las demos y el WhatsApp de las cuentas en modo consulta (con `activation_url`) |
 | `nlu.py` | Reglas locales: `parse()`, `parse_date()`, importes, IVA/IRPF, nombres; `format_reply()` redacta el resultado |
 | `tools.py` | `TOOLS` (lo que el cerebro puede hacer), `run_tool()`, permisos por plan (`_TOOL_ENTITLEMENTS`) y recibos de ejecución |
 | `action_review.py` | `propose()` convierte una acción sensible en propuesta; `respond()` atiende el «sí/no» |

@@ -1441,8 +1441,60 @@ class BackendTestCase(unittest.TestCase):
 
         handle.assert_not_called()
         self.assertTrue(result["results"][0]["subscription_required"])
-        self.assertIn("modo consulta", send.call_args.args[1])
+        reply = send.call_args.args[1]
+        self.assertIn("modo consulta", reply)
+        self.assertIn("no he guardado ni enviado nada", reply)
+        # Siempre dice cómo salir: el enlace directo a activar un plan.
+        self.assertIn(f"/b/{business['id']}/suscripcion", reply)
         self.assertIsNone(send.call_args.kwargs["business_id"])
+        self.assertEqual(db.list_invoices(business["id"]), [])
+
+    def test_whatsapp_read_only_still_answers_questions(self):
+        """Modo consulta conserva la lectura: preguntar no es pedir una acción."""
+        business, client = self.make_business("WhatsApp consulta lectura")
+        db.add_invoice(client["id"], "Reforma", 800, business_id=business["id"])
+        db.set_whatsapp_status(
+            business["id"], "conectado", phone="34600111222"
+        )
+        db.set_subscription(business["id"], "canceled", plan="tranquilidad")
+        replies = []
+
+        with (
+            patch.object(chat, "handle") as handle,
+            patch.object(whatsapp, "send",
+                         side_effect=lambda phone, text, **kw:
+                         replies.append((text, kw)) or True),
+        ):
+            whatsapp.handle_inbound({
+                "id": "wamid.ayuda", "from": "34600111222",
+                "text": "hola, ¿qué puedes hacer?",
+            })
+            whatsapp.handle_inbound({
+                "id": "wamid.cobros", "from": "34600111222",
+                "text": "¿quién me debe?",
+            })
+            whatsapp.handle_inbound({
+                "id": "wamid.foto", "from": "34600111222",
+                "image_id": "media-1", "image_mime": "image/jpeg",
+            })
+            whatsapp.handle_inbound({
+                "id": "wamid.si", "from": "34600111222", "text": "sí",
+            })
+
+        handle.assert_not_called()
+        ayuda, cobros, foto, si = (text for text, _ in replies)
+        self.assertIn("no he ejecutado nada", si)
+        url = f"/b/{business['id']}/suscripcion"
+        self.assertIn("modo consulta", ayuda)
+        self.assertIn("¿Quién me debe?", ayuda)
+        self.assertIn(url, ayuda)
+        self.assertNotIn("modo consulta", cobros.split("\n\n")[0])
+        self.assertIn(url, cobros)
+        self.assertIn("no he guardado el archivo", foto)
+        self.assertIn(url, foto)
+        # La cola bloquea envíos de cuentas sin plan: salen sin business_id.
+        self.assertTrue(all(kw["business_id"] is None for _, kw in replies))
+        self.assertEqual(db.list_expenses(business["id"]), [])
 
     def test_whatsapp_proactives_use_approved_template_and_stable_key(self):
         business, _ = self.make_business()

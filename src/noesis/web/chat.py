@@ -348,7 +348,45 @@ def _compose_briefing(business_id: int) -> dict:
     }
 
 
-def _coach_reply(business_id: int, message: str = "") -> str:
+# Mismas palabras que confirman una acción pendiente en WhatsApp: si llegan
+# hasta aquí es que no había nada que confirmar.
+_SI_SUELTO = {"si", "ok", "vale", "d'acord", "dacord", "confirmo", "confirmar", "yes", "va"}
+# Estas no confirman nada, así que no se puede afirmar que no hubiera algo pendiente.
+_ASENTIMIENTO = {"perfecto", "genial", "claro", "dale", "venga", "adelante",
+                 "de acuerdo", "hecho", "estupendo", "entendido"}
+_NO_SUELTO = {"no", "nada", "no gracias", "dejalo", "olvidalo", "cancela", "cancelar"}
+_GRACIAS = {"gracias", "muchas gracias", "mil gracias", "genial gracias", "ok gracias",
+            "vale gracias", "perfecto gracias", "gracies", "moltes gracies", "thanks"}
+
+
+def _social_reply(message: str) -> str | None:
+    norm = " ".join(nlu._norm(message).strip("!.¡¿?,;").split())
+    if norm in _GRACIAS:
+        return "De nada. Aquí estoy cuando me necesites."
+    if norm in _SI_SUELTO:
+        return ("No tengo nada pendiente de confirmar, así que no he hecho nada. Dime "
+                "qué necesitas, por ejemplo «¿Quién me debe?» o «Factura a Juan por "
+                "cambio de grifo 95 euros».")
+    if norm in _ASENTIMIENTO:
+        return ("👍 Si querías confirmar algo, respóndeme «sí». Si no, dime qué "
+                "necesitas.")
+    if norm in _NO_SUELTO:
+        return "De acuerdo, no he tocado nada."
+    return None
+
+
+_ATAJOS_DEL_PLAN = {
+    "cobros": "¿Quién me debe?",
+    "facturas": "¿Qué me falta por facturar?",
+    "proyectos": "¿Cómo van mis proyectos?",
+    "agenda": "¿Qué tengo hoy?",
+    "documentos": "¿Qué documentos tengo pendientes?",
+    "gestoria": "¿Qué me pide la gestoría?",
+}
+
+
+def _coach_reply(business_id: int, message: str = "", *,
+                 solo_lectura: bool = False) -> str:
     biz = db.get_business(business_id) or {}
     state = _business_state(business_id)
     billing = state["billing"]
@@ -377,8 +415,17 @@ def _coach_reply(business_id: int, message: str = "") -> str:
                   f"{round(top_client['facturado'] / total_client_income * 100)}% de lo "
                   "facturado. No es malo, pero conviene cuidarlo y abrir una segunda fuente."]
 
-    lines += ["", f"Dime **“ver {top['topic']}”** para ir directo, o háblame con una "
-              "frase normal para registrar factura, gasto o trabajo."]
+    # Solo se sugiere una frase que el cerebro entiende de verdad: «ver orden» o
+    # «ver facturas» no llevaban a ninguna parte. Sin permiso de escritura
+    # tampoco se invita a registrar nada.
+    atajo = _ATAJOS_DEL_PLAN.get(top["topic"])
+    registrar = "háblame con una frase normal para registrar factura, gasto o trabajo."
+    if atajo and solo_lectura:
+        lines += ["", f"Dime **«{atajo}»** para ir directo."]
+    elif atajo:
+        lines += ["", f"Dime **«{atajo}»** para ir directo, o {registrar}"]
+    elif not solo_lectura:
+        lines += ["", registrar[0].upper() + registrar[1:]]
     return "\n".join(lines)
 
 
@@ -438,8 +485,8 @@ def page_briefing(business_id: int, page: str) -> str | None:
         lines.append(f"Tienes {_count(n, 'documento pendiente', 'documentos pendientes')} de revisar."
                      if n else "No tienes documentos pendientes de revisar.")
         if state["gestoria_open"]:
-            lines.append(f"Tu gestoría tiene {len(state['gestoria_open'])} "
-                         "solicitud(es) abiertas esperándote.")
+            lines.append(f"Tu gestoría tiene {_count(len(state['gestoria_open']), 'solicitud abierta', 'solicitudes abiertas')} "
+                         "esperándote.")
     if page == "costes":
         n = len(state["received_pending"])
         if n:
@@ -482,7 +529,7 @@ def page_note(business_id: int, page: str, state: dict | None = None) -> str | N
         if state["docs_pending"]:
             bits.append(f"{_count(len(state['docs_pending']), 'documento', 'documentos')} por revisar")
         if state["gestoria_open"]:
-            bits.append(f"{len(state['gestoria_open'])} solicitud(es) de tu gestoría")
+            bits.append(f"{_count(len(state['gestoria_open']), 'solicitud', 'solicitudes')} de tu gestoría")
         return ("Tienes " + " y ".join(bits) + "." if bits
                 else "Todo al día por aquí. Sube una foto: te propongo dónde va y tú confirmas.")
     if page == "costes":
@@ -978,14 +1025,9 @@ def _parse_invoice_completion(message: str, faltan: list[str]) -> dict:
     no se toma por dato: «el cliente es muy pesado» no tiene importe ni sale sola.
     """
     texto = message.strip()
-    datos: dict = {}
-    corte = r"(?=\s*[,;.]|\s+y\s+(?:el\s+|la\s+)?(?:cliente|concepto|importe|precio)|$)"
-    m = re.search(r"\bcliente\s*(?:es|ser[aá]|:)\s*(.+?)" + corte, texto, re.I)
-    if m:
-        datos["cliente"] = nlu._limpio_o_nada(nlu._limpiar_cliente(m.group(1)))
-    m = re.search(r"\bconcepto\s*(?:es|ser[aá]|:)?\s*(.+?)" + corte, texto, re.I)
-    if m:
-        datos["concepto"] = nlu._limpio_o_nada(m.group(1))
+    # Cliente y concepto con etiqueta, en cualquier orden y con erratas de móvil;
+    # también «María Antonia es el cliente».
+    datos: dict = nlu.campos_etiquetados(texto)
     m = re.search(rf"\b(?:importe|precio|total|base)\s*(?:es|son|ser[aá]|de|:)?\s*({_AMOUNT})",
                   texto, re.I) or re.search(rf"^(?:son|es|ser[aá]n?)\s+({_AMOUNT})", texto, re.I)
     if not m and "importe" in faltan:
@@ -1441,6 +1483,9 @@ def _handle(
         if tool == "registrar_pago" and not config.ASSISTANT_REVIEW_ENABLED:
             return {"reply": "Abre la factura en Facturas para revisar y registrar el cobro. No he cambiado su estado.", "source": "local"}
         if tool == nlu.HELP:
+            # «¿Qué puedes hacer?» merece la lista; un «hola» suelto, la lectura.
+            if nlu.pide_capacidades(message):
+                return {"reply": nlu.help_text(), "source": "local"}
             return {"reply": _coach_reply(business_id, message), "source": "local"}
         if tool == nlu.PARTIAL_INVOICE and not learning.enabled():
             return _create_partial_invoice(business_id, args, actor, channel)
@@ -1539,6 +1584,12 @@ def _handle(
             if clave:
                 db.clear_pending_action(business_id, clave)
         return {"reply": nlu.format_reply(tool, result), "source": "local"}
+
+    # «Sí», «vale» o «gracias» sin nada pendiente no son una consulta: antes
+    # soltaban el parte entero del negocio o gastaban una consulta de IA.
+    social = _social_reply(message)
+    if social:
+        return {"reply": social, "source": "local"}
 
     # Marco común para el segundo nivel, sea privado o externo.
     business = db.get_business(business_id) or {}
@@ -1697,15 +1748,49 @@ _READ_ONLY_TOOLS = {
 }
 
 
-def handle_read_only(
-    business_id: int, message: str, page: str | None = None
-) -> dict:
-    """Conversación segura para demos: consulta datos sin persistir ni ejecutar.
+def consulta_note(activation_url: str) -> str:
+    """Cierre común del modo consulta: qué se puede hacer y cómo salir de él."""
+    return (
+        "Tu cuenta está en modo consulta: puedo enseñarte tus datos, pero no "
+        f"registrar ni enviar nada. Para volver a pedirme acciones, activa un plan "
+        f"aquí: {activation_url}"
+    )
 
-    No pasa por agentes privados o externos porque una herramienta de un agente
-    podría escribir. Tampoco guarda historial: la cuenta comercial sigue siendo
-    reproducible y de solo lectura.
+
+def consulta_help(activation_url: str) -> str:
+    return (
+        "Soy Bynoesis, tu oficina pequeña. Ahora tu cuenta está en modo consulta, "
+        "así que puedo contarte cómo va el negocio, pero no apuntar cosas nuevas.\n\n"
+        "Pregúntame, por ejemplo:\n"
+        "• «¿Qué tengo hoy?»\n"
+        "• «¿Quién me debe?»\n"
+        "• «Dame el resumen del mes»\n"
+        "• «¿Cómo van mis proyectos?»\n"
+        "• «¿Qué documentos tengo pendientes?»\n"
+        "• «¿Qué me falta por facturar?»\n\n"
+        "Para volver a hacer facturas, presupuestos, gastos o citas, activa un plan "
+        f"aquí: {activation_url}"
+    )
+
+
+def handle_read_only(
+    business_id: int, message: str, page: str | None = None, *,
+    activation_url: str | None = None,
+) -> dict:
+    """Conversación de solo lectura: consulta datos sin persistir ni ejecutar.
+
+    La usan la demo comercial y las cuentas en modo consulta (con
+    ``activation_url``, el enlace para activar un plan). No pasa por agentes
+    privados o externos porque una herramienta de un agente podría escribir.
+    Tampoco guarda historial: la cuenta comercial sigue siendo reproducible.
     """
+    # En modo consulta las lecturas acaban recordando cómo salir de él; en la
+    # demo no, porque allí no hay plan que activar.
+    def lectura(text: str) -> dict:
+        if activation_url:
+            text += "\n\n" + consulta_note(activation_url)
+        return {"reply": text, "source": "local"}
+
     norm = nlu._norm(message)
     if page and any(fragment in norm for fragment in (
         "esta pagina", "que veo aqui", "donde estoy", "que significa esto",
@@ -1713,24 +1798,40 @@ def handle_read_only(
     )):
         briefing = page_briefing(business_id, page)
         if briefing:
-            return {"reply": briefing, "source": "local"}
+            return lectura(briefing)
     if any(fragment in norm for fragment in (
         "sin facturar", "pendiente de facturar", "por facturar",
         "que me falta facturar", "trabajos sin cobrar",
     )):
-        return {"reply": _unbilled_reply(business_id), "source": "local"}
+        return lectura(_unbilled_reply(business_id))
     if any(fragment in norm for fragment in (
         "que harias", "prioridad", "aconsej", "recomiend", "diagnostico",
         "como lo ves", "mente", "piensa", "plan", "que hago",
         "por donde empiezo", "que toca",
     )):
-        return {"reply": _coach_reply(business_id, message), "source": "local"}
+        return lectura(_coach_reply(business_id, message, solo_lectura=True))
 
     parsed = nlu.parse(message)
     if parsed:
         tool, args = parsed
         if tool == nlu.HELP:
+            if activation_url:
+                return {"reply": consulta_help(activation_url), "source": "local"}
             return {"reply": nlu.help_text(), "source": "local"}
+        if tool in _READ_ONLY_TOOLS:
+            result = json.loads(run_tool(tool, args, business_id))
+            return lectura(nlu.format_reply(tool, result))
+        if activation_url:
+            return {
+                "reply": (
+                    "Eso no lo puedo hacer ahora: tu cuenta está en modo consulta y "
+                    "no he guardado ni enviado nada. Sí puedo enseñarte datos: prueba "
+                    "**¿Qué tengo hoy?**, **¿Quién me debe?** o **Dame el resumen del "
+                    "mes**.\n\nPara volver a pedirme facturas, presupuestos, gastos o "
+                    f"citas, activa un plan aquí: {activation_url}"
+                ),
+                "source": "local",
+            }
         if tool == "__need_date__":
             return {
                 "reply": (
@@ -1740,9 +1841,6 @@ def handle_read_only(
                 ),
                 "source": "local",
             }
-        if tool in _READ_ONLY_TOOLS:
-            result = json.loads(run_tool(tool, args, business_id))
-            return {"reply": nlu.format_reply(tool, result), "source": "local"}
         return {
             "reply": (
                 "Esta demostración es de solo lectura: puedo enseñarte el resultado, "
@@ -1753,7 +1851,7 @@ def handle_read_only(
             ),
             "source": "local",
         }
-    return {"reply": _coach_reply(business_id, message), "source": "local"}
+    return lectura(_coach_reply(business_id, message, solo_lectura=True))
 
 
 def _conversation_agent_key(business_id: int):

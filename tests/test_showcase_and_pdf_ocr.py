@@ -94,13 +94,24 @@ class ShowcaseAndPdfOcrTestCase(unittest.TestCase):
             {name: kind for name, kind, *_ in demo.SHOWCASE_DOCUMENTS},
         )
         today = date.today()
+        quarter = ((today.month - 1) // 3) + 1
         archive = gestoria_workspace.document_archive(
-            business_id, year=today.year, quarter=((today.month - 1) // 3) + 1,
+            business_id, year=today.year, quarter=quarter,
         )
+        # La demo emite facturas hace 30, 60, 90… días: cuántas caen en el
+        # trimestre depende del día (el 30-sep entraba la de hace 90 y el número
+        # fijo fallaba). Ingresos = esas facturas + el documento de ingreso subido.
+        period = gestoria_workspace._period(today.year, quarter)
+        generated = sum(
+            1 for invoice in db.list_invoices(business_id)
+            if gestoria_workspace._in_period(
+                invoice.get("issued_at") or invoice.get("created_at"), period)
+        )
+        ingresos = generated + 1
         self.assertEqual(
             archive["document_counts"],
             {
-                "todos": 13, "ingresos": 8, "gastos": 2,
+                "todos": ingresos + 5, "ingresos": ingresos, "gastos": 2,
                 "tickets": 1, "pendientes": 3, "otros": 2,
             },
         )

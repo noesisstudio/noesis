@@ -1,5 +1,24 @@
 # Tareas vivas
 
+## WhatsApp probado hablando con el bot — 30-sep
+
+Detalle en `Registro-cambios` (30-sep). Hecho y probado en local; **sin publicar**.
+
+- [x] Modo consulta: contesta preguntas, rechaza acciones y enlaza a activar un plan.
+- [x] Ayuda real, sugerencias del parte que funcionan, «sí/no/gracias» sin parte,
+  recordatorios con frase natural, fechas y plurales humanos, concordancia.
+- [ ] Founder: publicar (push a `main`) cuando lo decida y reactivar su cuenta de
+  prueba para repetir la conversación con el WhatsApp real.
+- [ ] Probar lo mismo con la IA de producción encendida: la simulación solo cubre el
+  cerebro local.
+- [ ] Por WhatsApp no se puede: dar el NIF/domicilio de un cliente, aceptar o pasar a
+  factura un presupuesto, ni facturar horas × precio. Ahora el bot lo dice; decidir
+  si se construye.
+- [x] `test_showcase_connects_owner_customer_and_multi_business_gestoria` fallaba
+  el 30-sep sin estos cambios: esperaba 8 ingresos fijos y la demo emite facturas
+  hace 30/60/90 días. Ahora calcula lo esperado según la fecha.
+- [ ] Quedan «(s)» en el panel de administración y alertas (`db.py`, `sales.py`).
+
 ## Correo del autónomo: enviar desde su Gmail y recibir facturas — 28-sep
 
 Todo el código está hecho, revisado y probado. Lo que falta es del founder y está

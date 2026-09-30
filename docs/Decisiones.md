@@ -2,6 +2,21 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## WhatsApp no deja al usuario sin salida (2026-09-30)
+
+Probado hablando con el bot: varias respuestas eran callejones sin salida. Se fija:
+
+- **Modo consulta lee también por WhatsApp.** Las preguntas se contestan con el
+  camino local de solo lectura de la demo (`handle_read_only`), sin agentes. Toda
+  negativa enlaza a activar un plan. Desarrolla la decisión del 2026-07-15.
+- **Un borrador de mensaje a un cliente se ofrece con SÍ/NO siempre que haya a
+  dónde mandarlo**, no solo si se dijo «manda». Sigue sin salir nada sin el SÍ.
+- **Lo que por WhatsApp no se puede hacer se dice**, con dónde hacerlo; no se
+  responde con el parte del negocio. Las sugerencias del bot solo usan frases que
+  el propio bot entiende.
+- «Sí» solo afirma «no hay nada pendiente» con las mismas palabras que confirman
+  una acción; «dale» o «perfecto» no confirman y no se puede afirmar eso.
+
 ## Recepción y memoria sin activación implícita (2026-09-24)
 
 25-sep: recuperación únicamente de `routing_changed` porque precede a cualquier

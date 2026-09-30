@@ -1,5 +1,26 @@
 ﻿# Registro de QA
 
+## 2026-09-30 — WhatsApp probado hablando con el bot
+
+- Prueba real: WhatsApp Web del founder (Chrome) con el chat de Bynoesis. Cuenta en
+  modo consulta: a «hola, ¿qué puedes hacer?» solo contestaba el aviso. No se
+  enviaron más mensajes reales ni se emitió nada.
+- Simulación local de ~80 mensajes por `whatsapp.handle_inbound` (sin red, base
+  temporal, sin IA) con cuenta activa y en modo consulta; de ahí salen los fallos
+  del `Registro-cambios`.
+- `test_showcase_connects_owner_customer_and_multi_business_gestoria` fallaba
+  igual sobre `HEAD` sin cambios (comprobado en un worktree temporal): contaba 8
+  ingresos fijos del trimestre y la demo emite facturas hace 30/60/90 días; el
+  30-sep entra la de hace 90. Ahora calcula lo esperado a partir de las fechas.
+- Suite completa: **1306 correctas** (335 s), Ruff y `check_project_truth` correctos.
+- Caso real enviado por el founder desde su móvil (cuenta ya activa): reproducido en
+  local con los mismos tres mensajes, corregido y fijado en
+  `test_charla_whatsapp` (datos etiquetados y borrador a medias).
+- Nuevas: `test_charla_whatsapp.py` (20) y 2 en `test_backend.py`; ajustada
+  `test_entrega_factura::test_writing_a_normal_email_still_works` al nuevo SÍ/NO.
+- No probado: la ruta con IA de producción, el envío real por Meta y la cuenta del
+  founder reactivada (sigue en modo consulta y el cambio no está publicado).
+
 ## 2026-09-28 — Correo del autónomo revisado
 
 - Suite completa **1281 correctas** (317,3 s), JavaScript 3/3, ruff y escáner de

@@ -253,7 +253,8 @@ def send_daily_closings(now: datetime | None = None) -> int:
         if invoices_today:
             total = sum(invoice["total"] for invoice in invoices_today)
             lines.append(
-                f"• Facturado: {len(invoices_today)} factura(s), {_eur(total)}"
+                f"• Facturado: {len(invoices_today)} "
+                f"{'factura' if len(invoices_today) == 1 else 'facturas'}, {_eur(total)}"
             )
         lines.append(f"• Cobrado hoy: {_eur(collected)}")
         pending = db.pending_payments(bid)
@@ -343,7 +344,8 @@ def send_weekly_summaries() -> None:
             who = oldest.get("client_name") or "un cliente"
             lines.append(
                 f"• Te deben {_eur(month['pending'])} en {len(pending)} "
-                f"factura(s). La más antigua: {who}, {_eur(oldest['total'])}."
+                f"{'factura' if len(pending) == 1 else 'facturas'}. "
+                f"La más antigua: {who}, {_eur(oldest['total'])}."
             )
         else:
             lines.append("• Nadie te debe nada. Todo cobrado 💪")

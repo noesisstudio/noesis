@@ -14,7 +14,7 @@ import time
 
 import anthropic
 
-from . import config, db
+from . import config, db, nlu
 from .adapters import ai as ai_adapter
 from .tools import TOOLS, run_tool
 
@@ -474,9 +474,9 @@ def daily_summary_text(business_id: int) -> str:
         if item.get("conversation_status") == "waiting_owner"
     ]
 
-    lines = [f"☀️ Buenos días. Parte del día ({today}):"]
+    lines = [f"☀️ Buenos días. Parte del {nlu.fecha_larga(date.today())}:"]
     if jobs:
-        lines.append(f"\n📋 Tienes {len(jobs)} trabajo(s):")
+        lines.append(f"\n📋 Tienes {nlu._cuenta(len(jobs), 'trabajo', 'trabajos')}:")
         for j in jobs:
             hora = ""
             if j.get("scheduled_for") and "T" in j["scheduled_for"]:
@@ -487,13 +487,15 @@ def daily_summary_text(business_id: int) -> str:
         lines.append("\n📋 Hoy no tienes trabajos agendados.")
 
     if sin_confirmar:
-        lines.append(f"\n⏳ {len(sin_confirmar)} cliente(s) sin confirmar todavía.")
+        lines.append(f"\n⏳ {nlu._cuenta(len(sin_confirmar), 'cliente', 'clientes')} "
+                     "sin confirmar todavía.")
     if pend:
-        lines.append(f"\n💸 {len(pend)} factura(s) sin cobrar — {total_pend:.2f} € pendientes.")
+        lines.append(f"\n💸 {nlu._cuenta(len(pend), 'factura', 'facturas')} sin cobrar: "
+                     f"{nlu._eur(total_pend)} pendientes.")
         for p in pend:
             d = p.get("days_outstanding")
             aviso = f" ({d} días)" if d else ""
-            lines.append(f"   • {p['client_name']}: {p['total']:.2f} €{aviso}")
+            lines.append(f"   • {p['client_name']}: {nlu._eur(p['total'])}{aviso}")
 
     if team_pending:
         blockers = sum(item.get("kind") == "blocker" for item in team_pending)
@@ -501,18 +503,22 @@ def daily_summary_text(business_id: int) -> str:
             float(item.get("amount") or 0) for item in team_pending
             if item.get("kind") == "cost"
         ), 2)
-        detail = f" · {pending_cost:.2f} € en costes" if pending_cost else ""
-        priority = f" · {blockers} bloqueo(s)" if blockers else ""
+        detail = f" · {nlu._eur(pending_cost)} en costes" if pending_cost else ""
+        priority = (f" · {nlu._cuenta(blockers, 'bloqueo', 'bloqueos')}"
+                    if blockers else "")
         lines.append(
-            f"\n👷 Equipo: {len(team_pending)} aportación(es) por revisar"
+            f"\n👷 Equipo: {nlu._cuenta(len(team_pending), 'aportación', 'aportaciones')} "
+            "por revisar"
             f"{detail}{priority}."
         )
     if customer_inbox:
         urgent = sum(bool(item.get("human_handoff")) for item in customer_inbox)
-        priority = f" · {urgent} urgente(s)" if urgent else ""
+        priority = (f" · {urgent} {'urgente' if urgent == 1 else 'urgentes'}"
+                    if urgent else "")
+        esperan = "espera" if len(customer_inbox) == 1 else "esperan"
         lines.append(
-            f"\n💬 Clientes: {len(customer_inbox)} conversación(es) esperan "
-            f"respuesta{priority}."
+            f"\n💬 Clientes: {nlu._cuenta(len(customer_inbox), 'conversación', 'conversaciones')} "
+            f"{esperan} respuesta{priority}."
         )
 
     lines.append("\n¿Quieres que confirme yo a los clientes o reordene la ruta?")

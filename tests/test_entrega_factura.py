@@ -184,7 +184,9 @@ class ContrapesoTests(_Base):
         # La salida que se añadió al redactor solo puede afectar a las frases
         # que nombran una factura por su número.
         respuesta = self.wa("escribe un correo a Juan para decirle que llego tarde")
-        self.assertIn("Borrador", respuesta)
+        # Por WhatsApp el borrador se ofrece con SÍ/NO si hay a dónde mandarlo.
+        self.assertIn("Hola Juan", respuesta)
+        self.assertIn("Todavía no lo he enviado", respuesta)
         self.assertNotIn("Entregar la factura", respuesta)
 
 

@@ -43,6 +43,9 @@ _WRITE_MARKERS = (
     "prepara un recordatorio", "prepara recordatorio", "recordatorio para",
     "seguimiento para", "missatge per", "correu per",
     "prepara un recordatori", "recordatori per",
+    # «Recuérdale a Marta que me pague» y «reclama la factura 3» son la forma
+    # natural de pedir un recordatorio de cobro; antes no llegaban aquí.
+    "recuerdale", "reclama", "que me pague", "que em pagui",
 )
 _SEND_MARKERS = (
     "envia", "envía", "enviar", "manda", "mándale", "mandale", "mandar",
@@ -354,6 +357,12 @@ def _select_single(items: list[dict], text: str) -> dict | None:
     ]
     if len(by_number) == 1:
         return by_number[0]
+    # «Reclama la factura 12»: el número que ve el autónomo en los borradores es el id.
+    ids = {int(n) for n in re.findall(r"\b(?:factura|presupuesto)\s*#?\s*(\d{1,9})\b",
+                                       nlu._norm(text))}
+    by_id = [item for item in items if item.get("id") in ids]
+    if len(by_id) == 1:
+        return by_id[0]
     return items[0] if len(items) == 1 else None
 
 
@@ -371,14 +380,24 @@ def _build_draft(business_id: int, text: str) -> tuple[CommunicationDraft | None
             "Me falta el correo de tu gestoría. Guárdalo en Ajustes y te preparo el envío.",
         )
 
-    if any(word in norm for word in (
+    pide_cobro = any(word in norm for word in (
         "cobro", "cobrar", "cobrament", "pagament pendent", "debe", "deu",
-        "impagad", "factura pendiente", "factura pendent",
-    )):
+        "impagad", "factura pendiente", "factura pendent", "pague", "pagui", "reclam",
+    ))
+    # «Prepara un recordatorio para Marta» sin más: si Marta tiene una factura
+    # sin cobrar y no se habla de cita ni presupuesto, es ese recordatorio.
+    if not pide_cobro and client and any(w in norm for w in ("recordatori", "recuerd")) \
+            and not any(w in norm for w in ("cita", "visita", "presupuest", "pressupost")):
+        pide_cobro = any(item.get("client_id") == client["id"]
+                         for item in db.pending_payments(business_id))
+    if pide_cobro:
         invoices = db.pending_payments(business_id)
         if client:
             invoices = [item for item in invoices if item.get("client_id") == client["id"]]
         invoice = _select_single(invoices, text)
+        if not invoice and client and not invoices:
+            return None, (f"{client['name']} no tiene facturas pendientes de cobro. "
+                          "No hay nada que reclamarle.")
         if not invoice:
             return None, (
                 "Dime el cliente o el número de factura que quieres reclamar; "
@@ -498,7 +517,10 @@ def prepare_response(
     can_send = draft.channel in {"email", "whatsapp_template"} and bool(
         draft.recipient_address
     )
-    if send_requested and channel == "whatsapp" and actor_phone and can_send:
+    # Por WhatsApp, si hay a dónde mandarlo, se ofrece siempre con SÍ/NO: antes
+    # solo al decir «manda» o «envía», y el resto recibía «No lo he enviado» sin
+    # saber cómo enviarlo. Sin el SÍ del dueño no sale nada.
+    if channel == "whatsapp" and actor_phone and can_send:
         db.set_pending_action(
             business_id,
             actor_phone,
@@ -518,10 +540,9 @@ def prepare_response(
     note = "No lo he enviado."
     if send_requested and channel != "whatsapp":
         note += " Para enviarlo con control, pídemelo por tu WhatsApp y confirma con SÍ."
-    elif send_requested and not can_send:
-        note += " Falta un canal válido del destinatario."
-    elif draft.channel == "draft_only":
-        note += " El cliente no tiene email y un WhatsApp proactivo necesita una plantilla aprobada."
+    elif not can_send:
+        note += (" En su ficha no hay correo ni móvil al que mandarlo: puedes "
+                 "copiarlo y enviárselo tú, o añadir su contacto en la web.")
     return {
         "reply": (
             f"Borrador para **{draft.recipient_name}**:\n\n{preview}\n\n{note}"

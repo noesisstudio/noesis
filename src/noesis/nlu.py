@@ -218,6 +218,44 @@ def _parse_time(norm: str) -> tuple[int, int] | None:
     return None
 
 
+_DIAS_SEMANA = ("lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo")
+_MESES = ("enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto",
+          "septiembre", "octubre", "noviembre", "diciembre")
+
+
+def fecha_larga(dia: date) -> str:
+    """«miércoles 30 de septiembre»."""
+    return f"{_DIAS_SEMANA[dia.weekday()]} {dia.day} de {_MESES[dia.month - 1]}"
+
+
+def dia_humano(valor: str, hoy: date | None = None) -> str:
+    """«2026-10-01T10:00» → «mañana a las 10:00»: al usuario no se le enseña ISO."""
+    try:
+        momento = datetime.fromisoformat(valor)
+    except (TypeError, ValueError):
+        return str(valor or "")
+    hoy = hoy or date.today()
+    dia = momento.date()
+    diferencia = (dia - hoy).days
+    if diferencia == 0:
+        texto = "hoy"
+    elif diferencia == 1:
+        texto = "mañana"
+    elif diferencia == -1:
+        texto = "ayer"
+    else:
+        texto = f"el {fecha_larga(dia)}"
+        if dia.year != hoy.year:
+            texto += f" de {dia.year}"
+    if "T" in str(valor):
+        texto += f" a las {momento.hour}:{momento.minute:02d}"
+    return texto
+
+
+def _cuenta(n: int, singular: str, plural: str) -> str:
+    return f"{n} {singular if n == 1 else plural}"
+
+
 def parse_date(text: str, base: date | None = None) -> str | None:
     """Convierte fechas en español a ISO. Devuelve None si no encuentra fecha."""
     base = base or date.today()
@@ -247,6 +285,26 @@ def parse_date(text: str, base: date | None = None) -> str | None:
 # Parser de intención -> (tool, args)
 # --------------------------------------------------------------------------- #
 HELP = "__help__"
+_SALUDO = re.compile(
+    # Las fórmulas largas primero: si no, «buenas» deja suelto «tardes».
+    r"^(?:(?:buenos dias|buenas tardes|buenas noches|hola|hey|buenas)\s+)+")
+_PREGUNTAS_DE_AYUDA = {
+    "que puedes hacer", "que sabes hacer", "que haces", "ayuda", "help",
+    "en que me puedes ayudar", "en que me ayudas", "como funciona",
+    "como funcionas", "que puedes hacer por mi",
+}
+
+
+def pide_capacidades(text: str) -> bool:
+    """«Hola, ¿qué puedes hacer?» pide la lista de lo que hace Bynoesis.
+
+    Un saludo suelto no: ese se contesta con la lectura del negocio. Solo cuenta
+    si tras el saludo no queda nada más, así «hola, factura a Juan…» sigue siendo
+    una factura.
+    """
+    pregunta = re.sub(r"[¿?¡!.,;:]", " ", _norm(text))
+    pregunta = _SALUDO.sub("", " ".join(pregunta.split()) + " ").strip()
+    return pregunta in _PREGUNTAS_DE_AYUDA
 NEED_INVOICE = "__need_invoice__"
 # Factura pedida con datos a medias: se crea el borrador con lo dicho y se declara
 # lo que falta, en vez de pedirlo todo de golpe y tirar lo que sí se entendió.
@@ -493,7 +551,8 @@ def _limpiar_cliente(nombre: str) -> str:
     nombre = re.sub(r"^(?:a\s+)?nom(?:bre)?\s+(?:de\s+|d')", "", str(nombre or "").strip(), flags=re.I)
     # «factura para el cliente Marta» no da de alta a nadie llamado «el cliente
     # Marta»: la palabra que describe el papel no forma parte del nombre.
-    nombre = re.sub(r"^(?:el|la|els|les|l')\s+(?:client[ea]?|proveedor[a]?)\s+",
+    # «Factura a cliente María» también, sin artículo.
+    nombre = re.sub(r"^(?:(?:el|la|els|les|l')\s+)?(?:client[ea]?|proveedor[a]?)\s*:?\s+",
                     "", nombre, flags=re.I)
     partes = nombre.split()
     while partes and partes[-1].lower().strip(",.") in _CONECTORES_FINALES:
@@ -695,6 +754,64 @@ def _limpio_o_nada(valor: str | None) -> str | None:
     return valor
 
 
+# Datos etiquetados, como se escriben en el móvil: «concepto: reforma de la
+# habitación», «cliente: María Antonia», «el cliente es: …». Cada valor llega
+# hasta la siguiente etiqueta. Antes solo se entendía «factura a X por Y» y un
+# mensaje con todo etiquetado dejaba un borrador sin cliente ni concepto.
+_ETIQUETA = re.compile(
+    r"(?:\b(?:el|la|mi)\s+)?\b(?P<campo>clienta|cliente|concepto|importe|precio)\b"
+    r"\s*(?:(?:es|ser[aá]|son)\b)?\s*[:=]?\s*", re.I)
+_COLA_SIN_VALOR = re.compile(
+    r"(?:\s+|^)(?:a|al|para|para\s+el|para\s+la|de|del|y|el|la|con|por|al\s+que|"
+    r"a\s+nombre\s+de)\s*$", re.I)
+_IMPORTE_AL_FINAL = re.compile(
+    rf"\s*(?:de\s+)?{_AMOUNT_RE}\s*(?:€|euros?|eur)?(?:\s*\+\s*iva)?\s*$", re.I)
+
+
+def campos_etiquetados(text: str) -> dict:
+    """Cliente y concepto dichos con etiqueta, o «María es el cliente»."""
+    texto = _erratas(text or "")
+    datos: dict = {}
+    marcas = list(_ETIQUETA.finditer(texto))
+    for i, marca in enumerate(marcas):
+        campo = marca.group("campo").lower()
+        if campo in {"importe", "precio"}:
+            continue
+        fin = marcas[i + 1].start() if i + 1 < len(marcas) else len(texto)
+        valor = re.split(r"[;\n]", texto[marca.end():fin])[0]
+        # «Maria Antonia por 350 + iva» o «ventana con el 10%»: el importe y los
+        # impuestos no son parte del nombre ni del concepto.
+        valor = re.split(rf"\s+(?:(?:por|de|son|x)\s+)?{_AMOUNT_RE}\s*(?:€|euros?|eur\b|%)"
+                         rf"|\s+(?:por|de|son)\s+{_AMOUNT_RE}\b|\s*\+\s*iva\b"
+                         r"|\s+(?:con|mas|más)\s+(?:el\s+)?(?:iva|irpf|\d)", valor,
+                         maxsplit=1, flags=re.I)[0]
+        valor = re.sub(r"^(?:de|del)\s+", "", valor.strip(" ,.:"), flags=re.I)
+        valor = _COLA_SIN_VALOR.sub("", valor).strip(" ,.:")
+        if campo == "concepto":
+            valor = _IMPORTE_AL_FINAL.sub("", valor).strip(" ,.:")
+            valor = _limpio_o_nada(valor)
+            if valor:
+                datos.setdefault("concepto", valor)
+        else:
+            # «Crea el cliente Pere» es dar de alta, no decir de quién es la
+            # factura: el cliente necesita «es», «:» o ir detrás de «a/para».
+            separado = re.search(r"(?:\bes\b|ser[aá]|[:=])", marca.group(0), re.I)
+            detras = re.search(r"\b(?:a|para|per)\s*$", texto[:marca.start()], re.I)
+            if not (separado or detras):
+                continue
+            valor = _limpio_o_nada(_limpiar_cliente(valor))
+            if valor:
+                datos.setdefault("cliente", valor)
+    if "cliente" not in datos:
+        m = re.match(r"\s*(?:(?:vale|ok|pues),?\s+)?(.+?)\s+es\s+(?:el|la|mi)\s+client[ea]\b",
+                     texto, re.I)
+        if m:
+            valor = _limpio_o_nada(_limpiar_cliente(m.group(1)))
+            if valor:
+                datos["cliente"] = valor
+    return datos
+
+
 def parse_partial_invoice(text: str) -> dict:
     """Extrae de una petición de factura lo que haya, aunque falten datos.
 
@@ -729,6 +846,8 @@ def parse_partial_invoice(text: str) -> dict:
         valor = _amount_value(importe.group(1))
         if valor > 0:
             args["base"] = valor
+    # Lo etiquetado manda sobre lo deducido por la posición de las palabras.
+    args.update(campos_etiquetados(text))
     return args
 
 
@@ -866,6 +985,23 @@ def _party_intent(papel: str, nombre: str) -> tuple[str, dict]:
     return (f"crear_{tipo}", args)
 
 
+# Erratas de teclado del móvil en las palabras que deciden la orden. Una
+# «fatura» no se entendía y la conversación acababa en el parte del negocio.
+_ERRATAS = (
+    (re.compile(r"\b(?:fatura|factrua|facutra|fctura|facura|factuta)(s?)\b", re.I), r"factura\1"),
+    (re.compile(r"\b(?:presupesto|presupueso|presupusto|presuspuesto|prespuesto)(s?)\b", re.I),
+     r"presupuesto\1"),
+    (re.compile(r"\b(?:clinte|cliete|clente|cleinte|cliemte|clietne)\b", re.I), "cliente"),
+    (re.compile(r"\b(?:concetpo|conepto|cocepto|concpeto|conceto|concepo)\b", re.I), "concepto"),
+)
+
+
+def _erratas(text: str) -> str:
+    for patron, correcto in _ERRATAS:
+        text = patron.sub(correcto, text)
+    return text
+
+
 def parse(text: str) -> tuple[str, dict] | None:
     # Lo primero: pasar a cifras los importes dictados en letra. Todo lo que
     # viene detrás busca números, y una nota de voz los trae escritos.
@@ -873,6 +1009,7 @@ def parse(text: str) -> tuple[str, dict] | None:
     # «ciento» acababa siendo el concepto de la factura.
     text = re.sub(r"(\d+(?:[.,]\d+)?)\s*por\s*ciento\b", r"\1%", text, flags=re.I)
     text = _cifras_dictadas(text)
+    text = _erratas(text)
     norm = _norm(text)
 
     refusal = safety_refusal(text)
@@ -882,6 +1019,16 @@ def parse(text: str) -> tuple[str, dict] | None:
         rate = re.search(rf"\b{field}\s*(?:(?:del|al)\s*)?(\d+(?:[.,]\d+)?)(?![\w.,])", norm)
         if rate and float(rate.group(1).replace(",", ".")) not in allowed:
             return (NEED_REVIEW, {"reply": "El tipo fiscal indicado no está admitido. Revisa IVA e IRPF en Facturas; no he sustituido el porcentaje por otro."})
+    # Lo que por WhatsApp todavía no se hace se dice con claridad; antes caía en
+    # el parte del negocio y parecía que el bot no había leído el mensaje.
+    if re.search(r"\bpresupuesto\b.*\b(?:acept\w*|rechaz\w*|convier\w*|convertir\w*|"
+                 r"pasa\w* a factura|en factura)\b|\b(?:acept\w*|rechaz\w*|convier\w*|"
+                 r"convertir\w*)\b.*\bpresupuesto\b|\bfactura del presupuesto\b", norm):
+        return (NEED_REVIEW, {"reply": (
+            "Aceptar, rechazar o pasar a factura un presupuesto todavía no lo hago por "
+            "WhatsApp. Hazlo en la web, en Presupuestos: con un clic se convierte en "
+            "factura. No he cambiado nada.")})
+
     # Se compara contra `norm`, sin acentos: contra el texto crudo, «qué trabajos
     # tengo mañana» no encajaba con «que.*trabajos» por la tilde y la orden se
     # perdía entera.
@@ -911,6 +1058,11 @@ def parse(text: str) -> tuple[str, dict] | None:
         return (NEED_REVIEW, {"reply": "Para registrar un cobro parcial, abre la factura e indica el importe recibido. No he cambiado su estado."})
 
     if norm in {"hola", "hey", "buenas", "ayuda", "help", "que puedes hacer"}:
+        return (HELP, {})
+    # «Hola, ¿qué puedes hacer?» es la primera frase de casi todo el mundo y no
+    # coincidía por el saludo y los signos. Solo cuenta si no queda nada más: un
+    # «hola, factura a Juan…» sigue siendo una factura.
+    if pide_capacidades(text):
         return (HELP, {})
 
     # --- Centro de control: límites reales de Bynoesis
@@ -965,8 +1117,10 @@ def parse(text: str) -> tuple[str, dict] | None:
         # El conector antes del importe es opcional: «el proyecto Casa Roca 12000
         # euros» no encajaba y acababa listando proyectos en vez de crear uno.
         m = re.search(
-            rf"(?:proyecto|projecte|obra)\s+(.+?)\s+(?:(?:de|por|per|presupuesto|"
-            rf"pressupost)\s+)?({_AMOUNT_RE})\s*(?:€|euros?|eur)?(?:\s|$)",
+            # «… con presupuesto de 20000» no puede dejar «con» en el nombre.
+            rf"(?:proyecto|projecte|obra)\s+(.+?)\s+(?:(?:(?:con|amb)\s+(?:un\s+)?)?"
+            rf"(?:presupuesto|pressupost)\s+(?:de\s+)?|(?:de|por|per)\s+)?"
+            rf"({_AMOUNT_RE})\s*(?:€|euros?|eur)?(?:\s|$)",
             text, re.I,
         )
         if m:
@@ -1058,6 +1212,21 @@ def parse(text: str) -> tuple[str, dict] | None:
             if "iva incluido" in norm or "iva inclos" in norm:
                 args["importe_incluye_iva"] = True
             return ("crear_factura", args)
+        # Si el parser de siempre no ha sacado la factura y hay etiquetas
+        # («concepto: …», «cliente: …»), mandan las etiquetas: la
+        # lectura por posición convertía «factura de 350€ + iva concepto: X el
+        # cliente es: Y» en una factura para el cliente «+ iva».
+        if (campos_etiquetados(text)
+                and (_VERBO_CREAR_FACTURA.search(norm) or _LLEVA_IMPORTE.search(norm))
+                and not _CONSULTA_FACTURA.search(norm)
+                and not _FACTURA_RECURRENTE.search(norm)):
+            args = parse_partial_invoice(text)
+            _add_tax_rates(norm, args)
+            if {"cliente", "concepto", "base"} <= args.keys():
+                if "iva incluido" in norm or "iva inclos" in norm:
+                    args["importe_incluye_iva"] = True
+                return ("crear_factura", {**args, "tipo_factura": "F1"})
+            return (PARTIAL_INVOICE, args)
         # «factura a Jordi…» / «factura para Jordi…» al principio: ahí «factura»
         # es el verbo facturar en imperativo, que es tan orden como «hazme».
         # «Factura a Jordi…» y también «factura reformas martinez ventana 750»:
@@ -1171,7 +1340,7 @@ def parse(text: str) -> tuple[str, dict] | None:
         return ("ver_agenda", {"fecha": date.today().isoformat()})
 
     # --- Cobros pendientes
-    if re.search(r"(cobr|por cobrar|quien me debe|pendiente de cobro|me deben|"
+    if re.search(r"(cobr|por cobrar|quien me debe|pendiente de cobro|me deben?\b|"
                  r"deudas?|sin cobrar|impagad|moroso|facturas? pendientes?|"
                  # Catalán: «quant em deuen», «qui em deu diners», «deutes».
                  r"em deuen|em deu\b|qui em deu|deutes?|per cobrar|sense cobrar)", norm):
@@ -1193,7 +1362,8 @@ def parse(text: str) -> tuple[str, dict] | None:
                          r"mostra\w*|dame|veure|ver)\b.*"
                          r"\b(documentos?|documents?|papeles?|papers?)\b", norm)):
         return ("ver_documentos_pendientes", {})
-    if re.search(r"(gestoria|gestor).*(pide|solicitud|pendient)", norm):
+    if re.search(r"(gestoria|gestor).*(pide|solicitud|pendient)"
+                 r"|(pide|solicitud|pendient).*\b(gestoria|gestor)\b", norm):
         return ("ver_solicitudes_gestoria", {})
 
     # --- Impuestos: va antes del resumen porque "como va mi iva" casa con ambos y
@@ -1264,13 +1434,19 @@ def format_reply(tool: str, result: dict) -> str:
         desglose = f"base {_eur(f['base'])} + IVA {_eur(f['vat_amount'])}"
         if f.get("irpf_amount"):
             desglose += f" − IRPF {_eur(f['irpf_amount'])}"
-        label = "Ticket de venta" if f.get("invoice_type") == "F2" else "Factura"
+        # «Factura» es femenino y «ticket» masculino: el texto concuerda con cada uno.
+        if f.get("invoice_type") == "F2":
+            label, preparado, pron, correcto = "Ticket de venta", "preparado", "lo", "correcto"
+        else:
+            label, preparado, pron, correcto = "Factura", "preparada", "la", "correcta"
         aviso = result.get("aviso_fiscal")
-        return (f"🧾 {label} #{f['id']} preparado para {f['client_name']}: "
-                f"**{_eur(f['total'])}** ({desglose}). Lo dejo en borrador para "
-                f"que lo revises. Cuando esté correcto, escribe «emitir factura "
-                f"{f['id']}»; para entregarlo también, «emitir y enviar factura "
-                f"{f['id']}»."
+        # El concepto se enseña: si no se dijo, es «Servicio» y así se ve.
+        concepto = f" ({f['concept']})" if f.get("concept") else ""
+        return (f"🧾 {label} #{f['id']} {preparado} para {f['client_name']}{concepto}: "
+                f"**{_eur(f['total'])}** ({desglose}). {pron.capitalize()} dejo en "
+                f"borrador para que {pron} revises. Cuando esté {correcto}, escribe "
+                f"«emitir factura {f['id']}»; para entregar{pron} también, «emitir "
+                f"y enviar factura {f['id']}»."
                 + (f"\n\n⚠️ {aviso}" if aviso else ""))
     if tool == "entregar_factura":
         entrega = result.get("entrega") or {}
@@ -1318,7 +1494,8 @@ def format_reply(tool: str, result: dict) -> str:
         desglose = f"base {_eur(q['base'])} + IVA {_eur(q['vat_amount'])}"
         if q.get("irpf_amount"):
             desglose += f" − IRPF {_eur(q['irpf_amount'])}"
-        return (f"📝 Presupuesto preparado para {q['client_name']}: **{_eur(q['total'])}** "
+        numero = f" #{q['id']}" if q.get("id") else ""
+        return (f"📝 Presupuesto{numero} preparado para {q['client_name']}: **{_eur(q['total'])}** "
                 f"({desglose}). Lo tienes en Presupuestos: envíalo y, si lo aceptan, "
                 "se convierte en factura con un clic.")
     if tool == "registrar_gasto":
@@ -1327,14 +1504,15 @@ def format_reply(tool: str, result: dict) -> str:
                 "Bien hecho: gasto apuntado al momento, beneficio más real.")
     if tool == "agendar_trabajo":
         t = result["trabajo"]
-        cuando = t["scheduled_for"].replace("T", " a las ") if t.get("scheduled_for") else "—"
-        return (f"📅 Agendado: {result['cliente']['name']} · {cuando}.\n"
+        cuando = dia_humano(t["scheduled_for"]) if t.get("scheduled_for") else "sin día"
+        return (f"📅 Agendado: {result['cliente']['name']}, {cuando}.\n"
                 "Lo importante ahora: que no se quede sin facturar cuando termines.")
     if tool == "ver_agenda":
         jobs = result["trabajos"]
         if not jobs:
-            return f"No tienes trabajos agendados para {result['fecha']}."
-        lines = [f"Tienes {len(jobs)} trabajo(s) para {result['fecha']}:"]
+            return f"No tienes trabajos agendados para {dia_humano(result['fecha'])}."
+        lines = [f"Tienes {_cuenta(len(jobs), 'trabajo', 'trabajos')} para "
+                 f"{dia_humano(result['fecha'])}:"]
         for j in jobs:
             h = j["scheduled_for"].split("T")[1] if j.get("scheduled_for") and "T" in j["scheduled_for"] else ""
             lines.append(f"• {h} {j.get('client_name') or ''} — {j['description']}")
@@ -1343,7 +1521,9 @@ def format_reply(tool: str, result: dict) -> str:
     if tool == "ver_cobros_pendientes":
         if result["n"] == 0:
             return "✅ No tienes cobros pendientes. Caja limpia. Mantén el hábito: revisarlo una vez al día basta."
-        lines = [f"💸 Hay {result['n']} factura(s) sin cobrar: **{_eur(result['total_pendiente'])}**."]
+        lines = [f"💸 {'Hay' if result['n'] != 1 else 'Tienes'} "
+                 f"{_cuenta(result['n'], 'factura', 'facturas')} sin cobrar: "
+                 f"**{_eur(result['total_pendiente'])}**."]
         for p in result["facturas"]:
             d = p.get("days_outstanding")
             lines.append(f"• {p['client_name']}: {_eur(p['total'])}" + (f" ({d} días)" if d else ""))
@@ -1353,8 +1533,9 @@ def format_reply(tool: str, result: dict) -> str:
         r = result
         return (f"📊 Lectura del mes: facturado **{_eur(r['invoiced'])}**, cobrado {_eur(r['collected'])}, "
                 f"pendiente {_eur(r['pending'])}, gastos {_eur(r['expenses'])}.\n\n"
-                f"Beneficio estimado: **{_eur(r['estimated_profit'])}**. "
-                f"Aparta al menos {_eur(r['vat_estimated'])} de IVA para no confundirte: no es caja libre.")
+                f"Beneficio estimado: **{_eur(r['estimated_profit'])}**."
+                + (f" Aparta al menos {_eur(r['vat_estimated'])} de IVA para no "
+                   "confundirte: no es caja libre." if r.get("vat_estimated") else ""))
     if tool == "ver_impuestos":
         if not result.get("ok"):
             return result.get("error") or "No he podido calcular el trimestre."
@@ -1368,7 +1549,8 @@ def format_reply(tool: str, result: dict) -> str:
         ]
         if result["datos_incompletos"]:
             lines.append(
-                f"⚠️ Hay {result['datos_incompletos']} apunte(s) sin IVA o sin base: "
+                f"⚠️ Hay {_cuenta(result['datos_incompletos'], 'apunte', 'apuntes')} "
+                "sin IVA o sin base: "
                 "la cifra se moverá cuando los completes."
             )
         lines.append(
@@ -1386,7 +1568,7 @@ def format_reply(tool: str, result: dict) -> str:
         if not projects:
             return "Aún no tienes proyectos. Si me dices nombre y presupuesto, preparo el primero."
         lines = [
-            f"🧰 Tienes {result['active_count']} proyecto(s) activo(s). "
+            f"🧰 Tienes {_cuenta(result['active_count'], 'proyecto activo', 'proyectos activos')}. "
             f"Quedan {_eur(result['margin'])} antes de consumir el presupuesto."
         ]
         for project in projects[:6]:
@@ -1408,29 +1590,32 @@ def format_reply(tool: str, result: dict) -> str:
         today = result.get("jornada_hoy") or []
         inside = [item for item in today if item.get("working")]
         return (
-            f"👷 Equipo: {len(people)} persona(s). "
-            f"Ahora mismo {len(inside)} tienen la jornada abierta."
+            f"👷 Equipo: {_cuenta(len(people), 'persona', 'personas')}. "
+            + ("Ahora mismo nadie tiene la jornada abierta." if not inside else
+               f"Ahora mismo {len(inside)} {'tiene' if len(inside) == 1 else 'tienen'} "
+               "la jornada abierta.")
         )
     if tool == "ver_documentos_pendientes":
         return (
             "📎 No tienes documentos pendientes de revisar."
             if not result.get("n") else
-            f"📎 Hay {result['n']} documento(s) esperando tu confirmación. "
+            f"📎 Hay {_cuenta(result['n'], 'documento', 'documentos')} esperando tu confirmación. "
             "Los encontrarás en Documentos."
         )
     if tool == "ver_solicitudes_gestoria":
         return (
             "Tu gestoría no tiene solicitudes abiertas."
             if not result.get("n") else
-            f"Tu gestoría tiene {result['n']} solicitud(es) abiertas. "
+            f"Tu gestoría tiene {_cuenta(result['n'], 'solicitud abierta', 'solicitudes abiertas')}. "
             "Te digo cuál atender primero si quieres."
         )
     if tool == "ver_control_noesis":
         automatic = [p for p in result["permisos"] if p["modo"] == "automatic"]
         confirmed = [p for p in result["permisos"] if p["modo"] == "confirm"]
         return (
-            f"Puedo ocuparme solo de {len(automatic)} tipo(s) de tarea interna. "
-            f"En {len(confirmed)} acción(es) siempre te pregunto. Transferencias, "
+            f"Puedo ocuparme solo de {_cuenta(len(automatic), 'tipo', 'tipos')} de tarea "
+            f"interna. En {_cuenta(len(confirmed), 'acción', 'acciones')} siempre te "
+            "pregunto. Transferencias, "
             "impuestos, devoluciones y borrados nunca son automáticos."
         )
     return "Hecho."

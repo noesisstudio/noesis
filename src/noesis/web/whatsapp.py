@@ -123,6 +123,16 @@ def _revive_link(code_hash: str, business_id: int) -> None:
         log.exception("No se pudo revivir el código de vinculación.")
 
 
+def _y_lista(partes: list[str]) -> str:
+    """«a, b y c»: una enumeración como se dice, no como se programa."""
+    return partes[0] if len(partes) == 1 else ", ".join(partes[:-1]) + " y " + partes[-1]
+
+
+def _subscription_url(business_id: int) -> str:
+    """Enlace directo a activar un plan: el modo consulta siempre dice cómo salir."""
+    return f"{config.BASE_URL}/b/{business_id}/suscripcion"
+
+
 def _try_link(from_phone: str, text: str) -> str | None:
     """Si el texto es ``BYNOESIS <code>``, liga el teléfono al negocio."""
     parts = (text or "").strip().split()
@@ -138,8 +148,8 @@ def _try_link(from_phone: str, text: str) -> str | None:
     business = db.get_business(business_id)
     if not db.subscription_allows_access(business):
         return (
-            "Tu cuenta está en modo consulta. Activa un plan desde la web y genera "
-            "un código nuevo para conectar WhatsApp."
+            "Tu cuenta está en modo consulta. Activa un plan aquí y genera un "
+            f"código nuevo para conectar WhatsApp: {_subscription_url(business_id)}"
         )
     conflicto = db.whatsapp_phone_conflict(from_phone, business_id)
     if conflicto:
@@ -183,8 +193,8 @@ def _link_expected_phone(from_phone: str, text: str, business_id: int) -> str:
         return (f"Hola 👋 Este WhatsApp está pendiente de conectarse a «{name}» en "
                 "Bynoesis. Si es tu negocio, responde SÍ y lo conecto.")
     if not db.subscription_allows_access(business):
-        return ("Tu cuenta está en modo consulta. Activa un plan desde la web para "
-                "conectar WhatsApp.")
+        return ("Tu cuenta está en modo consulta. Activa un plan aquí para "
+                f"conectar WhatsApp: {_subscription_url(business_id)}")
     try:
         db.set_whatsapp_status(business_id, "conectado", phone=from_phone)
     except ValueError as exc:
@@ -867,14 +877,23 @@ def _prepare_invoice_action(business: dict, phone: str, text: str) -> str | None
             ))
         missing = [label for value, label in required if not str(value or "").strip()]
         if missing:
-            return (
-                f"El borrador #{invoice['id']} aún no se puede emitir legalmente. "
-                "Falta: " + ", ".join(missing) + ". "
-                + ("Es una factura completa. El ticket sin NIF del cliente tiene un límite general de 400 € IVA incluido. "
-                   if invoice.get("invoice_type") != "F2" else "")
-                + "Completa esos datos y vuelve "
-                "a pedírmelo; no he cambiado la factura."
+            # Por WhatsApp no se completan fichas: se dice dónde hacerlo, con enlace.
+            del_negocio = [m for m in missing if m.endswith("del negocio")]
+            seccion = "ajustes" if del_negocio else "clientes"
+            texto = (
+                f"El borrador #{invoice['id']} aún no se puede emitir: falta "
+                + _y_lista([f"el {m}" for m in missing])
+                + ". Complétalo en la web y vuelve a "
+                f"pedírmelo: {config.BASE_URL}/b/{business['id']}/{seccion}"
             )
+            if (not del_negocio and invoice.get("invoice_type") != "F2"
+                    and db._fits_simplified_invoice(invoice.get("total"))):
+                texto += (
+                    "\n\nSi es un particular, también puedes hacerla como ticket de "
+                    "venta (hasta 400 € con IVA no necesita esos datos): "
+                    "«ticket de venta a … por … euros»."
+                )
+            return texto + "\n\nNo he cambiado la factura."
     if deliver and not (
         str(client.get("email") or "").strip()
         or recipient_phone(client.get("phone"))
@@ -1998,12 +2017,28 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
             continue
 
         if not db.subscription_allows_access(business):
-            send(
-                phone,
-                "Tu cuenta está en modo consulta. Puedes ver tu panel en la web, "
-                "pero necesitas activar un plan para pedirme acciones o enviar documentos.",
-                business_id=None,
-            )
+            # Modo consulta: las preguntas se contestan con datos y sin tocar
+            # nada; lo demás recibe el enlace para activar un plan. Sale sin
+            # business_id porque la cola bloquea los envíos de cuentas sin plan.
+            activation_url = _subscription_url(business["id"])
+            if message.get("image_id") or message.get("media_document_id"):
+                reply = (
+                    "Tu cuenta está en modo consulta y no he guardado el archivo. "
+                    "Para volver a mandarme fotos y documentos, activa un plan "
+                    f"aquí: {activation_url}"
+                )
+            elif _is_yes(text) or _is_no(text):
+                # Suele ser la respuesta a algo que quedó pendiente antes de caducar.
+                reply = (
+                    "Tu cuenta está en modo consulta, así que no he ejecutado nada de "
+                    "lo que estaba pendiente. Para poder confirmarlo, activa un plan "
+                    f"aquí: {activation_url}"
+                )
+            else:
+                reply = chat.handle_read_only(
+                    business["id"], text, activation_url=activation_url,
+                )["reply"]
+            send(phone, reply, business_id=None)
             results.append({
                 "phone": phone,
                 "business_id": business["id"],
