@@ -56,6 +56,31 @@ class CharlaWhatsappTestCase(unittest.TestCase):
         self.assertEqual(nlu.parse("presupesto a juan por baño 1000 euros")[0],
                          "crear_presupuesto")
 
+    def test_faltas_y_abreviaturas_de_movil_del_founder(self):
+        """Ronda real 30-sep por WhatsApp: todo esto acababa en la IA o sin datos."""
+        casos = {
+            "hazme una factra a lucia de 200e por reparacion grifo":
+                ("crear_factura", "lucia", "reparacion grifo", 200.0),
+            "factura a lucia por pintura 200e": ("crear_factura", "lucia", "pintura", 200.0),
+            "fatcura a juan por pintura 90 euros": ("crear_factura", "juan", "pintura", 90.0),
+            "presupueto a juan por baño 900 euros":
+                ("crear_presupuesto", "juan", "baño", 900.0),
+        }
+        for texto, (tool, cliente, concepto, base) in casos.items():
+            with self.subTest(texto=texto):
+                orden, datos = nlu.parse(texto)
+                self.assertEqual((orden, datos["cliente"], datos["concepto"], datos["base"]),
+                                 (tool, cliente, concepto, base))
+        self.assertEqual(nlu.parse("q tengo manana")[0], "ver_agenda")
+        self.assertTrue(nlu.pide_capacidades("hola k tal, q puedes acer"))
+        self.assertEqual(nlu.parse("hola, ¿qué tal?"), (nlu.HELP, {}))
+        agenda = nlu.parse("agenda a lucia el viernes a las 5 de la tarde pa mirar la caldera")
+        self.assertEqual(agenda[1]["descripcion"], "mirar la caldera")
+        # Las formas válidas y las palabras parecidas que son otra cosa no se tocan.
+        for texto in ("facturame a juan 100 euros", "la fractura del azulejo",
+                      "tengo 3 clientes nuevos"):
+            self.assertEqual(nlu.corregir_erratas(texto), texto)
+
     def test_la_gestoria_se_pregunta_en_cualquier_orden(self):
         self.assertEqual(nlu.parse("¿Qué me pide la gestoría?")[0], "ver_solicitudes_gestoria")
 

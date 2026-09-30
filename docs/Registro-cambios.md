@@ -1,5 +1,23 @@
 ﻿# Registro de cambios
 
+## 2026-09-30 (tarde, 2) — Faltas y abreviaturas de móvil
+
+Ronda real en el WhatsApp del founder escribiendo deprisa. Fallaban: «hazme una
+factra … de 200e», «… por pintura 200e» (borrador sin importe), «q tengo manana» y
+«hola k tal, q puedes acer» (acababan en la IA, que además dijo que los gastos se
+registran directos, falso con la revisión encendida) y «pa mirar la caldera»
+(«Trabajo: Trabajo»).
+
+- `nlu.corregir_erratas`: palabras clave (factura, presupuesto, cliente, concepto)
+  con una falta cercana se corrigen por parecido; las formas válidas en castellano y
+  catalán y las parecidas que son otra cosa («fractura», «concreto») no se tocan.
+  Abreviaturas sueltas: q/k → que, pa → para, xq → por qué, acer → hacer, «200e» →
+  200 euros. Se aplica en `chat._handle` antes de decidir; el historial guarda el
+  mensaje original.
+- Un saludo suelto («hola, ¿qué tal?») es ayuda/parte, no una consulta a la IA.
+- Riesgo: bajo-medio; un nombre de cliente que sea «Pa» o «Q» se leería como
+  abreviatura. Rollback: revertir el commit.
+
 ## 2026-09-30 (tarde) — Clientes con tilde y orden repetida con borrador abierto
 
 Casos reales del founder por WhatsApp (producción con `ASSISTANT_REVIEW_ENABLED`):

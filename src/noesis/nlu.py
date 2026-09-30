@@ -287,7 +287,8 @@ def parse_date(text: str, base: date | None = None) -> str | None:
 HELP = "__help__"
 _SALUDO = re.compile(
     # Las fórmulas largas primero: si no, «buenas» deja suelto «tardes».
-    r"^(?:(?:buenos dias|buenas tardes|buenas noches|hola|hey|buenas)\s+)+")
+    r"^(?:(?:buenos dias|buenas tardes|buenas noches|hola|hey|buenas|que tal|"
+    r"como estas|como va)\s+)+")
 _PREGUNTAS_DE_AYUDA = {
     "que puedes hacer", "que sabes hacer", "que haces", "ayuda", "help",
     "en que me puedes ayudar", "en que me ayudas", "como funciona",
@@ -302,9 +303,17 @@ def pide_capacidades(text: str) -> bool:
     si tras el saludo no queda nada más, así «hola, factura a Juan…» sigue siendo
     una factura.
     """
-    pregunta = re.sub(r"[¿?¡!.,;:]", " ", _norm(text))
-    pregunta = _SALUDO.sub("", " ".join(pregunta.split()) + " ").strip()
-    return pregunta in _PREGUNTAS_DE_AYUDA
+    return _sin_saludo(text) in _PREGUNTAS_DE_AYUDA
+
+
+def _sin_saludo(text: str) -> str:
+    pregunta = re.sub(r"[¿?¡!.,;:]", " ", _norm(_erratas(text)))
+    return _SALUDO.sub("", " ".join(pregunta.split()) + " ").strip()
+
+
+def solo_saludo(text: str) -> bool:
+    """«Hola, ¿qué tal?» o «buenas tardes» sin nada más."""
+    return bool(_norm(text)) and _sin_saludo(text) == ""
 NEED_INVOICE = "__need_invoice__"
 # Factura pedida con datos a medias: se crea el borrador con lo dicho y se declara
 # lo que falta, en vez de pedirlo todo de golpe y tirar lo que sí se entendió.
@@ -987,19 +996,57 @@ def _party_intent(papel: str, nombre: str) -> tuple[str, dict]:
 
 # Erratas de teclado del móvil en las palabras que deciden la orden. Una
 # «fatura» no se entendía y la conversación acababa en el parte del negocio.
-_ERRATAS = (
-    (re.compile(r"\b(?:fatura|factrua|facutra|fctura|facura|factuta)(s?)\b", re.I), r"factura\1"),
-    (re.compile(r"\b(?:presupesto|presupueso|presupusto|presuspuesto|prespuesto)(s?)\b", re.I),
-     r"presupuesto\1"),
-    (re.compile(r"\b(?:clinte|cliete|clente|cleinte|cliemte|clietne)\b", re.I), "cliente"),
-    (re.compile(r"\b(?:concetpo|conepto|cocepto|concpeto|conceto|concepo)\b", re.I), "concepto"),
+# Palabras que deciden la orden. Una falta cercana («factra», «fatura», «presupesto»,
+# «clinte», «cocepto») se corrige; las formas válidas no se tocan.
+_PALABRAS_CLAVE = ("factura", "presupuesto", "cliente", "concepto")
+_FORMAS_VALIDAS = {
+    "factura", "facturas", "facturar", "facturame", "facturo", "facturado",
+    "facturada", "facturadas", "facturados", "facturacion",
+    "presupuesto", "presupuestos", "presupuestar", "presupuestame", "presupuestado",
+    "cliente", "clientes", "clienta", "clientas", "concepto", "conceptos",
+    # Catalán: son palabras correctas, no faltas.
+    "facturat", "facturats", "facturada", "factures", "facturacio", "facturem",
+    "facturen", "facturi", "facturam", "pressupost", "pressupostos", "pressupostar",
+    "client", "clients", "clienta", "concepte", "conceptes",
+    # Parecidas pero son otra cosa.
+    "fractura", "fracturas", "concreto", "contento", "concierto", "presupone",
+}
+# Abreviaturas de móvil, solo como palabra suelta.
+_ABREVIATURAS = (
+    (re.compile(r"(?<![\w\d])(?:q|k|ke|qe)(?![\w\d])", re.I), "que"),
+    (re.compile(r"(?<![\w\d])(?:xq|pq|porq)(?![\w\d])", re.I), "por qué"),
+    (re.compile(r"(?<![\w\d])pa(?![\w\d'’])", re.I), "para"),
+    (re.compile(r"(?<![\w\d])acer(?![\w\d])", re.I), "hacer"),
+    (re.compile(r"(?<![\w\d])(?:tb|tmb)(?![\w\d])", re.I), "también"),
+    # «200e» o «200 e» es como se teclea el euro en el móvil.
+    (re.compile(r"(\d)\s?e(?![\w\d])", re.I), r"\1 euros"),
 )
 
 
+def _corrige_palabra(match: re.Match) -> str:
+    from difflib import get_close_matches
+
+    palabra = match.group(0)
+    plegada = _strip_accents(palabra.lower())
+    if plegada in _FORMAS_VALIDAS or len(plegada) < 6:
+        return palabra
+    plural = plegada.endswith("s") and plegada[:-1] not in _FORMAS_VALIDAS
+    raiz = plegada[:-1] if plural else plegada
+    parecida = get_close_matches(raiz, _PALABRAS_CLAVE, n=1, cutoff=0.8)
+    if not parecida:
+        return palabra
+    return parecida[0] + ("s" if plural else "")
+
+
 def _erratas(text: str) -> str:
-    for patron, correcto in _ERRATAS:
+    """Corrige faltas en las palabras clave y abreviaturas de móvil."""
+    text = re.sub(r"[^\W\d_]{6,}", _corrige_palabra, text or "")
+    for patron, correcto in _ABREVIATURAS:
         text = patron.sub(correcto, text)
     return text
+
+
+corregir_erratas = _erratas
 
 
 def parse(text: str) -> tuple[str, dict] | None:
@@ -1062,7 +1109,7 @@ def parse(text: str) -> tuple[str, dict] | None:
     # «Hola, ¿qué puedes hacer?» es la primera frase de casi todo el mundo y no
     # coincidía por el saludo y los signos. Solo cuenta si no queda nada más: un
     # «hola, factura a Juan…» sigue siendo una factura.
-    if pide_capacidades(text):
+    if pide_capacidades(text) or solo_saludo(text):
         return (HELP, {})
 
     # --- Centro de control: límites reales de Bynoesis

@@ -1,5 +1,12 @@
 ﻿# Registro de QA
 
+## 2026-09-30 (tarde, 2) — Faltas de móvil en el WhatsApp real
+
+- Probado en el WhatsApp del founder (Chrome): «fra … x 120 €», «Lucia prueva»,
+  «gaste 20», «kien me debe», «presupesto», «facura … cocepto» ya funcionaban; los
+  cinco fallos anotados en `Registro-cambios` quedan en `test_charla_whatsapp`.
+- Suite completa **1309 correctas** (346 s). Ruff correcto.
+
 ## 2026-09-30 (tarde) — Clientes con tilde y borrador abierto
 
 - Simulación con `ASSISTANT_REVIEW_ENABLED=true` (como producción): las simulaciones

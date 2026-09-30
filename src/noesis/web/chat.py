@@ -1397,6 +1397,9 @@ def _handle(
     actor: str | None = None,
     voice: bool = False,
 ) -> dict:
+    # Faltas y abreviaturas de móvil («factra», «q tengo», «200e») se corrigen
+    # antes de decidir; el historial guarda el mensaje tal cual llegó.
+    message = nlu.corregir_erratas(message)
     norm = nlu._norm(message)  # reutiliza el normalizador local; no sale del servidor.
     from .. import local_invoice, action_review, learning
     if local_invoice.enabled() and action_review.context.get() is not None:
