@@ -81,6 +81,24 @@ class CharlaWhatsappTestCase(unittest.TestCase):
                       "tengo 3 clientes nuevos"):
             self.assertEqual(nlu.corregir_erratas(texto), texto)
 
+    def test_hora_de_la_agenda_sin_segundos(self):
+        # En producción (Postgres) la hora llega con segundos: «10:00:00».
+        texto = nlu.format_reply("ver_agenda", {"fecha": "2026-10-01", "trabajos": [{
+            "scheduled_for": "2026-10-01T10:00:00", "client_name": "Ana",
+            "description": "caldera"}]})
+        self.assertIn("• 10:00 Ana", texto)
+        self.assertNotIn("10:00:00", texto)
+
+    def test_otra_factura_no_completa_el_borrador_a_medias(self):
+        """Caso real 30-sep: el #67 (pintura, sin importe) se llevó los 200 € de
+        una factura nueva por «reparacion grifo»."""
+        business, _ = self.make_business("Otra factura")
+        db.add_client("María Antonia", business_id=business["id"])
+        self.charla(business, "factura a Maria Antonia por pintura",
+                    "hazme una factra a Maria Antonia de 200e por reparacion grifo")
+        facturas = {i["concept"]: i["total"] for i in db.list_invoices(business["id"])}
+        self.assertEqual(facturas, {"pintura": 0.0, "reparacion grifo": 242.0})
+
     def test_la_gestoria_se_pregunta_en_cualquier_orden(self):
         self.assertEqual(nlu.parse("¿Qué me pide la gestoría?")[0], "ver_solicitudes_gestoria")
 

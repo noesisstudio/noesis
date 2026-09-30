@@ -1,5 +1,17 @@
 ﻿# Registro de cambios
 
+## 2026-09-30 (tarde, 3) — Otra factura no completa el borrador a medias
+
+- En producción, con el #67 a medias («pintura», sin importe), «hazme una factra a
+  Lucia … de 200e por reparacion grifo» completó el #67 con 200 €. Una orden entera
+  que choca con lo que el borrador ya tiene (otro concepto u otro cliente) ahora es
+  otra factura (`chat._choca_con_borrador`).
+- Agenda: la hora salía «10:00:00» con Postgres; ahora «10:00».
+- Correo: el código de confirmación de Gmail podía confundirse con nueve cifras del
+  token aleatorio de la dirección (prueba intermitente
+  `test_only_google_confirmation_links_are_relayed`); el patrón exige el código suelto.
+- Suite 1311 correctas. Rollback: revertir el commit.
+
 ## 2026-09-30 (tarde, 2) — Faltas y abreviaturas de móvil
 
 Ronda real en el WhatsApp del founder escribiendo deprisa. Fallaban: «hazme una

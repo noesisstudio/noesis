@@ -43,7 +43,9 @@ _PERMANENT_REJECTIONS = {
 # el reenvío de sus facturas no llegaría a funcionar.
 _GMAIL_FORWARDING_SENDER = "forwarding-noreply@google.com"
 _GMAIL_CONFIRM_LINK = re.compile(r"https://mail(?:-settings)?\.google\.com/mail/[^\s\"'<>]+")
-_GMAIL_CONFIRM_CODE = re.compile(r"(?<![\d-])(\d{9})(?![\d-])")
+# El código va suelto; nueve cifras dentro de una dirección con token aleatorio
+# («entrada+ab728317925c@…») no son el código y a veces se cogían antes.
+_GMAIL_CONFIRM_CODE = re.compile(r"(?<![\w.+@-])(\d{9})(?![\w.@-])")
 _EMAIL_ADDRESS = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 _GOOGLE_DKIM = re.compile(
     r"\bdkim=(\w+)\b[^;]*\bheader\.(?:d|i)=@?(?:[a-z0-9-]+\.)*google\.com\b"

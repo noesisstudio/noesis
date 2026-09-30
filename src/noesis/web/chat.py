@@ -1056,6 +1056,21 @@ def _create_partial_invoice(business_id: int, args: dict, actor: str | None,
             "source": "local", "invoice_ids": [invoice["id"]]}
 
 
+def _choca_con_borrador(business_id: int, invoice: dict, args: dict) -> bool:
+    faltan = db.invoice_pending_fields(invoice)
+    concepto = str(args.get("concepto") or "")
+    if ("concepto" not in faltan and concepto and concepto != "Servicio"
+            and nlu._norm(concepto) != nlu._norm(invoice.get("concept") or "")):
+        return True
+    if "cliente" not in faltan and args.get("cliente"):
+        dicho = _client_args(business_id, args["cliente"])
+        if dicho.get("client_id"):
+            return dicho["client_id"] != invoice.get("client_id")
+        return nlu._norm(dicho.get("client_name") or "") != nlu._norm(
+            invoice.get("client_name") or "")
+    return False
+
+
 def _complete_from_message(business_id: int, message: str, actor: str | None,
                            channel: str) -> dict | None:
     """Si hay un borrador a medias esperando y el mensaje trae un dato, lo rellena."""
@@ -1082,6 +1097,10 @@ def _complete_from_message(business_id: int, message: str, actor: str | None,
     # lo que falta; el «Servicio» por defecto no es un concepto dicho.
     orden = nlu.parse(message)
     if orden and orden[0] in {"crear_factura", nlu.PARTIAL_INVOICE}:
+        # Si la orden choca con lo que el borrador ya tiene (otro concepto u otro
+        # cliente), es otra factura: no se mezcla con la que estaba a medias.
+        if _choca_con_borrador(business_id, invoice, orden[1]):
+            return None
         campo_de = {"cliente": "cliente", "concepto": "concepto", "importe": "base"}
         for falta in faltan:
             clave = campo_de.get(falta)

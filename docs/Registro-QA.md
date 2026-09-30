@@ -1,5 +1,9 @@
 ﻿# Registro de QA
 
+## 2026-09-30 (tarde, 3)
+
+- Suite completa **1311 correctas**; la prueba de Gmail que fallaba a ratos pasa 25/25.
+
 ## 2026-09-30 (tarde, 2) — Faltas de móvil en el WhatsApp real
 
 - Probado en el WhatsApp del founder (Chrome): «fra … x 120 €», «Lucia prueva»,

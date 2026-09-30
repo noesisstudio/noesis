@@ -1561,7 +1561,8 @@ def format_reply(tool: str, result: dict) -> str:
         lines = [f"Tienes {_cuenta(len(jobs), 'trabajo', 'trabajos')} para "
                  f"{dia_humano(result['fecha'])}:"]
         for j in jobs:
-            h = j["scheduled_for"].split("T")[1] if j.get("scheduled_for") and "T" in j["scheduled_for"] else ""
+            # Postgres guarda «10:00:00»: al usuario se le dice «10:00».
+            h = j["scheduled_for"].split("T")[1][:5] if j.get("scheduled_for") and "T" in j["scheduled_for"] else ""
             lines.append(f"• {h} {j.get('client_name') or ''} — {j['description']}")
         lines.append("Al cerrar cada trabajo, deja la factura preparada. Ahí se escapa mucho dinero.")
         return "\n".join(lines)
