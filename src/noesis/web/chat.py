@@ -360,7 +360,14 @@ _GRACIAS = {"gracias", "muchas gracias", "mil gracias", "genial gracias", "ok gr
 
 
 def _social_reply(message: str) -> str | None:
-    norm = " ".join(nlu._norm(message).strip("!.¡¿?,;").split())
+    norm = " ".join(re.sub(r"[!.¡¿?,;…]", " ", nlu._norm(message)).split())
+    # «Vale, gracias», «ok muchas gracias», «genial gracias»: un agradecimiento
+    # con asentimiento delante también es un agradecimiento.
+    if re.fullmatch(r"(?:(?:vale|ok|okey|genial|perfecto|bien|estupendo|muy bien|"
+                    r"de acuerdo|entendido|guay|eh|ah)\s+)*(?:muchas\s+|mil\s+)?"
+                    r"(?:gracias|grcias|thanks|merci|grax)(?:\s+(?:de nuevo|crack|"
+                    r"maquina|majo|maja|guapo|guapa))?", norm):
+        return "De nada. Aquí estoy cuando me necesites."
     if norm in _GRACIAS:
         return "De nada. Aquí estoy cuando me necesites."
     if norm in _SI_SUELTO:
@@ -1192,7 +1199,11 @@ _NO_ES_NOMBRE_RE = re.compile(
     r"\b(?:factura\w*|gasto\w*|trabajo\w*|cita\w*|agenda\w*|cobro\w*|pago\w*|"
     r"presupuesto\w*|cliente\w*|proveedor\w*|resumen\w*|impuesto\w*|pdf|"
     r"documento\w*|ticket\w*|albaran\w*|euros?|que|cual\w*|cuant\w*|como|donde|"
-    r"cuando|quien|porque|tengo|tienes|hay|dime|ensename|muestrame)\b")
+    r"cuando|quien|porque|tengo|tienes|hay|dime|ensename|muestrame|"
+    # Muletillas y cortesía: «Eh... vale, gracias» no es el nombre de nadie.
+    # Era así como se creaba una ficha llamada «Eh» con su presupuesto.
+    r"gracias|vale|ok|okay|eh+|ah+|mm+|um+|bueno|pues|dale|genial|perfecto|"
+    r"hola|adios|venga|claro|vale|nada|espera|luego|oye|mira)\b|\.\.\.|…")
 
 
 def _party_name_answer(message: str) -> tuple[str | None, str | None]:
@@ -1363,7 +1374,12 @@ def _finish_order_for_a_new_client(business_id: int, message: str,
     else:
         corregido, _ = _party_name_answer(message)
         if not corregido:
-            return None  # ni un sí ni un nombre: que siga su camino normal
+            # Ni un sí ni un nombre: sigue su camino normal. Si es otra orden, la
+            # pregunta de antes deja de valer; si no, un «sí» o un nombre dicho
+            # mucho después crearía la ficha y la orden olvidada.
+            if not _es_solo_consulta(message):
+                db.clear_pending_action(business_id, clave)
+            return None
         nombre = corregido
         args["cliente"] = nombre
     try:
@@ -1492,7 +1508,9 @@ def _handle(
         if briefing:
             return {"reply": briefing, "source": "local"}
     if any(x in norm for x in ("sin facturar", "pendiente de facturar", "por facturar",
-                               "que me falta facturar", "trabajos sin cobrar")):
+                               "que me falta facturar", "trabajos sin cobrar",
+                               "que tengo que facturar", "que me queda facturar",
+                               "que falta facturar", "que he de facturar")):
         return {"reply": _unbilled_reply(business_id), "source": "local"}
     if any(x in norm for x in ("que harias", "prioridad", "aconsej", "recomiend",
                                "diagnostico", "como lo ves", "mente", "piensa", "plan",
@@ -1772,6 +1790,7 @@ def _handle(
 _READ_ONLY_TOOLS = {
     "ver_control_noesis",
     "ver_agenda",
+    "ver_gastos",
     "ver_cobros_pendientes",
     "ver_proyectos",
     "ver_equipo",
@@ -2001,6 +2020,16 @@ def _handle_turn(
                             "pintura 200 euros», o dime su número si quieres consultar una."
                         )
                         result["invoice_ids"] = []
+                    elif (enabled and not state.get("proposal")
+                          and re.search(r"\bresponde\w*\s+\W?si\b", reply_norm)
+                          and not db.get_pending_action(business_id, actor)):
+                        # La IA imitaba la tarjeta de revisión («Responde SÍ…») sin
+                        # que hubiera nada guardado detrás: el SÍ no hacía nada.
+                        result["reply"] = (
+                            "No he preparado nada con ese mensaje y no hay ninguna "
+                            "propuesta pendiente. Dime la orden completa otra vez, por "
+                            "ejemplo «agenda a Ana el viernes a las 11 para revisar la "
+                            "caldera», y te la preparo para confirmar.")
             if state.get("proposal"):
                 result = {**state["proposal"], "source": "local"}
             elif propuesta_viva and not result.get("confirmation_required"):

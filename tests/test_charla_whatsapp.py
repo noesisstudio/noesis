@@ -218,6 +218,265 @@ class CharlaWhatsappTestCase(unittest.TestCase):
             self.assertEqual((factura["client_id"], factura["concept"], factura["total"]),
                              (maria["id"], "reformas", 423.5))
 
+    # --- Clientes por WhatsApp (ronda real 30-sep, tarde)
+
+    def test_crear_cliente_como_se_dice(self):
+        """«crea un cliente nuevo que se llama Laura…» guardaba «nuevo que se llama Laura»."""
+        casos = {
+            "crea un cliente nuevo que se llama Laura Gimeno, su telefono es 612 345 678":
+                {"nombre": "Laura Gimeno", "telefono": "612345678"},
+            "añade a Laura Gimeno como cliente": {"nombre": "Laura Gimeno"},
+            "agrega el cliente Laura Gimeno": {"nombre": "Laura Gimeno"},
+            "guarda a Laura Gimeno en clientes": {"nombre": "Laura Gimeno"},
+            "tengo un cliente nuevo que se llama Laura Gimeno": {"nombre": "Laura Gimeno"},
+            "Laura Gimeno es un cliente nuevo": {"nombre": "Laura Gimeno"},
+            "registra un cliente con nombre Laura Gimeno": {"nombre": "Laura Gimeno"},
+            "apunta un cliente nuevo, Laura Gimeno": {"nombre": "Laura Gimeno"},
+            "dame de alta al cliente Pedro Ruiz": {"nombre": "Pedro Ruiz"},
+            "crea un nou client que es diu Laura Gimeno": {"nombre": "Laura Gimeno"},
+            "crea cliente Laura Gimeno email laura@gmail.com":
+                {"nombre": "Laura Gimeno", "email": "laura@gmail.com"},
+            "crea el cliente Laura Gimeno con NIF 12345678Z y direccion Calle Mayor 3, Valencia":
+                {"nombre": "Laura Gimeno", "nif": "12345678Z",
+                 "direccion": "Calle Mayor 3, Valencia"},
+            "crea el cliente Fontaneria Lopez SL con cif B12345674":
+                {"nombre": "Fontaneria Lopez SL", "nif": "B12345674"},
+            "crea el cliente Reformas Martínez, S.L.": {"nombre": "Reformas Martínez, S.L."},
+        }
+        for texto, esperado in casos.items():
+            with self.subTest(texto=texto):
+                self.assertEqual(nlu.parse(texto), ("crear_cliente", esperado))
+        self.assertEqual(nlu.parse("crea cliente 600123456")[0], nlu.NEED_PARTY_NAME)
+
+    def test_alta_con_datos_fiscales_los_guarda_y_avisa_del_nif_malo(self):
+        business, _ = self.make_business("Alta completa")
+        with patch.object(config, "ASSISTANT_REVIEW_ENABLED", True):
+            tarjeta, hecho = self.charla(
+                business, "crea el cliente Laura Gimeno con NIF 12345678Z, telefono "
+                "612345678 y direccion Calle Mayor 3, Valencia", "sí")
+            self.assertIn("NIF: 12345678Z", tarjeta)
+            self.assertNotIn("faltará", hecho)
+            malo, guardado = self.charla(business, "crea el cliente Pepe Ruiz nif 12345678A", "sí")
+        self.assertIn("no es válido", malo)
+        self.assertIn("no lo he guardado", guardado)
+        laura = db.resolve_client_reference("Laura Gimeno", business["id"])
+        self.assertEqual((laura["nif"], laura["phone"], laura["address"]),
+                         ("12345678Z", "612345678", "Calle Mayor 3, Valencia"))
+        self.assertFalse(db.resolve_client_reference("Pepe Ruiz", business["id"])["nif"])
+
+    def test_completar_y_corregir_la_ficha_hablando(self):
+        """«el NIF de Laura es…» soltaba el parte del día."""
+        business, _ = self.make_business("Completar ficha")
+        db.add_client("Laura Gimeno", phone="612345678", business_id=business["id"])
+        self.assertEqual(nlu.parse("cambia el importe de la factura 67 a 100 euros")[0],
+                         nlu.NEED_REVIEW)
+        self.assertNotEqual((nlu.parse("el numero de la factura 3 es 12") or ("",))[0],
+                            "actualizar_cliente")
+        with patch.object(config, "ASSISTANT_REVIEW_ENABLED", True):
+            nif, _, tel, _, correo, _, nadie = self.charla(
+                business, "el nif de Laura Gimeno es 12345678Z", "sí",
+                "cambia el telefono de Laura Gimeno a 699 88 77 66", "sí",
+                "añade el correo laura@gimeno.es a Laura Gimeno", "sí",
+                "el nif de Pepito es 12345678Z")
+        self.assertIn("Actualizar datos del cliente", nif)
+        self.assertIn("612345678 → 699887766", tel)
+        self.assertIn("Correo: laura@gimeno.es", correo)
+        self.assertIn("No tengo ficha de cliente «Pepito»", nadie)
+        laura = db.resolve_client_reference("Laura Gimeno", business["id"])
+        self.assertEqual((laura["nif"], laura["phone"], laura["email"]),
+                         ("12345678Z", "699887766", "laura@gimeno.es"))
+
+    # --- Notas de voz como las escribe Whisper (ronda 30-sep, tarde)
+
+    def voz(self, business, *textos):
+        db.set_whatsapp_status(business["id"], "conectado", phone=TELEFONO)
+        respuestas = []
+        for texto in textos:
+            self._enviados = getattr(self, "_enviados", 0) + 1
+            with patch.object(whatsapp, "_audio_to_text", return_value=(texto, None)), \
+                 patch.object(whatsapp, "send", side_effect=lambda phone, text, **kw:
+                              respuestas.append(text) or True), \
+                 patch.object(whatsapp, "_attach_new_invoice_pdf"):
+                whatsapp.handle_inbound({"id": f"wamid.voz.{self._enviados}",
+                                         "from": TELEFONO, "audio_id": "a1"})
+        return respuestas
+
+    def test_dictado_a_trozos_y_con_muletillas(self):
+        casos = {
+            "Factura a Juan García, 120 euros, cambio de grifo.":
+                ("crear_factura", "Juan García", "cambio de grifo", 120.0),
+            "Factura a Juan García, cambio de grifo, 120 euros.":
+                ("crear_factura", "Juan García", "cambio de grifo", 120.0),
+            "Hazme una factura para Reformas Martínez. Concepto ventanas. Importe 750 euros.":
+                ("crear_factura", "Reformas Martínez", "ventanas", 750.0),
+            "Factura a Reformas Martínez, S.L., 300 euros, pintura":
+                ("crear_factura", "Reformas Martínez, S.L.", "pintura", 300.0),
+            "Factura a Juan, 2 grifos, 120 euros": ("crear_factura", "Juan", "2 grifos", 120.0),
+            "Hazme un presupuesto para Ana, reforma del baño, mil doscientos euros.":
+                ("crear_presupuesto", "Ana", "reforma del baño", 1200.0),
+        }
+        for texto, (tool, cliente, concepto, base) in casos.items():
+            with self.subTest(texto=texto):
+                orden, datos = nlu.parse(nlu.corregir_erratas(texto))
+                self.assertEqual((orden, datos["cliente"], datos["concepto"], datos["base"]),
+                                 (tool, cliente, concepto, base))
+        orden, datos = nlu.parse(nlu.corregir_erratas(
+            "Oye, apúntame un gasto de 42,50 en material de fontanería."))
+        self.assertEqual((orden, datos["importe"]), ("registrar_gasto", 42.5))
+        self.assertEqual(nlu.parse(nlu.corregir_erratas(
+            "Mañana a las diez tengo que ir a casa de Juan García a mirar la caldera."))[1]
+            ["descripcion"], "mirar la caldera")
+        for si in ("Sí, confírmalo.", "confírmalo", "perfecto, sí", "sí, está bien", "venga sí"):
+            self.assertTrue(nlu.es_confirmacion(si), si)
+        for no_es_si in ("sí, pero 200", "si, cambia el cliente"):
+            self.assertFalse(nlu.es_confirmacion(no_es_si), no_es_si)
+
+    def test_una_muletilla_no_crea_la_ficha_que_se_quedo_esperando(self):
+        """Caso de la ronda de voz: «Eh... Vale, gracias.» creó el cliente «Eh» y
+        un presupuesto de 1.452 € que se había pedido tres órdenes antes."""
+        business, _ = self.make_business("Muletilla")
+        with patch.object(config, "ASSISTANT_REVIEW_ENABLED", True):
+            pregunta, gracias = self.voz(
+                business, "Hazme un presupuesto para Ana de mil doscientos euros por "
+                "reformar el baño.", "Eh... Vale, gracias.")
+            self.assertIn("No tengo ficha de **Ana**", pregunta)
+            self.assertTrue(gracias.startswith("De nada"))
+            # Otra orden en medio invalida la pregunta: un «sí» después no crea nada.
+            self.voz(business, "Hazme un presupuesto para Ana de 1200 euros por baño.",
+                     "¿Qué tengo mañana?", "Gasté cuarenta euros en gasolina.", "no", "sí")
+        self.assertEqual([c["name"] for c in db.list_clients(business["id"])
+                          if c["name"] in {"Eh", "Ana"}], [])
+        self.assertEqual(db.list_quotes(business["id"]), [])
+
+    def test_corregir_la_hora_de_una_cita_por_la_tarde(self):
+        business, _ = self.make_business("Cita corregida")
+        db.add_client("Marta López", business_id=business["id"])
+        with patch.object(config, "ASSISTANT_REVIEW_ENABLED", True):
+            tarjeta, seis, lunes, lugar, _ = self.voz(
+                business, "Agenda a Marta López el jueves a las cinco de la tarde para "
+                "revisar la caldera.", "Mejor a las seis.", "mejor el lunes",
+                "en Badalona", "sí")
+        self.assertIn("Trabajo: revisar la caldera\n", tarjeta)
+        self.assertIn("a las 18:00", seis)
+        self.assertIn("lunes", lunes)
+        self.assertIn("Lugar: Badalona", lugar)
+        (cita,) = db.jobs_between("2026-01-01", "2030-12-31", business["id"])
+        self.assertEqual((cita["zone"], cita["scheduled_for"][11:16]), ("Badalona", "18:00"))
+
+    def test_la_ia_no_puede_fingir_una_tarjeta_de_revision(self):
+        business, _ = self.make_business("Tarjeta falsa")
+        falsa = {"reply": "Agendar trabajo\nCuándo: 11:00\n\nNo he guardado nada. "
+                          "Responde SÍ para confirmarlo.", "source": "ia"}
+        with patch.object(config, "ASSISTANT_REVIEW_ENABLED", True), \
+                patch.object(chat, "_handle", return_value=falsa):
+            (respuesta,) = self.charla(business, "mejor a las 11")
+        self.assertIn("no hay ninguna propuesta pendiente", respuesta)
+
+    # --- Faltas, agenda, gastos y cobros
+
+    def test_faltas_sueltas_de_movil(self):
+        casos = {
+            "hazme una factura a juan x 200 € por pintar": "crear_factura",
+            "fra a lucia x 120 €": "crear_factura",
+            "cuanto me deven": "ver_cobros_pendientes",
+            "e gastado 20 en material": "registrar_gasto",
+            "he gastao 15 en parking": "registrar_gasto",
+            "agenda a luis el biernes a las 9": "agendar_trabajo",
+            "q tengo oy": "ver_agenda",
+            "que tengo mñana": "ver_agenda",
+            "cuanto iba tengo q pagar": "ver_impuestos",
+            "ticket de benta a juan por 30": "crear_factura",
+        }
+        for texto, tool in casos.items():
+            with self.subTest(texto=texto):
+                self.assertEqual(nlu.parse(nlu.corregir_erratas(texto))[0], tool)
+        self.assertEqual(nlu.parse(nlu.corregir_erratas(
+            "hazme una factura a juan x 200 € por pintar"))[1]["cliente"], "juan")
+        self.assertEqual(nlu.corregir_erratas("iba a llamarte"), "iba a llamarte")
+        self.assertEqual(nlu.corregir_erratas("3 x 20 euros"), "3 x 20 euros")
+        self.assertEqual(nlu.corregir_erratas("la ola del mar"), "la ola del mar")
+
+    def test_consultas_de_agenda_de_varios_dias_y_fechas_concretas(self):
+        from datetime import timedelta
+        hoy = date.today()
+        domingo = hoy + timedelta(days=6 - hoy.weekday())
+        self.assertEqual(nlu.parse("que tengo esta semana"),
+                         ("ver_agenda", {"fecha": hoy.isoformat(), "hasta": domingo.isoformat()}))
+        self.assertEqual(nlu.parse("mi agenda")[0], "ver_agenda")
+        self.assertEqual(nlu.parse("mis citas de hoy"), ("ver_agenda", {"fecha": hoy.isoformat()}))
+        self.assertEqual(nlu.parse("que tengo el viernes")[0], "ver_agenda")
+        self.assertEqual(nlu.parse("que tengo pendiente de cobrar")[0], "ver_cobros_pendientes")
+        self.assertEqual(nlu.parse("agenda para mañana a las 12 a Jordi")[1]["cliente"], "Jordi")
+        self.assertEqual(nlu.parse_date("el 15/10", date(2026, 9, 30)), "2026-10-15")
+        self.assertEqual(nlu.parse_date("el 3 de enero", date(2026, 9, 30)), "2027-01-03")
+        self.assertEqual(nlu.parse_date("el día 5", date(2026, 9, 30)), "2026-10-05")
+        self.assertIsNone(nlu.parse_date("el 31 de febrero", date(2026, 9, 30)))
+        self.assertEqual(
+            nlu.parse("agenda a Marta el 15 de octubre a las 10 para caldera")[1]["descripcion"],
+            "caldera")
+        self.assertEqual(nlu.parse("agenda a luis mañana a las 10 para la caldera")[1]
+                         ["descripcion"], "la caldera")
+
+    def test_gastos_y_deuda_de_un_cliente(self):
+        business, client = self.make_business("Consultas")
+        factura = db.add_invoice(client["id"], "Pintura", 100, business_id=business["id"])
+        db.issue_invoice(factura["id"], business["id"])
+        db.add_expense("Gasolina", 45, business_id=business["id"])
+        gastos, deuda, nadie, semana = self.charla(
+            business, "que gastos he apuntado hoy?", f"cuanto me debe {client['name']}?",
+            "cuanto me debe Pepito", "que tengo esta semana")
+        self.assertIn("Gasolina: 45,00 €", gastos)
+        self.assertIn(f"{client['name']} te debe **121,00 €**", deuda)
+        self.assertIn("No tengo ficha de cliente «Pepito»", nadie)
+        self.assertIn("No tienes trabajos agendados entre hoy", semana)
+
+    # --- Mensajes sin texto
+
+    def _meta(self, business, mensaje):
+        db.set_whatsapp_status(business["id"], "conectado", phone=TELEFONO)
+        self._enviados = getattr(self, "_enviados", 0) + 1
+        respuestas = []
+        payload = {"entry": [{"id": "waba", "changes": [{"value": {
+            "metadata": {"phone_number_id": str(whatsapp._PHONE_ID or "")},
+            "messages": [{"id": f"wamid.meta.{self._enviados}", "from": TELEFONO,
+                          **mensaje}]}}]}]}
+        with patch.object(whatsapp, "send",
+                          side_effect=lambda phone, text, **kw:
+                          respuestas.append(text) or True), \
+             patch.object(whatsapp, "_attach_new_invoice_pdf"), \
+             patch.object(chat, "handle", wraps=chat.handle) as cerebro:
+            whatsapp.handle_inbound(payload)
+        return respuestas, cerebro
+
+    def test_reaccion_sticker_y_ubicacion_no_llegan_al_cerebro(self):
+        """Caso real 30-sep, 18:02: un mensaje sin texto llegó vacío a la IA, que
+        contestó explicando la última factura."""
+        business, _ = self.make_business("Sin texto")
+        respuestas, cerebro = self._meta(
+            business, {"type": "reaction", "reaction": {"message_id": "x", "emoji": "👍"}})
+        self.assertEqual(respuestas, [])
+        cerebro.assert_not_called()
+        for tipo, esperado in (("sticker", "stickers"), ("location", "ubicación"),
+                               ("video", "vídeos"), ("unsupported", "no lo puedo leer")):
+            with self.subTest(tipo=tipo):
+                respuestas, cerebro = self._meta(business, {"type": tipo, tipo: {}})
+                self.assertEqual(len(respuestas), 1)
+                self.assertIn(esperado, respuestas[0])
+                cerebro.assert_not_called()
+
+    def test_tarjeta_de_contacto_propone_el_cliente(self):
+        business, _ = self.make_business("Contacto compartido")
+        with patch.object(config, "ASSISTANT_REVIEW_ENABLED", True):
+            (tarjeta,), _ = self._meta(business, {"type": "contacts", "contacts": [{
+                "name": {"formatted_name": "Ana Pérez"},
+                "phones": [{"phone": "+34 600 11 22 33", "wa_id": "34600112233"}]}]})
+            # El botón de una plantilla («Sí») confirma como el texto.
+            (hecho,), _ = self._meta(business, {"type": "button",
+                                                "button": {"text": "Sí", "payload": "si"}})
+        self.assertIn("Guardar cliente", tarjeta)
+        self.assertIn("Teléfono: 34600112233", tarjeta)
+        self.assertIn("Cliente guardado", hecho)
+
     # --- Contestar sin inventar
 
     def test_si_gracias_y_no_sin_nada_pendiente(self):

@@ -256,6 +256,63 @@ def _cuenta(n: int, singular: str, plural: str) -> str:
     return f"{n} {singular if n == 1 else plural}"
 
 
+_MES_DICHO = {"enero": 1, "gener": 1, "febrero": 2, "febrer": 2, "marzo": 3, "marc": 3,
+          "abril": 4, "mayo": 5, "maig": 5, "junio": 6, "juny": 6, "julio": 7,
+          "juliol": 7, "agosto": 8, "agost": 8, "septiembre": 9, "setiembre": 9,
+          "setembre": 9, "octubre": 10, "noviembre": 11, "novembre": 11,
+          "diciembre": 12, "desembre": 12}
+
+
+def _fecha_concreta(norm: str, base: date) -> date | None:
+    """Día y mes dichos: si ya ha pasado este año, es el del año que viene."""
+    meses = "|".join(sorted(_MES_DICHO, key=len, reverse=True))
+    anio = None
+    m = re.search(rf"\b(\d{{1,2}})\s+(?:de\s+|d')?({meses})\b(?:\s+(?:de\s+|del\s+)?(\d{{4}}))?",
+                  norm)
+    if m:
+        dia, mes = int(m.group(1)), _MES_DICHO[m.group(2)]
+        anio = int(m.group(3)) if m.group(3) else None
+    else:
+        m = re.search(r"(?<![\d.,])(\d{1,2})/(\d{1,2})(?:/(\d{2}|\d{4}))?(?![\d/])", norm)
+        if m:
+            dia, mes = int(m.group(1)), int(m.group(2))
+            if m.group(3):
+                anio = int(m.group(3)) + (2000 if len(m.group(3)) == 2 else 0)
+        else:
+            m = re.search(r"\b(?:el\s+)?dia\s+(\d{1,2})\b", norm)
+            if not m:
+                return None
+            dia, mes = int(m.group(1)), base.month
+            try:
+                candidata = date(base.year, mes, dia)
+            except ValueError:
+                return None
+            if candidata < base:
+                mes = mes % 12 + 1
+                anio = base.year + (1 if mes == 1 else 0)
+    try:
+        fecha = date(anio or base.year, mes, dia)
+    except ValueError:
+        return None
+    if anio is None and fecha < base:
+        try:
+            fecha = date(base.year + 1, mes, dia)
+        except ValueError:
+            return None
+    return fecha
+
+
+def _quitar_fecha_concreta(text: str) -> str:
+    """Borra «el 15 de octubre», «el día 15» o «15/10» de una orden."""
+    meses = "|".join(sorted(_MES_DICHO, key=len, reverse=True)).replace("marc", "mar[cç]")
+    meses = meses.replace("septiembre", "sept?iembre")
+    patron = (rf"\s*\b(?:el\s+)?(?:d[ií]a\s+)?\d{{1,2}}\s+(?:de\s+|d')?(?:{meses})\b"
+              r"(?:\s+(?:de\s+|del\s+)?\d{4})?"
+              r"|\s*\b(?:el\s+)?\d{1,2}/\d{1,2}(?:/\d{2,4})?(?![\d/])"
+              r"|\s*\b(?:el\s+)?d[ií]a\s+\d{1,2}\b")
+    return re.sub(patron, "", text, flags=re.I)
+
+
 def parse_date(text: str, base: date | None = None) -> str | None:
     """Convierte fechas en español a ISO. Devuelve None si no encuentra fecha."""
     base = base or date.today()
@@ -273,6 +330,11 @@ def parse_date(text: str, base: date | None = None) -> str | None:
             delta = delta or 7  # el "lunes" significa el próximo, no hoy
             day = base + timedelta(days=delta)
             break
+    # «El 15 de octubre», «el día 15», «15/10»: antes no se entendían y agendar
+    # para una fecha concreta solo funcionaba con días de la semana.
+    concreta = _fecha_concreta(norm, base)
+    if concreta:
+        day = concreta
     if day is None:
         return None
     t = _parse_time(norm)
@@ -348,6 +410,16 @@ _AGENDA_NOT_A_NAME = (
 )
 
 
+# Lo que no describe un trabajo: una fecha. «la caldera» o «el termo» sí lo
+# describen, aunque empiecen por artículo (eso solo descarta nombres).
+_AGENDA_NOT_A_TASK = (
+    r"^(?:hoy|manana|dema|pasado|proxim\w*|este|esta|lunes|martes|miercoles|jueves|"
+    r"viernes|sabado|domingo|a\s+las|por\s+la|de\s+la\s+(?:manana|tarde|noche)|dia\b|"
+    r"semana|mes\b|\d|(?:el|la|los|las)\s+(?:lunes|martes|miercoles|jueves|viernes|"
+    r"sabado|domingo|semana|mes|dia|proxim\w*|tarde|manana|noche)\b)"
+)
+
+
 def _is_agenda_order(norm: str) -> bool:
     if re.search(_AGENDA_NOUN, norm) and re.search(_AGENDA_VERB, norm):
         return True
@@ -369,15 +441,17 @@ def _looks_like_task(value: str) -> bool:
 
 def _agenda_client(text: str) -> str | None:
     """Nombre tras «a/con/para» que no sea una fecha, una tarea ni el sustantivo."""
+    # Dentro de un lookahead para ver también las coincidencias solapadas: en
+    # «a las 12 a Jordi» el primer «a» se tragaba el nombre del final.
     for match in re.finditer(
-        r"\b(?:a|con|para|per\s+a)\s+(.+?)"
+        r"(?=\b(?:a|con|para|per\s+a)\s+(.+?)"
         # «con» corta además de introducir: sin él, «apúntame mañana a las 10 con
         # Jordi Mas» se lo tragaba entero desde el «a» de «a las» y el nombre
         # quedaba dentro, así que se pedía el cliente teniéndolo delante.
         r"(?=\s+(?:hoy|avui|mañana|demà|dema|pasado|passat|el|la|los|las|"
         r"próximo|proxima|a las|a les|per|por la|en|para|de|con|"
         r"dilluns|dimarts|dimecres|dijous|divendres|dissabte|diumenge)\b"
-        r"|[,;]|$)",
+        r"|[,;]|$))",
         text, re.I,
     ):
         candidate = _limpiar_cliente(match.group(1))
@@ -402,11 +476,12 @@ def _agenda_description(text: str, cliente: str | None) -> str:
         r"|\s+(?:hoy|mañana|demà|pasado|a\s+las\b|por\s+la\b"
         r"|el\s+(?:lunes|martes|mi[ée]rcoles|jueves|viernes|s[áa]bado|domingo))\b)")
     for match in re.finditer(r"\b(?:para|de)\s+(.+?)" + _HASTA_LA_FECHA, text, re.I):
-        value = match.group(1).strip()
+        value = match.group(1).strip().rstrip(".!?¿¡;")
         folded = _norm(value)
         if (not value or value == cliente or len(value) > 200
-                or re.match(_AGENDA_NOT_A_NAME, folded)
-                or re.search(_AGENDA_NOUN, folded)):
+                or re.match(_AGENDA_NOT_A_TASK, folded)
+                or re.search(_AGENDA_NOUN, folded)
+                or (cliente and _norm(value) == _norm(cliente))):
             continue
         if _looks_like_task(value) or value != cliente:
             return value
@@ -444,7 +519,9 @@ def safety_refusal(text: str) -> str | None:
         return ("Borrar, anular o cancelar no lo hago por WhatsApp: es difícil de "
                 f"deshacer y prefiero que lo veas tú. Hazlo en la web, en "
                 f"**{_seccion_web(norm)}**. No he cambiado nada.")
-    if re.search(r"^(?:por favor[, ]+)?(cambia\w*|modifica\w*|mueve|reprograma\w*|rectifica\w*)\b", norm):
+    if re.search(r"^(?:por favor[, ]+)?(cambia\w*|modifica\w*|mueve|reprograma\w*|rectifica\w*)\b", norm) \
+            and not _dato_de_cliente(text):
+        # Corregir el teléfono o el NIF de una ficha sí se prepara (con revisión).
         return ("Cambiar algo que ya está guardado no lo hago por WhatsApp. Hazlo en la "
                 f"web, en **{_seccion_web(norm)}**. No he creado ni cambiado nada.")
     if re.search(r"\b(transferencia|transfiere|transferir|devolucion|devuelve)\b", norm):
@@ -481,13 +558,14 @@ _MARCA_DE_CONCEPTO = re.compile(
 # hace al confirmar (el PDF). Cualquier otra cosa —un número, un «pero», un
 # cambio— deja de ser un sí y la frase se vuelve a interpretar.
 _SI_INICIAL = re.compile(
-    r"^(?:si|sii|sip|vale|ok|okey|okay|confirmo|confirmar|correcto|exacto|"
-    r"perfecto|adelante|dale|claro|de acuerdo|eso es|hazlo|hazla|endavant|"
-    r"d'acord|fes-ho)\b")
+    r"^(?:si|sii|sip|vale|ok|okey|okay|confirmo|confirmar|confirmalo|confirmala|"
+    r"correcto|exacto|perfecto|adelante|dale|claro|de acuerdo|eso es|hazlo|hazla|"
+    r"venga|guardalo|guardala|endavant|d'acord|fes-ho)\b")
 # Palabras que pueden acompañar a un sí sin cambiar lo que se confirma.
 _COLA_SIN_ORDEN = re.compile(
-    r"^(?:[\s,.;:!¡]|y|i|tambien|ademes|ademas|por favor|porfa|gracias|"
-    r"confirmo|confirmar|correcto|exacto|perfecto|vale|ok|okey|claro|dale|"
+    r"^(?:[\s,.;:!¡]|y|i|tambien|ademes|ademas|por favor|porfa|gracias|si|"
+    r"confirmo|confirmar|confirmalo|confirmala|correcto|exacto|perfecto|vale|ok|"
+    r"okey|claro|dale|esta bien|todo bien|bien|guardalo|guardala|venga|"
     r"adelante|hazlo|hazla|generalo|generala|generame|genera|generar|creame|"
     r"crea|preparame|prepara|mandamelo|mandame|manda|enviamelo|enviame|envia|"
     r"pasamelo|pasame|pasa|adjuntamelo|adjuntame|adjunta|quiero|necesito|"
@@ -586,6 +664,59 @@ def _limpiar_cliente(nombre: str) -> str:
     while partes and partes[-1].lower().strip(",.") in _CONECTORES_FINALES:
         partes.pop()
     return " ".join(partes).strip(" ,.")
+
+
+_IMPORTE_SUELTO = re.compile(
+    rf"^(?:(?:por|de|son|total|importe|precio|base)\s*:?\s*)?({_AMOUNT_RE})\s*(?:€|euros?|eur)?"
+    r"(?:\s*(?:\+|mas|más)\s*(?:el\s+)?iva|\s+(?:con\s+)?iva\s+incluido|\s+con\s+(?:el\s+)?iva|"
+    r"\s+sin\s+iva)?$", re.I)
+
+
+def _documento_por_trozos(text: str, palabra: str) -> dict | None:
+    """«Factura a Juan García, 120 euros, cambio de grifo»: la orden dictada a trozos.
+
+    Por voz se dice así, con pausas que Whisper escribe como comas o puntos, y la
+    lectura por posición se llevaba «euros, cambio de grifo» como concepto. Cada
+    trozo es el cliente (el primero), el importe (el único con cifra) o parte del
+    concepto; «concepto X» e «importe X» mandan. Ante la duda —dos importes, una
+    cifra dentro del concepto— devuelve `None` y decide el lector de siempre.
+    """
+    m = re.match(rf"^\s*(?:(?:hazme|haz|crea|creame|créame|prepara|preparame|prepárame|"
+                 rf"genera|quiero|necesito)\s+)?(?:una?\s+|el\s+|la\s+)?{palabra}\s+"
+                 r"(?:a|para|per\s+a)\s+", text, re.I)
+    if not m:
+        return None
+    trozos = [t.strip(" .") for t in re.split(r"\s*[,;:]\s+|\.\s+|\.$", text[m.end():])
+              if t.strip(" .")]
+    # «Reformas Martínez, S.L., 120 euros…»: la coma de la forma societaria.
+    while len(trozos) > 1 and trozos[1].replace(".", "").upper() in _SIGLAS_CON_PUNTO:
+        trozos[0:2] = [f"{trozos[0]}, {trozos[1]}."]
+    if len(trozos) < 3 or re.search(r"\d|\s(?:por|de)\s+\d", trozos[0]):
+        return None
+    importe, conceptos = None, []
+    for trozo in trozos[1:]:
+        etiqueta = re.match(r"^(concepto|importe|precio|total|base)\s*:?\s*(.+)$", trozo, re.I)
+        if etiqueta and _norm(etiqueta.group(1)) == "concepto":
+            conceptos.append(etiqueta.group(2))
+            continue
+        cifra = _IMPORTE_SUELTO.match(trozo)
+        if cifra:
+            if importe is not None:
+                return None
+            importe = _amount_value(cifra.group(1))
+            continue
+        # «2 grifos» es el concepto con su cantidad; otra cifra suelta, no se sabe.
+        cantidad = re.match(r"^\d{1,3}\s+[^\W\d_]", trozo)
+        if (re.search(r"\d", trozo) and not cantidad) or re.search(r"\b(?:iva|irpf)\b", _norm(trozo)):
+            return None
+        conceptos.append(re.sub(r"^(?:por|para)\s+", "", trozo, flags=re.I))
+    concepto = _limpiar_concepto(", ".join(conceptos))
+    cliente = _limpiar_cliente(trozos[0])
+    if trozos[0].endswith(".") and trozos[0][:-1] == cliente:
+        cliente = trozos[0]  # «S.L.» lleva su punto en la factura
+    if not importe or importe <= 0 or not concepto or not cliente:
+        return None
+    return {"cliente": cliente, "concepto": concepto, "base": importe}
 
 
 def _factura_sin_preposicion(text: str, norm: str) -> dict | None:
@@ -886,6 +1017,79 @@ _DATO_DE_CONTACTO = re.compile(
     r"direcci[oó]n|domicilio|calle|avenida|zona)\b", re.I)
 
 
+_EMAIL_RE = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
+# NIF, NIE y CIF sueltos («con nif 12345678Z» o «B12345678» a secas).
+_NIF_RE = re.compile(
+    r"\b(\d{8}\s?-?[A-Z]|[XYZ]\s?-?\d{7}\s?-?[A-Z]|[ABCDEFGHJNPQRSUVW]\s?-?\d{7}[0-9A-J])\b",
+    re.I)
+_CLAVE_NIF = re.compile(r"\b(?:nif|cif|dni|nie)\b\s*(?:es\s+(?:el\s+)?)?:?\s*", re.I)
+_CLAVE_DIRECCION = re.compile(
+    r"\b(?:direcci[oó]n|domicilio|adre[çc]a|vive\s+en|est[aá]\s+en)\b\s*(?:es\s+)?:?\s*"
+    r"|\b(?=(?:calle|c/|avenida|avda\.?|av\.|plaza|pza\.?|paseo|pg\.?|carrer|"
+    r"camino|ronda|traves[ií]a|urbanizaci[oó]n)\s)", re.I)
+# Un móvil o fijo español dictado con o sin espacios, con o sin prefijo.
+_MOVIL_SUELTO = re.compile(r"(?<![\w+])((?:\+?34[\s.\-]?)?[6789](?:[\s.\-]?\d){8})(?!\d)")
+_CLAVE_TELEFONO = re.compile(r"\b(?:tel[eé]fono|telf?|tlf|m[oó]vil|whatsapp|n[uú]mero)\b"
+                             r"\s*(?:es\s+(?:el\s+)?)?:?\s*", re.I)
+_CLAVE_EMAIL = re.compile(r"\b(?:correo(?:\s+electr[oó]nico)?|email|e-mail|mail)\b"
+                          r"\s*(?:es\s+)?:?\s*", re.I)
+
+
+def datos_de_ficha(texto: str) -> tuple[int, dict]:
+    """Datos de contacto dictados con el nombre: teléfono, correo, NIF y dirección.
+
+    Devuelve `(dónde empiezan, datos)`. Antes solo se guardaba el teléfono, y el
+    correo o el NIF acababan pegados al nombre o perdidos sin avisar; justo lo
+    que luego hace falta para emitir y enviar la factura.
+    """
+    texto = str(texto or "")
+    datos: dict = {}
+    inicios: list[int] = []
+    correo = _EMAIL_RE.search(texto)
+    if correo:
+        datos["email"] = correo.group(0).lower()
+        clave = None
+        for clave in _CLAVE_EMAIL.finditer(texto[:correo.start()]):
+            pass
+        inicios.append(clave.start() if clave and not texto[clave.end():correo.start()].strip()
+                       else correo.start())
+    clave_nif = _CLAVE_NIF.search(texto)
+    nif = _NIF_RE.search(texto, clave_nif.end() if clave_nif else 0)
+    if nif and (clave_nif or not correo or not (correo.start() <= nif.start() < correo.end())):
+        datos["nif"] = re.sub(r"[\s-]", "", nif.group(1)).upper()
+        inicios.append(clave_nif.start() if clave_nif else nif.start())
+    elif clave_nif:
+        inicios.append(clave_nif.start())
+    tapados = [m.span() for m in (correo, nif) if m]
+
+    def libre(m) -> bool:
+        return not any(a <= m.start() < b for a, b in tapados)
+
+    clave_tel = _CLAVE_TELEFONO.search(texto)
+    movil = next((m for m in _MOVIL_SUELTO.finditer(texto, clave_tel.end() if clave_tel else 0)
+                  if libre(m)), None)
+    if not movil and clave_tel:
+        movil = next((m for m in _TELEFONO_RE.finditer(texto, clave_tel.end()) if libre(m)), None)
+    if movil:
+        datos["telefono"] = re.sub(r"[\s.\-]", "", movil.group(1))
+        inicios.append(clave_tel.start() if clave_tel else movil.start())
+        tapados.append(movil.span())
+    direccion = _CLAVE_DIRECCION.search(texto)
+    if direccion:
+        inicios.append(direccion.start())
+        resto = texto[direccion.end():]
+        # La dirección acaba donde empieza otro dato.
+        fin = len(resto)
+        for patron in (_CLAVE_TELEFONO, _CLAVE_EMAIL, _CLAVE_NIF, _EMAIL_RE, _MOVIL_SUELTO):
+            otro = patron.search(resto)
+            if otro:
+                fin = min(fin, otro.start())
+        valor = re.sub(r"\s+(?:y|con|i|amb)\s*$", "", resto[:fin].strip(" ,;")).strip(" ,;.")
+        if valor and re.search(r"[^\W\d_]", valor):
+            datos["direccion"] = valor
+    return (min(inicios) if inicios else -1, datos)
+
+
 def parse_party_name(raw: str) -> tuple[str | None, str | None]:
     """Separa el nombre de la ficha de los datos de contacto que lo acompañan.
 
@@ -898,6 +1102,17 @@ def parse_party_name(raw: str) -> tuple[str | None, str | None]:
     # «S.L.», que es parte del nombre y sale así en la factura.
     texto = _recortar((raw or "").strip())
     if not texto:
+        return (None, None)
+    inicio, datos = datos_de_ficha(texto)
+    if inicio > 0:
+        # «Laura Gimeno tel 612 34 56 78» o «Laura Gimeno laura@x.es»: el nombre
+        # acaba donde empiezan los datos, con o sin «con» delante.
+        texto = re.sub(r"(?:[\s,;:]+(?:y|con|i|amb|su|sus|es|de|el|la|que|tiene))*[\s,;:]*$",
+                       "", texto[:inicio], flags=re.I).strip()
+        texto = _recortar(texto) if texto else texto
+        if not texto:
+            return (None, None)
+    elif inicio == 0:
         return (None, None)
     # Lo dictado detrás de un punto o de una coma no es parte del nombre: «crear
     # cliente Reformas Martínez. Concierto Ventanas» da de alta a Reformas
@@ -924,6 +1139,7 @@ def parse_party_name(raw: str) -> tuple[str | None, str | None]:
             telefono = re.sub(r"[\s.\-]", "", encontrado.group(1))
     elif corte:
         texto = texto[:corte.start()].strip(" ,.;:")
+    telefono = telefono or datos.get("telefono")
     if len(texto) > 200:
         # Se devuelve tal cual: la base explica que es demasiado largo, y
         # recortarlo a escondidas daría de alta a alguien que no existe.
@@ -999,17 +1215,182 @@ def _parse_simplified_sale(text: str, norm: str) -> dict | None:
     return args
 
 
+_CAMPO_FICHA = (r"(?P<campo>nif|cif|dni|nie|tel[eé]fono|telf?|m[oó]vil|n[uú]mero(?:\s+de\s+tel[eé]fono)?|"
+                r"correo(?:\s+electr[oó]nico)?|email|e-mail|mail|direcci[oó]n|domicilio)")
+_CAMPO_A_ARG = (("nif", "nif"), ("cif", "nif"), ("dni", "nif"), ("nie", "nif"),
+                ("tel", "telefono"), ("movil", "telefono"), ("numero", "telefono"),
+                ("correo", "email"), ("email", "email"), ("e-mail", "email"),
+                ("mail", "email"), ("direccion", "direccion"), ("domicilio", "direccion"))
+
+
+def _dato_de_cliente(text: str) -> tuple[str, dict] | None:
+    """«El NIF de Laura Gimeno es 12345678Z» completa la ficha que ya existe.
+
+    También «añade el correo x@y.es a Laura», «ponle a Laura el teléfono …» y
+    «cambia el teléfono de Laura a …». Antes soltaba el parte del día.
+    """
+    t = text.strip().rstrip(".!")
+    formas = (
+        # «el NIF de Laura es X», «el teléfono del cliente Laura Gimeno es X»
+        rf"^(?:(?:cambia|cambiar|actualiza|corrige)\s+)?(?:el|la|su)?\s*{_CAMPO_FICHA}\s+"
+        r"(?:de|del|de\s+la)\s+(?:client[ea]\s+)?(?P<cliente>.+?)\s+"
+        r"(?:es|será|sera|a|por|:)\s*(?:el\s+|la\s+)?(?P<valor>.+)$",
+        # «añade el correo X a Laura», «pon el NIF X al cliente Laura»
+        rf"^(?:añade|anade|agrega|pon|ponle|guarda|apunta|mete)\s+(?:el|la|su)?\s*{_CAMPO_FICHA}"
+        r"\s*:?\s+(?P<valor>.+?)\s+(?:a|al|para|de|del)\s+(?:client[ea]\s+)?(?P<cliente>.+)$",
+        # «ponle a Laura el teléfono X», «añade a Laura el correo X»
+        r"^(?:añade|anade|agrega|pon|ponle|guarda|apunta)(?:le)?\s+(?:a|al)\s+(?:client[ea]\s+)?"
+        rf"(?P<cliente>.+?)\s+(?:el|la|su)?\s*{_CAMPO_FICHA}\s*:?\s+(?P<valor>.+)$",
+    )
+    for forma in formas:
+        m = re.match(forma, t, re.I)
+        if not m:
+            continue
+        campo = _norm(m.group("campo"))
+        arg = next(a for clave, a in _CAMPO_A_ARG if campo.startswith(clave))
+        cliente = _limpiar_cliente(m.group("cliente"))
+        valor = m.group("valor").strip(" ,;:")
+        if (not cliente or not valor or len(cliente.split()) > 6
+                or re.search(r"\b(?:factura|presupuesto|ticket|tiquet|gasto|proyecto)\b",
+                             _norm(cliente))):
+            return None
+        if arg in {"nif", "telefono"}:
+            valor = re.sub(r"[\s.\-]", "", valor)
+        # El valor tiene que parecer lo que se dice que es: «el número de la
+        # factura 3 es 12» no es un teléfono.
+        if ((arg == "telefono" and not re.fullmatch(r"\+?\d{9,15}", valor))
+                or (arg == "email" and "@" not in valor)
+                or (arg == "nif" and not re.fullmatch(r"[A-Z0-9]{8,10}", valor.upper()))
+                or (arg == "direccion" and not re.search(r"[^\W\d_]", valor))):
+            return None
+        return ("actualizar_cliente", {"cliente": cliente, arg: valor})
+    return None
+
+
+_OTRO_TEMA = re.compile(
+    r"\b(?:cobr\w*|pag\w*|factur\w*|iva|irpf|gast\w*|presupuest\w*|deb\w*|"
+    r"impuest\w*|clientes?|proveedor\w*|document\w*|gestori\w*|proyect\w*)\b")
+
+
+_FIN_DE_TROZO = (r"(?=\s+(?:a|para)\s+[a-záéíóúñ]+(?:ar|er|ir)\b|\s+(?:hoy|mañana|manana|pasado|"
+                 r"el|este|esta|a\s+las|por\s+la|en)\b|[,.;]|$)")
+
+
+def _visita_dicha(text: str) -> tuple[str, dict] | None:
+    """«Mañana a las diez tengo que ir a casa de Juan a mirar la caldera».
+
+    Así se cuenta una cita por voz, sin el verbo «agendar», y acababa en el parte
+    del día. Solo cuenta con un sitio al que se va (casa de, la obra de…) y una
+    fecha; si falta la fecha, que la pregunte la agenda de siempre.
+    """
+    m = re.search(r"\b(?:tengo que ir|he de ir|tengo que pasar|voy|ir[eé]|pasar[eé]|paso)\s+"
+                  r"(?:a\s+|por\s+)(?:casa\s+de|la\s+casa\s+de|la\s+obra\s+de|el\s+local\s+de|"
+                  r"la\s+tienda\s+de|ver\s+a|donde)\s+(.+?)" + _FIN_DE_TROZO, text, re.I)
+    fecha = parse_date(text) if m else None
+    if not m or not fecha:
+        return None
+    cliente = _limpiar_cliente(m.group(1))
+    if not cliente or re.match(_AGENDA_NOT_A_NAME, _norm(cliente)):
+        return None
+    tarea = re.search(r"\b(?:a|para)\s+([a-záéíóúñ]+(?:ar|er|ir)\b.*?)"
+                      r"(?=\s+(?:hoy|mañana|manana|pasado|este|esta|a\s+las|por\s+la|"
+                      r"el\s+(?:lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo|d[ií]a)|"
+                      r"en\s+[A-ZÁÉÍÓÚ])\b|[,.;]|$)",
+                      text[m.end():])
+    return ("agendar_trabajo", {"cliente": cliente,
+                                "descripcion": tarea.group(1).strip() if tarea else "Visita",
+                                "fecha_hora": fecha})
+
+
+def _pide_agendar(text: str, norm: str) -> bool:
+    """«Agenda para mañana a las 12 a Jordi» crea una cita; no la consulta."""
+    if not re.match(r"^(?:agenda\w*|apunta\w*|anota\w*|pon\w*)\b", norm):
+        return False
+    if _agenda_client(_quitar_fecha_concreta(text)):
+        return True
+    # «… a las 12 a Jordi»: el nombre va al final, detrás de la hora.
+    return any(not re.match(_AGENDA_NOT_A_NAME, palabra) and not re.search(_AGENDA_NOUN, palabra)
+               for palabra in re.findall(r"\b(?:a|con)\s+([a-z]{3,})\b", norm))
+
+
+def _consulta_de_agenda(text: str, norm: str) -> tuple[str, dict] | None:
+    """«¿Qué tengo el viernes?», «agenda de la semana», «mi agenda».
+
+    Antes solo se entendían hoy y mañana: el resto acababa en la IA o, peor, en
+    «me falta el cliente» como si se quisiera crear una cita.
+    """
+    from datetime import timedelta
+    pregunta = re.search(
+        r"^(?:y\s+)?(?:que|q)\s+(?:tengo|hay|tenemos|me toca|toca)\b|"
+        r"^(?:y\s+)?(?:que|cuantos|cuantas)\s+(?:trabajos|citas|visitas)\b|"
+        r"^(?:tengo|tenemos)\s+(?:algo|trabajo|citas?|visitas?)\b|"
+        r"^(?:estoy|estamos)\s+libres?\b|"
+        r"^(?:mi|la|ver|ensename|muestrame|dime|pasame)\s+(?:la\s+)?agenda\b|"
+        r"^agenda\s+(?:de|del|para|per)\s+(?:hoy|manana|la\s+semana|esta|el|la|este|"
+        r"lunes|martes|miercoles|jueves|viernes|sabado|domingo|pasado)|^agenda$|"
+        r"^(?:mis|las|los)\s+(?:citas|trabajos|visitas)\b|"
+        r"^(?:que|quins|quines)\s+(?:tinc|feines|treballs)\b", norm)
+    if not pregunta or _OTRO_TEMA.search(norm) or _pide_agendar(text, norm):
+        return None
+    hoy = date.today()
+    if re.search(r"\b(?:semana que viene|proxima semana|siguiente semana|"
+                 r"setmana que ve|proxima setmana)\b", norm):
+        lunes = hoy + timedelta(days=7 - hoy.weekday())
+        return ("ver_agenda", {"fecha": lunes.isoformat(),
+                               "hasta": (lunes + timedelta(days=6)).isoformat()})
+    if re.search(r"\b(?:semana|setmana)\b", norm):
+        return ("ver_agenda", {"fecha": hoy.isoformat(),
+                               "hasta": (hoy + timedelta(days=6 - hoy.weekday())).isoformat()})
+    if re.search(r"\b(?:mes|este mes)\b", norm):
+        return None
+    cuando = parse_date(text)
+    if cuando:
+        return ("ver_agenda", {"fecha": cuando[:10]})
+    if re.search(r"agenda\s*$", norm) or re.search(r"\bproximos dias\b", norm):
+        return ("ver_agenda", {"fecha": hoy.isoformat(),
+                               "hasta": (hoy + timedelta(days=6)).isoformat()})
+    return None
+
+
+def _consulta_de_gastos(norm: str) -> tuple[str, dict] | None:
+    """«¿Qué gastos he apuntado hoy?», «mis gastos del mes», «en qué he gastado»."""
+    if not re.search(
+            r"^(?:y\s+)?(?:que|cuales|cuantos|ver|mis|lista(?:me)?|ensename|muestrame|dime|"
+            r"pasame)\s+(?:(?:son|han sido|los|las|mis|de)\s+)?gastos\b|^gastos(?:\s+de|\s+del|$)|"
+            r"^(?:en que|en que cosas)\s+(?:he|hemos)\s+gastado", norm):
+        return None
+    from datetime import timedelta
+    hoy = date.today()
+    if re.search(r"\bhoy\b", norm):
+        return ("ver_gastos", {"desde": hoy.isoformat(), "hasta": hoy.isoformat()})
+    if re.search(r"\bayer\b", norm):
+        ayer = (hoy - timedelta(days=1)).isoformat()
+        return ("ver_gastos", {"desde": ayer, "hasta": ayer})
+    if re.search(r"\bsemana\b", norm):
+        return ("ver_gastos", {"desde": (hoy - timedelta(days=hoy.weekday())).isoformat(),
+                               "hasta": hoy.isoformat()})
+    return ("ver_gastos", {})
+
+
 def _party_intent(papel: str, nombre: str) -> tuple[str, dict]:
     """Alta de cliente o proveedor con el nombre ya separado de sus datos."""
     tipo = "cliente" if _norm(papel).startswith("client") else "proveedor"
+    nombre = re.sub(
+        r"^(?:(?:que\s+)?se\s+llama|llamad[oa]|con\s+(?:el\s+)?nombre(?:\s+de)?|"
+        r"de\s+nombre|a\s+nombre\s+de|que\s+es\s+diu|anomenad[ao]|que\s+es)\s*:?\s+",
+        "", str(nombre or "").strip(), flags=re.I)
     limpio, telefono = parse_party_name(nombre)
     if not limpio:
         # Un «cliente» que es solo un número de teléfono no es el nombre de
         # nadie: se pregunta en vez de dejar una ficha llamada «600123456».
         return (NEED_PARTY_NAME, {"tipo": tipo, "motivo": "sin_nombre"})
     args: dict = {"nombre": limpio}
-    if telefono and tipo == "cliente":
-        args["telefono"] = telefono
+    if tipo == "cliente":
+        datos = datos_de_ficha(nombre)[1]
+        if telefono:
+            datos["telefono"] = telefono
+        args.update({k: datos[k] for k in ("telefono", "email", "nif", "direccion")
+                     if datos.get(k)})
     return (f"crear_{tipo}", args)
 
 
@@ -1037,8 +1418,31 @@ _ABREVIATURAS = (
     (re.compile(r"(?<![\w\d])pa(?![\w\d'’])", re.I), "para"),
     (re.compile(r"(?<![\w\d])acer(?![\w\d])", re.I), "hacer"),
     (re.compile(r"(?<![\w\d])(?:tb|tmb)(?![\w\d])", re.I), "también"),
+    (re.compile(r"(?<![\w\d])(?:fra|fras|fact|fctra|ftra)(?![\w\d])", re.I), "factura"),
     # «200e» o «200 e» es como se teclea el euro en el móvil.
     (re.compile(r"(\d)\s?e(?![\w\d])", re.I), r"\1 euros"),
+    # Faltas sueltas de la ronda real del 30-sep: cada una rompía la orden entera.
+    (re.compile(r"(?<![\w\d])oy(?![\w\d])", re.I), "hoy"),
+    (re.compile(r"(?<![\w\d])(?:mñn|mñna|mñana|mnn|mañna|manaña)(?![\w\d])", re.I), "mañana"),
+    (re.compile(r"(?<![\w\d])(?:biernes|vierns|viernez)(?![\w\d])", re.I), "viernes"),
+    (re.compile(r"(?<![\w\d])(?:juebes|jueve)(?![\w\d])", re.I), "jueves"),
+    (re.compile(r"(?<![\w\d])(?:sabdo|savado|sabado)(?![\w\d])", re.I), "sábado"),
+    (re.compile(r"(?<![\w\d])sita(s?)(?![\w\d])", re.I), r"cita\1"),
+    (re.compile(r"(?<![\w\d])deven(?![\w\d])", re.I), "deben"),
+    (re.compile(r"(?<![\w\d])deve(?![\w\d])", re.I), "debe"),
+    (re.compile(r"(?<![\w\d])gastao(?![\w\d])", re.I), "gastado"),
+    (re.compile(r"(?<![\w\d])e\s+(gastado|pagado|comprado|cobrado|facturado|hecho)\b", re.I),
+     r"he \1"),
+    (re.compile(r"(?<![\w\d])bent(a|as)(?![\w\d])", re.I), r"vent\1"),
+    (re.compile(r"(?<![\w\d])(?:grasias|grasis|gracis|grax|grcias)(?![\w\d])", re.I), "gracias"),
+    (re.compile(r"^\s*ola(?![\w\d])", re.I), "hola"),
+    # «iba» por «IVA» solo donde no puede ser el verbo.
+    (re.compile(r"\b(el|del|de|cuanto|cuánto|mi|con|sin|mas|más|\+)\s+iba\b", re.I), r"\1 iva"),
+    (re.compile(r"\biba\s+(?=tengo|del|trimestral|incluido|a pagar|repercutido|soportado)",
+                re.I), "iva "),
+    # «Juan x 200»: la «x» del móvil es «por» entre una palabra y un importe.
+    # Entre dos cifras («3 x 20») es una multiplicación y no se toca.
+    (re.compile(r"(?<=[^\W\d_])\s+x\s+(?=\d)", re.I), " por "),
 )
 
 
@@ -1057,9 +1461,20 @@ def _corrige_palabra(match: re.Match) -> str:
     return parecida[0] + ("s" if plural else "")
 
 
+# Muletillas con las que empieza una nota de voz («Oye, apúntame un gasto…»).
+# Las órdenes se reconocen por cómo empiezan, así que la muletilla las tapaba.
+_MULETILLA_INICIAL = re.compile(
+    r"^(?:(?:oye|oiga|mira|eh+|ehm+|mm+|bueno|pues nada|pues|a ver|venga|perdona|por favor|"
+    r"porfa|hey)\b[\s,.…!¡]*)+", re.I)
+
+
 def _erratas(text: str) -> str:
     """Corrige faltas en las palabras clave y abreviaturas de móvil."""
-    text = re.sub(r"[^\W\d_]{6,}", _corrige_palabra, text or "")
+    text = text or ""
+    sin_muletilla = _MULETILLA_INICIAL.sub("", text.strip())
+    if sin_muletilla.strip(" ,.…!¡?¿"):
+        text = sin_muletilla
+    text = re.sub(r"[^\W\d_]{6,}", _corrige_palabra, text)
     for patron, correcto in _ABREVIATURAS:
         text = patron.sub(correcto, text)
     return text
@@ -1071,6 +1486,7 @@ corregir_erratas = _erratas
 _ORDENES_DE_ACCION = {
     "crear_factura", "crear_presupuesto", "registrar_gasto", "agendar_trabajo",
     "crear_cliente", "crear_proveedor", "crear_proyecto", "crear_factura_a_medias",
+    "actualizar_cliente",
 }
 # Se corta donde empieza otra orden: «…, y hazle una factura…», «…; agenda…».
 _CORTE_DE_ORDEN = re.compile(
@@ -1133,12 +1549,19 @@ def parse(text: str) -> tuple[str, dict] | None:
             "WhatsApp. Hazlo en la web, en Presupuestos: con un clic se convierte en "
             "factura. No he cambiado nada.")})
 
+    consulta = _consulta_de_agenda(text, norm)
+    if consulta:
+        return consulta
+    gastos = _consulta_de_gastos(norm)
+    if gastos:
+        return gastos
     # Se compara contra `norm`, sin acentos: contra el texto crudo, «qué trabajos
     # tengo mañana» no encajaba con «que.*trabajos» por la tilde y la orden se
     # perdía entera.
     if re.search(r"(?:(?:que|quins|quines|quin)\b.*"
                  r"\b(?:trabajos|citas|tengo|treballs|feines|tinc)\b.*"
-                 r"|agenda (?:de|para|per) )(?:hoy|avui|manana|dema)", norm):
+                 r"|agenda (?:de|para|per) )(?:hoy|avui|manana|dema)", norm) \
+            and not _pide_agendar(text, norm):
         when = parse_date(text)
         if when:
             return ("ver_agenda", {"fecha": when[:10]})
@@ -1178,29 +1601,47 @@ def parse(text: str) -> tuple[str, dict] | None:
     # Altas explícitas: no hace falta crear una factura de rebote para guardar
     # una relación comercial. El acceso de una persona, en cambio, exige correo,
     # rol e invitación segura y no se concede desde una frase incompleta.
+    dato_cliente = _dato_de_cliente(text)
+    if dato_cliente:
+        return dato_cliente
+    _PAPEL = r"(client[ea]s?|client|proveedor[a]?|prove[ïi]dor[a]?)"
+    _VERBO_ALTA = (r"(?:crea\w*|crear|cre[ao]|anade\w*|añade\w*|agrega\w*|agregar|"
+                   r"apunta\w*|registra\w*|guarda\w*|mete\w*|afegeix\w*|fes|"
+                   r"(?:da|dar|dame|donar?|dona)\s+(?:de\s+)?alta|alta|"
+                   r"nuevo|nueva|nou|nova)")
     party = re.search(
         # El artículo determinado entra igual que el indeterminado: «crea el
         # cliente Talleres Pino» se decía tan a menudo como «un cliente», y
         # antes caía en la regla de listar clientes sin dar de alta a nadie.
-        r"\b(?:crea|crear|anade|añade|nuevo|nueva|alta)\s+"
+        # «Agrega», «apunta», «registra» o «dar de alta» también son altas.
+        rf"\b{_VERBO_ALTA}\s+"
         # «alta de cliente X» se dice tanto como «alta cliente X».
-        r"(?:de\s+)?(?:un|una|el|la|los|las)?\s*"
+        r"(?:de\s+|a\s+)?(?:un|una|el|la|los|las|l'|al)?\s*"
+        r"(?:(?:nuev[oa]|nou|nova|otr[oa]|altre|altra)\s+)?"
         # «client» y «proveïdor» en catalán se dicen tanto como en castellano.
-        r"(client\w*|proveedor\w*|prove[ïi]dor\w*)\s*:?\s+(.+?)\s*$",
+        rf"{_PAPEL}(?:\s+(?:nuev[oa]|nou|nova))?\s*[:,]?\s+(.+?)\s*$",
         text, re.I,
     )
     if not party:
-        # Orden inverso: primero el nombre y después el papel.
-        inversa = re.search(
-            r"\b(?:da|dar)\s+de\s+alta\s+(?:a\s+)?(.+?)\s+como\s+"
-            r"(client\w*|proveedor\w*|prove[ïi]dor\w*)\b",
-            text, re.I,
+        # Orden inverso: primero el nombre y después el papel («añade a Laura
+        # como cliente», «guarda a Laura en clientes», «Laura es un cliente nuevo»).
+        inversa = (
+            re.search(rf"\b{_VERBO_ALTA}\s+(?:a\s+)?(.+?)\s+(?:como|com|en|a)\s+"
+                      rf"(?:(?:un|una|el|la|mis|los|les|els)\s+)?(?:nuev[oa]\s+)?{_PAPEL}\b",
+                      text, re.I)
+            or re.search(rf"^(?:tengo|tinc)\s+(?:un|una)\s+(?:nuev[oa]\s+|nou\s+|nova\s+)?{_PAPEL}"
+                         r"\s+(?:nuev[oa]\s+|nou\s+|nova\s+)?(?:que\s+se\s+llama|llamad[oa]|"
+                         r"que\s+es\s+diu)\s+(.+?)\s*$", text.strip(), re.I)
+            or re.search(rf"^(.+?)\s+(?:es|és)\s+(?:un|una)\s+(?:nuev[oa]\s+|nou\s+|nova\s+)?"
+                         rf"{_PAPEL}(?:\s+(?:nuev[oa]|nou|nova))?\s*[.!]?\s*$", text.strip(), re.I)
         )
         if inversa:
-            return _party_intent(inversa.group(2), inversa.group(1))
+            grupos = inversa.groups()
+            papel, nombre = ((grupos[1], grupos[0]) if _norm(grupos[1]).startswith(("client", "prove"))
+                             else (grupos[0], grupos[1]))
+            return _party_intent(papel, nombre)
     if party:
-        name = re.sub(r"^(?:llamad[oa]|que se llama)\s+", "", party.group(2), flags=re.I)
-        return _party_intent(party.group(1), name)
+        return _party_intent(party.group(1), party.group(2))
     # «Crea el cliente» o «nuevo proveedor» a secas. Antes no casaba con nada de
     # aquí y acababa listando clientes o dando el parte del día: la orden se
     # perdía entera por faltar una palabra.
@@ -1247,6 +1688,10 @@ def parse(text: str) -> tuple[str, dict] | None:
 
     # --- Crear presupuesto: acepta varios órdenes naturales ---
     if "presupuest" in norm or "pressupost" in norm:
+        args = _documento_por_trozos(text, r"(?:presupuesto|pressupost)")
+        if args:
+            _add_tax_rates(norm, args)
+            return ("crear_presupuesto", args)
         args = _parse_doc_command(
             text, norm, r"(?:presupuest(?:o|ar|a|ame)?|pressupost(?:ar|a|am)?)"
         )
@@ -1309,7 +1754,8 @@ def parse(text: str) -> tuple[str, dict] | None:
 
     # --- Crear factura: acepta varios órdenes naturales ---
     if "factura" in norm:
-        args = _parse_doc_command(text, norm, r"fact[uú]ra(?:r|me)?")
+        args = (_documento_por_trozos(text, r"factura")
+                or _parse_doc_command(text, norm, r"fact[uú]ra(?:r|me)?"))
         if args:
             args["tipo_factura"] = "F1"
             _add_tax_rates(norm, args)
@@ -1413,16 +1859,22 @@ def parse(text: str) -> tuple[str, dict] | None:
                 args["iva"] = int(rate.group(1))
             return ("registrar_gasto", args)
 
+    visita = _visita_dicha(text)
+    if visita:
+        return visita
     # --- Agenda: «agenda a Marta el jueves por la mañana en Badalona» y también
     # «añade un trabajo para mañana a las 12», que antes no se entendía.
     if _is_agenda_order(norm):
         fecha = parse_date(text)
-        cliente = _agenda_client(text)
+        # «El 15 de octubre» no es ni el cliente ni el trabajo: el «de» se leía
+        # como «trabajo de octubre».
+        sin_fecha = _quitar_fecha_concreta(text)
+        cliente = _agenda_client(sin_fecha)
         zona = None
-        zm = re.search(r"\ben\s+([A-Za-záéíóúñ ]+)$", text.strip())
+        zm = re.search(r"\ben\s+([A-Za-záéíóúñ ]+)$", sin_fecha.strip())
         if zm:
             zona = zm.group(1).strip()
-        descripcion = _agenda_description(text, cliente)
+        descripcion = _agenda_description(sin_fecha, cliente)
         if cliente and fecha:
             return ("agendar_trabajo", {
                 "cliente": cliente, "descripcion": descripcion, "fecha_hora": fecha,
@@ -1444,6 +1896,13 @@ def parse(text: str) -> tuple[str, dict] | None:
         return ("ver_agenda", {"fecha": date.today().isoformat()})
 
     # --- Cobros pendientes
+    # «¿Cuánto me debe Reformas Martínez?»: los cobros de ese cliente.
+    debe = re.match(r"^(?:y\s+)?(?:cuanto|que|lo que)\s+(?:me\s+)?(?:debe|deben|adeuda)\s+"
+                    r"(?:todavia\s+|aun\s+)?(?:el\s+cliente\s+|la\s+cliente\s+)?(.+?)\s*\??$", norm)
+    if debe and not re.match(r"^(?:de|en|el mes|este|total|todo|todos)\b", debe.group(1)):
+        nombre = text.strip().rstrip("?¿!. ")
+        nombre = nombre[len(nombre) - len(debe.group(1)):] if len(nombre) >= len(debe.group(1)) else debe.group(1)
+        return ("ver_cobros_pendientes", {"cliente": _limpiar_cliente(nombre)})
     if re.search(r"(cobr|por cobrar|quien me debe|pendiente de cobro|me deben?\b|"
                  r"deudas?|sin cobrar|impagad|moroso|facturas? pendientes?|"
                  # Catalán: «quant em deuen», «qui em deu diners», «deutes».
@@ -1572,7 +2031,36 @@ def format_reply(tool: str, result: dict) -> str:
             suffix += (" Lo he enlazado al borrador "
                        + ", ".join(f"#{n}" for n in enlazadas)
                        + " que lo esperaba.")
-        return f"Cliente guardado: **{client['name']}**.{suffix}"
+        completados = [{"phone": "teléfono", "email": "correo", "nif": "NIF",
+                        "address": "dirección"}[k] for k in result.get("completados") or []]
+        if result.get("existing") and completados:
+            suffix = (" Ya existía; le he añadido " + " y ".join(completados) + ".")
+        datos = [f"{etiqueta}: {client[k]}" for k, etiqueta in (
+            ("phone", "Teléfono"), ("email", "Correo"), ("nif", "NIF"),
+            ("address", "Dirección")) if client.get(k)]
+        texto = f"Cliente guardado: **{client['name']}**.{suffix}"
+        if datos:
+            texto += "\n" + "\n".join(datos)
+        for aviso in result.get("avisos") or []:
+            texto += f"\n⚠️ {aviso}"
+        if not (client.get("nif") and client.get("address")):
+            texto += ("\n\nPara emitirle facturas completas faltará "
+                      + " y ".join(x for x, ok in (("el NIF", client.get("nif")),
+                                                  ("la dirección", client.get("address")))
+                                   if not ok)
+                      + ": dímelo («el NIF de " + client["name"] + " es …») o añádelo en Clientes.")
+        return texto
+    if tool == "actualizar_cliente":
+        client = result["cliente"]
+        etiquetas = {"phone": "teléfono", "email": "correo", "nif": "NIF",
+                     "address": "dirección"}
+        cambios = result.get("cambios") or {}
+        texto = (f"Ficha de **{client['name']}** actualizada: "
+                 + ", ".join(f"{etiquetas[k]} {v[1]}" for k, v in cambios.items()) + "."
+                 if cambios else f"La ficha de **{client['name']}** ya tenía esos datos.")
+        for aviso in result.get("avisos") or []:
+            texto += f"\n⚠️ {aviso}"
+        return texto
     if tool == "crear_proveedor":
         supplier = result["proveedor"]
         suffix = " Ya existía; he reutilizado su ficha." if result.get("existing") else ""
@@ -1611,6 +2099,38 @@ def format_reply(tool: str, result: dict) -> str:
         cuando = dia_humano(t["scheduled_for"]) if t.get("scheduled_for") else "sin día"
         return (f"📅 Agendado: {result['cliente']['name']}, {cuando}.\n"
                 "Lo importante ahora: que no se quede sin facturar cuando termines.")
+    if tool == "ver_agenda" and result.get("hasta"):
+        jobs = result["trabajos"]
+        desde, hasta = dia_humano(result["fecha"]), dia_humano(result["hasta"])
+        if not jobs:
+            return f"No tienes trabajos agendados entre {desde} y {hasta}."
+        lines = [f"Tienes {_cuenta(len(jobs), 'trabajo', 'trabajos')} entre {desde} y {hasta}:"]
+        dia_actual = None
+        for j in jobs:
+            dia, _, hora = str(j.get("scheduled_for") or "").partition("T")
+            if dia != dia_actual:
+                dia_actual = dia
+                lines.append(f"\n*{dia_humano(dia)[:1].upper()}{dia_humano(dia)[1:]}*")
+            lugar = j.get("zone") or j.get("project_location")
+            lines.append(f"• {hora[:5]} {j.get('client_name') or ''} — {j['description']}"
+                         + (f" ({lugar})" if lugar else ""))
+        return "\n".join(lines)
+    if tool == "ver_gastos":
+        desde, hasta = result["desde"], result["hasta"]
+        periodo = (dia_humano(desde) if desde == hasta
+                   else "este mes" if desde.endswith("-01") and hasta == date.today().isoformat()
+                   else f"entre {dia_humano(desde)} y {dia_humano(hasta)}")
+        if not result["gastos"]:
+            return f"No tienes gastos apuntados {'para ' if desde == hasta else ''}{periodo}."
+        lines = [f"Gastos {'de ' if desde == hasta else ''}{periodo}: "
+                 f"{_cuenta(result['n'], 'apunte', 'apuntes')}, **{_eur(result['total'])}**."]
+        for g in result["gastos"][:10]:
+            cuando = str(g.get("spent_on") or g.get("created_at") or "")[:10]
+            lines.append(f"• {g['concept']}: {_eur(g['amount'])}"
+                         + (f" ({dia_humano(cuando)})" if cuando and desde != hasta else ""))
+        if result["n"] > 10:
+            lines.append(f"…y {result['n'] - 10} más. Los tienes todos en Gastos.")
+        return "\n".join(lines)
     if tool == "ver_agenda":
         jobs = result["trabajos"]
         if not jobs:
@@ -1622,6 +2142,20 @@ def format_reply(tool: str, result: dict) -> str:
             h = j["scheduled_for"].split("T")[1][:5] if j.get("scheduled_for") and "T" in j["scheduled_for"] else ""
             lines.append(f"• {h} {j.get('client_name') or ''} — {j['description']}")
         lines.append("Al cerrar cada trabajo, deja la factura preparada. Ahí se escapa mucho dinero.")
+        return "\n".join(lines)
+    if tool == "ver_cobros_pendientes" and result.get("cliente"):
+        quien = result["cliente"]
+        if result.get("sin_ficha"):
+            return f"No tengo ficha de cliente «{quien}», así que no me consta que te deba nada."
+        if result["n"] == 0:
+            return f"✅ {quien} no te debe nada: no tiene facturas pendientes de cobro."
+        lines = [f"💸 {quien} te debe **{_eur(result['total_pendiente'])}** en "
+                 f"{_cuenta(result['n'], 'factura', 'facturas')}:"]
+        for p in result["facturas"]:
+            d = p.get("days_outstanding")
+            lines.append(f"• {p.get('number') or '#' + str(p.get('id'))}: {_eur(p['total'])}"
+                         + (f" ({d} días)" if d else ""))
+        lines.append(f"Si quieres, dime «recuérdale a {quien} que me pague».")
         return "\n".join(lines)
     if tool == "ver_cobros_pendientes":
         if result["n"] == 0:

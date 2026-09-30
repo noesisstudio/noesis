@@ -9197,6 +9197,17 @@ def delete_expense(expense_id, business_id) -> None:
                      (expense_id, business_id))
 
 
+def expenses_between(start: str, end: str, business_id) -> list[dict]:
+    """Gastos con fecha (o alta) entre dos días ISO, ambos incluidos."""
+    with get_conn() as conn:
+        return [dict(r) for r in conn.execute(
+            "SELECT * FROM expenses WHERE business_id=? "
+            "AND SUBSTR(COALESCE(CAST(spent_on AS TEXT), CAST(created_at AS TEXT)), 1, 10) "
+            "BETWEEN ? AND ? ORDER BY COALESCE(CAST(spent_on AS TEXT), "
+            "CAST(created_at AS TEXT)) DESC",
+            (business_id, start, end)).fetchall()]
+
+
 def list_expenses(business_id) -> list[dict]:
     with get_conn() as conn:
         return [dict(r) for r in conn.execute(

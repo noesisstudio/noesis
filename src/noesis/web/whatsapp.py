@@ -585,6 +585,8 @@ def _extract_messages(payload: dict) -> list[dict]:
                 interactive_text = (
                     (interactive.get("button_reply", {}) or {}).get("title")
                     or (interactive.get("list_reply", {}) or {}).get("title")
+                    # Botón de respuesta rápida de una plantilla aprobada.
+                    or (message.get("button", {}) or {}).get("text")
                     or ""
                 )
                 out.append({
@@ -613,6 +615,7 @@ def _extract_messages(payload: dict) -> list[dict]:
                     "waba_id": str(entry.get("id") or ""),
                     "profile_name": profiles.get(str(phone), ""),
                     "message_type": message_type,
+                    "contacts": message.get("contacts") or [],
                 })
     return out
 
@@ -1748,6 +1751,31 @@ def _ingest_customer_media(
     return document
 
 
+_SIN_TEXTO = {
+    "location": ("He recibido una ubicación, pero todavía no la guardo. Si es la "
+                 "dirección de un trabajo, escríbemela con la orden; por ejemplo: "
+                 "«agenda a Ana el jueves a las 10 en Calle Mayor 3»."),
+    "sticker": ("Los stickers no los leo 🙂. Escríbeme lo que necesites o mándame "
+                "una nota de voz."),
+    "video": ("Los vídeos no los leo todavía. Mándame una foto, un PDF, una nota de "
+              "voz o escríbeme la orden."),
+    "unknown": ("Ese tipo de mensaje no lo puedo leer. Escríbeme la orden, mándame "
+                "una nota de voz o una foto o PDF del documento."),
+}
+
+
+def _contact_card_order(contacts: list) -> str | None:
+    """«Crea el cliente …» a partir de la tarjeta compartida, si trae nombre."""
+    card = contacts[0] if contacts and isinstance(contacts[0], dict) else {}
+    nombre = str((card.get("name") or {}).get("formatted_name") or "").strip()
+    if not nombre:
+        return None
+    telefono = next((str(p.get("wa_id") or p.get("phone") or "").strip()
+                     for p in card.get("phones") or [] if isinstance(p, dict)), "")
+    telefono = re.sub(r"[^\d+]", "", telefono)
+    return f"crea el cliente {nombre}" + (f" con teléfono {telefono}" if telefono else "")
+
+
 def _handle_business_customer_message(connection: dict, message: dict) -> dict:
     """Recepcionista segura: organiza, acusa recibo y escala sin revelar datos."""
     from ..documents.service import UploadError
@@ -1921,6 +1949,26 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
                 })
                 _finish_inbound_message(message_id, claimed_ids)
                 continue
+
+        if message.get("contacts") and not text:
+            # Una tarjeta de contacto compartida es, casi siempre, un cliente.
+            text = _contact_card_order(message["contacts"]) or ""
+        sin_texto = not text.strip() and not (
+            message.get("image_id") or message.get("media_document_id"))
+        if sin_texto and (not connection or message.get("message_type") == "reaction"):
+            # Reacciones, stickers, ubicaciones… no traen nada que leer. Antes
+            # llegaban al cerebro como un mensaje vacío: soltaban el parte entero
+            # o la IA se inventaba de qué se estaba hablando.
+            tipo = str(message.get("message_type") or "unknown")
+            if tipo != "reaction":
+                owner = db.get_business_by_phone(phone)
+                if owner:
+                    send(phone, _SIN_TEXTO.get(tipo, _SIN_TEXTO["unknown"]),
+                         business_id=owner["id"])
+            results.append({"phone": phone, "ignored": True,
+                            "reason": f"sin_texto:{tipo}"})
+            _finish_inbound_message(message_id, claimed_ids)
+            continue
 
         message["text"] = text
         if connection:

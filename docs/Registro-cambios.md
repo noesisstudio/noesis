@@ -1,5 +1,41 @@
 ﻿# Registro de cambios
 
+## 2026-09-30 (noche) — Clientes, voz, agenda y mensajes sin texto
+
+Ronda en el WhatsApp real del founder y simulación de notas de voz con frases como
+las escribe Whisper (puntos, comas, números en letra, muletillas).
+
+- **Mensaje sin texto**: a las 18:02 una entrada sin texto llegó vacía al cerebro
+  («El mensaje está vacío» en Railway) y la IA contestó explicando la factura #70.
+  Reacciones se ignoran; sticker, ubicación, vídeo y tipos desconocidos reciben un
+  aviso local; una tarjeta de contacto propone «crea el cliente …»; el botón de una
+  plantilla se lee como texto (`whatsapp._SIN_TEXTO`, `_contact_card_order`).
+- **Clientes**: «crea un cliente nuevo que se llama Laura…» guardaba «nuevo que se
+  llama Laura». Se entienden agrega/apunta/registra/guarda, «añade a X como
+  cliente», «X es un cliente nuevo», «tengo un cliente nuevo que se llama X» y
+  catalán. Se guardan correo, NIF y dirección dictados (`nlu.datos_de_ficha`); un
+  NIF inválido se avisa y no se guarda. Nueva orden `actualizar_cliente` («el NIF
+  de Laura es…», «cambia el teléfono de Laura a…») con tarjeta antes → después.
+- **Voz**: muletillas iniciales («Oye,», «Eh…», «Bueno, pues nada») tapaban la
+  orden; dictado a trozos («Factura a Juan, 120 euros, cambio de grifo»,
+  «Concepto ventanas. Importe 750») (`nlu._documento_por_trozos`); «Sí,
+  confírmalo», «perfecto, sí», «venga sí» son sí; «tengo que ir a casa de Juan
+  mañana a las diez a mirar la caldera» agenda.
+- **Grave, corregido**: tras «presupuesto para Ana» (sin ficha), «Eh... Vale,
+  gracias.» varias órdenes después creó la ficha «Eh» y su presupuesto. Las
+  muletillas no son nombres y otra orden invalida la pregunta pendiente.
+- **Agenda**: «qué tengo esta semana/la semana que viene/el viernes», «mi agenda»,
+  «mis citas de hoy», «estoy libre el jueves» en local (antes IA o «me falta el
+  cliente»). Fechas concretas: «el 15 de octubre», «el día 15», «15/10». Corregir
+  una cita pendiente («mejor a las 11», «el lunes», «en Badalona»): antes la IA
+  fingía una tarjeta corregida sin nada guardado detrás; ahora además se sustituye
+  cualquier respuesta de IA que pida «Responde SÍ» sin propuesta real.
+- **Consultas nuevas en local**: `ver_gastos` («qué gastos he apuntado hoy») y
+  deuda de un cliente («¿cuánto me debe Reformas Martínez?»).
+- **Faltas sueltas**: oy, mñn, biernes, sita, deven, gastao, «e gastado», benta,
+  grasias, «ola», «iba» por IVA solo en contexto, «juan x 200» y «fra».
+- Suite 1325 correctas. Riesgo medio (parser). Rollback: revertir el commit.
+
 ## 2026-09-30 (tarde, 4) — Varias órdenes, negativas con destino y tarjetas completas
 
 Ronda en el WhatsApp real del founder:

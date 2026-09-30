@@ -14,13 +14,14 @@ from . import config, db, nlu, local_invoice
 
 context: ContextVar[dict | None] = ContextVar("action_review", default=None)
 READS = {
-    "ver_agenda", "ver_cobros_pendientes", "resumen_negocio", "ver_impuestos",
+    "ver_agenda", "ver_gastos", "ver_cobros_pendientes", "resumen_negocio", "ver_impuestos",
     "listar_clientes", "ver_perfil_cliente", "ver_proyectos", "ver_proyecto",
     "ver_equipo", "ver_documentos_pendientes", "ver_solicitudes_gestoria",
     "ver_control_noesis",
 }
 LABELS = {
     "crear_cliente": "Guardar cliente", "crear_proveedor": "Guardar proveedor",
+    "actualizar_cliente": "Actualizar datos del cliente",
     "crear_factura": "Preparar factura borrador", "crear_presupuesto": "Preparar presupuesto",
     "agendar_trabajo": "Agendar trabajo", "registrar_gasto": "Registrar gasto",
     "registrar_pago": "Registrar el saldo pendiente como cobrado",
@@ -79,13 +80,39 @@ def _preview(bid: int, tool: str, args: dict) -> tuple[str, dict]:
         for clave, etiqueta in (("telefono", "Teléfono"), ("email", "Correo"),
                                 ("nif", "NIF"), ("direccion", "Dirección")):
             if args.get(clave):
-                lines.append(f"{etiqueta}: {args[clave]}")
+                aviso = ""
+                if clave == "nif":
+                    from .fiscal_validation import valid_spanish_tax_id
+                    if not valid_spanish_tax_id(args[clave]):
+                        aviso = " ⚠️ no es válido: no lo guardaré"
+                lines.append(f"{etiqueta}: {args[clave]}{aviso}")
         if tool == "crear_cliente":
             existing = db.resolve_client_reference(name, bid)
             if existing:
                 args["nombre"] = existing["name"]
                 snapshot["client"] = {k: existing.get(k) for k in ("id", "name", "nif")}
                 lines.append(f"Reutilizaré la ficha existente: {existing['name']} · #{existing['id']}")
+    if tool == "actualizar_cliente":
+        from .tools import datos_de_cliente_validos
+        nombre = str(args.get("cliente") or "").strip()
+        ficha = db.resolve_client_reference(nombre, bid) if nombre else None
+        if not ficha:
+            raise ValueError(f"No tengo ficha de cliente «{nombre}». Créala con «crea el "
+                             f"cliente {nombre}» y dime sus datos. No he cambiado nada.")
+        datos, avisos = datos_de_cliente_validos(args)
+        if avisos and not datos:
+            raise ValueError(" ".join(avisos) + " No he cambiado nada.")
+        args["cliente"] = ficha["name"]
+        lines.append(f"Cliente: {ficha['name']} · ficha #{ficha['id']}")
+        snapshot["client"] = {k: ficha.get(k) for k in ("id", "name", *datos)}
+        etiquetas = {"phone": "Teléfono", "email": "Correo", "nif": "NIF",
+                     "address": "Dirección"}
+        for columna, valor in datos.items():
+            antes = ficha.get(columna)
+            lines.append(f"{etiquetas[columna]}: {valor}" if not antes else
+                         f"{etiquetas[columna]}: {antes} → {valor}" if antes != valor else
+                         f"{etiquetas[columna]}: {valor} (ya lo tenía)")
+        lines.extend(f"⚠️ {aviso}" for aviso in avisos)
     if tool in {"crear_factura", "crear_presupuesto"}:
         business = db.get_business(bid) or {}
         vat = args.get("iva")
@@ -212,6 +239,8 @@ _VERBO_CAMBIO = (r"(?:eran?|son|es|seran?|serian?|mejor|ponle|pon|dejalo en|"
 
 def _correccion(text: str, tool: str, args: dict) -> dict | None:
     """Lo que cambia de una propuesta ya hecha. `None` si no es una corrección."""
+    if tool == "agendar_trabajo":
+        return _correccion_de_cita(text, args)
     if tool not in {"crear_factura", "crear_presupuesto", "registrar_gasto"}:
         return None
     crudo = str(text or "").strip().strip(".!¡")
@@ -296,6 +325,52 @@ def _correccion(text: str, tool: str, args: dict) -> dict | None:
                              "precio, cantidad, concepto o IVA quieres corregir.")
         revisado["lineas"] = [dict(line) for line in args["lineas"]]
     return revisado
+
+
+def _correccion_de_cita(text: str, args: dict) -> dict | None:
+    """«Mejor a las 11», «el lunes», «en Badalona»: solo cambia lo que se nombra.
+
+    Antes no se entendía: la propuesta se descartaba y la IA contestaba con una
+    tarjeta «corregida» que no existía, así que el SÍ no agendaba nada.
+    """
+    crudo = str(text or "").strip().strip(".!¡")
+    norm = nlu._norm(crudo)
+    if ("?" in crudo or "¿" in crudo or len(norm.split()) > 9
+            or re.search(r"\b(?:agend\w*|factur\w*|presupuest\w*|gast\w*|cliente\s+nuevo)\b", norm)):
+        return None
+    cambios: dict = {}
+    anterior = str(args.get("fecha_hora") or "")
+    dia_anterior, _, hora_anterior = anterior.partition("T")
+    fecha = nlu.parse_date(crudo)
+    hora = nlu._parse_time(norm)
+    if fecha and "T" in fecha:
+        cambios["fecha_hora"] = fecha
+    elif fecha:
+        cambios["fecha_hora"] = fecha + ("T" + hora_anterior if hora_anterior else "")
+    elif hora and dia_anterior:
+        h = hora[0]
+        # «Mejor a las seis» sobre una cita de las 17:00 son las 18:00, no las 6.
+        antes = int(hora_anterior[:2]) if hora_anterior[:2].isdigit() else 0
+        if (antes >= 13 and 1 <= h <= 11
+                and not re.search(r"manana|madrugada|mati\b", norm)):
+            h += 12
+        cambios["fecha_hora"] = f"{dia_anterior}T{h:02d}:{hora[1]:02d}"
+    lugar = re.match(r"^(?:no\s*,?\s*)?(?:mejor\s+|es\s+|que\s+sea\s+|sera\s+)?en\s+(.+)$", norm)
+    if lugar and not fecha and not hora:
+        zona = crudo[len(crudo) - len(lugar.group(1)):].strip(" ,.")
+        if zona and len(zona) <= 80:
+            cambios["zona"] = zona
+    quien = re.match(r"^(?:no\s*,?\s*)?(?:el cliente es|la cliente es|cliente:?)\s+(.+)$", norm)
+    if quien:
+        nombre = nlu._limpiar_cliente(crudo[len(crudo) - len(quien.group(1)):].strip())
+        if nombre:
+            cambios.update(cliente=nombre, cliente_id=None)
+    que = re.match(r"^(?:no\s*,?\s*)?(?:el\s+)?trabajo\s*(?:es|:)\s*(.+)$", norm)
+    if que:
+        cambios["descripcion"] = crudo[len(crudo) - len(que.group(1)):].strip(" ,.")
+    if not cambios:
+        return None
+    return {**args, **cambios}
 
 
 def respond(bid: int, actor: str, text: str) -> dict | None:

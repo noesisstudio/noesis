@@ -1,5 +1,16 @@
 ﻿# Registro de QA
 
+## 2026-09-30 (noche) — Clientes, voz y agenda
+
+- WhatsApp real del founder (Chrome): cobros, crear cliente, gasto con corrección y
+  descarte, agenda y corrección de hora, IVA, semana, facturado del mes, gastos.
+  Nada emitido ni guardado (todo descartado con NO).
+- Voz: WhatsApp Web no deja adjuntar el audio generado (WAV rechazado, AAC se queda
+  cargando), así que la transcripción real de Meta/Groq **no se ha probado**. Se
+  simuló la ruta de nota de voz con ~25 frases como las escribe Whisper.
+- Web de producción no probada: sin sesión iniciada y no se introducen contraseñas.
+- Suite completa **1325 correctas** (317 s). Ruff y `check_project_truth` correctos.
+
 ## 2026-09-30 (tarde, 4)
 
 - WhatsApp real: faltas de móvil, catalán, PDF, ticket, cliente con teléfono, borrar/cambiar, proyecto y varias órdenes. Suite **1313 correctas**.

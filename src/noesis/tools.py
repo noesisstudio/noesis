@@ -11,6 +11,7 @@ el CLI. El cerebro (agente o NLU local) decide cuál usar; aquí solo se ejecuta
 from __future__ import annotations
 
 import json
+import re
 import logging
 from contextvars import ContextVar
 from datetime import date
@@ -49,11 +50,22 @@ TOOLS: list[dict] = [
     },
     {
         "name": "ver_agenda",
-        "description": "Muestra los trabajos programados para un día concreto.",
+        "description": ("Muestra los trabajos programados para un día concreto o, con "
+                        "«hasta», para varios días seguidos (máximo 31)."),
         "input_schema": {
             "type": "object",
-            "properties": {"fecha": {"type": "string", "description": "YYYY-MM-DD"}},
+            "properties": {"fecha": {"type": "string", "description": "YYYY-MM-DD"},
+                           "hasta": {"type": "string", "description": "YYYY-MM-DD"}},
             "required": ["fecha"],
+        },
+    },
+    {
+        "name": "ver_gastos",
+        "description": "Lista los gastos apuntados entre dos fechas (por defecto, este mes).",
+        "input_schema": {
+            "type": "object",
+            "properties": {"desde": {"type": "string", "description": "YYYY-MM-DD"},
+                           "hasta": {"type": "string", "description": "YYYY-MM-DD"}},
         },
     },
     {
@@ -144,8 +156,10 @@ TOOLS: list[dict] = [
     },
     {
         "name": "ver_cobros_pendientes",
-        "description": "Lista facturas enviadas y no cobradas, con días de retraso y total.",
-        "input_schema": {"type": "object", "properties": {}},
+        "description": ("Lista facturas enviadas y no cobradas, con días de retraso y "
+                        "total. Con «cliente», solo las de ese cliente."),
+        "input_schema": {"type": "object",
+                         "properties": {"cliente": {"type": "string"}}},
     },
     {
         "name": "resumen_negocio",
@@ -206,8 +220,25 @@ TOOLS: list[dict] = [
         "input_schema": {
             "type": "object",
             "properties": {"nombre": {"type": "string"},
-                           "telefono": {"type": "string"}},
+                           "telefono": {"type": "string"},
+                           "email": {"type": "string"},
+                           "nif": {"type": "string"},
+                           "direccion": {"type": "string"}},
             "required": ["nombre"],
+        },
+    },
+    {
+        "name": "actualizar_cliente",
+        "description": ("Añade o corrige el teléfono, correo, NIF o dirección de un "
+                        "cliente que ya existe. No cambia su nombre ni sus facturas."),
+        "input_schema": {
+            "type": "object",
+            "properties": {"cliente": {"type": "string"},
+                           "telefono": {"type": "string"},
+                           "email": {"type": "string"},
+                           "nif": {"type": "string"},
+                           "direccion": {"type": "string"}},
+            "required": ["cliente"],
         },
     },
     {
@@ -338,13 +369,17 @@ def _agendar_trabajo(business_id, cliente, descripcion, fecha_hora, zona=None,
     return {"ok": True, "trabajo": job, "cliente": c}
 
 
-def _crear_cliente(business_id, nombre, telefono=None):
+def _crear_cliente(business_id, nombre, telefono=None, email=None, nif=None,
+                  direccion=None):
+    datos, avisos = datos_de_cliente_validos(
+        {"telefono": telefono, "email": email, "nif": nif, "direccion": direccion})
     before = db.resolve_client_reference(nombre, business_id)
-    client = before or db.add_client(nombre, phone=telefono, business_id=business_id)
-    if before and telefono and not before.get("phone"):
-        # La ficha existía sin teléfono y ahora se ha dicho: se completa en vez
-        # de perderlo. Un teléfono ya guardado no se pisa desde una frase.
-        db.update_client(client["id"], business_id=business_id, phone=telefono)
+    client = before or db.add_client(nombre, business_id=business_id, **datos)
+    nuevos = {k: v for k, v in datos.items() if v and before and not before.get(k)}
+    if nuevos:
+        # La ficha existía sin esos datos y ahora se han dicho: se completa en
+        # vez de perderlos. Un dato ya guardado no se pisa desde una frase.
+        db.update_client(client["id"], business_id=business_id, **nuevos)
         client = db.get_client(client["id"], business_id) or client
     # Los borradores a medias que esperaban a este cliente por su nombre quedan
     # enlazados en el mismo paso: «factura para Jordi, ya te paso los datos» +
@@ -354,7 +389,58 @@ def _crear_cliente(business_id, nombre, telefono=None):
     except ValueError:
         enlazadas = []
     return {"ok": True, "cliente": client, "existing": bool(before),
-            "facturas_enlazadas": enlazadas}
+            "facturas_enlazadas": enlazadas, "completados": sorted(nuevos),
+            "avisos": avisos}
+
+
+_CAMPOS_CLIENTE = {"telefono": "phone", "email": "email", "nif": "nif",
+                   "direccion": "address"}
+
+
+def datos_de_cliente_validos(datos: dict) -> tuple[dict, list[str]]:
+    """Normaliza teléfono, correo, NIF y dirección; lo que no vale se avisa."""
+    from .fiscal_validation import valid_spanish_tax_id
+    limpios, avisos = {}, []
+    for campo, columna in _CAMPOS_CLIENTE.items():
+        valor = str(datos.get(campo) or "").strip()
+        if not valor:
+            continue
+        if campo == "nif":
+            valor = re.sub(r"[\s.\-]", "", valor).upper()
+            if not valid_spanish_tax_id(valor):
+                avisos.append(f"El NIF {valor} no es válido y no lo he guardado.")
+                continue
+        if campo == "email":
+            valor = valor.lower()
+            if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", valor):
+                avisos.append(f"El correo {valor} no parece válido y no lo he guardado.")
+                continue
+        if campo == "telefono":
+            valor = re.sub(r"[\s.\-()]", "", valor)
+            if not re.fullmatch(r"\+?\d{9,15}", valor):
+                avisos.append(f"El teléfono {valor} no parece válido y no lo he guardado.")
+                continue
+        limpios[columna] = valor[:300]
+    return limpios, avisos
+
+
+def _actualizar_cliente(business_id, cliente, telefono=None, email=None, nif=None,
+                        direccion=None):
+    ficha = db.resolve_client_reference(cliente, business_id)
+    if not ficha:
+        return {"error": f"No tengo ficha de cliente «{cliente}». Créala con «crea el "
+                         f"cliente {cliente}» y dime sus datos."}
+    datos, avisos = datos_de_cliente_validos(
+        {"telefono": telefono, "email": email, "nif": nif, "direccion": direccion})
+    if not datos and not avisos:
+        return {"error": "Dime qué dato quieres guardar: teléfono, correo, NIF o dirección."}
+    cambios = {k: (ficha.get(k), v) for k, v in datos.items() if ficha.get(k) != v}
+    if cambios:
+        db.update_client(ficha["id"], business_id=business_id,
+                         **{k: v for k, (_, v) in cambios.items()})
+        ficha = db.get_client(ficha["id"], business_id) or ficha
+    return {"ok": bool(cambios) or not avisos, "cliente": ficha,
+            "cambios": {k: list(v) for k, v in cambios.items()}, "avisos": avisos}
 
 
 def _crear_proveedor(business_id, nombre):
@@ -363,9 +449,25 @@ def _crear_proveedor(business_id, nombre):
     return {"ok": True, "proveedor": supplier, "existing": bool(before)}
 
 
-def _ver_agenda(business_id, fecha):
+def _ver_agenda(business_id, fecha, hasta=None):
+    if hasta and hasta > fecha:
+        from datetime import timedelta
+        tope = (date.fromisoformat(fecha) + timedelta(days=31)).isoformat()
+        hasta = min(hasta, tope)
+        jobs = db.jobs_between(fecha, hasta, business_id)
+        return {"fecha": fecha, "hasta": hasta, "n": len(jobs), "trabajos": jobs}
     jobs = db.jobs_for_date(fecha, business_id)
     return {"fecha": fecha, "n": len(jobs), "trabajos": jobs}
+
+
+def _ver_gastos(business_id, desde=None, hasta=None):
+    hoy = date.today()
+    desde = desde or hoy.replace(day=1).isoformat()
+    hasta = hasta or hoy.isoformat()
+    gastos = db.expenses_between(desde, hasta, business_id)
+    total = sum(float(g.get("amount") or 0) for g in gastos)
+    return {"desde": desde, "hasta": hasta, "n": len(gastos),
+            "total": round(total, 2), "gastos": gastos}
 
 
 _TICKET_LIMIT_ERROR = (
@@ -589,10 +691,21 @@ def _registrar_pago(business_id, factura_id):
     return {"ok": True, "factura": paid}
 
 
-def _ver_cobros_pendientes(business_id):
+def _ver_cobros_pendientes(business_id, cliente=None):
     pend = db.pending_payments(business_id)
+    if cliente:
+        try:
+            ficha = db.resolve_client_reference(cliente, business_id)
+        except ValueError:
+            ficha = None
+        if not ficha:
+            return {"n": 0, "total_pendiente": 0, "facturas": [],
+                    "cliente": cliente, "sin_ficha": True}
+        pend = [p for p in pend if p.get("client_id") == ficha["id"]]
+        cliente = ficha["name"]
     total = round(sum(p["total"] for p in pend), 2)
-    return {"n": len(pend), "total_pendiente": total, "facturas": pend}
+    return {"n": len(pend), "total_pendiente": total, "facturas": pend,
+            **({"cliente": cliente} if cliente else {})}
 
 
 def _resumen_negocio(business_id, mes=None):
@@ -708,8 +821,10 @@ def _ver_control_noesis(business_id):
 _DISPATCH = {
     "crear_cliente": _crear_cliente,
     "crear_proveedor": _crear_proveedor,
+    "actualizar_cliente": _actualizar_cliente,
     "agendar_trabajo": _agendar_trabajo,
     "ver_agenda": _ver_agenda,
+    "ver_gastos": _ver_gastos,
     "crear_factura": _crear_factura,
     "preparar_factura_trabajo": _preparar_factura_trabajo,
     "crear_presupuesto": _crear_presupuesto,

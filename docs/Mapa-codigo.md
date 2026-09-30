@@ -266,7 +266,11 @@ distinta. `_find_supplier_row_by_name` pliega mayúsculas y acentos, y lo usan t
 `find_supplier` como el control de duplicados de `add_supplier`.
 
 `tools.py`: `_crear_cliente` acepta `telefono` y lo rellena si la ficha existía sin
-él; un teléfono ya guardado no se pisa desde una frase.
+él; un teléfono ya guardado no se pisa desde una frase. Desde el 30-sep acepta
+también `email`, `nif` y `direccion` (validados por `datos_de_cliente_validos`), y
+`actualizar_cliente` corrige esos datos de una ficha existente con revisión. Nuevas
+consultas `ver_gastos` y `ver_cobros_pendientes(cliente=…)`; `ver_agenda` admite
+`hasta` para varios días.
 
 `routers/clients.py` y `routers/invoicing.py`: las dos altas de cliente por web
 devuelven 400 con el motivo. Sin ese `except ValueError`, el nuevo límite de nombre
