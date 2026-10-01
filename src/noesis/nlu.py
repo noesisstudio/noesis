@@ -1648,6 +1648,9 @@ _ABREVIATURAS = (
     (re.compile(r"(\d)\s*(?:euors|eurso|euos|erous|eurs|euroz|uros|leuros|pavos|napos|"
                 r"lereles)(?![\w\d])", re.I), r"\1 euros"),
     (re.compile(r"(?<![\w\d])presu(?![\w\d])", re.I), "presupuesto"),
+    # «emite la 70»: sin decir «factura». Vale igual en la web que en WhatsApp.
+    (re.compile(r"^\s*(?:emitir|emite|emitela|emetre|emet)\s+(?:la\s+|el\s+)?(?:n[uú]mero\s+)?"
+                r"#?(\d{1,9})\s*[.!]?\s*$", re.I), r"emitir factura \1"),
     # «la factura número 72», «factura nº 72»: el número va pegado a la palabra.
     (re.compile(r"\b(factura|ticket|tiquet|presupuesto|trabajo)\s+(?:n[uú]mero|num\.?|n[ºo°]\.?)"
                 r"\s*(?=#?\d)", re.I), r"\1 "),

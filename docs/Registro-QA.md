@@ -1,5 +1,12 @@
 ﻿# Registro de QA
 
+## 2026-10-01 (10)
+
+- Chat web simulado con 25 mensajes (revisión encendida). Suite **1355 correctas**
+  (321 s). Ruff correcto.
+- No verificado en producción: los commits posteriores a `ce9c164` (Railway MCP
+  desconectado tras reiniciar el equipo). Pendientes en `sigue.md`.
+
 ## 2026-10-01 (9)
 
 - Regresión por la ruta de voz con 33 frases tras los cambios del día: sin

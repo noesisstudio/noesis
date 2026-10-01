@@ -1551,6 +1551,20 @@ def _handle(
                                "que hago", "por donde empiezo", "que toca")):
         return {"reply": _coach_reply(business_id, message), "source": "local"}
 
+    if channel != "whatsapp":
+        # «Pásame la 70 en pdf» en la web: no se adjunta nada, se da el enlace.
+        from . import whatsapp as canal_whatsapp
+        if canal_whatsapp._is_owner_pdf_request(message) and not re.match(
+                r"^(?:crea\w*|hazme|fes\w*|prepara\w*)\s+", norm):
+            factura, aviso = canal_whatsapp._invoice_for_owner_pdf(business_id, message)
+            if not factura:
+                return {"reply": aviso or "No encuentro esa factura.", "source": "local"}
+            nombre = (f"de la factura {factura['number']}" if factura.get("number")
+                      else f"del borrador #{factura['id']}")
+            return {"reply": (f"Aquí tienes el PDF {nombre} de "
+                              f"{factura.get('client_name') or 'tu cliente'}: "
+                              f"{config.BASE_URL}/api/{business_id}/invoices/{factura['id']}/pdf"),
+                    "source": "local"}
     communication = internal_brain.prepare_response(
         business_id,
         message,

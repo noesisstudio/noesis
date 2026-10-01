@@ -1,5 +1,14 @@
 ﻿# Registro de cambios
 
+## 2026-10-01 (10) — Chat web igualado y nota de traspaso `sigue.md`
+
+- Chat de la web: «emite la 1» (la reescritura pasa a `nlu`, vale para los dos
+  canales), «pásame la 1 en pdf» da el enlace al PDF, y el borrador de mensaje al
+  cliente ofrece el enlace `wa.me` también en la web.
+- `sigue.md` en la raíz: lo pendiente y la prioridad del founder (más tiempo al
+  audio). Es temporal: se borra cuando el founder diga «sigue».
+- Suite 1355 correctas. Rollback: revertir el commit.
+
 ## 2026-10-01 (9) — Voz: número del documento en letra y punto final
 
 Repaso de regresión por la ruta de nota de voz (33 frases).

@@ -888,8 +888,6 @@ def _prepare_invoice_action(business: dict, phone: str, text: str) -> str | None
     """Convierte una orden de emisión/entrega en una confirmación verificable."""
     # «emitir fra 70», «emite la 70»: con faltas o sin decir «factura».
     text = nlu.corregir_erratas(text or "")
-    text = re.sub(r"^\s*(emitir|emite|emitela|emetre|emet)\s+(?:la\s+|el\s+)?(?:n[uú]mero\s+)?"
-                  r"#?(\d{1,9})\s*[.!]?\s*$", r"emitir factura \2", text, flags=re.I)
     if re.fullmatch(r"(?:emitela|emet\s*la|emetla|emite|emet)", _searchable_text(text)):
         focus = db.get_pending_action(business["id"], f"invoice-focus:{phone}")
         if not focus:

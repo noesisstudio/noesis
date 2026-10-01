@@ -472,7 +472,7 @@ def _build_draft(business_id: int, text: str) -> tuple[CommunicationDraft | None
     return None, "Dime a qué cliente escribimos y qué necesitas comunicarle."
 
 
-def _como_enviarlo(business_id: int, draft) -> str:
+def _como_enviarlo(business_id: int, draft, *, por_whatsapp: bool = True) -> str:
     """Qué puede hacer el titular con un borrador que Bynoesis no puede enviar.
 
     Antes decía siempre «en su ficha no hay correo ni móvil», aunque los hubiera:
@@ -492,9 +492,13 @@ def _como_enviarlo(business_id: int, draft) -> str:
         partes.append(" Un mensaje libre a un cliente no puedo enviarlo yo por WhatsApp, "
                       "pero puedes mandarlo tú con un toque: "
                       f"https://wa.me/{movil}?text={quote(draft.body)}")
-    if correo:
+    if correo and por_whatsapp:
         partes.append(f" {'También puedo' if movil else 'Puedo'} enviárselo por correo a "
                       f"{correo}: dime «envíaselo por correo».")
+    elif correo:
+        # En la web no hay «sí» por WhatsApp con el que confirmar el envío.
+        partes.append(f" Para que se lo envíe yo por correo a {correo}, pídemelo por tu "
+                      "WhatsApp y confirma con SÍ.")
     if not partes:
         return (" En su ficha no hay correo ni móvil al que mandarlo: puedes copiarlo y "
                 "enviárselo tú, o añadir su contacto («el teléfono de "
@@ -613,14 +617,14 @@ def prepare_response(
             "draft": draft.pending_payload(),
         }
     note = "No lo he enviado."
-    if send_requested and channel != "whatsapp":
-        note += " Para enviarlo con control, pídemelo por tu WhatsApp y confirma con SÍ."
-    elif not can_send:
-        note += _como_enviarlo(business_id, draft)
+    if not can_send:
+        note += _como_enviarlo(business_id, draft, por_whatsapp=channel == "whatsapp")
         if clave and channel == "whatsapp":
             # Para que «envíaselo por correo» sepa de qué mensaje se habla.
             db.set_pending_action(business_id, clave, "comm_draft",
                                   draft.pending_payload(), ttl_minutes=30)
+    elif send_requested and channel != "whatsapp":
+        note += " Para enviarlo con control, pídemelo por tu WhatsApp y confirma con SÍ."
     return {
         "reply": (
             f"Borrador para **{draft.recipient_name}**:\n\n{preview}\n\n{note}"

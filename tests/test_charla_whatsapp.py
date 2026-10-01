@@ -921,6 +921,25 @@ class CharlaWhatsappTestCase(unittest.TestCase):
         self.assertEqual(nlu.parse("Crea el cliente Reformas Martínez, S.L.")[1]["nombre"],
                          "Reformas Martínez, S.L.")
 
+    def test_el_chat_de_la_web_entiende_lo_mismo(self):
+        business, client = self.make_business("Web igual")
+        db.update_client(client["id"], business_id=business["id"], phone="611414422",
+                         email="cliente@example.com")
+        borrador = db.add_invoice(client["id"], "Pintura", 100, business_id=business["id"])
+
+        def web(texto):
+            return chat.handle(business["id"], texto, channel="web", actor_id="owner")["reply"]
+
+        with patch.object(config, "ASSISTANT_REVIEW_ENABLED", True):
+            emitir = web(f"emite la {borrador['id']}")
+            web("no")
+            pdf = web(f"pasame la {borrador['id']} en pdf")
+            recado = web(f"mandale un whatsapp a {client['name']} diciendo que llego tarde")
+        self.assertIn("Emitir factura", emitir)
+        self.assertIn(f"/api/{business['id']}/invoices/{borrador['id']}/pdf", pdf)
+        self.assertIn("https://wa.me/34611414422?text=", recado)
+        self.assertIn("pídemelo por tu WhatsApp", recado)
+
     def test_catalan_de_la_ronda(self):
         casos = {
             "crea el client Joan Puig amb telèfon 612345678":

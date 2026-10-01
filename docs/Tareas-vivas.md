@@ -1,5 +1,17 @@
 # Tareas vivas
 
+## Pruebas de WhatsApp (1-oct-2026)
+
+- [ ] **Audio real**: la transcripción nunca se ha probado de punta a punta. Es la
+      prioridad del founder para la próxima sesión. Detalle en `sigue.md`.
+- [ ] Verificar en producción los commits posteriores a `ce9c164`.
+- [ ] Orden de mensajes seguidos y lentitud en frío (>9 s la primera respuesta).
+- [ ] Respuestas locales en catalán cuando el negocio está en catalán.
+- [ ] Revisar las 6 alertas de Dependabot.
+- [ ] Founder: borrar de Documentos los tres archivos de prueba y corregir el NIF de
+      la ficha «reformas martínez» (`481234129L` no es válido).
+
+
 ## WhatsApp probado hablando con el bot — 30-sep
 
 Detalle en `Registro-cambios` (30-sep). Hecho y probado en local; **sin publicar**.
