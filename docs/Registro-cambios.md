@@ -1,5 +1,14 @@
 ﻿# Registro de cambios
 
+## 2026-10-01 (14) — `cryptography` 47 → 50 (alertas de Dependabot)
+
+- `pip-audit -r requirements.txt` daba 7 avisos, todos de `cryptography` 47.0.0
+  (PYSEC-2026-3552/3553/3554, GHSA-537c-gmf6-5ccf). Se aplica la subida de la rama
+  de Dependabot (`97c4ae7`): `>=50.0.0,<51` en `pyproject.toml` y
+  `requirements.txt`, y `uv.lock`. Tras subir, `pip-audit` sin avisos.
+- Riesgo: salto de versión mayor en cifrado (`secret_box`, firmas). Suite completa
+  correcta con 50.0.2 instalada. Rollback: revertir el commit.
+
 ## 2026-10-01 (13) — WhatsApp: aceptar o rechazar presupuestos y mover o cancelar citas
 
 - Objetivo (huecos de `sigue.md`): las dos cosas se remitían a la web, y la web ni

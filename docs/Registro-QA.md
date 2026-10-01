@@ -1,5 +1,10 @@
 ﻿# Registro de QA
 
+## 2026-10-01 (14)
+
+- `cryptography` 50.0.2 instalada en local: suite completa **1367 correctas**
+  (342 s); `pip-audit -r requirements.txt` sin vulnerabilidades conocidas.
+
 ## 2026-10-01 (13)
 
 - Conversación simulada por WhatsApp con la revisión encendida: aceptar por cliente

@@ -24,7 +24,7 @@
       saturado ya no dicen «mal configurado» (1-oct, `Registro-cambios` 12).
 - [ ] Por WhatsApp aún no: facturas de varias líneas, asignar un gasto a obra o
       cliente. Mover y cancelar citas en catalán. La web no deja mover una cita.
-- [ ] Revisar las 6 alertas de Dependabot (`pip-audit`).
+- [x] Alertas de Dependabot: eran de `cryptography` 47; subida a 50 (1-oct, 14).
 - [ ] Founder: borrar de Documentos los tres archivos de prueba (ticket «Ferretería
       La Llave», su sticker y el PDF «Suministros Eléctricos Levante»), revisar el
       gasto «gasolina 45 €» del 30-sep y corregir el NIF de la ficha «reformas
