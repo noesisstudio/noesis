@@ -1,5 +1,18 @@
 ﻿# Registro de cambios
 
+## 2026-10-01 (3) — Más faltas: euros, presupuestos, gastos sin verbo, emitir y PDF
+
+- «factura ha juan», «100 euors/pavos», «presu», «ajenda», «enbia», «resumn»,
+  «clintes» y la hora «10h».
+- «presupuesto juan 500 baño» y «factura juan 100 pintura»: con el importe en medio,
+  delante va el cliente y detrás el concepto (antes cliente «juan baño»).
+- Gastos: «gasto 20 gasolina» perdía el concepto; «gasolina 20 euros», «20€ de
+  parking» y «compra de material 45,50» se entienden. Sin verbo solo con vocabulario
+  de gasto (`nlu._COSA_DE_GASTO`): «juan 100 euros» no se apunta.
+- WhatsApp: «emite la 70», «emitir fra 70», «pásame la 70 en pdf», «el pdf de la 70»
+  y «pdf de la factura 70».
+- Suite 1342 correctas. Riesgo medio (parser). Rollback: revertir el commit.
+
 ## 2026-10-01 (2) — Altas con faltas, «hazle…», mayúsculas y trimestre en plazo
 
 Ronda en el WhatsApp real (faltas y altas de clientes) y batería local de ~50 frases.

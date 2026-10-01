@@ -663,6 +663,50 @@ class CharlaWhatsappTestCase(unittest.TestCase):
         self.assertTrue(whatsapp_documents._DESTINO.fullmatch("es de la obra de juan"))
         self.assertFalse(whatsapp_documents._DESTINO.fullmatch("es de leroy merlin"))
 
+    def test_mas_faltas_en_facturas_agenda_y_gastos(self):
+        casos = {
+            "factura ha juan por pintar 100 euros": ("crear_factura", "juan", "pintar", 100.0),
+            "factura a juan por pintar 100 euors": ("crear_factura", "juan", "pintar", 100.0),
+            "factura a juan por pintar 100 pavos": ("crear_factura", "juan", "pintar", 100.0),
+            "factura juan 100 pintura": ("crear_factura", "juan", "pintura", 100.0),
+            "presu a juan por baño 500 euros": ("crear_presupuesto", "juan", "baño", 500.0),
+            "presupuesto juan 500 baño": ("crear_presupuesto", "juan", "baño", 500.0),
+        }
+        for texto, (tool, cliente, concepto, base) in casos.items():
+            with self.subTest(texto=texto):
+                orden, datos = nlu.parse(nlu.corregir_erratas(texto))
+                self.assertEqual((orden, datos["cliente"], datos["concepto"], datos["base"]),
+                                 (tool, cliente, concepto, base))
+        gastos = {"gasto 20 gasolina": ("gasolina", 20.0), "gasolina 20 euros": ("gasolina", 20.0),
+                  "20€ de parking": ("parking", 20.0), "compra de material 45,50": ("material", 45.5)}
+        for texto, (concepto, importe) in gastos.items():
+            with self.subTest(texto=texto):
+                self.assertEqual(nlu.parse(nlu.corregir_erratas(texto)),
+                                 ("registrar_gasto", {"concepto": concepto, "importe": importe}))
+        self.assertIsNone(nlu.parse("juan 100 euros"))
+        cita = nlu.parse(nlu.corregir_erratas("ajenda a juan mañana 10h para revisar caldera"))
+        self.assertEqual((cita[0], cita[1]["fecha_hora"][11:]), ("agendar_trabajo", "10:00"))
+        self.assertEqual(nlu.parse(nlu.corregir_erratas("resumn del mes"))[0], "resumen_negocio")
+        self.assertEqual(nlu.parse(nlu.corregir_erratas("enbia la factura 70 al cliente por correo")),
+                         ("entregar_factura", {"factura_id": 70, "canal": "email"}))
+
+    def test_emitir_y_pdf_sin_decir_factura(self):
+        business, client = self.make_business("Sin decir factura")
+        uno = db.add_invoice(client["id"], "Pintura", 100, business_id=business["id"])
+        dos = db.add_invoice(client["id"], "Ventana", 200, business_id=business["id"])
+        emitir, _, con_falta, _ = self.charla(
+            business, f"emite la {uno['id']}", "no", f"emitir fra {dos['id']}", "no")
+        self.assertIn(f"emitir el borrador #{uno['id']}", emitir)
+        self.assertIn(f"emitir el borrador #{dos['id']}", con_falta)
+        for texto, esperado in ((f"pasame la {uno['id']} en pdf", uno["id"]),
+                                (f"el pdf de la {dos['id']}", dos["id"]),
+                                (f"pdf de la factura {dos['id']}", dos["id"])):
+            with self.subTest(texto=texto):
+                self.assertTrue(whatsapp._is_owner_pdf_request(texto))
+                factura, _ = whatsapp._invoice_for_owner_pdf(business["id"], texto, TELEFONO)
+                self.assertEqual(factura["id"], esperado)
+        self.assertFalse(whatsapp._is_owner_pdf_request("factura a juan por 20 euros de pdf"))
+
     def test_catalan_de_la_ronda(self):
         casos = {
             "crea el client Joan Puig amb telèfon 612345678":

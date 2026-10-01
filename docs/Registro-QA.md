@@ -1,5 +1,10 @@
 ﻿# Registro de QA
 
+## 2026-10-01 (3)
+
+- Batería local de ~40 frases con faltas (facturas, presupuestos, agenda, gastos,
+  emitir, PDF). Suite completa **1342 correctas** (316 s). Ruff correcto.
+
 ## 2026-10-01 (2)
 
 - WhatsApp real (producción `3b648d2`): «factra … x 150e», «kien me deve», «q tengo

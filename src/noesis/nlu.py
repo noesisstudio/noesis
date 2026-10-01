@@ -227,6 +227,12 @@ def _parse_time(norm: str) -> tuple[int, int] | None:
         if 0 <= hora <= 23 and 0 <= minuto <= 59:
             return (hora, minuto)
         return None
+    # «mañana 10h», «el lunes 16:30h»: la hora escrita como en un mensaje.
+    suelta = re.search(r"(?<![\d.,])(\d{1,2})(?:[:.](\d{2}))?\s*h(?:oras?)?\b", norm)
+    if suelta:
+        hora, minuto = int(suelta.group(1)), int(suelta.group(2) or 0)
+        if 0 <= hora <= 23 and 0 <= minuto <= 59:
+            return (hora, minuto)
     # Sin hora explícita, el momento del día da una por defecto. «Por la mañana»
     # es una hora; «mañana» a secas es el día siguiente, y antes valían igual.
     if re.search(r"\b(?:por|de)\s+la\s+manana\b|\bal\s+mati\b", norm):
@@ -779,6 +785,19 @@ def _factura_sin_preposicion(text: str, norm: str) -> dict | None:
         # Si después de quitar verbo e importe todavía se habla de una factura,
         # no se ha separado limpiamente y lo que queda no es el nombre de nadie.
         return None
+    # «juan 500 baño»: con el importe en medio, delante va el cliente y detrás el
+    # concepto. Antes salía el cliente «juan baño» con concepto «Servicio».
+    limpia = lambda trozo: re.sub(  # noqa: E731
+        r"\s*\b(?:euros?|eur|€|mas iva|más iva|con iva)\b\s*", " ", trozo, flags=re.I
+    ).strip(" ,.;:")
+    detras = limpia(text[importe.end():])
+    delante = limpia(text[:importe.start()])
+    if detras and re.search(r"[^\W\d_]", detras) and resto.endswith(detras) \
+            and len(resto) > len(detras):
+        nombre = _limpiar_cliente(resto[:len(resto) - len(detras)].strip(" ,.;:"))
+        if nombre and delante:
+            return {"cliente": nombre, "concepto": _limpiar_concepto(
+                re.sub(r"^(?:de|por|para)\s+", "", detras, flags=re.I)), "base": valor}
     cliente, concepto = _cliente_y_concepto(resto, "Servicio")
     if not cliente:
         return None
@@ -1382,6 +1401,44 @@ def _visita_dicha(text: str) -> tuple[str, dict] | None:
                                 "fecha_hora": fecha})
 
 
+# Lo que un autónomo apunta como gasto con dos palabras: «gasolina 20 euros».
+_COSA_DE_GASTO = re.compile(
+    r"\b(?:gasolina|gasoil|gasoleo|diesel|combustible|parking|aparcamiento|peaje\w*|"
+    r"material\w*|herramienta\w*|ferreteria|tornill\w*|pintura|brocas?|silicona|cemento|"
+    r"comida|menu|desayuno|cafe\w*|almuerzo|cena|dietas?|taxi|tren|metro|autobus|hotel|"
+    r"luz|agua|telefono|movil|internet|seguro\w*|alquiler|renting|itv|taller|recambios?|"
+    r"repuestos?|gestoria|autonomos|cuota|furgoneta|ruedas?|neumaticos?|uniformes?|"
+    r"epis?|guantes|limpieza|papeleria|sellos|correos|mensajeria|envio)\b")
+
+
+def _gasto_sin_verbo(text: str, norm: str) -> tuple[str, dict] | None:
+    """«gasolina 20 euros» o «20 euros gasolina», sin «gasté» ni «apunta».
+
+    Solo con palabras que son gasto de por sí: «Juan 100 euros» no se apunta como
+    gasto, que igual es un cobro o una factura a medias.
+    """
+    limpio = norm.strip(" .,!")
+    antes = re.fullmatch(rf"([a-z ]{{3,40}}?)\s+({_AMOUNT_RE})\s*(?:€|euros?|eur)?", limpio)
+    despues = re.fullmatch(rf"({_AMOUNT_RE})\s*(?:€|euros?|eur)\s+(?:de\s+|en\s+)?([a-z ]{{3,40}})",
+                           limpio)
+    m = antes or despues
+    if not m:
+        return None
+    concepto_norm, cifra = (m.group(1), m.group(2)) if antes else (m.group(2), m.group(1))
+    if not _COSA_DE_GASTO.search(concepto_norm) or re.search(
+            r"\b(?:factura\w*|presupuest\w*|cobr\w*|cliente\w*|me (?:debe|pago|han))\b", limpio):
+        return None
+    importe = _amount_value(cifra)
+    if importe <= 0:
+        return None
+    # El concepto con sus tildes, tal como se escribió.
+    crudo = re.sub(rf"{_AMOUNT_RE}\s*(?:€|euros?|eur\b)?", " ", text, count=1, flags=re.I)
+    concepto = _limpiar_concepto(re.sub(r"^\s*(?:de|en)\s+", "", " ".join(crudo.split()),
+                                        flags=re.I))
+    return ("registrar_gasto", {"concepto": concepto or concepto_norm.strip(),
+                                "importe": importe})
+
+
 def _pide_agendar(text: str, norm: str) -> bool:
     """«Agenda para mañana a las 12 a Jordi» crea una cita; no la consulta."""
     if not re.match(r"^(?:agenda\w*|apunta\w*|anota\w*|pon\w*)\b", norm):
@@ -1570,6 +1627,17 @@ _ABREVIATURAS = (
     # Faltas sueltas de la ronda real del 30-sep: cada una rompía la orden entera.
     (re.compile(r"(?<![\w\d])oy(?![\w\d])", re.I), "hoy"),
     (re.compile(r"(?<![\w\d])nueb([oa]s?)(?![\w\d])", re.I), r"nuev\1"),
+    # «factura ha juan»: la hache de más detrás de la orden.
+    (re.compile(r"\b(factura\w*|presupuesto|cita|agenda\w*|ticket)\s+ha\s+(?=\S)", re.I),
+     r"\1 a "),
+    # «100 euors», «100 pavos», «100 eurs»: el euro mal tecleado o dicho en la calle.
+    (re.compile(r"(\d)\s*(?:euors|eurso|euos|erous|eurs|euroz|uros|leuros|pavos|napos|"
+                r"lereles)(?![\w\d])", re.I), r"\1 euros"),
+    (re.compile(r"(?<![\w\d])presu(?![\w\d])", re.I), "presupuesto"),
+    (re.compile(r"(?<![\w\d])ajend(a\w*)(?![\w\d])", re.I), r"agend\1"),
+    (re.compile(r"(?<![\w\d])en[bv]i(a\w*)(?![\w\d])", re.I), r"envi\1"),
+    (re.compile(r"(?<![\w\d])(?:resumn|resumne|rsumen|resuemn)(?![\w\d])", re.I), "resumen"),
+    (re.compile(r"(?<![\w\d])clint(es?)(?![\w\d])", re.I), r"client\1"),
     (re.compile(r"(?<![\w\d])(?:provedor|probeedor|provedor|proveedro|porveedor)(?![\w\d])",
                 re.I), "proveedor"),
     (re.compile(r"(?<![\w\d])(?:mñn|mñna|mñana|mnn|mañna|manaña)(?![\w\d])", re.I), "mañana"),
@@ -1975,6 +2043,13 @@ def _parse(text: str) -> tuple[str, dict] | None:
         args = _parse_doc_command(
             text, norm, r"(?:presupuest(?:o|ar|a|ame)?|pressupost(?:ar|a|am)?)"
         )
+        if not args and re.match(r"(?:(?:hazme|haz|crea\w*|prepara\w*|pasame)\s+)?(?:un\s+)?"
+                                 r"(?:presupuesto|pressupost)\s+\S", norm) \
+                and not re.search(r"\b(?:acept\w*|rechaz\w*|que|cual\w*|cuant\w*|ver)\b", norm):
+            # «presupuesto juan 500 baño»: sin «a» ni «por», como «factura juan 500 baño».
+            args = _factura_sin_preposicion(
+                re.sub(r"presupuesto|pressupost", "factura", text, count=1, flags=re.I),
+                re.sub(r"presupuesto|pressupost", "factura", norm, count=1))
         if args:
             _add_tax_rates(norm, args)
             return ("crear_presupuesto", args)
@@ -2106,7 +2181,7 @@ def _parse(text: str) -> tuple[str, dict] | None:
                      r"compre\b|he comprado\b|ticket\b|tiquet\b|recibo\b|"
                      # «He pagado 60 de seguro», «pagué la gasolina, 55 euros».
                      # «Me han pagado» no entra: empieza por «me han».
-                     r"he pagado\b|pague\b|"
+                     r"he pagado\b|pague\b|compra de\b|"
                      # Catalán: «he gastat 35 euros» no registraba nada.
                      r"despesa\b|he gastat\b|m'he gastat\b|he comprat\b|rebut\b)")
     # «Hoy he gastado 45…», «ayer compré…»: el cuándo delante tapaba la orden.
@@ -2137,6 +2212,12 @@ def _parse(text: str) -> tuple[str, dict] | None:
                 medio = re.match(rf"\s*\w+\s+(.+?)\s+(?:por|de|en)?\s*{_AMOUNT_RE}",
                                  text, re.I)
                 concepto = _limpiar_concepto(medio.group(1)) if medio else ""
+            if not concepto:
+                # «gasto 20 gasolina», «gasté 20 euros gasolina»: el concepto va
+                # detrás del importe, sin «en» ni «de».
+                cola = re.search(rf"{_AMOUNT_RE}\s*(?:€|euros?|eur\b)?\s+([^\d€]{{2,60}})$",
+                                 text.strip().rstrip("."), re.I)
+                concepto = _limpiar_concepto(cola.group(1)) if cola else ""
             concepto = re.sub(r"\s+(?:hoy|ayer|esta\s+ma[ñn]ana|esta\s+tarde)$", "",
                               concepto, flags=re.I).strip()
             concepto = concepto or "Gasto"
@@ -2149,6 +2230,9 @@ def _parse(text: str) -> tuple[str, dict] | None:
                 args["iva"] = int(rate.group(1))
             return ("registrar_gasto", args)
 
+    suelto = _gasto_sin_verbo(text, norm)
+    if suelto:
+        return suelto
     visita = _visita_dicha(text)
     if visita:
         return visita

@@ -843,6 +843,10 @@ def _needs_confirmation(text: str) -> bool:
 
 def _prepare_invoice_action(business: dict, phone: str, text: str) -> str | None:
     """Convierte una orden de emisión/entrega en una confirmación verificable."""
+    # «emitir fra 70», «emite la 70»: con faltas o sin decir «factura».
+    text = nlu.corregir_erratas(text or "")
+    text = re.sub(r"^\s*(emitir|emite|emitela|emetre|emet)\s+(?:la\s+|el\s+)?(?:n[uú]mero\s+)?"
+                  r"#?(\d{1,9})\s*[.!]?\s*$", r"emitir factura \2", text, flags=re.I)
     if re.fullmatch(r"(?:emitela|emet\s*la|emetla|emite|emet)", _searchable_text(text)):
         focus = db.get_pending_action(business["id"], f"invoice-focus:{phone}")
         if not focus:
@@ -965,10 +969,14 @@ def _is_owner_pdf_request(text: str) -> bool:
         r"\b(?:envi|pass|pas|mand|adjunt)\w*(?:me|melo|mela|mel)\b", normalized
     )
     here = re.search(r"\b(?:aqui|chat|xat)\b", normalized)
+    # «pdf de la factura 70», «el pdf de la 70», «quiero el pdf de la factura 70»:
+    # se pide el archivo aunque no haya verbo de envío.
+    sin_verbo = re.search(
+        r"\bpdf\s+(?:de|del)\s+(?:la\s+|el\s+)?(?:(?:factura|ticket|tiquet)\b|\d+\b)|"
+        r"\b(?:factura|ticket|tiquet)\s+\d+\s+en\s+pdf\b", normalized)
     return bool(
         re.search(r"\bpdf\b", normalized)
-        and action
-        and (context or direct_pronoun or here)
+        and ((action and (context or direct_pronoun or here)) or sin_verbo)
     )
 
 
@@ -1023,6 +1031,10 @@ def _invoice_for_owner_pdf(business_id: int, text: str, phone: str | None = None
         return numbered[0], None
 
     explicit = re.search(r"\b(?:factura|ticket|tiquet)\s*(?:numero|num|n|id)?\s*#?\s*(\d+)\b", normalized)
+    if not explicit:
+        # «pásame la 70 en pdf», «el pdf de la 70»: el número sin decir «factura».
+        explicit = re.search(r"\b(?:la|el)\s+(?:numero\s+)?(\d{1,9})\b(?!\s*(?:euros?|eur|%))",
+                             normalized)
     if explicit:
         invoice = db.get_invoice(int(explicit.group(1)), business_id)
         return (invoice, None) if invoice else (None, "No encuentro esa factura en tu cuenta. Comprueba su número; no he enviado otro documento.")
