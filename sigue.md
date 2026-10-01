@@ -2,7 +2,7 @@
 
 > Nota temporal. **Cuando el founder diga «sigue», leer esto, borrarlo del repo
 > (commit) y continuar.** El detalle de cada cambio está en `docs/Registro-cambios.md`
-> (entradas 11 a 17 del 1-oct) y `docs/Registro-QA.md`. Lo pendiente fijo está en
+> (entradas 11 a 19 del 1-oct) y `docs/Registro-QA.md`. Lo pendiente fijo está en
 > `docs/Tareas-vivas.md` (sección «Pruebas de WhatsApp»).
 
 ## Qué se hizo en esta sesión
@@ -29,6 +29,11 @@ total para subir. Todo lo siguiente está subido y desplegado salvo lo que se di
    - La tarjeta de factura no avisaba de un NIF inválido hasta emitir.
    - «¿Cuánto he facturado este mes?» no decía el mes; a principio de mes ahora
      enseña también el anterior.
+   - «k tngo q hacer oy» caía en la IA, que se equivocó de fecha y de agenda: ahora
+     abreviaturas de móvil en local y fecha escrita entera en el prompt de la IA.
+   - «Resumen de la semana» daba el mes: ahora lunes a domingo.
+8. Pie de tarjetas sin «corregir:» (enseña a corregir hablando) y aviso de IVA que
+   nombra el apunte incompleto.
 
 ## Cómo probar (método que funcionó)
 
@@ -48,19 +53,16 @@ total para subir. Todo lo siguiente está subido y desplegado salvo lo que se di
 ## Lo siguiente (en este orden)
 
 1. **Seguir la ronda real por WhatsApp Web** con frases de autónomo: corregir lo que
-   falle. Ideas sin probar aún: «resumen de la semana», notas de voz, fotos de
-   tickets, «envíale la factura 3 por correo», «recuérdale a X que me pague»,
-   frases en catalán, faltas de ortografía de móvil.
-2. **Pie de las tarjetas**: sigue diciendo «o «corregir:» seguido de la orden
-   completa», pero ya se corrige hablando («no, eran 120», «mejor a las 12»).
-   Cambiar el texto (`action_review.propose`) y sus pruebas.
-3. **Aviso de IVA**: «Hay 1 apunte sin IVA o sin base» no dice cuál ni dónde.
-4. **Audio real**: sigue sin probarse una nota de voz de punta a punta. Opciones:
+   falle. Ya probado y bien: presupuestos, citas, varias líneas, gasto a obra,
+   cobros, IVA, teléfono, agenda, «recuérdale a X que me pague», «que tinc demà».
+   Sin probar aún: notas de voz, fotos de tickets, «envíale la factura 3 por
+   correo», más catalán y más faltas de móvil.
+2. **Audio real**: sigue sin probarse una nota de voz de punta a punta. Opciones:
    el founder manda 5–10 notas desde el móvil y se leen en Railway; o
    `brew install ffmpeg` y generar ogg/opus (`say` → aiff → ogg).
-5. **Respuestas en catalán** cuando el negocio está en catalán (grande).
-6. **Gasto a un cliente sin obra**: `expenses` no tiene `client_id` (migración).
-7. **Orden de mensajes y lentitud**: mediana del webhook ~45 ms, p99 hasta 15 s
+3. **Respuestas en catalán** cuando el negocio está en catalán (grande).
+4. **Gasto a un cliente sin obra**: `expenses` no tiene `client_id` (migración).
+5. **Orden de mensajes y lentitud**: mediana del webhook ~45 ms, p99 hasta 15 s
    (IA o transcripción en la propia petición). Lo arregla
    `NOESIS_WHATSAPP_INBOX_ENABLED`, pero activarlo es decisión del founder y antes
    hay que probarlo con Meta real.
