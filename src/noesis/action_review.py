@@ -79,6 +79,14 @@ def _preview(bid: int, tool: str, args: dict) -> tuple[str, dict]:
             args["cliente_id"] = client["id"]
             snapshot["client"] = {k: client.get(k) for k in ("id", "name", "nif")}
             lines.append(f"Cliente: {client['name']} · ficha #{client['id']}")
+            if tool == "crear_factura" and args.get("tipo_factura") != "F2":
+                from .fiscal_validation import problema_nif_cliente
+                nif_malo = problema_nif_cliente(client.get("nif"))
+                if nif_malo:
+                    # Se avisa ya: antes se descubría al emitir, con el borrador hecho.
+                    lines.append(f"⚠️ Ojo: {nif_malo}. El borrador se guarda, pero no "
+                                 f"podré emitirla hasta que lo corrijas («el NIF de "
+                                 f"{client['name']} es …»).")
         else:
             # Un alta implícita crea duplicados por errores de voz/ortografía.
             raise ValueError(f"No encuentro un cliente inequívoco llamado «{name}». Crea primero su ficha con «crear cliente {name}» o corrige el nombre.")

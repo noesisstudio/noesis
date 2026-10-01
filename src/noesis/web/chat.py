@@ -1400,6 +1400,13 @@ def _finish_order_for_a_new_client(business_id: int, message: str,
     except (TypeError, ValueError, KeyError):
         db.clear_pending_action(business_id, clave)
         return None
+    if nlu._norm(message).strip(" .!¡") in {"no", "nop", "no gracias", "ahora no",
+                                             "dejalo", "cancela", "descarta"}:
+        # «No» a «¿creo su ficha?» contestaba «no hay ninguna propuesta pendiente»,
+        # como si no se hubiera preguntado nada.
+        db.clear_pending_action(business_id, clave)
+        return {"reply": "Vale, no creo la ficha y dejo la orden. No he cambiado nada.",
+                "source": "local", "action_result": "discarded"}
     if nlu.es_confirmacion(message):
         # Con una ficha parecida delante, «sí» es esa ficha. Crear un duplicado
         # exige decir «crea el cliente X», que es un acto aparte.

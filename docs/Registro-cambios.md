@@ -1,5 +1,21 @@
 ﻿# Registro de cambios
 
+## 2026-10-01 (17) — Fallos de la ronda real por WhatsApp Web
+
+Ronda en producción (`e0d9d53`) hablando con el bot desde WhatsApp Web: presupuestos,
+citas, varias líneas y gasto a obra funcionan. Se corrige lo que falló:
+
+- `nlu.py`: «hazle un presupuesto a reformas martínez…» buscaba el cliente «este
+  cliente a reformas martínez»; el «le» ya no se añade si la frase nombra al cliente.
+- `web/chat.py`: «no» a «No tengo ficha de X, ¿la creo?» contestaba «no hay ninguna
+  propuesta pendiente»; ahora descarta y lo dice.
+- `action_review.py`: la tarjeta de una factura completa avisa si el NIF de la
+  ficha no es válido (antes solo se veía al emitir).
+- `tools.py` + `nlu.py`: «¿cuánto he facturado este mes?» nombra el mes y los días
+  que lleva; los cinco primeros días enseña también el mes que acaba de cerrar.
+- `sigue.md`: nota de traspaso nueva a petición del founder.
+- Pruebas: `test_charla_whatsapp` (4 nuevas). Rollback: revertir el commit.
+
 ## 2026-10-01 (16) — Gasto apuntado a una obra por WhatsApp
 
 - Objetivo (hueco de `sigue.md`): «gasté 120 euros en azulejos para la reforma Casa

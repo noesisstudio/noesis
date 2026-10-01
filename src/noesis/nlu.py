@@ -2098,8 +2098,12 @@ def parse(text: str) -> tuple[str, dict] | None:
         return repetida
     con_le = _ORDEN_CON_LE.match((text or "").strip())
     if con_le:
+        # «Hazle un presupuesto a Juan…» ya dice el cliente: el «le» es él. Antes
+        # se añadía «a este cliente» igualmente y salía «este cliente a Juan».
+        nombra = re.match(r"\s+(?:a|para|per\s+a)\s+\S", text.strip()[con_le.end():], re.I)
+        sufijo = "" if nombra else " a este cliente"
         text = _ORDEN_CON_LE.sub(
-            lambda m: f"{_strip_accents(m.group(1))}me {m.group(2)} a este cliente",
+            lambda m: f"{_strip_accents(m.group(1))}me {m.group(2)}{sufijo}",
             text.strip(), count=1)
     resultado = _parse_con_numero(text)
     if resultado and _PRONOMBRE_CLIENTE.match(str(resultado[1].get("cliente") or "").strip()):
@@ -3032,11 +3036,21 @@ def format_reply(tool: str, result: dict) -> str:
             return (f"📊 Lectura de {etiqueta}: facturado **{_eur(r['invoiced'])}**, cobrado "
                     f"{_eur(r['collected'])}, pendiente {_eur(r['pending'])}, gastos "
                     f"{_eur(r['expenses'])}.\n\nBeneficio estimado: **{_eur(r['estimated_profit'])}**.")
-        return (f"📊 Lectura del mes: facturado **{_eur(r['invoiced'])}**, cobrado {_eur(r['collected'])}, "
-                f"pendiente {_eur(r['pending'])}, gastos {_eur(r['expenses'])}.\n\n"
-                f"Beneficio estimado: **{_eur(r['estimated_profit'])}**."
-                + (f" Aparta al menos {_eur(r['vat_estimated'])} de IVA para no "
-                   "confundirte: no es caja libre." if r.get("vat_estimated") else ""))
+        hoy = date.today()
+        dias = f"llevas {_cuenta(hoy.day, 'día', 'días')}"
+        texto = (f"📊 Lectura de {_MESES_DEL_ANIO[hoy.month - 1]} ({dias}): facturado "
+                 f"**{_eur(r['invoiced'])}**, cobrado {_eur(r['collected'])}, "
+                 f"pendiente {_eur(r['pending'])}, gastos {_eur(r['expenses'])}.\n\n"
+                 f"Beneficio estimado: **{_eur(r['estimated_profit'])}**."
+                 + (f" Aparta al menos {_eur(r['vat_estimated'])} de IVA para no "
+                    "confundirte: no es caja libre." if r.get("vat_estimated") else ""))
+        a = r.get("anterior")
+        if a:
+            nombre = _MESES_DEL_ANIO[int(str(a.get("month") or "0000-01")[5:7]) - 1]
+            texto += (f"\n\n{nombre[:1].upper()}{nombre[1:]}, que acaba de cerrar: facturado "
+                      f"**{_eur(a['invoiced'])}**, cobrado {_eur(a['collected'])}, gastos "
+                      f"{_eur(a['expenses'])}; beneficio estimado {_eur(a['estimated_profit'])}.")
+        return texto
     if tool == "ver_impuestos":
         if not result.get("ok"):
             return result.get("error") or "No he podido calcular el trimestre."

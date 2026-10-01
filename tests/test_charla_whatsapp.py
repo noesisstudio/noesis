@@ -1259,6 +1259,54 @@ class CharlaWhatsappTestCase(unittest.TestCase):
             self.assertIn("varias obras", duda)
             self.assertEqual(len(db.list_expenses(business["id"])), antes)
 
+    def test_hazle_con_cliente_dicho_y_no_a_crear_la_ficha(self):
+        """Ronda real 1-oct: «hazle un presupuesto a X…» buscaba «este cliente a X»,
+        y un «no» a «¿creo su ficha?» contestaba que no había nada pendiente."""
+        self.assertEqual(
+            nlu.parse("hazle un presupuesto a reformas martínez de 500 euros por pintar el salón"),
+            ("crear_presupuesto", {"cliente": "reformas martínez", "concepto": "pintar el salón",
+                                   "base": 500.0}))
+        self.assertEqual(nlu.parse("hazle una factura de 200 euros por pintura")[1]["cliente"],
+                         nlu.CLIENTE_DE_LA_CONVERSACION)
+        business, _ = self.make_business("No a la ficha")
+        with patch.object(config, "ASSISTANT_REVIEW_ENABLED", True):
+            pregunta, no = self.charla(
+                business, "presupuesto a Cliente Inventado por pintura 300 euros", "no")
+        self.assertIn("No tengo ficha", pregunta)
+        self.assertIn("no creo la ficha", no)
+        self.assertNotIn("Inventado", " ".join(c["name"] for c in db.list_clients(business["id"])))
+
+    def test_tarjeta_de_factura_avisa_del_nif_invalido(self):
+        """Ronda real 1-oct: el NIF malo de una ficha solo se veía al emitir."""
+        business, _ = self.make_business("NIF malo")
+        db.add_client("Reformas Martinez", nif="481234129L", business_id=business["id"])
+        with patch.object(config, "ASSISTANT_REVIEW_ENABLED", True):
+            (tarjeta,) = self.charla(business, "factura a Reformas Martinez por pintura 100 euros")
+        self.assertIn("481234129L) no es válido", tarjeta)
+        self.assertIn("no podré emitirla", tarjeta)
+
+    def test_lectura_del_mes_nombra_el_mes_y_a_principio_enseña_el_anterior(self):
+        """Ronda real 1-oct: «cuánto he facturado este mes» daba todo a cero sin decir
+        de qué mes, el día 1, cuando lo que interesa es el que acaba de cerrar."""
+        from noesis import tools
+
+        class Dia(date):
+            dia = date(2026, 10, 2)
+
+            @classmethod
+            def today(cls):
+                return cls.dia
+
+        business, _ = self.make_business("Lectura mes")
+        with patch.object(tools, "date", Dia), patch.object(nlu, "date", Dia):
+            texto = nlu.format_reply("resumen_negocio", tools._resumen_negocio(business["id"]))
+            self.assertIn("Lectura de octubre (llevas 2 días)", texto)
+            self.assertIn("Septiembre, que acaba de cerrar", texto)
+            Dia.dia = date(2026, 10, 20)
+            texto = nlu.format_reply("resumen_negocio", tools._resumen_negocio(business["id"]))
+            self.assertIn("Lectura de octubre (llevas 20 días)", texto)
+            self.assertNotIn("acaba de cerrar", texto)
+
     def test_frases_para_mover_y_cancelar_citas(self):
         casos = {
             "cancela la cita de Juan García": ("cancelar_cita", {"cliente": "Juan García"}),

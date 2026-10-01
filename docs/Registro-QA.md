@@ -1,5 +1,14 @@
 ﻿# Registro de QA
 
+## 2026-10-01 (17) — Ronda real por WhatsApp Web
+
+- Producción `e0d9d53`, chat «Bynoesis» del founder (Claude in Chrome): «mis
+  presupuestos», aceptar el #8, mover la cita con corrección de hora, cancelarla,
+  factura de varias líneas, gasto a obra (inexistente: queda general), lectura del
+  mes y del mes pasado, cobros, IVA, teléfono, gasto, agenda y presupuesto. Todo
+  descartado con NO; nada guardado. 3 fallos y 1 mejora corregidos (entrada 17).
+- Suite completa **1373 correctas** (321 s).
+
 ## 2026-10-01 (16)
 
 - Conversación simulada: gasto a obra por nombre y por cliente, obra inexistente

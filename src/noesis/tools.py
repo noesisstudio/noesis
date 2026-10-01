@@ -14,7 +14,7 @@ import json
 import re
 import logging
 from contextvars import ContextVar
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 
 from . import config, db
@@ -769,7 +769,15 @@ def _resumen_negocio(business_id, mes=None, anio=None):
             for k in claves:
                 total[k] += float(cifras.get(k) or 0)
         return {"anio": anio, "hasta_mes": ultimo, **{k: round(v, 2) for k, v in total.items()}}
-    return db.month_billing(mes, business_id=business_id)
+    resultado = db.month_billing(mes, business_id=business_id)
+    hoy = date.today()
+    if not mes and hoy.day <= 5:
+        # El día 1 «este mes» está a cero: se enseña también el que acaba de cerrar,
+        # que es por el que se suele preguntar a principio de mes.
+        anterior = (hoy.replace(day=1) - timedelta(days=1)).strftime("%Y-%m")
+        resultado = {**resultado,
+                     "anterior": db.month_billing(anterior, business_id=business_id)}
+    return resultado
 
 
 def _ver_impuestos(business_id, trimestre=None, anio=None):
