@@ -1,5 +1,12 @@
 ﻿# Registro de cambios
 
+## 2026-10-01 (21) — Recordatorio sin día y NO a un mensaje
+
+- `nlu.py`: «tengo que llamar a Juan» sin día pregunta para cuándo (antes, el parte).
+- `web/whatsapp.py`: NO a un mensaje o recordatorio de cobro responde «Vale, no lo
+  envío» en vez de «No he apuntado nada».
+- Pruebas: `test_charla_whatsapp`. Rollback: revertir el commit.
+
 ## 2026-10-01 (20) — Ronda local: clientes, obras, recordatorios y pendientes
 
 Simulación por `whatsapp.handle_inbound` con ~40 frases de autónomo; lo que acababa en

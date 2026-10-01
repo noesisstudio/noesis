@@ -2295,9 +2295,13 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
                     trigger_source="noesis_proposed",
                 )
             db.clear_pending_action(business["id"], phone)
+            # Un mensaje o un recordatorio no se «apunta»: se envía o no.
+            descartado = ("Vale, no lo envío. No ha salido nada."
+                          if pending.get("kind") in {"send_communication", "reclamar"}
+                          else "Descartado. No he apuntado nada.")
             send(
                 phone,
-                "Descartado. No he apuntado nada.",
+                descartado,
                 business_id=business["id"],
             )
             results.append({

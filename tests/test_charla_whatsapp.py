@@ -1390,6 +1390,9 @@ class CharlaWhatsappTestCase(unittest.TestCase):
         self.assertIn("mañana a las 10:00", recado)
         self.assertIn("Notas sueltas todavía no las guardo", nota)
         self.assertIn("Por cobrar: 121,00 € en 1 factura", pendiente)
+        cuando = nlu.parse("tengo que llamar a Juan García")
+        self.assertIn("¿Para cuándo?", cuando[1]["reply"])
+        self.assertIn("recuérdame llamar a Juan García mañana", cuando[1]["reply"])
 
     def test_borrador_de_mensaje_con_nombre_corto(self):
         """«Manda un whatsapp a Juan…» con la ficha «Juan García» pedía el cliente."""

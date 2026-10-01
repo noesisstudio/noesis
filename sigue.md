@@ -2,7 +2,7 @@
 
 > Nota temporal. **Cuando el founder diga «sigue», leer esto, borrarlo del repo
 > (commit) y continuar.** El detalle de cada cambio está en `docs/Registro-cambios.md`
-> (entradas 11 a 20 del 1-oct) y `docs/Registro-QA.md`. Lo pendiente fijo está en
+> (entradas 11 a 21 del 1-oct) y `docs/Registro-QA.md`. Lo pendiente fijo está en
 > `docs/Tareas-vivas.md` (sección «Pruebas de WhatsApp»).
 
 ## Qué se hizo en esta sesión
@@ -42,6 +42,11 @@ total para subir. Todo lo siguiente está subido y desplegado salvo lo que se di
 
 ## Cómo probar (método que funcionó)
 
+> ⚠️ **Antes de cada tanda en WhatsApp Web, comprobar en una llamada aparte que el
+> chat abierto es «Bynoesis»** (cabecera del `#main`). El 1-oct, tras reconectarse
+> Chrome, había otro chat abierto y 4 frases de prueba fueron a un contacto
+> personal del founder.
+
 - **Real**: el founder conecta Claude in Chrome escribiendo `@browser` en el chat de
   VS Code (en VS Code no se conecta solo). Abrir `web.whatsapp.com`, chat «Bynoesis».
   Leer respuestas con `javascript_tool`:
@@ -72,14 +77,12 @@ total para subir. Todo lo siguiente está subido y desplegado salvo lo que se di
    `brew install ffmpeg` y generar ogg/opus (`say` → aiff → ogg).
 3. **Respuestas en catalán** cuando el negocio está en catalán (grande).
 4. **Gasto a un cliente sin obra**: `expenses` no tiene `client_id` (migración).
-5. **Meta Ads (pregunta del founder)**: la recomendación «conecta tu CRM a Meta»
-   solo sirve con anuncios de formulario instantáneo. Si los anuncios llevan a la
-   web, lo útil es Píxel + API de conversiones web (registro y pago). Esperando a
-   que diga qué tipo de anuncio usa. `/admin/crm` podría enviar fases del lead.
-6. **Pequeños**: «tengo que llamar a Juan» sin día cae en el parte (debería
-   preguntar cuándo); «Descartado. No he apuntado nada» al decir NO a un mensaje
-   (mejor «No lo envío»).
-7. **Orden de mensajes y lentitud**: mediana del webhook ~45 ms, p99 hasta 15 s
+5. **Meta Ads**: el founder NO usa formularios instantáneos, así que «conecta tu
+   CRM a Meta» no aplica (se le dijo que la cierre y descarte). Lo útil sería
+   Píxel + API de conversiones web (registro y pago); pendiente de que él lo pida y
+   dé el ID del conjunto de datos «Bynoesis» y ponga el token en Railway (no en el
+   chat). Requiere consentimiento de cookies antes de activarlo.
+6. **Orden de mensajes y lentitud**: mediana del webhook ~45 ms, p99 hasta 15 s
    (IA o transcripción en la propia petición). Lo arregla
    `NOESIS_WHATSAPP_INBOX_ENABLED`, pero activarlo es decisión del founder y antes
    hay que probarlo con Meta real.

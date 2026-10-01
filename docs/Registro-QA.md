@@ -1,5 +1,13 @@
 ﻿# Registro de QA
 
+## 2026-10-01 (21)
+
+- Suite completa **1379 correctas** (412 s).
+- **Incidencia en la ronda real**: tras reconectarse Chrome, WhatsApp Web tenía
+  abierto un chat personal del founder y se enviaron 4 frases de prueba a ese
+  contacto. Avisado al founder. Regla nueva: comprobar el chat abierto («Bynoesis»)
+  en una llamada aparte antes de cada tanda de mensajes.
+
 ## 2026-10-01 (20)
 
 - Simulación local por la entrada real de WhatsApp con ~40 frases. Suite completa

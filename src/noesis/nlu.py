@@ -839,7 +839,13 @@ def _recordatorio_como_cita(text: str, norm: str) -> tuple[str, dict] | None:
         return None
     when = parse_date(text)
     if not when:
-        return None
+        if m.group(1).startswith("cobrar"):
+            return None  # «tengo que cobrar a Juan» es otra cosa: sus cobros.
+        verbo = re.sub(r"\s+", " ", m.group(1)).strip()
+        quien = _limpiar_cliente(str(text or "").strip().rstrip(".!?")[-len(m.group(2)):])
+        return (NEED_REVIEW, {"reply": (
+            f"¿Para cuándo? Dímelo con día y hora y lo dejo en la agenda: «recuérdame "
+            f"{verbo} a {quien or 'Juan'} mañana a las 10». No he guardado nada.")})
     crudo = str(text or "").strip().rstrip(".!")
     resto = crudo[len(crudo) - len(m.group(2)):]
     palabras, nombre = resto.split(), []
