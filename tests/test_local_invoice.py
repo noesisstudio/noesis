@@ -243,3 +243,48 @@ class LocalInvoiceTests(unittest.TestCase):
         # El foco viaja en la respuesta, que no tiene por qué ser la última.
         focos = [llamada.kwargs.get("invoice_id") for llamada in send.call_args_list]
         self.assertIn(invoice["id"], focos)
+
+    def test_dictated_lines_without_tax_use_the_business_vat(self):
+        """Ronda 1-oct: «3 horas a 40 euros la hora» se remitía al formulario.
+
+        Se dicta así por WhatsApp o por voz: «por» en vez de «con» y sin «más IVA».
+        El IVA es el habitual del negocio y la tarjeta lo enseña antes del SÍ.
+        """
+        self.enable()
+        first = self.say("factura a Marta López por 3 horas de fontanería a 40 euros la hora "
+                         "y material 45 euros")
+        self.assertTrue(first["confirmation_required"])
+        self.assertIn("1. Horas de fontanería: 3 × 40,00 €", first["reply"])
+        self.assertIn("2. Material: 1 × 45,00 €", first["reply"])
+        self.assertIn("Total: 199,65", first["reply"])
+        self.assertEqual(db.list_invoices(self.bid), [])
+        self.say("sí")
+        invoice = db.list_invoices(self.bid)[0]
+        self.assertEqual((invoice["status"], invoice["total"]), ("borrador", 199.65))
+        lines = db.get_invoice_lines(invoice["id"], self.bid)
+        self.assertEqual([(x["quantity"], x["unit_price"], x["vat_rate"]) for x in lines],
+                         [(3, 40, 21), (1, 45, 21)])
+
+    def test_dictated_parser_only_takes_what_is_unambiguous(self):
+        casos = {
+            "factura a Juan por 3 horas a 40 euros la hora": [("Horas", "3", "40")],
+            "factura a Juan: mano de obra 120 euros y material 45 euros":
+                [("Mano de obra", "1", "120"), ("Material", "1", "45")],
+            "factura a Juan por 120 euros de mano de obra, 45 euros de material":
+                [("Mano de obra", "1", "120"), ("Material", "1", "45")],
+        }
+        for texto, esperado in casos.items():
+            with self.subTest(texto=texto):
+                plan = local_invoice.parse(texto)
+                self.assertEqual([(x.description, str(x.quantity), str(x.unit_price))
+                                  for x in plan.lines], esperado)
+                self.assertIsNone(plan.vat)
+        self.assertEqual(local_invoice.parse(
+            "factura a Juan por grifo 80 euros y desplazamiento 20 euros más IVA del 10%").vat, 10)
+        for texto in ("factura a Juan por pintura 200 euros",        # un importe: camino normal
+                      "factura a Juan por 2 grifos 30 euros y material 10 euros",  # ¿cada uno?
+                      "factura a Juan por mano de obra 120 euros y material 45 euros con IVA incluido",
+                      "factura a Juan por 3 horas a 40 euros con 15% de IRPF",
+                      "factura a Juan por 3 horas a 40 euros con un 10% de descuento"):
+            with self.subTest(texto=texto):
+                self.assertIsNone(local_invoice.parse(texto))

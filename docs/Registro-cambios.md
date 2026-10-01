@@ -1,5 +1,20 @@
 ﻿# Registro de cambios
 
+## 2026-10-01 (15) — Facturas de varias líneas dictadas como se hablan
+
+- Objetivo (hueco de `sigue.md`): «factura a Juan por 3 horas a 40 euros la hora»
+  se remitía al formulario. La gramática local exigía «con …» y «más IVA del 21%».
+- `local_invoice.py`: `_parse_dictada` como segundo intento tras la gramática
+  estricta, que no cambia. Admite «por» o «:», líneas con cantidad («3 horas a 40
+  euros la hora», «2 grifos a 25 euros cada uno») o sin ella («mano de obra 120
+  euros», «120 euros de material»), separadas por «y», coma o «;», y el IVA opcional
+  (sin decirlo, el habitual del negocio; la tarjeta lo enseña). Solo entra con dos
+  líneas o una cantidad por precio. No interpreta IRPF, IVA incluido, descuentos,
+  negaciones ni «2 grifos 30 euros» (¿cada uno o en total?).
+- Requiere `NOESIS_LOCAL_PLANNER_ENABLED` y la revisión (ambos activos en
+  producción). Sin ellos sigue la respuesta de siempre.
+- Pruebas: `test_local_invoice` (2 nuevas). Rollback: revertir el commit.
+
 ## 2026-10-01 (14) — `cryptography` 47 → 50 (alertas de Dependabot)
 
 - `pip-audit -r requirements.txt` daba 7 avisos, todos de `cryptography` 47.0.0

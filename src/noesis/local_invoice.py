@@ -46,7 +46,8 @@ class InvoiceLine:
 class LocalInvoicePlan:
     client: str
     lines: tuple[InvoiceLine, ...]
-    vat: int
+    # `None`: no se dijo; manda el IVA habitual del negocio, que la tarjeta enseña.
+    vat: int | None
     invoice_type: str
 
     def arguments(self) -> dict:
@@ -54,7 +55,8 @@ class LocalInvoicePlan:
             "cliente": self.client, "concepto": "; ".join(x.description for x in self.lines),
             "base": 0, "iva": self.vat, "tipo_factura": self.invoice_type,
             "lineas": [{"description": x.description, "quantity": str(x.quantity),
-                        "unit_price": str(x.unit_price), "vat_rate": self.vat}
+                        "unit_price": str(x.unit_price),
+                        **({"vat_rate": self.vat} if self.vat is not None else {})}
                        for x in self.lines],
         }
 
@@ -63,6 +65,95 @@ def parse(message: str) -> LocalInvoicePlan | None:
     """Admite líneas con precio NETO explícito; lo demás no se interpreta aquí."""
     if len(message) > 4000:
         return None
+    return _parse_estricta(message) or _parse_dictada(message)
+
+
+_EUROS = r"\s*(?:€|euros?|eur)"
+# «a 40 euros la hora», «a 12 euros cada uno», «a 30 euros el metro».
+_POR_UNIDAD = r"(?:\s+(?:cada|la|el|por|per|al)\s+[a-záéíóúñç]{1,15})?"
+
+
+def _linea_dictada(trozo: str) -> InvoiceLine | None:
+    """Una línea dicha como se habla: «3 horas a 40 euros la hora», «material 45 euros»
+    o «120 euros de mano de obra». Lo que no encaje entero no se interpreta."""
+    trozo = trozo.strip(" .")
+    con_cantidad = re.fullmatch(
+        rf"({NUMBER})\s+(.{{1,100}}?)\s+a\s+({NUMBER}){_EUROS}{_POR_UNIDAD}", trozo, re.I)
+    if con_cantidad:
+        cantidad, descripcion, precio = con_cantidad.groups()
+    else:
+        sin_cantidad = (re.fullmatch(rf"(.{{1,100}}?)\s*:?\s+({NUMBER}){_EUROS}", trozo, re.I)
+                        or re.fullmatch(rf"({NUMBER}){_EUROS}\s+(?:de|por|en|per)\s+(.{{1,100}})",
+                                        trozo, re.I))
+        if not sin_cantidad:
+            return None
+        a, b = sin_cantidad.groups()
+        descripcion, precio = (a, b) if re.fullmatch(NUMBER, b) else (b, a)
+        cantidad = "1"
+        # «2 grifos 30 euros» no dice si son 30 cada uno o en total: no se adivina.
+        if re.match(r"\d", descripcion):
+            return None
+    descripcion = descripcion.strip(" ,:")
+    if (not re.search(r"[a-záéíóúñç]", descripcion, re.I) or re.search(r"\d", descripcion)
+            or any(c in descripcion for c in "<>={}[]")
+            or re.search(r"\biva\b", normalized(descripcion))):
+        return None
+    try:
+        return InvoiceLine(descripcion[:1].upper() + descripcion[1:],
+                           decimal_number(cantidad), decimal_number(precio))
+    except ValueError:
+        return None
+
+
+def _parse_dictada(message: str) -> LocalInvoicePlan | None:
+    """«Factura a Juan por 3 horas a 40 euros la hora y material 45 euros».
+
+    Es como se dicta una factura de varias líneas por WhatsApp o por voz; la
+    gramática estricta exigía «con» y «más IVA del 21%» al final. El IVA dicho
+    manda; si no se dice, el habitual del negocio, y la tarjeta lo enseña. Solo
+    entra con dos líneas o con una cantidad por precio: una factura de un importe
+    sigue el camino de siempre.
+    """
+    text = message.strip().rstrip(".")
+    plano = normalized(text)
+    if re.search(r"\b(?:no|sin|sense|menos|menys|irpf|incluido|incluida|inclos|inclosa|"
+                 r"descuento|dto|retencion)\b|%\s*(?!$)", plano):
+        return None
+    match = re.fullmatch(
+        r"(?:(?:crea(?:me)?|créame|hazme|haz|prepara(?:me)?|prepárame|fes(?:-me)?)\s+"
+        r"(?:una?\s+)?)?(factura|ticket|tiquet)(?:\s+de\s+(?:venta|venda))?\s+"
+        r"(?:para|a|per\s+a)\s+(.{1,160}?)(?:\s+(?:con|amb|por|per)\s+|\s*:\s*)(.+)",
+        text, re.I)
+    if not match:
+        return None
+    kind, client, body = match.groups()
+    vat = None
+    tax = re.search(r"[,;]?\s+(?:más|mas|més|mes|\+)\s+(?:el\s+)?IVA"
+                    r"(?:\s*(?:del|al)?\s*(0|4|10|21)\s*%)?$", body, re.I)
+    if tax:
+        vat = int(tax.group(1)) if tax.group(1) else None
+        body = body[:tax.start()].strip()
+    if re.search(r"\biva\b", normalized(body)):
+        return None
+    trozos = [t for t in re.split(r"\s*;\s*|\s*,\s+|\s+(?:y|i|más|mas|més)\s+", body, flags=re.I)
+              if t.strip()]
+    if not 1 <= len(trozos) <= 20 or not client.strip():
+        return None
+    lines = []
+    for trozo in trozos:
+        line = _linea_dictada(trozo)
+        if line is None:
+            return None
+        lines.append(line)
+    if len(lines) == 1 and lines[0].quantity == 1:
+        return None
+    if len("; ".join(x.description for x in lines)) > 500:
+        return None
+    return LocalInvoicePlan(client.strip(), tuple(lines), vat,
+                            "F1" if kind.lower() == "factura" else "F2")
+
+
+def _parse_estricta(message: str) -> LocalInvoicePlan | None:
     text = message.strip().rstrip(".")
     match = re.fullmatch(
         r"(?:(?:crea(?:me)?|créame|hazme|prepara|fes(?:-me)?)\s+(?:una?\s+)?)?"

@@ -1,5 +1,11 @@
 ﻿# Registro de QA
 
+## 2026-10-01 (15)
+
+- 13 frases dictadas comparadas (cuatro de la ronda real; la orden estricta de
+  siempre da el mismo plan). Conversación con tarjeta, IVA del negocio y SÍ: total
+  199,65 € y dos líneas guardadas. Suite completa **1369 correctas** (355 s).
+
 ## 2026-10-01 (14)
 
 - `cryptography` 50.0.2 instalada en local: suite completa **1367 correctas**
