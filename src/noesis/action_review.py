@@ -347,6 +347,24 @@ def _preview(bid: int, tool: str, args: dict) -> tuple[str, dict]:
     return "\n".join(lines), snapshot
 
 
+# Cómo se corrige cada tarjeta hablando. El pie pedía «corregir:» y la orden
+# entera, cuando desde el 24-09 basta con decir el cambio (`_correccion`).
+_COMO_CORREGIR = {
+    "crear_factura": "«no, eran 120» o «es para Ana»",
+    "crear_presupuesto": "«no, eran 120» o «es para Ana»",
+    "registrar_gasto": "«no, eran 45»",
+    "agendar_trabajo": "«mejor a las 12» o «el lunes»",
+    "mover_cita": "«mejor a las 12»",
+}
+
+
+def _pie_de_tarjeta(tool: str) -> str:
+    pie = "No he guardado cambios. Responde SÍ para confirmar o NO para descartar."
+    if tool in _COMO_CORREGIR:
+        pie += f" Si algo está mal, dímelo tal cual: {_COMO_CORREGIR[tool]}."
+    return pie
+
+
 def propose(bid: int, tool: str, args: dict, *, expected_id: int | None = None) -> dict | None:
     state = context.get()
     if state is None or tool in READS:
@@ -365,7 +383,7 @@ def propose(bid: int, tool: str, args: dict, *, expected_id: int | None = None) 
             row = db.revise_pending_action(bid, state["actor"], expected_id, payload)
             if not row:
                 raise ValueError("La propuesta cambió o ya se confirmó. Vuelve a pedirla; no he repetido nada.")
-        reply = preview + "\n\nNo he guardado cambios. Responde SÍ para confirmar, NO para descartar o «corregir:» seguido de la orden completa."
+        reply = preview + "\n\n" + _pie_de_tarjeta(tool)
         result = {"confirmation_required": True, "reply": reply, "proposal_id": row["id"]}
     except (ValueError, TypeError, ArithmeticError) as exc:
         if expected_id is not None:

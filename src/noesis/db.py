@@ -10767,6 +10767,17 @@ def _tax_quarter_from(
             item.get("base") is None or item.get("vat_amount") is None
             for item in quarter_received
         ) + sum(item.get("vat_rate") is None for item in quarter_expenses),
+        # Cuáles son, para poder decir qué completar y dónde (máximo tres).
+        "incompletos": ([
+            {"tipo": "gasto", "concepto": e.get("concept"), "importe": e.get("amount")}
+            for e in quarter_expenses if e.get("vat_rate") is None
+        ] + [
+            {"tipo": "factura recibida",
+             "concepto": item.get("supplier_name") or item.get("number") or "sin proveedor",
+             "importe": item.get("total")}
+            for item in quarter_received
+            if item.get("base") is None or item.get("vat_amount") is None
+        ])[:3],
     }
 
 

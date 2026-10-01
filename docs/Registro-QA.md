@@ -1,5 +1,9 @@
 ﻿# Registro de QA
 
+## 2026-10-01 (18)
+
+- Pie de tarjeta y aviso de IVA. Suite completa **1375 correctas** (314 s). Ruff correcto.
+
 ## 2026-10-01 (17) — Ronda real por WhatsApp Web
 
 - Producción `e0d9d53`, chat «Bynoesis» del founder (Claude in Chrome): «mis

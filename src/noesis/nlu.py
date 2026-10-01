@@ -3064,10 +3064,16 @@ def format_reply(tool: str, result: dict) -> str:
             f"• IRPF del periodo: {_eur(result['irpf_pago'])} (modelo 130)",
         ]
         if result["datos_incompletos"]:
+            cuales = "; ".join(
+                f"{x['tipo']} «{x.get('concepto') or 'sin concepto'}»"
+                + (f" ({_eur(x['importe'])})" if x.get("importe") is not None else "")
+                for x in result.get("incompletos") or [])
             lines.append(
                 f"⚠️ Hay {_cuenta(result['datos_incompletos'], 'apunte', 'apuntes')} "
-                "sin IVA o sin base: "
-                "la cifra se moverá cuando los completes."
+                "sin IVA o sin base"
+                + (f": {cuales}" if cuales else "")
+                + ". Si llevaban IVA, el soportado sale más bajo de lo real: complétalos "
+                "en Gastos (o en Documentos si es una factura recibida)."
             )
         lines.append(
             "Son cifras de apoyo con lo registrado hasta hoy. "

@@ -1307,6 +1307,25 @@ class CharlaWhatsappTestCase(unittest.TestCase):
             self.assertIn("Lectura de octubre (llevas 20 días)", texto)
             self.assertNotIn("acaba de cerrar", texto)
 
+    def test_pie_de_tarjeta_enseña_a_corregir_hablando(self):
+        from noesis import action_review
+        self.assertIn("«no, eran 120»", action_review._pie_de_tarjeta("crear_factura"))
+        self.assertIn("«mejor a las 12»", action_review._pie_de_tarjeta("mover_cita"))
+        for tool in ("crear_factura", "cancelar_cita", "registrar_pago"):
+            self.assertNotIn("corregir:", action_review._pie_de_tarjeta(tool))
+            self.assertIn("Responde SÍ para confirmar", action_review._pie_de_tarjeta(tool))
+
+    def test_aviso_de_iva_dice_que_apunte_falta(self):
+        """Ronda real 1-oct: «Hay 1 apunte sin IVA o sin base» sin decir cuál."""
+        from noesis import tools
+        business, _ = self.make_business("IVA incompleto")
+        db.add_expense("gasolina", 45, business_id=business["id"])
+        hoy = date.today()
+        texto = nlu.format_reply("ver_impuestos", tools._ver_impuestos(
+            business["id"], trimestre=(hoy.month - 1) // 3 + 1, anio=hoy.year))
+        self.assertIn("gasto «gasolina» (45,00 €)", texto)
+        self.assertIn("complétalos en Gastos", texto)
+
     def test_frases_para_mover_y_cancelar_citas(self):
         casos = {
             "cancela la cita de Juan García": ("cancelar_cita", {"cliente": "Juan García"}),

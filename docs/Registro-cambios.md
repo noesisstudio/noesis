@@ -1,5 +1,13 @@
 ﻿# Registro de cambios
 
+## 2026-10-01 (18) — Pie de tarjeta y aviso de IVA que dice qué falta
+
+- `action_review.py`: el pie de las tarjetas pedía «corregir:» y la orden entera; ahora
+  dice cómo corregir hablando según la tarjeta («no, eran 120», «mejor a las 12»).
+- `db.tax_quarter` añade `incompletos` (hasta tres) y `nlu.py` los nombra: «gasto
+  «gasolina» (45,00 €)», con dónde completarlos. Antes: «Hay 1 apunte sin IVA».
+- Pruebas: `test_charla_whatsapp` (2 nuevas). Rollback: revertir el commit.
+
 ## 2026-10-01 (17) — Fallos de la ronda real por WhatsApp Web
 
 Ronda en producción (`e0d9d53`) hablando con el bot desde WhatsApp Web: presupuestos,
