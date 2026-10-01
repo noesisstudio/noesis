@@ -1796,8 +1796,9 @@ _SIN_TEXTO = {
     "location": ("He recibido una ubicación, pero todavía no la guardo. Si es la "
                  "dirección de un trabajo, escríbemela con la orden; por ejemplo: "
                  "«agenda a Ana el jueves a las 10 en Calle Mayor 3»."),
-    "sticker": ("Los stickers no los leo 🙂. Escríbeme lo que necesites o mándame "
-                "una nota de voz."),
+    "sticker": ("Los stickers no los leo 🙂. Si era la foto de un ticket o de una "
+                "factura, mándamela como foto o como documento. Si no, escríbeme lo que "
+                "necesites o mándame una nota de voz."),
     "video": ("Los vídeos no los leo todavía. Mándame una foto, un PDF, una nota de "
               "voz o escríbeme la orden."),
     "unknown": ("Ese tipo de mensaje no lo puedo leer. Escríbeme la orden, mándame "
@@ -1991,6 +1992,10 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
                 _finish_inbound_message(message_id, claimed_ids)
                 continue
 
+        # Un 👍, «nooo» o «vale vale» se leen como la palabra que quieren decir.
+        escrito = text
+        text = nlu.normalizar_entrada(text)
+        es_gesto = bool(text != escrito and not re.search(r"[^\W\d_]", escrito or ""))
         if message.get("contacts") and not text:
             # Una tarjeta de contacto compartida es, casi siempre, un cliente.
             text = _contact_card_order(message["contacts"]) or ""
@@ -2178,6 +2183,14 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
             continue
 
         pending = db.get_pending_action(business["id"], phone)
+        if pending and _is_yes(text) and es_gesto and pending.get("kind") == "emitir_factura":
+            # Emitir no se puede deshacer: un 👍 suelto no basta.
+            send(phone, "Para emitir necesito que me lo confirmes con palabras: "
+                        "responde SÍ o NO. No he emitido nada.", business_id=business["id"])
+            results.append({"phone": phone, "business_id": business["id"],
+                            "confirmed": False, "reason": "gesto"})
+            _finish_inbound_message(message_id, claimed_ids)
+            continue
         if pending and _is_yes(text):
             confirmed_reply = _execute_pending(business, phone, pending)
             try:

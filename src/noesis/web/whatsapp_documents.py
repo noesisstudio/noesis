@@ -547,6 +547,10 @@ def handle_reply(business: dict, phone: str, text: str) -> str | None:
     if _STOP.fullmatch(folded):
         db.clear_pending_action(business_id, review_key(phone))
         return "De acuerdo, no apunto nada más. Los documentos quedan guardados en tus papeles."
+    if _SHOW.fullmatch(folded):
+        # «¿Cuánto era?», «a ver»: antes de mirar si es otra orden, porque
+        # «cuánto…» también empieza muchas consultas del negocio.
+        return review.render(item, position=index + 1, count=len(items))
     if _OTHER_ORDER.match(folded) and not _CORRECTION_START.match(folded):
         return None
     if _DESTINO.fullmatch(folded):

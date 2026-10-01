@@ -3264,9 +3264,26 @@ def get_user_by_email(email) -> dict | None:
 
 
 # ---------------------------------------------------------------- Clientes ---
+_NO_ES_NOMBRE_DE_FICHA = re.compile(r"[<>{}\[\]=;|\\`$]|--|https?://")
+
+
+def _valid_party_name(name: str, papel: str) -> None:
+    """Un nombre lleva letras y no lleva símbolos de código ni enlaces.
+
+    Por WhatsApp, `<script>alert(1)</script>` enviado tras «no tengo ficha de
+    Pedro, ¿la creo?» se tomó por el nombre corregido y dio de alta esa ficha con
+    su factura. Ese nombre sale después en el PDF y en la web.
+    """
+    if _NO_ES_NOMBRE_DE_FICHA.search(name) or not re.search(r"[^\W\d_]", name):
+        raise ValueError(f"Ese texto no sirve como nombre del {papel}: escribe solo "
+                         "el nombre, sin símbolos ni enlaces.")
+
+
 def add_client(name, phone=None, address=None, zone=None, nif=None, email=None,
                *, business_id: int) -> dict:
     name = (name or "").strip()
+    if name:
+        _valid_party_name(name, "cliente")
     # Los dos motivos se distinguen porque llevan a cosas distintas: uno se
     # arregla diciendo el nombre y el otro acortándolo. Antes, un nombre de 400
     # caracteres entraba tal cual en clientes (proveedores sí lo cortaba), y la
@@ -9242,6 +9259,7 @@ def add_supplier(name, nif=None, email=None, phone=None, note=None, *,
     name = (name or "").strip()
     if not name:
         raise ValueError("El nombre del proveedor es obligatorio.")
+    _valid_party_name(name, "proveedor")
     if len(name) > 200:
         raise ValueError("El nombre del proveedor es demasiado largo (máx. 200).")
     nif = _clean_nif(nif)

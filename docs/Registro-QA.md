@@ -1,5 +1,14 @@
 ﻿# Registro de QA
 
+## 2026-10-01 (5) — Foto real y fuzz
+
+- **Foto real de un ticket por WhatsApp (producción)**: lectura correcta de
+  proveedor, CIF, número, fecha, concepto, base, IVA y total; corrección «el total es
+  18» recalcula; «es de la obra de…» responde sin tocar el proveedor; descartado con
+  NO (el documento queda archivado en Documentos del founder como prueba).
+- La misma foto enviada como sticker: «Los stickers no los leo».
+- Fuzz de 65 mensajes: 0 excepciones. Suite completa **1347 correctas** (316 s).
+
 ## 2026-10-01 (4)
 
 - Producción `4288af7` en el WhatsApp real: «nuebo», nombre con mayúsculas, aviso de

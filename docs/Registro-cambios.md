@@ -1,5 +1,25 @@
 ﻿# Registro de cambios
 
+## 2026-10-01 (5) — Robustez: nombres, gestos, varias líneas y foto real de ticket
+
+Fuzz de 65 mensajes raros contra el bot entero (0 excepciones) y foto real de un
+ticket por WhatsApp.
+
+- **Grave**: con «no tengo ficha de Pedro, ¿la creo?» pendiente, `<script>…` se tomó
+  por el nombre corregido y creó esa ficha con su factura. Un nombre de cliente o
+  proveedor no admite símbolos de código ni enlaces y debe llevar letras
+  (`db._valid_party_name`, también en la web).
+- 👍/👌/✅ → «vale», 👎 → «no», 🙏 → «gracias»; «nooo», «no no no», «okkk», «valee»
+  (`nlu.normalizar_entrada`). **Emitir** exige un SÍ escrito: un gesto no basta.
+- Mensajes de varias líneas: las que solo saludan o agradecen no parten la orden.
+- «Paga la factura de la luz» ya no pide datos para crear una factura; «llama a
+  Juan» da su teléfono; «adiós» se despide; emojis sueltos y «?» no dan el parte.
+- Importe 0 se rechaza antes de preguntar por la ficha; «factura a por euros» no
+  crea el cliente «por euros».
+- Revisión de tickets: «¿cuánto era?» enseña la tarjeta; el aviso de sticker dice
+  cómo mandar un ticket (una foto enviada como sticker no se puede leer).
+- Suite 1347 correctas. Riesgo medio. Rollback: revertir el commit.
+
 ## 2026-10-01 (4) — «Hazme otra igual» y entrega de una factura ya emitida
 
 Simulación del ciclo completo (crear → emitir → entregar → cobrar).

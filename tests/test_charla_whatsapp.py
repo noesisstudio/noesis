@@ -739,6 +739,59 @@ class CharlaWhatsappTestCase(unittest.TestCase):
         self.assertIn("Ya está emitida", pregunta)
         self.assertNotIn("borrador", pregunta)
 
+    def test_gestos_respuestas_alargadas_y_varias_lineas(self):
+        casos = {"👍": "vale", "👍🏻": "vale", "👎": "no", "🙏": "gracias", "nooo": "no",
+                 "no no no": "no", "okkk": "ok", "valee": "vale", "siii": "sí",
+                 "hola\nfactura a Juan por pintar 100\ngracias": "factura a Juan por pintar 100"}
+        for escrito, leido in casos.items():
+            self.assertEqual(nlu.normalizar_entrada(escrito), leido, escrito)
+        for intacto in ("llama", "Lola", "nono", "😂😂", "factura a juan por 100", "vale"):
+            self.assertEqual(nlu.normalizar_entrada(intacto), intacto)
+        business, client = self.make_business("Gestos")
+        borrador = db.add_invoice(client["id"], "Pintura", 100, business_id=business["id"])
+        with patch.object(config, "ASSISTANT_REVIEW_ENABLED", True):
+            _, gasto = self.charla(business, "gasté 20 en gasolina", "👍")
+            _, descartado = self.charla(business, "gasté 30 en parking", "nooo")
+            _, gesto = self.charla(business, f"emitir factura {borrador['id']}", "👍")
+            risa, duda, adios = self.charla(business, "no", "😂😂", "?", "adiós")[1:]
+        self.assertIn("20,00", gasto)
+        self.assertIn("Descartado", descartado)
+        self.assertIn("confirmes con palabras", gesto)
+        self.assertEqual(db.get_invoice(borrador["id"], business["id"])["status"], "borrador")
+        self.assertIn("escríbemelo", risa)
+        self.assertIn("Soy Bynoesis", duda)
+        self.assertIn("Hasta luego", adios)
+        self.assertEqual([g["amount"] for g in db.list_expenses(business["id"])], [20.0])
+
+    def test_un_nombre_no_lleva_simbolos_de_codigo(self):
+        """Fuzz del 1-oct: «<script>…» tras «no tengo ficha de Pedro» creó esa ficha
+        y su factura."""
+        business, _ = self.make_business("Nombres limpios")
+        with patch.object(config, "ASSISTANT_REVIEW_ENABLED", True):
+            self.charla(business, "factura a Pedro por grifo 50 euros",
+                        "<script>alert(1)</script>")
+        self.assertEqual([c["name"] for c in db.list_clients(business["id"])
+                          if "script" in c["name"] or c["name"] == "Pedro"], [])
+        self.assertEqual(db.list_invoices(business["id"]), [])
+        with self.assertRaises(ValueError):
+            db.add_client("<b>Juan</b>", business_id=business["id"])
+        with self.assertRaises(ValueError):
+            db.add_client("600123456", business_id=business["id"])
+        self.assertEqual(db.add_client("Reformas & Pinturas O'Brien (Valencia)",
+                                       business_id=business["id"])["name"],
+                         "Reformas & Pinturas O'Brien (Valencia)")
+
+    def test_pagar_llamar_e_importe_cero(self):
+        self.assertIn("No puedo pagar nada", nlu.parse("paga la factura de la luz")[1]["reply"])
+        self.assertEqual(nlu.parse("pagué la gasolina, 55 euros")[0], "registrar_gasto")
+        business, client = self.make_business("Llamar y cero")
+        db.update_client(client["id"], business_id=business["id"], phone="612345678")
+        llamar, cero = self.charla(business, f"llama a {client['name']}",
+                                   "factura a Desconocido por pintar 0 euros")
+        self.assertIn("Yo no hago llamadas", llamar)
+        self.assertIn("612345678", llamar)
+        self.assertIn("mayor que cero", cero)
+
     def test_catalan_de_la_ronda(self):
         casos = {
             "crea el client Joan Puig amb telèfon 612345678":

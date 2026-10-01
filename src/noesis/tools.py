@@ -788,7 +788,7 @@ def _registrar_gasto(
                                                 business_id=business_id)}
 
 
-def _ver_cliente(business_id, cliente, dato=None):
+def _ver_cliente(business_id, cliente, dato=None, llamar=False):
     try:
         ficha = db.resolve_client_reference(cliente, business_id)
     except ValueError as exc:
@@ -797,7 +797,8 @@ def _ver_cliente(business_id, cliente, dato=None):
         return {"ok": False, "error": f"No tengo ficha de cliente «{cliente}»."}
     facturas = [f for f in db.list_invoices(business_id, client_id=ficha["id"], limit=50)
                 if f.get("status") != "anulada"]
-    return {"ok": True, "cliente": ficha, "dato": dato, "facturas": facturas[:5],
+    return {"ok": True, "cliente": ficha, "dato": dato, "llamar": bool(llamar),
+            "facturas": facturas[:5],
             "n_facturas": len(facturas),
             "n_borradores": sum(1 for f in facturas if f.get("status") == "borrador"),
             "pendiente": round(sum(float(f.get("remaining_amount") or 0) for f in facturas

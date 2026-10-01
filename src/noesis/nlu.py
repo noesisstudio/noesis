@@ -562,6 +562,11 @@ def safety_refusal(text: str) -> str | None:
         # Corregir el teléfono o el NIF de una ficha sí se prepara (con revisión).
         return ("Cambiar algo que ya está guardado no lo hago por WhatsApp. Hazlo en la "
                 f"web, en **{_seccion_web(norm)}**. No he creado ni cambiado nada.")
+    if re.match(r"^(?:por favor[, ]+)?(?:paga|pagar|pagame|abona|abonar|ingresa|ingresar)\b", norm):
+        # «Paga la factura de la luz» acababa pidiendo datos para crear una factura.
+        return ("No puedo pagar nada ni mover dinero por ti. Si lo que quieres es apuntar "
+                "que ya lo has pagado, dime «he pagado 60 euros de luz» y lo registro como "
+                "gasto. No he ejecutado ninguna operación.")
     if re.search(r"\b(transferencia|transfiere|transferir|devolucion|devuelve)\b", norm):
         return "No puedo mover dinero ni hacer transferencias o devoluciones. No he ejecutado ninguna operación."
     if re.search(r"\b(no|nunca)\b.*\b(cre\w*|ha\w*|registr\w*|factur\w*|apunt\w*|anad\w*|envi\w*|gast\w*|paga\w*)\b", norm):
@@ -960,6 +965,10 @@ def _limpio_o_nada(valor: str | None) -> str | None:
     if not valor or len(valor) > 160:
         return None
     if _RELLENO_NO_DATO.search(_norm(valor)) or re.fullmatch(r"[\d\s.,€]+", valor):
+        return None
+    # «factura a  por  euros»: solo conectores y unidades no son el nombre de nadie.
+    if all(p in {"por", "de", "del", "para", "a", "al", "con", "y", "el", "la", "un", "una",
+                 "euro", "euros", "eur", "mas", "iva", "en"} for p in _norm(valor).split()):
         return None
     return valor
 
@@ -1685,6 +1694,50 @@ _MULETILLA_INICIAL = re.compile(
     r"porfa|hey)\b[\s,.…!¡]*)+", re.I)
 
 
+_EMOJI_DICE = (
+    ("👍👌✅🆗💪🤝☑✔", "vale"),
+    ("👎❌🚫⛔✖", "no"),
+    ("🙏😊☺🥰😘❤💚💙🫶👏🙌😁😃😄🤗", "gracias"),
+    ("👋", "hola"),
+)
+_RESPUESTA_CORTA = {"si": "sí", "no": "no", "ok": "ok", "vale": "vale", "gracias": "gracias",
+                    "hola": "hola", "nada": "nada", "venga": "venga", "dale": "dale"}
+
+
+def normalizar_entrada(text: str) -> str:
+    """Deja en una palabra lo que se contesta con un gesto o alargando letras.
+
+    Un 👍 escrito, «nooo», «okkk», «no no no» o «valee» soltaban el parte del día,
+    y con una propuesta pendiente ni la confirmaban ni la descartaban. Un mensaje
+    de varias líneas pierde las que solo saludan o dan las gracias, que partían la
+    orden por la mitad. Lo demás se devuelve tal cual.
+    """
+    crudo = str(text or "")
+    sin_espacios = re.sub(r"[\s\ufe0f\u200d]", "", crudo)
+    sin_tono = re.sub(r"[\U0001F3FB-\U0001F3FF]", "", sin_espacios)
+    if sin_tono and not re.search(r"[\w¿?¡!.,]", sin_tono):
+        for emojis, palabra in _EMOJI_DICE:
+            if all(c in emojis for c in sin_tono):
+                return palabra
+        return crudo
+    plano = _norm(crudo).strip(" .,!¡¿?…")
+    if plano and len(plano) <= 24 and re.fullmatch(r"[a-z ]+", plano):
+        palabras = [re.sub(r"(.)\1+", r"\1", p) for p in plano.split()]
+        # «valee» → «vale», pero «llama» no es «lama»: solo si queda una respuesta corta.
+        if len(set(palabras)) == 1 and palabras[0] in _RESPUESTA_CORTA \
+                and (len(palabras) > 1 or palabras[0] != plano):
+            return _RESPUESTA_CORTA[palabras[0]]
+    if "\n" in crudo:
+        lineas = [linea.strip() for linea in crudo.splitlines() if linea.strip()]
+        utiles = [linea for linea in lineas
+                  if not solo_saludo(linea)
+                  and _norm(linea).strip(" .,!¡") not in {"gracias", "muchas gracias", "porfa",
+                                                          "por favor", "un saludo", "saludos"}]
+        if utiles and len(utiles) < len(lineas):
+            return "\n".join(utiles)
+    return crudo
+
+
 def _erratas(text: str) -> str:
     """Corrige faltas en las palabras clave y abreviaturas de móvil."""
     text = text or ""
@@ -1984,6 +2037,12 @@ def _parse(text: str) -> tuple[str, dict] | None:
     pregunta_cliente = _pregunta_por_cliente(text, norm)
     if pregunta_cliente:
         return pregunta_cliente
+    llamar = re.match(r"^(?:llama|llamar|llamame|telefonea)\s+(?:a|al)\s+(?:client[ea]\s+)?(.+?)\s*$",
+                      text.strip().rstrip(".!"), re.I)
+    if llamar and _limpiar_cliente(llamar.group(1)):
+        # No hago llamadas; lo útil es dar el teléfono para que llame el autónomo.
+        return ("ver_cliente", {"cliente": _limpiar_cliente(llamar.group(1)),
+                                "dato": "telefono", "llamar": True})
     _PAPEL = r"(client[ea]s?|client|proveedor[a]?|prove[ïi]dor[a]?)"
     _VERBO_ALTA = (r"(?:crea\w*|crear|cre[ao]|anade\w*|añade\w*|a[ñn]adir\w*|agrega\w*|agregar|"
                    r"apunta\w*|registra\w*|guarda\w*|mete\w*|hazme|haz|hacer|afegeix\w*|fes|"
@@ -2491,6 +2550,9 @@ def format_reply(tool: str, result: dict) -> str:
         if dato in etiquetas:
             columna, nombre = etiquetas[dato]
             if c.get(columna):
+                if result.get("llamar"):
+                    return (f"Yo no hago llamadas, pero aquí tienes el teléfono de "
+                            f"**{c['name']}**: {c[columna]}.")
                 return f"El {nombre} de **{c['name']}** es {c[columna]}."
             ejemplo = {"phone": "612 34 56 78", "email": "correo@ejemplo.es",
                        "nif": "12345678Z", "address": "Calle Mayor 3, Valencia"}[columna]

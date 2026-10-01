@@ -360,6 +360,11 @@ _GRACIAS = {"gracias", "muchas gracias", "mil gracias", "genial gracias", "ok gr
 
 
 def _social_reply(message: str) -> str | None:
+    if str(message or "").strip() and not re.search(r"\w", message):
+        # Solo signos o emojis: «?», «...», «😂😂».
+        if "?" in message:
+            return nlu.help_text()
+        return "🙂 Si necesitas algo, escríbemelo y me pongo con ello."
     norm = " ".join(re.sub(r"[!.¡¿?,;…]", " ", nlu._norm(message)).split())
     # «Vale, gracias», «ok muchas gracias», «genial gracias»: un agradecimiento
     # con asentimiento delante también es un agradecimiento.
@@ -370,6 +375,9 @@ def _social_reply(message: str) -> str | None:
         return "De nada. Aquí estoy cuando me necesites."
     if norm in _GRACIAS:
         return "De nada. Aquí estoy cuando me necesites."
+    if re.fullmatch(r"(?:adios|adeu|hasta luego|hasta manana|hasta pronto|nos vemos|chao|"
+                    r"chau|ciao|bye|buenas noches|que descanses|hasta otra)(?:\s+gracias)?", norm):
+        return "Hasta luego 👋. Aquí estoy cuando me necesites."
     if norm in _SI_SUELTO:
         return ("No tengo nada pendiente de confirmar, así que no he hecho nada. Dime "
                 "qué necesitas, por ejemplo «¿Quién me debe?» o «Factura a Juan por "
@@ -1221,7 +1229,9 @@ _NO_ES_NOMBRE_RE = re.compile(
     # Muletillas y cortesía: «Eh... vale, gracias» no es el nombre de nadie.
     # Era así como se creaba una ficha llamada «Eh» con su presupuesto.
     r"gracias|vale|ok|okay|eh+|ah+|mm+|um+|bueno|pues|dale|genial|perfecto|"
-    r"hola|adios|venga|claro|vale|nada|espera|luego|oye|mira)\b|\.\.\.|…")
+    r"hola|adios|venga|claro|vale|nada|espera|luego|oye|mira)\b|\.\.\.|…|"
+    # Símbolos de código o enlaces: nadie se llama así.
+    r"[<>{}\[\]=;|\\`$]|--|https?://")
 
 
 def _party_name_answer(message: str) -> tuple[str | None, str | None]:
@@ -1652,6 +1662,16 @@ def _handle(
             rate = float(business.get("default_vat") or 21)
             args["base"] = round(float(args["base"]) / (1 + rate / 100), 2)
             args["iva"] = rate
+        if tool in {"crear_factura", "crear_presupuesto"}:
+            try:
+                importe_valido = float(args.get("base") or 0) > 0
+            except (TypeError, ValueError):
+                importe_valido = False
+            if not importe_valido and not args.get("lineas"):
+                # Antes de preguntar por la ficha del cliente: con 0 € no hay nada que hacer.
+                return {"reply": ("El importe tiene que ser mayor que cero. Dímelo de nuevo "
+                                  "con el importe, por ejemplo «factura a Ana por pintura "
+                                  "200 euros». No he creado nada."), "source": "local"}
         if (tool in {"crear_factura", "crear_presupuesto", "agendar_trabajo"}
                 and args.get("cliente") == nlu.CLIENTE_DE_LA_CONVERSACION):
             # «Hazle una factura…», «a este cliente», «para él»: el último nombrado.
@@ -2013,6 +2033,8 @@ def _handle_turn(
     from .. import action_review, learning
     enabled = config.ASSISTANT_REVIEW_ENABLED
     actor = f"wa:{actor_phone}" if channel == "whatsapp" else f"web:{actor_id or 'owner'}"
+    # El historial guarda lo que se escribió; lo que se interpreta va normalizado.
+    message = nlu.normalizar_entrada(message)
     turn = {"message": message, "original": message}
     if learning.enabled():
         try:
