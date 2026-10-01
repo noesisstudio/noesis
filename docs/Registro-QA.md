@@ -1,5 +1,10 @@
 ﻿# Registro de QA
 
+## 2026-10-01 (7)
+
+- Simulación de presupuestos, tickets, trabajos y proyectos (24 mensajes). Suite
+  completa **1352 correctas** (311 s). Ruff correcto.
+
 ## 2026-10-01 (6)
 
 - Producción `c9886b1` en el WhatsApp real: «gasolina 20 euros» + «nooo», «llama a…»,

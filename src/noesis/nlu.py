@@ -1247,6 +1247,11 @@ def _parse_simplified_sale(text: str, norm: str) -> dict | None:
         text = re.sub(r"\b(ticket|tiquet)\b(?!\s+de\s+(?:venta|venda))", "ticket de venta", text, count=1, flags=re.I)
         text = re.sub(r"\bconcepto\b", "por", text, flags=re.I)
         norm = _norm(text)
+    # «Ticket a Marta de 50 euros por revisión»: un ticket A alguien es una venta;
+    # se apuntaba como gasto.
+    if re.match(r"^(?:un\s+)?(?:ticket|tiquet)\s+(?:a|para|per\s+a)\s+\S", norm):
+        text = re.sub(r"\b(ticket|tiquet)\b", "ticket de venta", text, count=1, flags=re.I)
+        norm = _norm(text)
     explicit = bool(
         re.search(r"\b(?:ticket|tiquet)\s+de\s+(?:venta|venda)\b", norm)
         or "factura simplificada" in norm
@@ -1759,7 +1764,7 @@ corregir_erratas = _erratas
 _ORDENES_DE_ACCION = {
     "crear_factura", "crear_presupuesto", "registrar_gasto", "agendar_trabajo",
     "crear_cliente", "crear_proveedor", "crear_proyecto", "crear_factura_a_medias",
-    "actualizar_cliente",
+    "actualizar_cliente", "terminar_trabajo",
 }
 # Se corta donde empieza otra orden: «…, y hazle una factura…», «…; agenda…».
 _CORTE_DE_ORDEN = re.compile(
@@ -1857,6 +1862,7 @@ _ORDEN_CON_LE = re.compile(
 
 
 REPETIR_FACTURA = "__repetir_factura__"
+FACTURA_DE_TRABAJO = "__factura_de_trabajo__"
 _OTRA_IGUAL = re.compile(
     r"^(?:(?:hazme|haz|crea\w*|prepara\w*|quiero|necesito|ponme)\s+)?"
     r"(?:otra(?:\s+factura)?\s+(?:igual|como\s+la\s+(?:ultima|anterior|de\s+antes))|"
@@ -1956,8 +1962,10 @@ def _parse(text: str) -> tuple[str, dict] | None:
     # Lo que por WhatsApp todavía no se hace se dice con claridad; antes caía en
     # el parte del negocio y parecía que el bot no había leído el mensaje.
     if re.search(r"\bpresupuesto\b.*\b(?:acept\w*|rechaz\w*|convier\w*|convertir\w*|"
-                 r"pasa\w* a factura|en factura)\b|\b(?:acept\w*|rechaz\w*|convier\w*|"
-                 r"convertir\w*)\b.*\bpresupuesto\b|\bfactura del presupuesto\b", norm):
+                 r"pasa\w* a factura|en factura|a factura)\b|\b(?:acept\w*|rechaz\w*|convier\w*|"
+                 r"convertir\w*|pasa\w*|factura\w*)\b.*\bpresupuesto\s*#?\s*\d|"
+                 r"\b(?:acept\w*|rechaz\w*|convier\w*|convertir\w*)\b.*\bpresupuesto\b|"
+                 r"\bfactura del presupuesto\b", norm):
         return (NEED_REVIEW, {"reply": (
             "Aceptar, rechazar o pasar a factura un presupuesto todavía no lo hago por "
             "WhatsApp. Hazlo en la web, en Presupuestos: con un clic se convierte en "
@@ -2154,6 +2162,42 @@ def _parse(text: str) -> tuple[str, dict] | None:
             _add_tax_rates(norm, args)
             return ("crear_presupuesto", args)
 
+    # «Ya he terminado el trabajo de Marta», «he acabado lo de Marta López».
+    hecho = re.match(
+        r"^(?:ya\s+)?(?:he|hemos)\s+(?:terminado|acabado|finalizado|hecho|cerrado)\s+"
+        r"(?:el\s+trabajo|la\s+obra|la\s+visita|la\s+cita|lo|el\s+encargo|la\s+faena)\s+"
+        r"(?:de|del|en casa de|con)\s+(?:la\s+|el\s+)?(.+?)\s*$", text.strip().rstrip(".!"), re.I)
+    if not hecho:
+        hecho = re.match(r"^(?:marca|pon|da)\s+(?:como\s+)?(?:hecho|terminado|por\s+hecho|"
+                         r"por\s+terminado)\s+(?:el\s+trabajo|lo|la\s+cita)\s+(?:de|del|con)\s+"
+                         r"(.+?)\s*$", text.strip().rstrip(".!"), re.I)
+    if hecho and _limpiar_cliente(hecho.group(1)):
+        return ("terminar_trabajo", {"cliente": _limpiar_cliente(hecho.group(1))})
+    # «Factura el trabajo de Marta López (por 120 euros)».
+    del_trabajo = re.match(
+        r"^(?:factura\w*|hazme\s+la\s+factura\s+de|prepara\w*\s+la\s+factura\s+de)\s+"
+        r"(?:el\s+trabajo|lo|la\s+obra|la\s+visita|la\s+cita)\s+(?:de|del|con)\s+(.+?)\s*$",
+        text.strip().rstrip(".!"), re.I)
+    if del_trabajo:
+        resto = del_trabajo.group(1)
+        importe = re.search(rf"\s+(?:por|de|son)\s+({_AMOUNT_RE})\s*(?:€|euros?|eur)?\s*$", resto, re.I)
+        datos: dict = {}
+        if importe:
+            datos["base"] = _amount_value(importe.group(1))
+            resto = resto[:importe.start()]
+        if _limpiar_cliente(resto):
+            return (FACTURA_DE_TRABAJO, {"cliente": _limpiar_cliente(resto), **datos})
+    # «¿Qué presupuestos tengo?», «mis presupuestos», «presupuestos de Juan».
+    presus = re.match(r"^(?:y\s+)?(?:(?:que|cuales|cuantos|ver|mis|lista(?:me)?|ensename|muestrame|"
+                      r"dime)\s+(?:los\s+|mis\s+)?)?(?:presupuestos|pressupostos)\b"
+                      r"(?:\s+(?:tengo|hay|llevo|tinc))?(?:\s+(?:pendientes?|enviados?|abiertos?))?"
+                      r"(?:\s+(?:de|del|a|para)\s+(?:el\s+cliente\s+)?(.+?))?\s*\??$", norm)
+    if presus:
+        if presus.group(1):
+            crudo = text.strip().rstrip("?¿!. ")
+            return ("ver_presupuestos", {"cliente": _limpiar_cliente(
+                crudo[len(crudo) - len(presus.group(1)):])})
+        return ("ver_presupuestos", {})
     # --- Facturar un trabajo ya cerrado sin reescribir cliente ni concepto ---
     work_invoice = re.search(
         r"\b(?:factura|facturar)\s+(?:(?:el|del)\s+)?(?:trabajo|treball)\s*#?\s*(\d+)\b",
@@ -2539,6 +2583,33 @@ def format_reply(tool: str, result: dict) -> str:
                                    if not ok)
                       + ": dímelo («el NIF de " + client["name"] + " es …») o añádelo en Clientes.")
         return texto
+    if tool == "ver_presupuestos":
+        quien = f" de {result['cliente']}" if result.get("cliente") else ""
+        if result.get("sin_ficha"):
+            return f"No tengo ficha de cliente «{result['cliente']}»."
+        if not result["presupuestos"]:
+            return (f"No tienes presupuestos{quien}. Dime, por ejemplo, «presupuesto a Ana por "
+                    "reforma de baño 1200 euros».")
+        estados = {"borrador": "sin enviar", "enviado": "enviado, esperando respuesta",
+                   "aceptado": "aceptado", "rechazado": "rechazado", "caducado": "caducado"}
+        lines = [f"📝 {_cuenta(result['n'], 'presupuesto', 'presupuestos')}{quien}:"]
+        for p in result["presupuestos"]:
+            lines.append(f"• {p.get('number') or '#' + str(p['id'])} · {p.get('client_name') or ''} · "
+                         f"{p.get('concept') or ''} · {_eur(p.get('total') or 0)} · "
+                         f"{estados.get(p.get('status'), p.get('status') or '')}")
+        if result["n"] > len(result["presupuestos"]):
+            lines.append("…y más en Presupuestos.")
+        lines.append("Enviarlos, aceptarlos o pasarlos a factura se hace en la web, en Presupuestos.")
+        return "\n".join(lines)
+    if tool == "terminar_trabajo":
+        if result.get("error"):
+            return result["error"] + " No he cambiado nada."
+        t, c = result["trabajo"], result["cliente"]
+        precio = t.get("price_estimate")
+        siguiente = (f"«factura el trabajo de {c['name']}»" if precio else
+                     f"«factura a {c['name']} por {t.get('description') or 'el trabajo'} … euros»")
+        return (f"✅ Trabajo de **{c['name']}** marcado como hecho: {t.get('description') or 'Trabajo'}.\n"
+                f"Para que no se quede sin facturar, dime {siguiente}.")
     if tool == "ver_cliente":
         if not result.get("ok"):
             return (result.get("error") or "No encuentro ese cliente.") + \

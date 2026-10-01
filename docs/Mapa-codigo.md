@@ -271,7 +271,10 @@ también `email`, `nif` y `direccion` (validados por `datos_de_cliente_validos`)
 `actualizar_cliente` corrige esos datos de una ficha existente con revisión. Nuevas
 consultas `ver_gastos`, `ver_cliente` y `ver_cobros_pendientes(cliente=…)`;
 `ver_agenda` admite `hasta` y `resumen_negocio` admite `anio`. `run_tool` resuelve
-`factura_numero` («2026/0001») a su id antes de proponer o ejecutar.
+`factura_numero` («2026/0001») a su id antes de proponer o ejecutar. Desde el 1-oct:
+`ver_presupuestos`, `terminar_trabajo` (escritura con revisión) y los marcadores de
+`nlu` `REPETIR_FACTURA` y `FACTURA_DE_TRABAJO`, que `chat._handle` convierte en un
+`crear_factura` con los datos de la última factura o del trabajo agendado.
 
 `routers/clients.py` y `routers/invoicing.py`: las dos altas de cliente por web
 devuelven 400 con el motivo. Sin ese `except ValueError`, el nuevo límite de nombre

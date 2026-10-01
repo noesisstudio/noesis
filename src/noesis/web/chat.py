@@ -11,7 +11,7 @@ import json
 import re
 import logging
 import threading
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from .. import config, db, internal_brain, nlu
 from ..adapters import ai as ai_adapter
@@ -449,14 +449,19 @@ def _unbilled_reply(business_id: int) -> str:
     if not jobs:
         return ("No veo trabajos hechos sin facturar. Buena señal: vas al día con la "
                 "facturación. Cuando cierres uno nuevo, dímelo y te dejo la factura lista.")
-    lines = [f"Tienes **{_count(len(jobs), 'trabajo', 'trabajos')}** que parecen hechos y aún sin factura:"]
+    uno = len(jobs) == 1
+    lines = [f"Tienes **{_count(len(jobs), 'trabajo', 'trabajos')}** que "
+             f"{'parece hecho' if uno else 'parecen hechos'} y aún sin factura:"]
     for j in jobs[:8]:
-        when = (j.get("scheduled_for") or "")[:10]
+        when = nlu.dia_humano(str(j.get("scheduled_for") or "")[:10]) if j.get("scheduled_for") else ""
         est = f" · ~{_eur(j['price_estimate'])}" if j.get("price_estimate") else ""
         lines.append(f"• {j.get('client_name') or '—'} — {j['description']}"
                      + (f" ({when})" if when else "") + est)
-    lines.append("Si alguno ya lo cobraste o no procede facturarlo, ignóralo. Para el "
-                 "resto: «factura a [cliente] por [concepto] [importe]».")
+    primero = jobs[0]
+    lines.append(("Si ya lo cobraste o no procede facturarlo, ignóralo. Si no: " if uno else
+                  "Si alguno ya lo cobraste o no procede facturarlo, ignóralo. Para el resto: ")
+                 + f"«factura a {primero.get('client_name') or '[cliente]'} por "
+                 f"{primero.get('description') or '[concepto]'} … euros».")
     return "\n".join(lines)
 
 
@@ -1561,6 +1566,37 @@ def _handle(
         tool, args = parsed
         if tool == nlu.NEED_REVIEW:
             return {"reply": args["reply"], "source": "local"}
+        if tool == nlu.FACTURA_DE_TRABAJO:
+            # «Factura el trabajo de Marta»: cliente y concepto salen de la agenda;
+            # el importe, del precio estimado si lo hay.
+            ficha = None
+            try:
+                ficha = db.resolve_client_reference(str(args.get("cliente") or ""), business_id)
+            except ValueError:
+                pass
+            if not ficha:
+                return {"reply": (f"No tengo ficha de cliente «{args.get('cliente')}». Dime la "
+                                  "factura entera: «factura a … por … euros». No he creado nada."),
+                        "source": "local"}
+            desde = (date.today() - timedelta(days=90)).isoformat()
+            hasta = (date.today() + timedelta(days=30)).isoformat()
+            suyos = [j for j in db.jobs_between(desde, hasta, business_id)
+                     if j.get("client_id") == ficha["id"]
+                     and str(j.get("status") or "") not in db._JOB_DEAD_STATES]
+            if not suyos:
+                return {"reply": (f"No veo ningún trabajo de {ficha['name']} en la agenda. Dime la "
+                                  f"factura entera: «factura a {ficha['name']} por … euros». "
+                                  "No he creado nada."), "source": "local"}
+            trabajo = max(suyos, key=lambda j: str(j.get("scheduled_for") or ""))
+            concepto = trabajo.get("description") or "Trabajo"
+            importe = args.get("base") or trabajo.get("price_estimate")
+            if not importe or float(importe) <= 0:
+                return {"reply": (f"El último trabajo de {ficha['name']} es «{concepto}», pero no "
+                                  "tiene importe. Dímelo así y te la preparo: «factura a "
+                                  f"{ficha['name']} por {concepto} … euros». No he creado nada."),
+                        "source": "local"}
+            tool, args = "crear_factura", {"cliente": ficha["name"], "concepto": concepto,
+                                           "base": float(importe), "tipo_factura": "F1"}
         if tool == nlu.REPETIR_FACTURA:
             # «Hazme otra igual»: los datos salen de la última factura; lo dicho
             # detrás («para Juan», «pero de 400») sustituye solo eso.
@@ -1865,6 +1901,7 @@ _READ_ONLY_TOOLS = {
     "ver_agenda",
     "ver_gastos",
     "ver_cliente",
+    "ver_presupuestos",
     "ver_impuestos",
     "ver_cobros_pendientes",
     "ver_proyectos",

@@ -22,7 +22,7 @@ _DIAS = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domin
 _MUTATING_TOOLS = {
     "agendar_trabajo", "crear_factura", "crear_presupuesto", "registrar_gasto",
     "crear_proyecto", "crear_tarea_proyecto", "preparar_factura_trabajo",
-    "crear_cliente", "crear_proveedor", "actualizar_cliente",
+    "crear_cliente", "crear_proveedor", "actualizar_cliente", "terminar_trabajo",
 }
 
 

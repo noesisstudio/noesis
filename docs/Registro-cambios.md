@@ -1,5 +1,21 @@
 ﻿# Registro de cambios
 
+## 2026-10-01 (7) — Tickets de mostrador, presupuestos y trabajos por WhatsApp
+
+- **Ticket de venta sin comprador fallaba con la revisión encendida** («No encuentro
+  un cliente… Cliente de mostrador»): en producción los tickets de mostrador no
+  salían. La tarjeta dice «venta de mostrador» y se crea como antes.
+- **«Ticket a Marta López de 50 euros por revisión» se apuntaba como gasto**: un
+  ticket *a* alguien es una venta (F2).
+- «Pasa el presupuesto 1 a factura» preguntaba si crear el cliente «factura»: ahora
+  explica que se hace en Presupuestos.
+- Nuevas: `ver_presupuestos` («qué presupuestos tengo», «presupuestos de Juan»),
+  `terminar_trabajo` («ya he terminado el trabajo de Marta», con tarjeta) y «factura
+  el trabajo de Marta (por 120 euros)», que saca cliente y concepto de la agenda.
+- «Qué me falta por facturar»: singular/plural, fecha humana y ejemplo con los datos
+  reales del primer trabajo.
+- Suite 1352 correctas. Rollback: revertir el commit.
+
 ## 2026-10-01 (6) — Recados al cliente y modo consulta
 
 - **Caso real**: «mándale un whatsapp a reformas martínez diciendo que llego tarde»

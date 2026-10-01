@@ -258,6 +258,18 @@ TOOLS: list[dict] = [
         "input_schema": {"type": "object", "properties": {}},
     },
     {
+        "name": "ver_presupuestos",
+        "description": "Lista los presupuestos con su estado (borrador, enviado, aceptado, rechazado).",
+        "input_schema": {"type": "object", "properties": {"cliente": {"type": "string"}}},
+    },
+    {
+        "name": "terminar_trabajo",
+        "description": ("Marca como hecho el trabajo agendado de un cliente. No factura: "
+                        "solo cambia el estado del trabajo."),
+        "input_schema": {"type": "object", "properties": {"cliente": {"type": "string"}},
+                         "required": ["cliente"]},
+    },
+    {
         "name": "ver_cliente",
         "description": ("Ficha de un cliente: teléfono, correo, NIF, dirección y sus "
                         "últimas facturas con lo pendiente de cobro."),
@@ -789,6 +801,52 @@ def _registrar_gasto(
                                                 business_id=business_id)}
 
 
+def _ver_presupuestos(business_id, cliente=None):
+    presupuestos = db.list_quotes(business_id)
+    if cliente:
+        try:
+            ficha = db.resolve_client_reference(cliente, business_id)
+        except ValueError:
+            ficha = None
+        if not ficha:
+            return {"presupuestos": [], "n": 0, "cliente": cliente, "sin_ficha": True}
+        presupuestos = [p for p in presupuestos if p.get("client_id") == ficha["id"]]
+        cliente = ficha["name"]
+    return {"presupuestos": presupuestos[:10], "n": len(presupuestos),
+            **({"cliente": cliente} if cliente else {})}
+
+
+def trabajo_abierto_de(business_id: int, cliente: str) -> tuple[dict | None, dict | None]:
+    """El trabajo sin cerrar más cercano de un cliente: `(ficha, trabajo)`."""
+    try:
+        ficha = db.resolve_client_reference(cliente, business_id)
+    except ValueError:
+        ficha = None
+    if not ficha:
+        return None, None
+    from datetime import timedelta
+    hoy = date.today()
+    trabajos = [j for j in db.jobs_between((hoy - timedelta(days=60)).isoformat(),
+                                           (hoy + timedelta(days=30)).isoformat(), business_id)
+                if j.get("client_id") == ficha["id"]
+                and str(j.get("status") or "") not in (*db._JOB_DONE_STATES, *db._JOB_DEAD_STATES)]
+    if not trabajos:
+        return ficha, None
+    # El más cercano a hoy: lo normal es cerrar el de hoy o el último que pasó.
+    return ficha, min(trabajos, key=lambda j: abs(
+        (date.fromisoformat(str(j.get("scheduled_for") or hoy.isoformat())[:10]) - hoy).days))
+
+
+def _terminar_trabajo(business_id, cliente):
+    ficha, trabajo = trabajo_abierto_de(business_id, cliente)
+    if not ficha:
+        return {"error": f"No tengo ficha de cliente «{cliente}»."}
+    if not trabajo:
+        return {"error": f"{ficha['name']} no tiene ningún trabajo abierto que cerrar."}
+    db.update_job_status(trabajo["id"], "hecho", business_id)
+    return {"ok": True, "cliente": ficha, "trabajo": db.get_job(trabajo["id"], business_id)}
+
+
 def _ver_cliente(business_id, cliente, dato=None, llamar=False):
     try:
         ficha = db.resolve_client_reference(cliente, business_id)
@@ -913,6 +971,8 @@ _DISPATCH = {
     "registrar_gasto": _registrar_gasto,
     "listar_clientes": _listar_clientes,
     "ver_cliente": _ver_cliente,
+    "ver_presupuestos": _ver_presupuestos,
+    "terminar_trabajo": _terminar_trabajo,
     "ver_perfil_cliente": _ver_perfil_cliente,
     "ver_proyectos": _ver_proyectos,
     "ver_proyecto": _ver_proyecto,

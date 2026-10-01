@@ -828,6 +828,58 @@ class CharlaWhatsappTestCase(unittest.TestCase):
         self.assertNotIn("Así veo", emitir)
         self.assertIn("este mes", gastos)
 
+    def test_ticket_de_mostrador_y_ticket_a_un_cliente(self):
+        """Con la revisión encendida un ticket sin comprador fallaba pidiendo crear la
+        ficha «Cliente de mostrador», y «ticket a Marta…» se apuntaba como gasto."""
+        business, _ = self.make_business("Tickets")
+        db.add_client("Marta López", business_id=business["id"])
+        with patch.object(config, "ASSISTANT_REVIEW_ENABLED", True):
+            mostrador, hecho, a_cliente, _ = self.charla(
+                business, "ticket de venta por desplazamiento 36,30 euros", "sí",
+                "ticket a Marta López de 50 euros por revisión", "no")
+        self.assertIn("venta de mostrador", mostrador)
+        self.assertIn("Total: 36,30 €", mostrador)
+        self.assertIn("Ticket de venta", hecho)
+        self.assertIn("Preparar ticket de venta borrador", a_cliente)
+        self.assertIn("Cliente: Marta López", a_cliente)
+        self.assertEqual(nlu.parse("ticket de 12 euros de parking")[0], "registrar_gasto")
+        (ticket,) = db.list_invoices(business["id"])
+        self.assertEqual((ticket["invoice_type"], ticket["total"]), ("F2", 36.3))
+
+    def test_presupuestos_listados_y_pasar_a_factura_se_explica(self):
+        business, client = self.make_business("Presupuestos")
+        self.assertIn("todavía no lo hago por WhatsApp",
+                      nlu.parse("pasa el presupuesto 1 a factura")[1]["reply"])
+        vacio, _, lista, del_cliente = self.charla(
+            business, "que presupuestos tengo",
+            f"presupuesto a {client['name']} por reforma del baño 3500 euros",
+            "mis presupuestos", f"presupuestos de {client['name']}")
+        self.assertIn("No tienes presupuestos", vacio)
+        self.assertIn("reforma del baño · 4.235,00 € · sin enviar", lista)
+        self.assertIn(f"de {client['name']}", del_cliente)
+
+    def test_terminar_y_facturar_un_trabajo_de_la_agenda(self):
+        business, _ = self.make_business("Trabajos")
+        marta = db.add_client("Marta López", business_id=business["id"])
+        trabajo = db.add_job(marta["id"], "cambiar el termo",
+                             scheduled_for=f"{date.today().isoformat()}T10:00",
+                             business_id=business["id"])
+        with patch.object(config, "ASSISTANT_REVIEW_ENABLED", True):
+            sin_importe, con_importe, _, tarjeta, hecho, otra_vez = self.charla(
+                business, "factura el trabajo de Marta López",
+                "factura el trabajo de Marta López por 120 euros", "no",
+                "ya he terminado el trabajo de Marta López", "sí",
+                "he acabado lo de Marta López")
+        self.assertIn("no tiene importe", sin_importe)
+        self.assertIn("Concepto: cambiar el termo", con_importe)
+        self.assertIn("Total: 145,20 €", con_importe)
+        self.assertIn("Marcar trabajo como hecho", tarjeta)
+        self.assertIn("marcado como hecho", hecho)
+        self.assertIn("ningún trabajo abierto", otra_vez)
+        self.assertEqual(db.get_job(trabajo["id"], business["id"])["status"], "hecho")
+        (pendiente,) = self.charla(business, "que me falta por facturar")
+        self.assertIn("parece hecho", pendiente)
+
     def test_catalan_de_la_ronda(self):
         casos = {
             "crea el client Joan Puig amb telèfon 612345678":

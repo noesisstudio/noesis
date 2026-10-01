@@ -15,7 +15,7 @@ from . import config, db, nlu, local_invoice
 context: ContextVar[dict | None] = ContextVar("action_review", default=None)
 READS = {
     "ver_agenda", "ver_gastos", "ver_cobros_pendientes", "resumen_negocio", "ver_impuestos",
-    "listar_clientes", "ver_cliente", "ver_perfil_cliente", "ver_proyectos", "ver_proyecto",
+    "listar_clientes", "ver_cliente", "ver_presupuestos", "ver_perfil_cliente", "ver_proyectos", "ver_proyecto",
     "ver_equipo", "ver_documentos_pendientes", "ver_solicitudes_gestoria",
     "ver_control_noesis",
 }
@@ -24,6 +24,7 @@ LABELS = {
     "actualizar_cliente": "Actualizar datos del cliente",
     "crear_factura": "Preparar factura borrador", "crear_presupuesto": "Preparar presupuesto",
     "agendar_trabajo": "Agendar trabajo", "registrar_gasto": "Registrar gasto",
+    "terminar_trabajo": "Marcar trabajo como hecho",
     "registrar_pago": "Registrar el saldo pendiente como cobrado",
     "enviar_factura": "Emitir factura (la entrega se gestiona por separado)",
     "entregar_factura": "Entregar la factura al cliente",
@@ -58,12 +59,18 @@ def _preview(bid: int, tool: str, args: dict) -> tuple[str, dict]:
     snapshot = {}
     if tool in {"crear_factura", "crear_presupuesto", "agendar_trabajo"}:
         name = str(args.get("cliente") or "").strip()
-        if not name and args.get("tipo_factura") == "F2":
+        mostrador = not name and args.get("tipo_factura") == "F2"
+        if mostrador:
             name = "Cliente de mostrador"
         if not name:
             raise ValueError("Falta el cliente. No elegiré uno por mi cuenta.")
         client = db.resolve_client_reference(name, bid)
-        if client:
+        if mostrador and not client:
+            # Un ticket sin comprador es una venta de mostrador: no hay ficha que
+            # elegir. Con la revisión encendida esto fallaba pidiendo crear la
+            # ficha «Cliente de mostrador», y los tickets no salían.
+            lines.append("Cliente: venta de mostrador, sin datos del comprador")
+        elif client:
             args["cliente"] = client["name"]
             args["cliente_id"] = client["id"]
             snapshot["client"] = {k: client.get(k) for k in ("id", "name", "nif")}
@@ -93,6 +100,20 @@ def _preview(bid: int, tool: str, args: dict) -> tuple[str, dict]:
                 args["nombre"] = existing["name"]
                 snapshot["client"] = {k: existing.get(k) for k in ("id", "name", "nif")}
                 lines.append(f"Reutilizaré la ficha existente: {existing['name']} · #{existing['id']}")
+    if tool == "terminar_trabajo":
+        from .tools import trabajo_abierto_de
+        ficha, trabajo = trabajo_abierto_de(bid, str(args.get("cliente") or ""))
+        if not ficha:
+            raise ValueError(f"No tengo ficha de cliente «{args.get('cliente')}». No he cambiado nada.")
+        if not trabajo:
+            raise ValueError(f"{ficha['name']} no tiene ningún trabajo abierto que cerrar. "
+                             "No he cambiado nada.")
+        args["cliente"] = ficha["name"]
+        snapshot["job"] = {"id": trabajo["id"], "status": trabajo.get("status")}
+        lines.extend([f"Cliente: {ficha['name']} · ficha #{ficha['id']}",
+                      f"Trabajo: {trabajo.get('description') or 'Trabajo'}",
+                      f"Cuándo: {nlu.dia_humano(trabajo.get('scheduled_for')) or 'sin día'}",
+                      "Solo cambia el estado: la factura se pide aparte."])
     if tool == "actualizar_cliente":
         from .tools import datos_de_cliente_validos
         nombre = str(args.get("cliente") or "").strip()
