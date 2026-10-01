@@ -53,6 +53,19 @@ _SEND_MARKERS = (
 )
 
 
+_RECADO = re.compile(
+    r"^(?:dile|diles|avisa(?:le)?|comentale|comunicale|escribe(?:le)?|informa(?:le)?)\s+"
+    r"(?:a|al)\s+.+?\s+(?:de\s+que|que|diciendo(?:le)?\s+que|para\s+decirle\s+que)\s+\S")
+# «Envíaselo por correo», justo después de un borrador que no se pudo enviar.
+_POR_CORREO = re.compile(
+    r"^(?:si\s*,?\s*)?(?:envia\w*|manda\w*|pasa\w*)\s*(?:lo\s+|selo\s+)?(?:por\s+)?"
+    r"(?:correo|email|mail|e-mail)\s*$")
+
+
+def _draft_key(actor_phone: str | None) -> str | None:
+    return f"comm-draft:{actor_phone}" if actor_phone else None
+
+
 def _eur(number) -> str:
     return (
         f"{(number or 0):,.2f} €"
@@ -311,6 +324,8 @@ def _gestoria_draft(business: dict) -> CommunicationDraft | None:
 def _custom_detail(text: str) -> str:
     patterns = (
         r"(?:diciendo|para decirle|dient|per dir-li|saying)\s+que\s+(.+)$",
+        r"(?:dile|diles|avisa\w*|comenta\w*|comunica\w*|escribe\w*|informa\w*)\s+(?:a|al)\s+"
+        r".+?\s+(?:de\s+)?que\s+(.+)$",
         r"(?:dile|digues-li|tell (?:him|her|them))\s+(.+)$",
         r":\s*(.+)$",
     )
@@ -457,6 +472,36 @@ def _build_draft(business_id: int, text: str) -> tuple[CommunicationDraft | None
     return None, "Dime a qué cliente escribimos y qué necesitas comunicarle."
 
 
+def _como_enviarlo(business_id: int, draft) -> str:
+    """Qué puede hacer el titular con un borrador que Bynoesis no puede enviar.
+
+    Antes decía siempre «en su ficha no hay correo ni móvil», aunque los hubiera:
+    un mensaje libre a un cliente no puede salir por el WhatsApp de empresa (Meta
+    solo admite plantillas aprobadas), así que se da un enlace para que lo mande
+    el propio titular con un toque y, si hay correo, la opción de enviarlo por ahí.
+    """
+    from urllib.parse import quote
+    from .web import whatsapp
+
+    cliente = db.get_client(draft.client_id, business_id) if draft.client_id else None
+    cliente = cliente or {}
+    movil = whatsapp.recipient_phone(cliente.get("phone"))
+    correo = str(cliente.get("email") or "").strip()
+    partes = []
+    if movil:
+        partes.append(" Un mensaje libre a un cliente no puedo enviarlo yo por WhatsApp, "
+                      "pero puedes mandarlo tú con un toque: "
+                      f"https://wa.me/{movil}?text={quote(draft.body)}")
+    if correo:
+        partes.append(f" {'También puedo' if movil else 'Puedo'} enviárselo por correo a "
+                      f"{correo}: dime «envíaselo por correo».")
+    if not partes:
+        return (" En su ficha no hay correo ni móvil al que mandarlo: puedes copiarlo y "
+                "enviárselo tú, o añadir su contacto («el teléfono de "
+                f"{draft.recipient_name} es …»).")
+    return "".join(partes)
+
+
 def handles(text: str) -> bool:
     """Detecta peticiones de redacción sin capturar órdenes operativas normales."""
     norm = nlu._norm(text)
@@ -479,6 +524,10 @@ def handles(text: str) -> bool:
         or (any(word in norm for word in ("cita", "visita")) and "confirm" in norm)
     )
     if any(marker in norm for marker in _WRITE_MARKERS):
+        return True
+    # «Dile a Juan que mañana no puedo ir», «avisa a Ana de que llego tarde»:
+    # un mensaje al cliente dicho como se dice, sin la palabra «mensaje».
+    if _RECADO.match(norm) or _POR_CORREO.match(norm):
         return True
     write_requested = any(word in norm for word in ("redact", "escrib", "escriu"))
     if write_requested:
@@ -507,6 +556,29 @@ def prepare_response(
     """Redacta y, si procede, deja un envío pendiente de confirmación."""
     if not handles(text):
         return None
+    clave = _draft_key(actor_phone)
+    if _POR_CORREO.match(nlu._norm(text)):
+        guardado = db.get_pending_action(business_id, clave) if clave else None
+        if not guardado:
+            return {"reply": ("No tengo ningún mensaje a medias que enviar. Dime a quién y "
+                              "qué, por ejemplo «dile a Ana por correo que mañana llego a "
+                              "las 9»."), "source": "local_internal"}
+        payload = json.loads(guardado["payload"])
+        cliente = db.get_client(payload.get("client_id"), business_id) or {}
+        correo = str(cliente.get("email") or "").strip()
+        if not correo:
+            return {"reply": (f"{payload.get('recipient_name') or 'Ese cliente'} no tiene "
+                              "correo en su ficha. Dímelo («el correo de … es …») y te lo "
+                              "envío."), "source": "local_internal"}
+        payload.update(channel="email", recipient_address=correo)
+        db.clear_pending_action(business_id, clave)
+        db.set_pending_action(business_id, actor_phone, "send_communication", payload,
+                              ttl_minutes=120)
+        return {"reply": (f"Se lo envío por correo a **{payload.get('recipient_name')}** "
+                          f"({correo}):\n\n**{payload.get('subject')}**\n\n"
+                          f"{payload.get('body')}\n\n**Todavía no lo he enviado.** Responde "
+                          "SÍ para enviarlo o NO para descartarlo."),
+                "source": "local_internal", "draft": payload}
     draft, error = _build_draft(business_id, text)
     if error:
         return {"reply": error, "source": "local_internal"}
@@ -541,8 +613,11 @@ def prepare_response(
     if send_requested and channel != "whatsapp":
         note += " Para enviarlo con control, pídemelo por tu WhatsApp y confirma con SÍ."
     elif not can_send:
-        note += (" En su ficha no hay correo ni móvil al que mandarlo: puedes "
-                 "copiarlo y enviárselo tú, o añadir su contacto en la web.")
+        note += _como_enviarlo(business_id, draft)
+        if clave and channel == "whatsapp":
+            # Para que «envíaselo por correo» sepa de qué mensaje se habla.
+            db.set_pending_action(business_id, clave, "comm_draft",
+                                  draft.pending_payload(), ttl_minutes=30)
     return {
         "reply": (
             f"Borrador para **{draft.recipient_name}**:\n\n{preview}\n\n{note}"

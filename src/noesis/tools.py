@@ -492,11 +492,12 @@ def _ver_agenda(business_id, fecha, hasta=None):
 
 def _ver_gastos(business_id, desde=None, hasta=None):
     hoy = date.today()
+    del_mes = not desde and not hasta
     desde = desde or hoy.replace(day=1).isoformat()
     hasta = hasta or hoy.isoformat()
     gastos = db.expenses_between(desde, hasta, business_id)
     total = sum(float(g.get("amount") or 0) for g in gastos)
-    return {"desde": desde, "hasta": hasta, "n": len(gastos),
+    return {"desde": desde, "hasta": hasta, "n": len(gastos), "del_mes": del_mes,
             "total": round(total, 2), "gastos": gastos}
 
 

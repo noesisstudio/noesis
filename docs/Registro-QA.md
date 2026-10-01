@@ -1,5 +1,12 @@
 ﻿# Registro de QA
 
+## 2026-10-01 (6)
+
+- Producción `c9886b1` en el WhatsApp real: «gasolina 20 euros» + «nooo», «llama a…»,
+  «paga la factura de la luz», «hazme otra igual» correctos; el recado al cliente
+  mostró el fallo de «no hay correo ni móvil».
+- Modo consulta simulado con 17 mensajes. Suite **1349 correctas** (313 s).
+
 ## 2026-10-01 (5) — Foto real y fuzz
 
 - **Foto real de un ticket por WhatsApp (producción)**: lectura correcta de

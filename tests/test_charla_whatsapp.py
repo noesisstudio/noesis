@@ -792,6 +792,42 @@ class CharlaWhatsappTestCase(unittest.TestCase):
         self.assertIn("612345678", llamar)
         self.assertIn("mayor que cero", cero)
 
+    def test_recados_al_cliente_y_envio_por_correo(self):
+        """Caso real 1-oct: «mándale un whatsapp a reformas martínez…» decía que en la
+        ficha no había correo ni móvil, teniendo los dos."""
+        business, _ = self.make_business("Recados")
+        db.add_client("Reformas Martínez", phone="611414422", email="rm@example.com",
+                      business_id=business["id"])
+        db.add_client("Juan García", business_id=business["id"])
+        borrador, por_correo, _, sin_contacto, sin_correo, con_canal = self.charla(
+            business, "mandale un whatsapp a reformas martinez diciendo que llego 20 minutos tarde",
+            "envíaselo por correo", "no", "dile a Juan García que mañana no puedo ir",
+            "envialo por correo",
+            "avisa a reformas martinez por correo de que mañana empezamos a las 8")
+        self.assertIn("https://wa.me/34611414422?text=", borrador)
+        self.assertIn("rm@example.com", borrador)
+        self.assertNotIn("no hay correo ni móvil", borrador)
+        self.assertIn("Responde SÍ para enviarlo", por_correo)
+        self.assertIn("Mañana no puedo ir.", sin_contacto)
+        self.assertIn("no hay correo ni móvil", sin_contacto)
+        self.assertIn("no tiene correo en su ficha", sin_correo)
+        self.assertIn("Mañana empezamos a las 8.", con_canal)
+        self.assertEqual(db.get_pending_action(business["id"], TELEFONO)["kind"],
+                         "send_communication")
+
+    def test_modo_consulta_lee_impuestos_y_rechaza_ordenes_raras(self):
+        business, _ = self.make_business("Consulta completa")
+        url = "https://example.com/activar"
+        iva = chat.handle_read_only(business["id"], "cuanto iva tengo que pagar",
+                                    activation_url=url)["reply"]
+        emitir = chat.handle_read_only(business["id"], "emite la 1", activation_url=url)["reply"]
+        gastos = chat.handle_read_only(business["id"], "mis gastos", activation_url=url)["reply"]
+        self.assertIn("IVA", iva)
+        self.assertIn("modelo 303", iva)
+        self.assertIn("modo consulta", emitir)
+        self.assertNotIn("Así veo", emitir)
+        self.assertIn("este mes", gastos)
+
     def test_catalan_de_la_ronda(self):
         casos = {
             "crea el client Joan Puig amb telèfon 612345678":

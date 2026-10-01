@@ -1865,6 +1865,7 @@ _READ_ONLY_TOOLS = {
     "ver_agenda",
     "ver_gastos",
     "ver_cliente",
+    "ver_impuestos",
     "ver_cobros_pendientes",
     "ver_proyectos",
     "ver_equipo",
@@ -1984,6 +1985,15 @@ def handle_read_only(
     social = _social_reply(message)
     if social:
         return {"reply": social, "source": "local"}
+    if activation_url and re.match(
+            r"^(?:emit\w*|emet\w*|envia\w*|manda\w*|cobra\w*|registra\w*|apunta\w*|anota\w*|"
+            r"agenda\w*|crea\w*|haz\w*|prepara\w*|borra\w*|cambia\w*|pon\w*|guarda\w*)\b", norm):
+        # Una orden que el cerebro local no ha sabido leer sigue siendo una orden:
+        # en modo consulta se dice que no se hace, no se suelta el parte.
+        return {"reply": ("Eso no lo puedo hacer ahora: tu cuenta está en modo consulta y "
+                          "no he guardado ni enviado nada.\n\nPara volver a pedirme "
+                          f"acciones, activa un plan aquí: {activation_url}"),
+                "source": "local"}
     return lectura(_coach_reply(business_id, message, solo_lectura=True))
 
 

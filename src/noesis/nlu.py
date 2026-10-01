@@ -2655,17 +2655,20 @@ def format_reply(tool: str, result: dict) -> str:
         return "\n".join(lines)
     if tool == "ver_gastos":
         desde, hasta = result["desde"], result["hasta"]
-        periodo = (dia_humano(desde) if desde == hasta
-                   else "este mes" if desde.endswith("-01") and hasta == date.today().isoformat()
+        # El día 1, «mis gastos» es el mes entero aunque empiece y acabe hoy.
+        un_dia = desde == hasta and not result.get("del_mes")
+        periodo = (dia_humano(desde) if un_dia
+                   else "este mes" if result.get("del_mes") or (
+                       desde.endswith("-01") and hasta == date.today().isoformat())
                    else f"entre {dia_humano(desde)} y {dia_humano(hasta)}")
         if not result["gastos"]:
-            return f"No tienes gastos apuntados {'para ' if desde == hasta else ''}{periodo}."
-        lines = [f"Gastos {'de ' if desde == hasta else ''}{periodo}: "
+            return f"No tienes gastos apuntados {'para ' if un_dia else ''}{periodo}."
+        lines = [f"Gastos {'de ' if un_dia else ''}{periodo}: "
                  f"{_cuenta(result['n'], 'apunte', 'apuntes')}, **{_eur(result['total'])}**."]
         for g in result["gastos"][:10]:
             cuando = str(g.get("spent_on") or g.get("created_at") or "")[:10]
             lines.append(f"• {g['concept']}: {_eur(g['amount'])}"
-                         + (f" ({dia_humano(cuando)})" if cuando and desde != hasta else ""))
+                         + (f" ({dia_humano(cuando)})" if cuando and not un_dia else ""))
         if result["n"] > 10:
             lines.append(f"…y {result['n'] - 10} más. Los tienes todos en Gastos.")
         return "\n".join(lines)

@@ -1,5 +1,19 @@
 ﻿# Registro de cambios
 
+## 2026-10-01 (6) — Recados al cliente y modo consulta
+
+- **Caso real**: «mándale un whatsapp a reformas martínez diciendo que llego tarde»
+  contestaba «en su ficha no hay correo ni móvil», teniendo los dos. Un mensaje libre
+  no puede salir por el WhatsApp de empresa (Meta: solo plantillas), así que ahora se
+  da un enlace `wa.me` con el texto para que lo mande el titular y, si hay correo, se
+  ofrece enviarlo por ahí. «Envíaselo por correo» recupera ese borrador y pide el SÍ
+  (`internal_brain._como_enviarlo`, pendiente `comm-draft:`).
+- «Dile a Juan que…», «avisa a Ana de que…», «escribe a X que…» se reconocen como
+  mensajes al cliente (antes, parte del día).
+- Modo consulta: «¿cuánto IVA tengo que pagar?» es una lectura; una orden que no se
+  entiende se rechaza en vez de dar el parte; «mis gastos» el día 1 dice «este mes».
+- Suite 1349 correctas. Rollback: revertir el commit.
+
 ## 2026-10-01 (5) — Robustez: nombres, gestos, varias líneas y foto real de ticket
 
 Fuzz de 65 mensajes raros contra el bot entero (0 excepciones) y foto real de un
