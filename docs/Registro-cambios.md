@@ -1,5 +1,11 @@
 ﻿# Registro de cambios
 
+## 2026-10-01 (11) — Se retira `sigue.md`
+
+- El founder dijo «sigue»: lo pendiente de la nota pasa entero a `Tareas-vivas.md`
+  (sección «Pruebas de WhatsApp») y se borra `sigue.md`. Solo documentación; sin
+  cambios de código. Rollback: revertir el commit.
+
 ## 2026-10-01 (10) — Chat web igualado y nota de traspaso `sigue.md`
 
 - Chat de la web: «emite la 1» (la reescritura pasa a `nlu`, vale para los dos

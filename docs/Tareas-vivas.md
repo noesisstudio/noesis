@@ -2,14 +2,29 @@
 
 ## Pruebas de WhatsApp (1-oct-2026)
 
-- [ ] **Audio real**: la transcripción nunca se ha probado de punta a punta. Es la
-      prioridad del founder para la próxima sesión. Detalle en `sigue.md`.
-- [ ] Verificar en producción los commits posteriores a `ce9c164`.
-- [ ] Orden de mensajes seguidos y lentitud en frío (>9 s la primera respuesta).
+- [ ] **Audio real** (prioridad del founder): la transcripción nunca se ha probado
+      de punta a punta. WhatsApp Web rechaza el WAV generado y el AAC se queda
+      cargando; lo probado es lo que pasa *después* de transcribir (helper `voz()` de
+      `tests/test_charla_whatsapp.py`). Hace falta ogg/opus real: `ffmpeg` en el Mac
+      (`say` → aiff → ogg) o notas de voz del founder desde el móvil leyendo en
+      Railway qué transcribió Groq. Casos: ruido de obra, catalán y castellano
+      mezclados, cifras («ciento veinte con cincuenta»), nombres de clientes, notas
+      de más de 60 s, nota vacía o inaudible y el aviso de fallo (`_VOZ_EXPLICACION`).
+      Emitir por voz sigue pidiendo una segunda confirmación.
+- [ ] Verificar en producción los commits posteriores a `ce9c164` (fichaje, número
+      en letra, «emite la 1» y PDF por enlace en el chat web).
+- [ ] Web de producción sin probar (sin sesión) y canal de recepcionista y mensajes
+      proactivos con plantilla sin tocar.
+- [ ] Orden de mensajes seguidos (con `NOESIS_WHATSAPP_INBOX_ENABLED` apagado un «sí»
+      rápido puede adelantarse a su tarjeta) y lentitud en frío (>9 s).
 - [ ] Respuestas locales en catalán cuando el negocio está en catalán.
-- [ ] Revisar las 6 alertas de Dependabot.
-- [ ] Founder: borrar de Documentos los tres archivos de prueba y corregir el NIF de
-      la ficha «reformas martínez» (`481234129L` no es válido).
+- [ ] Por WhatsApp aún no: aceptar/rechazar/facturar un presupuesto, facturas de
+      varias líneas, asignar un gasto a obra o cliente, mover o cancelar una cita.
+- [ ] Revisar las 6 alertas de Dependabot (`pip-audit`).
+- [ ] Founder: borrar de Documentos los tres archivos de prueba (ticket «Ferretería
+      La Llave», su sticker y el PDF «Suministros Eléctricos Levante»), revisar el
+      gasto «gasolina 45 €» del 30-sep y corregir el NIF de la ficha «reformas
+      martínez» (`481234129L` no es válido; tiene 13 borradores).
 
 
 ## WhatsApp probado hablando con el bot — 30-sep

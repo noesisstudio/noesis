@@ -5,7 +5,7 @@
 - Chat web simulado con 25 mensajes (revisión encendida). Suite **1355 correctas**
   (321 s). Ruff correcto.
 - No verificado en producción: los commits posteriores a `ce9c164` (Railway MCP
-  desconectado tras reiniciar el equipo). Pendientes en `sigue.md`.
+  desconectado tras reiniciar el equipo). Pendientes en `Tareas-vivas.md`.
 
 ## 2026-10-01 (9)
 
