@@ -1,5 +1,17 @@
 # Mapa de código
 
+## WhatsApp: presupuestos, citas, voz y trimestre — 1-oct
+
+- `tools.py`: herramientas solo locales (`aceptar_presupuesto`, `rechazar_presupuesto`,
+  `cancelar_cita`, `mover_cita`; fuera de `TOOLS`) y sus resolutores
+  `presupuesto_citado`, `cita_citada` y `obra_del_gasto`.
+- `db.py`: `reschedule_job`; `jobs_for_date` excluye citas canceladas;
+  `tax_quarter` devuelve `incompletos` (hasta tres apuntes sin IVA o sin base).
+- `adapters/transcription.py`: `NotaNoValida(motivo)` separa fallos de la nota de
+  fallos de configuración; `web/whatsapp.py` y `web/routers/assistant.py` los explican.
+- `local_invoice._parse_dictada`: facturas de varias líneas dictadas.
+- `action_review._pie_de_tarjeta`: cómo corregir cada tarjeta hablando.
+
 ## Memoria y transporte — candidato 24-sep
 
 25-sep: `db.recover_whatsapp_inbound` valida administrador, audita intento y
