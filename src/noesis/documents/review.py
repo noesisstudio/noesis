@@ -322,7 +322,10 @@ _PATTERNS = (
         r"|(?:es|era)\s+de\s+(.{2,80})"
     )),
     ("concept", re.compile(r"(?:el\s+)?(?:concepto|concepte|descripcion)\s*(?:es|:)?\s+(.{2,200})")),
-    ("bare", re.compile(rf"({_NUM}){_CURRENCY}(?:\s+(?:en|de|a|para|por)?\s*(.{{2,80}}))?")),
+    # «45,20 Leroy Merlin» y también como se contesta hablando: «son 25 euros de
+    # gasolina», «fueron 12 en parking», «he pagado 30 de material».
+    ("bare", re.compile(rf"(?:(?:son|eran|fueron|es|era|costo|me\s+costo|he\s+pagado|pague)\s+)?"
+                        rf"({_NUM}){_CURRENCY}(?:\s+(?:en|de|a|para|por)?\s*(.{{2,80}}))?")),
 )
 
 
@@ -597,7 +600,7 @@ def render(item: dict, *, position: int | None = None, count: int | None = None)
         identity.append(f"vence {_day(values['due_on'])}")
     if identity:
         lines.append(" · ".join(identity))
-    if mode == "gasto" and values.get("concept"):
+    if mode == "gasto" and values.get("concept") and values.get("concept") != party:
         lines.append(values["concept"])
 
     def mark(field: str) -> str:

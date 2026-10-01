@@ -1,5 +1,17 @@
 ﻿# Registro de cambios
 
+## 2026-10-01 — Revisión de tickets por WhatsApp
+
+Simulación de una foto de ticket de punta a punta (lectura simulada, resto real).
+
+- Ante una foto ilegible, «son 25 euros de gasolina» daba «no he entendido el
+  cambio»: el dato libre admite «son/eran/fueron/he pagado» delante de la cifra.
+- «Es de la obra de Juan» guardaba «la obra de Juan» como **proveedor**: ahora se
+  dice que asignar a obra o cliente se hace en Costes y no se cambia nada.
+- Proveedor y concepto iguales ya no se repiten en la tarjeta.
+- Pruebas: 117 dirigidas (documentos y conversación) correctas y ruff; **la suite
+  completa no se ha vuelto a pasar** tras este cambio. Rollback: revertir el commit.
+
 ## 2026-09-30 (noche, 4) — Archivos locales del founder
 
 - Sube `.claude/settings.json` (plugins `pyright-lsp` y `hookify`), la bóveda de

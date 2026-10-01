@@ -1,5 +1,12 @@
 ﻿# Registro de QA
 
+## 2026-10-01 — Tickets por WhatsApp
+
+- Simulación de foto de ticket: corrección de total, concepto, foto repetida y foto
+  ilegible. 117 pruebas dirigidas correctas; suite completa pendiente de repetir
+  (la última completa, 1335, es del commit `a50cf23`).
+- No probado: una foto real por WhatsApp (WhatsApp Web no terminó de cargar).
+
 ## 2026-09-30 (noche, 3)
 
 - Producción con `da110fc` en el WhatsApp real: ficha y facturas de un cliente,

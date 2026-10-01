@@ -37,7 +37,14 @@ _CONFIRM_ALL = re.compile(
 )
 _STOP = re.compile(r"cancela(?:r)?(?:\s+(?:todo|la\s+revision))?|para|dejalo|olvidalo|basta|stop")
 _SKIP = re.compile(r"salta(?:la|lo)?|siguiente|descarta(?:la|lo)?|pasa|otra|next")
-_SHOW = re.compile(r"ver|resumen|como\s+queda|como\s+esta|muestra(?:mela|melo)?")
+_SHOW = re.compile(r"ver|resumen|como\s+queda|como\s+esta|muestra(?:mela|melo)?|"
+                   r"cuanto\s+(?:era|es|pone|ponia)|que\s+(?:pone|ponia|era|has\s+leido)|"
+                   r"a\s+ver|ensename(?:lo|la)?")
+# «Es de la obra de Juan»: a qué obra o cliente se carga, no quién lo vendió.
+_DESTINO = re.compile(
+    r"(?:es|era|va|ponlo|cargalo|apuntalo)\s+(?:de|del|para|a|en|al)\s+"
+    r"(?:la\s+obra|el\s+proyecto|la\s+reforma|la\s+casa|el\s+piso|el\s+cliente|la\s+clienta|"
+    r"la\s+cliente)\b.*")
 _CORRECTION_START = re.compile(
     r"(?:no\s*,?\s*)?(?:el\s+|la\s+)?(?:total|importe|import|base|iva|cuota|irpf|retencion|proveedor|"
     r"emisor|nif|cif|fecha|data|vence|vencimiento|numero|num|concepto|es\s+un|es\s+una|es\s+de|son)\b"
@@ -542,6 +549,12 @@ def handle_reply(business: dict, phone: str, text: str) -> str | None:
         return "De acuerdo, no apunto nada más. Los documentos quedan guardados en tus papeles."
     if _OTHER_ORDER.match(folded) and not _CORRECTION_START.match(folded):
         return None
+    if _DESTINO.fullmatch(folded):
+        # Antes se guardaba «la obra de Juan» como proveedor del ticket.
+        return ("Asignar un gasto a una obra o a un cliente todavía no lo hago por "
+                "WhatsApp: cuando esté apuntado, hazlo en la web, en Costes. No he "
+                "cambiado nada.\n\n"
+                + review.render(item, position=index + 1, count=len(items)))
     correction = re.sub(r"^\s*no\s*[,.:;]?\s+(?=\S)", "", text, flags=re.I)
     changed, unknown = review.apply_correction(item, correction)
     if changed:
