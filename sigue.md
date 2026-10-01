@@ -2,7 +2,7 @@
 
 > Nota temporal. **Cuando el founder diga «sigue», leer esto, borrarlo del repo
 > (commit) y continuar.** El detalle de cada cambio está en `docs/Registro-cambios.md`
-> (entradas 11 a 19 del 1-oct) y `docs/Registro-QA.md`. Lo pendiente fijo está en
+> (entradas 11 a 20 del 1-oct) y `docs/Registro-QA.md`. Lo pendiente fijo está en
 > `docs/Tareas-vivas.md` (sección «Pruebas de WhatsApp»).
 
 ## Qué se hizo en esta sesión
@@ -34,6 +34,11 @@ total para subir. Todo lo siguiente está subido y desplegado salvo lo que se di
    - «Resumen de la semana» daba el mes: ahora lunes a domingo.
 8. Pie de tarjetas sin «corregir:» (enseña a corregir hablando) y aviso de IVA que
    nombra el apunte incompleto.
+9. **Ronda local** (simulador por `whatsapp.handle_inbound`, ver abajo): altas
+   «añade a X como cliente, teléfono …», ranking «¿quién es mi mejor cliente?»,
+   «cuántos clientes», «¿cuánto he ganado?», borradores con nombre corto («dile a
+   Juan…»), abrir obra con tarjeta, «¿cómo va la obra de X?», «recuérdame llamar a
+   X mañana a las 10» (cita), notas sueltas (se explica) y «¿qué tengo pendiente?».
 
 ## Cómo probar (método que funcionó)
 
@@ -43,6 +48,11 @@ total para subir. Todo lo siguiente está subido y desplegado salvo lo que se di
   `Array.from(document.querySelector('#main').querySelectorAll('[role="row"]')).slice(-4).map(r=>r.innerText).join('\n---\n')`.
   Escribir: clic en (900, 653) con la ventana a 1300×900, `type`, `Return`, esperar
   ~10 s. Todo lo que propone se descarta con «no».
+- **Simulador local** (sin Chrome): script que crea una base temporal con dos
+  clientes, una factura emitida y una obra, y manda frases por
+  `whatsapp.handle_inbound` con `whatsapp.send` parcheado (revisión y planificador
+  encendidos, sin IA). Llamar a `chat.handle` directamente engaña: el SÍ/NO de los
+  borradores de mensaje lo atiende antes `whatsapp.py`.
 - **Producción**: `curl https://bynoesis.com/ready` da el `release` desplegado.
   Railway MCP (proyecto «autonoms») para despliegues y registros.
 - **Suite**: `NOESIS_SECRET=noesis-local-secret-fixed-32-characters-minimum
@@ -62,7 +72,14 @@ total para subir. Todo lo siguiente está subido y desplegado salvo lo que se di
    `brew install ffmpeg` y generar ogg/opus (`say` → aiff → ogg).
 3. **Respuestas en catalán** cuando el negocio está en catalán (grande).
 4. **Gasto a un cliente sin obra**: `expenses` no tiene `client_id` (migración).
-5. **Orden de mensajes y lentitud**: mediana del webhook ~45 ms, p99 hasta 15 s
+5. **Meta Ads (pregunta del founder)**: la recomendación «conecta tu CRM a Meta»
+   solo sirve con anuncios de formulario instantáneo. Si los anuncios llevan a la
+   web, lo útil es Píxel + API de conversiones web (registro y pago). Esperando a
+   que diga qué tipo de anuncio usa. `/admin/crm` podría enviar fases del lead.
+6. **Pequeños**: «tengo que llamar a Juan» sin día cae en el parte (debería
+   preguntar cuándo); «Descartado. No he apuntado nada» al decir NO a un mensaje
+   (mejor «No lo envío»).
+7. **Orden de mensajes y lentitud**: mediana del webhook ~45 ms, p99 hasta 15 s
    (IA o transcripción en la propia petición). Lo arregla
    `NOESIS_WHATSAPP_INBOX_ENABLED`, pero activarlo es decisión del founder y antes
    hay que probarlo con Meta real.
