@@ -2,7 +2,7 @@
 
 > Nota temporal. **Cuando el founder diga «sigue», leer esto, borrarlo del repo
 > (commit) y continuar.** El detalle de cada cambio está en `docs/Registro-cambios.md`
-> (entradas 11 a 21 del 1-oct) y `docs/Registro-QA.md`. Lo pendiente fijo está en
+> (entradas 11 a 22 del 1-oct) y `docs/Registro-QA.md`. Lo pendiente fijo está en
 > `docs/Tareas-vivas.md` (sección «Pruebas de WhatsApp»).
 
 ## Qué se hizo en esta sesión
@@ -39,6 +39,8 @@ total para subir. Todo lo siguiente está subido y desplegado salvo lo que se di
    «cuántos clientes», «¿cuánto he ganado?», borradores con nombre corto («dile a
    Juan…»), abrir obra con tarjeta, «¿cómo va la obra de X?», «recuérdame llamar a
    X mañana a las 10» (cita), notas sueltas (se explica) y «¿qué tengo pendiente?».
+10. **Céntimos dictados** («cuarenta y cinco con cincuenta de gasolina» guardaba 45 €)
+    y **citas en catalán** («cancel·la», «mou … a dijous»).
 
 ## Cómo probar (método que funcionó)
 

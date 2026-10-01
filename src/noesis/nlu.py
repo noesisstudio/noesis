@@ -144,9 +144,15 @@ def _cifras_dictadas(text: str) -> str:
         rf"(?P<cifra>(?:(?:{palabras_sueltas})\s+)*(?:{palabras_sueltas}))"
         rf"(?:\s+(?:con|amb)\s+(?P<centimos>(?:(?:{palabras_sueltas})\s*)+?))?"
         # «y» cierra la cifra solo si no sigue otra cifra: «treinta y cinco» es una.
-        rf"(?=\s+(?:a|para|per|con|en)\b|\s+(?:y|i)\s+(?!(?:{palabras_sueltas})\b)"
+        # «de» también: «cuarenta y cinco con cincuenta de gasolina» perdía los
+        # céntimos y se apuntaban 45 € (ronda local del 1-oct).
+        rf"(?=\s+(?:a|para|per|con|en|de|del)\b|\s+(?:y|i)\s+(?!(?:{palabras_sueltas})\b)"
         rf"|\s*[,.;]|$)",
         _sin_euros, text, flags=re.I)
+    # «45 con 50 de gasolina», «120 con 50 euros»: los céntimos dichos en cifras.
+    text = re.sub(r"(?<![\d.,])(\d{1,6})\s+(?:con|amb)\s+(\d{1,2})(?![\d.,])"
+                  r"(?=\s*(?:€|euros?\b|eur\b)|\s+(?:de|del|en)\s|\s*[,.;]|\s*$)",
+                  lambda m: f"{m.group(1)},{int(m.group(2)):02d}", text, flags=re.I)
     if not re.search(r"\b(?:euros?|eur|€)\b", text, re.I):
         return text
 
@@ -715,17 +721,23 @@ def _limpiar_cliente(nombre: str) -> str:
 
 _CITA = r"(?:cita|visita|trabajo|feina)"
 _VERBO_CANCELA_CITA = (r"(?:cancela|cancelar|cancelame|cancelala|anula|anular|anulame|anulala|"
-                       r"desconvoca|suspende)")
+                       r"desconvoca|suspende|"
+                       # Catalán: «cancel·la la cita», «anul·la la visita».
+                       r"cancel[·.]?la|cancel[·.]?lar|anul[·.]?la|anul[·.]?lar|suspen)")
 _VERBO_MUEVE_CITA = (r"(?:mueve|muevela|mover|moverla|muevame|cambia|cambiame|cambiala|"
                      r"cambiar|aplaza|aplazame|aplazala|aplazar|retrasa|retrasame|"
                      r"retrasala|retrasar|adelanta|adelantame|adelantala|adelantar|"
-                     r"reprograma|reprogramame|reprogramala|pasa|pasame|pasala)")
+                     r"reprograma|reprogramame|reprogramala|pasa|pasame|pasala|"
+                     # Catalán: «mou la cita», «canvia la visita», «ajorna la feina».
+                     r"mou|moure|canvia|canviar|ajorna|ajornar|endarrereix|avanca|avançar|passa)")
 _DIA_DICHO = (r"(?:hoy|avui|manana|dema|pasado|lunes|martes|miercoles|jueves|viernes|"
-              r"sabado|domingo|dia|\d)")
+              r"sabado|domingo|dilluns|dimarts|dimecres|dijous|divendres|dissabte|"
+              r"diumenge|dia|\d)")
 # Lo que corta el nombre del cliente: «… de Juan García | del jueves | al lunes».
 _CORTE_NOMBRE = {"del", "al", "para", "a", "que", "y", "por", "este", "esta", "hoy",
                  "manana", "pasado", "lunes", "martes", "miercoles", "jueves", "viernes",
-                 "sabado", "domingo"}
+                 "sabado", "domingo", "avui", "dema", "dilluns", "dimarts", "dimecres",
+                 "dijous", "divendres", "dissabte", "diumenge", "per", "les"}
 
 
 def _cambio_de_cita(text: str, norm: str) -> tuple[str, dict] | None:
@@ -741,7 +753,8 @@ def _cambio_de_cita(text: str, norm: str) -> tuple[str, dict] | None:
         return None
     articulo = r"(?:\s+(?:la|el|mi|su|esa|ese|esta|este))?"
     cancelar = re.search(rf"\b{_VERBO_CANCELA_CITA}{articulo}\s+{_CITA}\b", norm) \
-        or re.search(rf"\b(?:ha|han)\s+(?:cancelado|anulado){articulo}\s+{_CITA}\b", norm)
+        or re.search(rf"\b(?:ha|han)\s+(?:cancelado|anulado|cancel[·.]?lat|anul[·.]?lat)"
+                     rf"{articulo}\s+{_CITA}\b", norm)
     mover = re.search(rf"\b{_VERBO_MUEVE_CITA}{articulo}\s+{_CITA}\b", norm) \
         or re.search(rf"\b(?:ha|han)\s+(?:aplazado|movido|cambiado|retrasado|adelantado)"
                      rf"{articulo}\s+{_CITA}\b", norm)
@@ -762,9 +775,12 @@ def _cambio_de_cita(text: str, norm: str) -> tuple[str, dict] | None:
     else:
         de_quien = re.search(rf"\b{_CITA}\s+(?:de|con|a|del cliente|de la cliente)\s+(.+)$",
                              crudo, re.I)
-        quien_dice = re.match(r"^\s*(?:el\s+cliente\s+|la\s+cliente\s+)?(.+?)\s+(?:me\s+)?"
+        # «En Joan m'ha cancel·lat la visita»: artículo catalán y «m'» pegado.
+        quien_dice = re.match(r"^\s*(?:el\s+cliente\s+|la\s+cliente\s+|en\s+|na\s+)?(.+?)"
+                              r"(?:\s+me\s+|\s+m['’]|\s+)"
                               r"(?:ha|han)\s+(?:cancelado|anulado|aplazado|movido|cambiado|"
-                              r"retrasado|adelantado)\b", crudo, re.I)
+                              r"retrasado|adelantado|cancel[·.]?lat|anul[·.]?lat|ajornat)\b",
+                              crudo, re.I)
         palabras = (de_quien.group(1) if de_quien else
                     quien_dice.group(1) if quien_dice else "").split()
         nombre = []
@@ -785,7 +801,7 @@ def _cambio_de_cita(text: str, norm: str) -> tuple[str, dict] | None:
         else:
             resto = _norm(crudo[(quien_dice.end() if quien_dice else 0):])
     origen, destino = "", resto
-    tramo = re.search(r"\bdel?\s+(.+?)\s+(?:al|a el|para el|para)\s+(.+)$", resto)
+    tramo = re.search(r"\b(?:del?|d')\s*(.+?)\s+(?:al|a el|para el|para|a)\s+(.+)$", resto)
     if tramo and re.match(_DIA_DICHO, tramo.group(1)):
         origen, destino = tramo.group(1), tramo.group(2)
     elif tool == "cancelar_cita":

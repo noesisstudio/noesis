@@ -1,5 +1,15 @@
 ﻿# Registro de cambios
 
+## 2026-10-01 (22) — Céntimos dictados y citas en catalán
+
+- `nlu._cifras_dictadas`: «apunta un gasto de cuarenta y cinco con cincuenta de
+  gasolina» guardaba **45 €** (los céntimos se perdían si detrás venía «de»); y
+  «45 con 50» en cifras tampoco se leía. Ahora 45,50 en los dos casos.
+- `nlu._cambio_de_cita`: catalán — «cancel·la / anul·la la cita», «mou / canvia /
+  ajorna la visita … a dijous a les 10», «en Joan m'ha cancel·lat la visita»; los
+  días catalanes cortan el nombre del cliente («dijous» ya no se toma por cliente).
+- Pruebas: `test_charla_whatsapp` (1 nueva). Rollback: revertir el commit.
+
 ## 2026-10-01 (21) — Recordatorio sin día y NO a un mensaje
 
 - `nlu.py`: «tengo que llamar a Juan» sin día pregunta para cuándo (antes, el parte).

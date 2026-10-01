@@ -1,5 +1,10 @@
 ﻿# Registro de QA
 
+## 2026-10-01 (22)
+
+- Simulación local en catalán y con frases de Whisper. Suite completa **1380
+  correctas** (373 s). Ruff correcto.
+
 ## 2026-10-01 (21)
 
 - Suite completa **1379 correctas** (412 s).

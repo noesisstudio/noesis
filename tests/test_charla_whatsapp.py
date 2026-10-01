@@ -1404,6 +1404,23 @@ class CharlaWhatsappTestCase(unittest.TestCase):
         self.assertIsNone(error)
         self.assertEqual(draft.recipient_name, "Juan García")
 
+    def test_centimos_dictados_y_citas_en_catalan(self):
+        """Ronda local 1-oct: «cuarenta y cinco con cincuenta de gasolina» apuntaba 45 €
+        y «cancel·la la cita» / «mou la cita… a dijous» no se entendían."""
+        for texto, importe in (("Apunta un gasto de cuarenta y cinco con cincuenta de gasolina.", 45.5),
+                               ("apunta 45 con 50 de gasolina", 45.5),
+                               ("gasté treinta y cinco con veinte en el parking", 35.2),
+                               ("gasto de cuarenta de gasolina", 40.0)):
+            with self.subTest(texto=texto):
+                self.assertEqual(nlu.parse(texto)[1]["importe"], importe)
+        self.assertEqual(nlu.parse("cancel·la la cita de Juan García"),
+                         ("cancelar_cita", {"cliente": "Juan García"}))
+        self.assertEqual(nlu.parse("en Joan m'ha cancel·lat la visita"),
+                         ("cancelar_cita", {"cliente": "Joan"}))
+        mou = nlu.parse("mou la cita de Juan García a dijous a les 10")
+        self.assertEqual((mou[0], mou[1]["cliente"], mou[1]["nueva_hora"]),
+                         ("mover_cita", "Juan García", "10:00"))
+
     def test_frases_para_mover_y_cancelar_citas(self):
         casos = {
             "cancela la cita de Juan García": ("cancelar_cita", {"cliente": "Juan García"}),
