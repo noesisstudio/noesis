@@ -9253,6 +9253,16 @@ def expenses_between(start: str, end: str, business_id) -> list[dict]:
             (business_id, start, end)).fetchall()]
 
 
+def collected_between(start: str, end: str, business_id) -> float:
+    """Cobrado (pagos de facturas) entre dos días ISO, ambos incluidos."""
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT COALESCE(SUM(amount),0) AS total FROM invoice_payments "
+            "WHERE business_id=? AND SUBSTR(CAST(paid_at AS TEXT), 1, 10) BETWEEN ? AND ?",
+            (business_id, start, end)).fetchone()
+    return round(float(row["total"] or 0), 2)
+
+
 def list_expenses(business_id) -> list[dict]:
     with get_conn() as conn:
         return [dict(r) for r in conn.execute(

@@ -163,12 +163,13 @@ TOOLS: list[dict] = [
     },
     {
         "name": "resumen_negocio",
-        "description": ("Cifras del mes (o del año con «anio»): facturado, cobrado, "
-                        "pendiente, IVA, gastos, beneficio."),
+        "description": ("Cifras del mes (o del año con «anio», o de la semana con "
+                        "«semana»): facturado, cobrado, pendiente, IVA, gastos, beneficio."),
         "input_schema": {
             "type": "object",
             "properties": {"mes": {"type": "string", "description": "YYYY-MM"},
-                           "anio": {"type": "integer"}},
+                           "anio": {"type": "integer"},
+                           "semana": {"type": "string", "enum": ["actual", "pasada"]}},
         },
     },
     {
@@ -754,7 +755,32 @@ def _ver_cobros_pendientes(business_id, cliente=None, tras_cobro=False):
             **({"tras_cobro": True} if tras_cobro else {})}
 
 
-def _resumen_negocio(business_id, mes=None, anio=None):
+def _resumen_de_semana(business_id, semana="actual"):
+    """Lunes a domingo: facturado, cobrado, gastos y trabajos de la semana."""
+    hoy = date.today()
+    lunes = hoy - timedelta(days=hoy.weekday() + (7 if semana == "pasada" else 0))
+    domingo = lunes + timedelta(days=6)
+    desde, hasta = lunes.isoformat(), domingo.isoformat()
+    emitidas = [f for f in db.list_invoices(business_id)
+                if f.get("status") in {"enviada", "parcial", "cobrada"}
+                and desde <= str(f.get("issued_at") or f.get("created_at") or "")[:10] <= hasta]
+    gastos = db.expenses_between(desde, hasta, business_id)
+    trabajos = [j for j in db.jobs_between(desde, hasta, business_id)
+                if str(j.get("status") or "") not in db._JOB_DEAD_STATES]
+    hechos = [j for j in trabajos if str(j.get("status") or "") in db._JOB_DONE_STATES]
+    return {"semana": semana, "desde": desde, "hasta": hasta,
+            "facturado": round(sum(float(f.get("total") or 0) for f in emitidas), 2),
+            "n_facturas": len(emitidas),
+            "cobrado": db.collected_between(desde, hasta, business_id),
+            "gastos": round(sum(float(g.get("amount") or 0) for g in gastos), 2),
+            "n_trabajos": len(trabajos), "n_hechos": len(hechos),
+            "pendiente_total": round(sum(float(p.get("total") or 0)
+                                         for p in db.pending_payments(business_id)), 2)}
+
+
+def _resumen_negocio(business_id, mes=None, anio=None, semana=None):
+    if semana:
+        return _resumen_de_semana(business_id, semana)
     if anio:
         hoy = date.today()
         anio = int(anio)

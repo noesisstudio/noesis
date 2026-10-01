@@ -1,5 +1,10 @@
 ﻿# Registro de QA
 
+## 2026-10-01 (19)
+
+- Abreviaturas, fecha del prompt y resumen semanal. Suite completa **1377
+  correctas** (366 s). Ruff correcto.
+
 ## 2026-10-01 (18)
 
 - Pie de tarjeta y aviso de IVA. Suite completa **1375 correctas** (314 s). Ruff correcto.

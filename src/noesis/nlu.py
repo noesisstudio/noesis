@@ -1697,6 +1697,10 @@ _MESES_DEL_ANIO = ("enero", "febrero", "marzo", "abril", "mayo", "junio", "julio
 def _periodo_del_resumen(norm: str) -> dict:
     """«Este año», «el mes pasado», «en agosto»: antes siempre era el mes en curso."""
     hoy = date.today()
+    if re.search(r"\bsemana\s+(?:pasada|anterior)\b|\bsetmana\s+passada\b", norm):
+        return {"semana": "pasada"}
+    if re.search(r"\b(?:la|esta|aquesta)\s+(?:semana|setmana)\b", norm):
+        return {"semana": "actual"}
     anio = re.search(r"\b(?:en|de|del)\s+(20\d\d)\b", norm)
     if re.search(r"\b(?:este|aquest)\s+(?:ano|any)\b|\bel ano\b|\ben lo que va de ano\b", norm):
         return {"anio": hoy.year}
@@ -1805,7 +1809,11 @@ _ABREVIATURAS = (
     # «200e» o «200 e» es como se teclea el euro en el móvil.
     (re.compile(r"(\d)\s?e(?![\w\d])", re.I), r"\1 euros"),
     # Faltas sueltas de la ronda real del 30-sep: cada una rompía la orden entera.
-    (re.compile(r"(?<![\w\d])oy(?![\w\d])", re.I), "hoy"),
+    (re.compile(r"(?<![\w\d])(?:oy|hoi)(?![\w\d])", re.I), "hoy"),
+    # Ronda real del 1-oct: «k tngo q hacer oy» caía en la IA, que se equivocó de
+    # día y de agenda. Sin vocales es como se teclea con prisa.
+    (re.compile(r"(?<![\w\d])(?:tngo|tego|tengp)(?![\w\d])", re.I), "tengo"),
+    (re.compile(r"(?<![\w\d])(?:mñn|mñna|mñana|manyana)(?![\w\d])", re.I), "mañana"),
     (re.compile(r"(?<![\w\d])nueb([oa]s?)(?![\w\d])", re.I), r"nuev\1"),
     # «factura ha juan»: la hache de más detrás de la orden.
     (re.compile(r"\b(factura\w*|presupuesto|cita|agenda\w*|ticket)\s+ha\s+(?=\S)", re.I),
@@ -3021,6 +3029,20 @@ def format_reply(tool: str, result: dict) -> str:
             lines.append(f"• {p['client_name']}: {_eur(p['total'])}" + (f" ({d} días)" if d else ""))
         lines.append("Mi consejo: reclama primero las de más de 7 días, corto y sin disculparte.")
         return "\n".join(lines)
+    if tool == "resumen_negocio" and result.get("semana"):
+        r = result
+        titulo = "Esta semana" if r["semana"] == "actual" else "La semana pasada"
+        desde = fecha_larga(date.fromisoformat(r["desde"]))
+        hasta = fecha_larga(date.fromisoformat(r["hasta"]))
+        texto = (f"📊 {titulo} (del {desde} al {hasta}): facturado **{_eur(r['facturado'])}** "
+                 f"en {_cuenta(r['n_facturas'], 'factura', 'facturas')}, cobrado "
+                 f"{_eur(r['cobrado'])}, gastos {_eur(r['gastos'])}.\n"
+                 f"Trabajos: {r['n_trabajos']}"
+                 + (f", {_cuenta(r['n_hechos'], 'hecho', 'hechos')}" if r["n_trabajos"] else "")
+                 + ".")
+        if r.get("pendiente_total"):
+            texto += f"\nPendiente de cobro en total: {_eur(r['pendiente_total'])}."
+        return texto
     if tool == "resumen_negocio":
         r = result
         if r.get("anio"):

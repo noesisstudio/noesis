@@ -11,6 +11,7 @@
   fallos de configuración; `web/whatsapp.py` y `web/routers/assistant.py` los explican.
 - `local_invoice._parse_dictada`: facturas de varias líneas dictadas.
 - `action_review._pie_de_tarjeta`: cómo corregir cada tarjeta hablando.
+- `tools._resumen_de_semana` + `db.collected_between`: resumen de lunes a domingo.
 
 ## Memoria y transporte — candidato 24-sep
 

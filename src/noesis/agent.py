@@ -7,7 +7,7 @@ servidor antes de devolver el resultado. Web y WhatsApp usan el mismo bucle.
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 import json
 import threading
 import time
@@ -102,7 +102,11 @@ requieren aprobación específica. No presentes una preferencia como permiso: co
 el control de Bynoesis si hay dudas.
 
 CONTEXTO TEMPORAL
-- Hoy es {_DIAS[hoy.weekday()]} {hoy.isoformat()}.
+- Hoy es {nlu.fecha_larga(hoy)} de {hoy.year} ({hoy.isoformat()}); mañana es \
+{nlu.fecha_larga(hoy + timedelta(days=1))}. Usa estas fechas tal cual: no las \
+recalcules.
+- Antes de decir que un día no hay trabajos, consulta la agenda con la herramienta: \
+no lo afirmes de memoria.
 - Cuando diga "mañana", "el jueves", "esta tarde"... calcula tú la fecha real y \
 pásala a las herramientas en ISO (YYYY-MM-DD o YYYY-MM-DDTHH:MM).
 

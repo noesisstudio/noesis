@@ -1,5 +1,19 @@
 ﻿# Registro de cambios
 
+## 2026-10-01 (19) — Abreviaturas de móvil, fecha de la IA y resumen de la semana
+
+Segunda tanda de la ronda real por WhatsApp Web:
+
+- `nlu.py`: «k tngo q hacer oy» no se entendía en local y la IA respondió «jueves 2
+  de octubre» (era jueves 1) y que no había trabajos (había uno). Se añaden «tngo»,
+  «hoi», «mñn», «mñana»… a las abreviaturas: ahora lo resuelve el cerebro local.
+- `agent.py`: el prompt da la fecha escrita entera («jueves 1 de octubre de 2026»),
+  la de mañana y la regla de consultar la agenda antes de decir que un día está libre.
+- «Resumen de la semana» / «de la semana pasada»: lunes a domingo con facturado,
+  cobrado, gastos y trabajos (`tools._resumen_de_semana`, `db.collected_between`).
+  Antes devolvía la lectura del mes. La IA también puede pedirlo (`semana`).
+- Pruebas: `test_charla_whatsapp` (2 nuevas). Rollback: revertir el commit.
+
 ## 2026-10-01 (18) — Pie de tarjeta y aviso de IVA que dice qué falta
 
 - `action_review.py`: el pie de las tarjetas pedía «corregir:» y la orden entera; ahora

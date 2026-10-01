@@ -1326,6 +1326,33 @@ class CharlaWhatsappTestCase(unittest.TestCase):
         self.assertIn("gasto «gasolina» (45,00 €)", texto)
         self.assertIn("complétalos en Gastos", texto)
 
+    def test_resumen_de_la_semana(self):
+        """Ronda real 1-oct: «resumen de la semana» devolvía la lectura del mes."""
+        business, client = self.make_business("Semana")
+        factura = db.add_invoice(client["id"], "Pintura", 100, business_id=business["id"])
+        db.issue_invoice(factura["id"], business["id"])
+        db.add_expense("gasolina", 30, business_id=business["id"])
+        (resumen,) = self.charla(business, "resumen de la semana")
+        self.assertIn("Esta semana (del lunes", resumen)
+        self.assertIn("facturado **121,00 €** en 1 factura", resumen)
+        self.assertIn("gastos 30,00 €", resumen)
+        self.assertIn("Pendiente de cobro en total: 121,00 €", resumen)
+        (pasada,) = self.charla(business, "resumen de la semana pasada")
+        self.assertIn("La semana pasada", pasada)
+        self.assertIn("facturado **0,00 €**", pasada)
+
+    def test_abreviaturas_de_movil_y_fecha_de_la_ia(self):
+        """Ronda real 1-oct: «k tngo q hacer oy» iba a la IA, que dijo «jueves 2»
+        siendo jueves 1 y que no había trabajos cuando había uno."""
+        hoy = date.today().isoformat()
+        for texto in ("k tngo q hacer oy", "q tngo hoi"):
+            self.assertEqual(nlu.parse(nlu.corregir_erratas(texto)), ("ver_agenda", {"fecha": hoy}))
+        self.assertEqual(nlu.parse(nlu.corregir_erratas("q tngo mñn"))[0], "ver_agenda")
+        from noesis import agent
+        prompt = agent._system_prompt({})
+        self.assertIn(f"Hoy es {nlu.fecha_larga(date.today())}", prompt)
+        self.assertIn("consulta la agenda con la herramienta", prompt)
+
     def test_frases_para_mover_y_cancelar_citas(self):
         casos = {
             "cancela la cita de Juan García": ("cancelar_cita", {"cliente": "Juan García"}),
