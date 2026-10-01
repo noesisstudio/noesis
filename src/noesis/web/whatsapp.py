@@ -930,6 +930,15 @@ def _prepare_invoice_action(business: dict, phone: str, text: str) -> str | None
         {"invoice_id": invoice["id"], "deliver": deliver,
          "invoice_fingerprint": _invoice_fingerprint(invoice, business["id"])},
     )
+    if invoice.get("status") != "borrador":
+        # Ya emitida: solo se entrega. Decir «voy a emitir el borrador» era falso.
+        destino = str(client.get("email") or "").strip() or "su WhatsApp"
+        return (
+            f"Voy a entregar la factura {invoice.get('number') or invoice['id']} a "
+            f"{client.get('name') or 'el cliente'} ({destino}) por "
+            f"{_eur(invoice['total'])}. Ya está emitida: no cambia ningún número. "
+            "¿Confirmas? Responde SÍ o NO."
+        )
     action = "emitir y entregar" if deliver else "emitir"
     recipient = f" a {client.get('name')}" if deliver else ""
     return (
@@ -1410,6 +1419,7 @@ def _execute_pending(business: dict, phone: str, pending: dict) -> str:
             return "No encuentro ese borrador. No he emitido ni enviado nada."
         if payload.get('invoice_fingerprint') and payload['invoice_fingerprint'] != _invoice_fingerprint(invoice, business['id']):
             return "La factura ha cambiado desde que te pedí confirmación. Revísala y vuelve a pedir la emisión; no he emitido ni enviado nada."
+        ya_emitida = invoice.get("status") != "borrador"
         if invoice.get("status") == "borrador":
             from ..conversation_plan import expected_invoice
             expectation = expected_invoice.set((business['id'], invoice_id, payload.get('invoice_fingerprint')))
@@ -1436,6 +1446,17 @@ def _execute_pending(business: dict, phone: str, pending: dict) -> str:
             if not attachment["sent"]:
                 return f"Factura {invoice['number']} emitida. " + attachment["reply"]
             return f"Factura {invoice['number']} emitida por {_eur(invoice['total'])}. He enviado su PDF aquí, no al cliente."
+        if delivery["queued"] and ya_emitida:
+            return (
+                f"Hecho ✅ Entrega de la factura {invoice['number']} preparada por "
+                f"{delivery['channel']} a {delivery['target']}."
+            )
+        if ya_emitida and payload.get("deliver"):
+            return (
+                f"La factura {invoice['number']} ya estaba emitida, pero no he podido "
+                "preparar la entrega al cliente. Revisa su correo o teléfono en Clientes, "
+                f"o descarga el PDF y mándalo tú: {delivery['owner_pdf_url']}"
+            )
         if delivery["queued"]:
             return (
                 f"Hecho ✅ Factura {invoice['number']} emitida. PDF generado y "

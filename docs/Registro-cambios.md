@@ -1,5 +1,18 @@
 ﻿# Registro de cambios
 
+## 2026-10-01 (4) — «Hazme otra igual» y entrega de una factura ya emitida
+
+Simulación del ciclo completo (crear → emitir → entregar → cobrar).
+
+- «Enviar factura 2026/0001», ya emitida, decía «voy a emitir y entregar el
+  borrador»: ahora dice que solo se entrega y que no cambia ningún número; el
+  resultado tampoco habla de «emitida» si ya lo estaba.
+- Nuevo: «hazme otra igual», «repite la última factura», «otra igual para Juan»,
+  «la misma pero de 400» (`nlu.REPETIR_FACTURA`): copia cliente, concepto, importe,
+  IVA e IRPF de la última factura y pasa por la tarjeta de revisión. Con varias
+  líneas remite a la web.
+- Suite 1344 correctas. Rollback: revertir el commit.
+
 ## 2026-10-01 (3) — Más faltas: euros, presupuestos, gastos sin verbo, emitir y PDF
 
 - «factura ha juan», «100 euors/pavos», «presu», «ajenda», «enbia», «resumn»,

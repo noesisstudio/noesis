@@ -1,5 +1,12 @@
 ﻿# Registro de QA
 
+## 2026-10-01 (4)
+
+- Producción `4288af7` en el WhatsApp real: «nuebo», nombre con mayúsculas, aviso de
+  segunda orden y 3T con plazo correctos. Dos mensajes seguidos se contestaron en
+  orden distinto al de envío (el webhook no garantiza orden con la bandeja apagada).
+- Ciclo crear/emitir/entregar/cobrar simulado en local. Suite **1344 correctas**.
+
 ## 2026-10-01 (3)
 
 - Batería local de ~40 frases con faltas (facturas, presupuestos, agenda, gastos,

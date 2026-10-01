@@ -707,6 +707,38 @@ class CharlaWhatsappTestCase(unittest.TestCase):
                 self.assertEqual(factura["id"], esperado)
         self.assertFalse(whatsapp._is_owner_pdf_request("factura a juan por 20 euros de pdf"))
 
+    def test_otra_igual_repite_la_ultima_factura(self):
+        self.assertEqual(nlu.parse("otra igual pero para Juan García y de 250"),
+                         (nlu.REPETIR_FACTURA, {"base": 250.0, "cliente": "Juan García"}))
+        self.assertEqual(nlu.parse("hazme otra factura a Juan por 100 pintar")[0], "crear_factura")
+        self.assertIsNone(nlu.parse("otra igual que ayer con descuento"))
+        business, client = self.make_business("Repetir")
+        db.add_client("Juan García", business_id=business["id"])
+        with patch.object(config, "ASSISTANT_REVIEW_ENABLED", True):
+            (vacio,) = self.charla(business, "hazme otra igual")
+            self.charla(business, f"factura a {client['name']} por mantenimiento mensual "
+                        "300 euros con irpf del 15", "sí")
+            igual, _, otro, _, importe = self.charla(
+                business, "hazme otra igual", "no", "otra igual para Juan García", "no",
+                "la misma pero de 400 euros")
+        self.assertIn("ninguna factura que repetir", vacio)
+        self.assertIn("Concepto: mantenimiento mensual", igual)
+        self.assertIn("IRPF 15 %", igual)
+        self.assertIn("Total: 318,00 €", igual)
+        self.assertIn("Cliente: Juan García", otro)
+        self.assertIn("Total: 424,00 €", importe)
+        self.assertEqual(len(db.list_invoices(business["id"])), 1)
+
+    def test_entregar_una_factura_ya_emitida_no_dice_que_la_emite(self):
+        business, client = self.make_business("Entrega clara")
+        db.update_client(client["id"], business_id=business["id"], email="cliente@example.com")
+        factura = db.add_invoice(client["id"], "Pintura", 100, business_id=business["id"])
+        factura = db.issue_invoice(factura["id"], business["id"])
+        (pregunta,) = self.charla(business, f"enviar factura {factura['number']}")
+        self.assertIn(f"Voy a entregar la factura {factura['number']}", pregunta)
+        self.assertIn("Ya está emitida", pregunta)
+        self.assertNotIn("borrador", pregunta)
+
     def test_catalan_de_la_ronda(self):
         casos = {
             "crea el client Joan Puig amb telèfon 612345678":

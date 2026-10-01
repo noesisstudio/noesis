@@ -1551,6 +1551,31 @@ def _handle(
         tool, args = parsed
         if tool == nlu.NEED_REVIEW:
             return {"reply": args["reply"], "source": "local"}
+        if tool == nlu.REPETIR_FACTURA:
+            # «Hazme otra igual»: los datos salen de la última factura; lo dicho
+            # detrás («para Juan», «pero de 400») sustituye solo eso.
+            ultimas = [f for f in db.list_invoices(business_id, limit=20)
+                       if f.get("client_id") and f.get("base") and f.get("concept")
+                       and f.get("status") != "anulada"]
+            if not ultimas:
+                return {"reply": ("Todavía no hay ninguna factura que repetir. Dímela "
+                                  "entera, por ejemplo «factura a Ana por pintura 200 "
+                                  "euros». No he creado nada."), "source": "local"}
+            ultima = ultimas[0]
+            lineas = db.get_invoice_lines(ultima["id"], business_id)
+            if len(lineas) > 1 and "base" not in args:
+                return {"reply": (f"La última factura ({ultima.get('number') or '#' + str(ultima['id'])}) "
+                                  "tiene varias líneas. Duplícala en la web, en **Facturas**, "
+                                  "para conservar cada línea. No he creado nada."),
+                        "source": "local"}
+            tool = "crear_factura"
+            args = {"cliente": args.get("cliente") or ultima.get("client_name"),
+                    "concepto": ultima["concept"],
+                    "base": args.get("base") or float(ultima["base"]),
+                    "iva": float(ultima.get("vat_rate") if ultima.get("vat_rate") is not None
+                                 else 21),
+                    "irpf": float(ultima.get("irpf_rate") or 0),
+                    "tipo_factura": ultima.get("invoice_type") or "F1"}
         if tool == "registrar_pago" and not config.ASSISTANT_REVIEW_ENABLED:
             return {"reply": "Abre la factura en Facturas para revisar y registrar el cobro. No he cambiado su estado.", "source": "local"}
         if tool == nlu.HELP:

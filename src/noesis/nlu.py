@@ -1803,7 +1803,48 @@ _ORDEN_CON_LE = re.compile(
     r"(una?\s+(?:factura|presupuesto|pressupost|ticket|tiquet|cita|visita|trabajo))\b", re.I)
 
 
+REPETIR_FACTURA = "__repetir_factura__"
+_OTRA_IGUAL = re.compile(
+    r"^(?:(?:hazme|haz|crea\w*|prepara\w*|quiero|necesito|ponme)\s+)?"
+    r"(?:otra(?:\s+factura)?\s+(?:igual|como\s+la\s+(?:ultima|anterior|de\s+antes))|"
+    r"la\s+misma(?:\s+factura)?|(?:repite|repetir|duplica|duplicar|copia|copiar)\s+"
+    r"(?:la\s+)?(?:ultima\s+)?factura(?:\s+(?:anterior|de\s+antes))?)"
+    r"(?P<resto>\b.*)$")
+
+
+def _repetir_factura(text: str) -> tuple[str, dict] | None:
+    """«Hazme otra igual», «otra igual para Juan», «la misma pero de 400».
+
+    Las cuotas y los trabajos repetidos se facturan así. Lo que se cambia —el
+    cliente o el importe— se dice detrás; el resto sale de la última factura.
+    """
+    m = _OTRA_IGUAL.match(_norm(text).strip(" .!"))
+    if not m:
+        return None
+    resto = m.group("resto").strip(" ,")
+    crudo = text.strip().rstrip(".! ")
+    crudo_resto = crudo[len(crudo) - len(resto):] if resto and len(crudo) >= len(resto) else resto
+    args: dict = {}
+    importe = re.search(rf"(?:de|por|pero\s+de|pero\s+por)\s+({_AMOUNT_RE})\s*(?:€|euros?|eur)?",
+                        crudo_resto, re.I)
+    if importe:
+        args["base"] = _amount_value(importe.group(1))
+        crudo_resto = (crudo_resto[:importe.start()] + " " + crudo_resto[importe.end():]).strip()
+    crudo_resto = re.sub(r"(?:\s+|^)(?:y|e|pero|,)\s*$", "", crudo_resto, flags=re.I).strip()
+    quien = re.search(r"\b(?:a|para|per\s+a)\s+(.+?)\s*(?:\bpero\b.*)?$", crudo_resto, re.I)
+    if quien:
+        nombre = _limpiar_cliente(quien.group(1))
+        if nombre:
+            args["cliente"] = nombre
+    elif crudo_resto and not re.fullmatch(r"(?:pero|y|,|\s|que la ultima|a la ultima)*", _norm(crudo_resto)):
+        return None  # hay algo más que no se entiende: mejor no adivinar
+    return (REPETIR_FACTURA, args)
+
+
 def parse(text: str) -> tuple[str, dict] | None:
+    repetida = _repetir_factura(text or "")
+    if repetida:
+        return repetida
     con_le = _ORDEN_CON_LE.match((text or "").strip())
     if con_le:
         text = _ORDEN_CON_LE.sub(
