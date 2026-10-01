@@ -202,9 +202,18 @@ class ConversationSafetyTests(unittest.TestCase):
     def test_unknown_ai_write_cannot_bypass_review(self):
         token = action_review.context.set({"actor": "web:owner"})
         try:
-            result = json.loads(run_tool("crear_proyecto", {"nombre": "Obra", "presupuesto": 500}, self.bid))
+            result = json.loads(run_tool("crear_tarea_proyecto", {"proyecto_id": 1, "titulo": "Tarea"}, self.bid))
             self.assertIn("todavía no lo preparo", result["reply"])
             self.assertIn("No he cambiado nada", result["reply"])
+        finally:
+            action_review.context.reset(token)
+        # Abrir una obra sí se prepara desde el 1-oct, pero como tarjeta: nada se
+        # guarda sin el SÍ.
+        token = action_review.context.set({"actor": "web:owner"})
+        try:
+            result = json.loads(run_tool("crear_proyecto", {"nombre": "Obra", "presupuesto": 500}, self.bid))
+            self.assertTrue(result["confirmation_required"])
+            self.assertIn("Abrir obra", result["reply"])
             self.assertEqual(db.list_projects(self.bid), [])
         finally:
             action_review.context.reset(token)

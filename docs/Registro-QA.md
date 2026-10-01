@@ -1,5 +1,10 @@
 ﻿# Registro de QA
 
+## 2026-10-01 (20)
+
+- Simulación local por la entrada real de WhatsApp con ~40 frases. Suite completa
+  **1379 correctas** (382 s). Ruff correcto. Chrome se desconectó: sin ronda real.
+
 ## 2026-10-01 (19)
 
 - Abreviaturas, fecha del prompt y resumen semanal. Suite completa **1377

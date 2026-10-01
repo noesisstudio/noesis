@@ -121,7 +121,9 @@ class CharlaWhatsappTestCase(unittest.TestCase):
                 business, "crea un proyecto reforma cocina con presupuesto de 8000 euros",
                 "crea el cliente Pedro Prueba con telefono 600 11 22 33", "no",
                 f"ticket de venta a {fiscal['name']} por desplazamiento 36,30 euros")
-        self.assertIn(f"/b/{business['id']}/proyectos", proyecto)
+        # Desde el 1-oct abrir una obra sí se prepara por WhatsApp, con tarjeta.
+        self.assertIn("Abrir obra", proyecto)
+        self.assertIn("Presupuesto: 8.000,00 €", proyecto)
         self.assertIn("Teléfono: 600112233", cliente)
         self.assertTrue(ticket.startswith("Preparar ticket de venta borrador"), ticket)
 
@@ -1352,6 +1354,52 @@ class CharlaWhatsappTestCase(unittest.TestCase):
         prompt = agent._system_prompt({})
         self.assertIn(f"Hoy es {nlu.fecha_larga(date.today())}", prompt)
         self.assertIn("consulta la agenda con la herramienta", prompt)
+
+    def test_ronda_local_clientes_obras_recordatorios_y_pendientes(self):
+        """Simulación del 1-oct: frases normales que acababan en el parte general."""
+        business, client = self.make_business("Ronda local")
+        nombre = client["name"]
+        factura = db.add_invoice(client["id"], "Pintura", 100, business_id=business["id"])
+        db.issue_invoice(factura["id"], business["id"])
+        db.add_project("Reforma Casa Roca", 12000, client_id=client["id"],
+                       business_id=business["id"])
+        # Altas con «como cliente» y datos detrás, no «cambia el dato de una ficha».
+        self.assertEqual(nlu.parse("añade a Pedro Gómez como cliente, teléfono 612345678"),
+                         ("crear_cliente", {"nombre": "Pedro Gómez", "telefono": "612345678"}))
+        self.assertEqual(nlu.parse("guarda a Laura en clientes con correo l@x.es"),
+                         ("crear_cliente", {"nombre": "Laura", "email": "l@x.es"}))
+        self.assertEqual(nlu.parse("ponle a Laura el teléfono 612345678")[0], "actualizar_cliente")
+        self.assertEqual(nlu.parse("cuánto he ganado este año")[0], "resumen_negocio")
+        with patch.object(config, "ASSISTANT_REVIEW_ENABLED", True):
+            mejor, cuantos, obra, abrir, hecho, recado, _, nota, pendiente = self.charla(
+                business, "quien es mi mejor cliente", "cuantos clientes tengo",
+                "cómo va la obra de Casa Roca",
+                f"crea una obra para {nombre}: reforma cocina 8000 euros", "sí",
+                f"recuérdame llamar a {nombre} mañana a las 10", "no",
+                "apunta una nota: comprar tubos", "qué tengo pendiente")
+        self.assertIn(f"1. {nombre} — 121,00 €", mejor)
+        self.assertIn("Tienes 1 cliente", cuantos)
+        self.assertIn("**Reforma Casa Roca**", obra)
+        self.assertIn("margen **12.000,00 €**", obra)
+        self.assertIn("Abrir obra", abrir)
+        self.assertIn("Presupuesto: 8.000,00 €", abrir)
+        self.assertIn("Proyecto creado: Reforma cocina", hecho)
+        self.assertEqual(sorted(p["name"] for p in db.list_projects(business["id"])),
+                         ["Reforma Casa Roca", "Reforma cocina"])
+        self.assertIn("Trabajo: Llamar", recado)
+        self.assertIn("mañana a las 10:00", recado)
+        self.assertIn("Notas sueltas todavía no las guardo", nota)
+        self.assertIn("Por cobrar: 121,00 € en 1 factura", pendiente)
+
+    def test_borrador_de_mensaje_con_nombre_corto(self):
+        """«Manda un whatsapp a Juan…» con la ficha «Juan García» pedía el cliente."""
+        from noesis import internal_brain
+        business, _ = self.make_business("Mensaje corto")
+        db.add_client("Juan García", phone="34600000001", business_id=business["id"])
+        draft, error = internal_brain._build_draft(
+            business["id"], "manda un whatsapp a Juan diciendo que llego tarde")
+        self.assertIsNone(error)
+        self.assertEqual(draft.recipient_name, "Juan García")
 
     def test_frases_para_mover_y_cancelar_citas(self):
         casos = {

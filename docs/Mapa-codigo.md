@@ -12,6 +12,7 @@
 - `local_invoice._parse_dictada`: facturas de varias líneas dictadas.
 - `action_review._pie_de_tarjeta`: cómo corregir cada tarjeta hablando.
 - `tools._resumen_de_semana` + `db.collected_between`: resumen de lunes a domingo.
+- `tools.obra_por_nombre`, `_ver_pendientes`, `_listar_clientes(ranking)`; tarjeta `crear_proyecto` en `action_review`.
 
 ## Memoria y transporte — candidato 24-sep
 

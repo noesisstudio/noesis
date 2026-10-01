@@ -17,7 +17,7 @@ READS = {
     "ver_agenda", "ver_gastos", "ver_cobros_pendientes", "resumen_negocio", "ver_impuestos",
     "listar_clientes", "ver_cliente", "ver_presupuestos", "ver_perfil_cliente", "ver_proyectos", "ver_proyecto",
     "ver_equipo", "ver_documentos_pendientes", "ver_solicitudes_gestoria",
-    "ver_control_noesis",
+    "ver_control_noesis", "ver_pendientes",
 }
 LABELS = {
     "crear_cliente": "Guardar cliente", "crear_proveedor": "Guardar proveedor",
@@ -32,13 +32,13 @@ LABELS = {
     "rechazar_presupuesto": "Marcar el presupuesto como rechazado",
     "cancelar_cita": "Cancelar la cita",
     "mover_cita": "Cambiar la cita de día u hora",
+    "crear_proyecto": "Abrir obra",
 }
 
 
 
 # Dónde se hace en la web lo que por WhatsApp aún no se prepara.
 _SECCION_DE_TOOL = {
-    "crear_proyecto": ("Proyectos", "proyectos"),
     "crear_tarea_proyecto": ("Proyectos", "proyectos"),
     "preparar_factura_trabajo": ("Facturas", "facturas"),
 }
@@ -237,6 +237,30 @@ def _preview(bid: int, tool: str, args: dict) -> tuple[str, dict]:
             + (f" · {destino}" if destino else ""),
             "Se manda al CLIENTE, no a ti.",
         ])
+    if tool == "crear_proyecto":
+        nombre = str(args.get("nombre") or "").strip()
+        if not nombre or len(nombre) > 200:
+            raise ValueError("Dime cómo se llama la obra. No he creado nada.")
+        presupuesto = Decimal(str(args.get("presupuesto") or 0))
+        if not presupuesto.is_finite() or presupuesto <= 0:
+            raise ValueError("Dime el presupuesto de la obra en euros. No he creado nada.")
+        lines.append(f"Nombre: {nombre}")
+        dicho = str(args.get("cliente") or "").strip()
+        if dicho:
+            ficha = db.resolve_client_reference(dicho, bid)
+            if not ficha:
+                # Una obra no da de alta clientes de rebote: un error de voz
+                # dejaría una ficha duplicada colgando de ella.
+                raise ValueError(f"No encuentro un cliente inequívoco llamado «{dicho}». Crea "
+                                 f"primero su ficha con «crea el cliente {dicho}» o corrige el "
+                                 "nombre. No he creado nada.")
+            args["cliente"] = ficha["name"]
+            snapshot["client"] = {k: ficha.get(k) for k in ("id", "name")}
+            lines.append(f"Cliente: {ficha['name']} · ficha #{ficha['id']}")
+        else:
+            lines.append("Cliente: sin cliente")
+        lines.append(f"Presupuesto: {nlu._eur(presupuesto)}")
+        lines.append("Los gastos «para la obra …» y sus horas se irán sumando a su margen.")
     if tool in {"cancelar_cita", "mover_cita"}:
         from datetime import date as _date, datetime as _datetime
         from .tools import cita_citada

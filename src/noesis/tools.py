@@ -255,8 +255,9 @@ TOOLS: list[dict] = [
     },
     {
         "name": "listar_clientes",
-        "description": "Lista los clientes guardados.",
-        "input_schema": {"type": "object", "properties": {}},
+        "description": ("Lista los clientes guardados. Con «ranking», ordenados por lo "
+                        "facturado (para «quién es mi mejor cliente»)."),
+        "input_schema": {"type": "object", "properties": {"ranking": {"type": "boolean"}}},
     },
     {
         "name": "ver_presupuestos",
@@ -362,6 +363,12 @@ TOOLS: list[dict] = [
     {
         "name": "ver_solicitudes_gestoria",
         "description": "Lista las solicitudes abiertas entre el negocio y su gestoría.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "ver_pendientes",
+        "description": ("Lo pendiente de hoy en un vistazo: citas, cobros, borradores sin "
+                        "emitir, presupuestos sin respuesta y documentos por revisar."),
         "input_schema": {"type": "object", "properties": {}},
     },
     {
@@ -863,12 +870,21 @@ def obra_del_gasto(business_id: int, concepto) -> tuple[dict | None, str, str | 
     Si no hay ninguna, el gasto queda general y la tarjeta lo dice; si encajan
     varias, se pregunta, que imputar a la obra equivocada falsea su margen.
     """
-    from .nlu import _norm
     texto = str(concepto or "").strip()
     m = _OBRA_DEL_GASTO.search(texto)
     if not m:
         return None, texto, None
     dicho = m.group(1).strip(" .,")
+    obra = obra_por_nombre(business_id, dicho, sufijo=" No he registrado nada.")
+    if obra:
+        return obra, texto[:m.start()].strip() or texto, dicho
+    return None, texto, dicho
+
+
+def obra_por_nombre(business_id: int, dicho: str, *, sufijo: str = "") -> dict | None:
+    """La obra abierta que se nombra: por nombre exacto, por palabras del nombre o
+    por su cliente. `None` si no hay ninguna; con varias, pregunta cuál."""
+    from .nlu import _norm
     palabras = _norm(dicho).split()
     abiertas = [p for p in db.list_projects(business_id)
                 if p.get("status") not in ("terminado", "cancelado")]
@@ -882,12 +898,12 @@ def obra_del_gasto(business_id: int, concepto) -> tuple[dict | None, str, str | 
                      lambda p: encaja(p.get("client_name"))):
         obras = [p for p in abiertas if criterio(p)]
         if len(obras) == 1:
-            return obras[0], texto[:m.start()].strip() or texto, dicho
+            return obras[0]
         if len(obras) > 1:
             raise ValueError(f"Hay varias obras que encajan con «{dicho}»: "
                              + ", ".join(p["name"] for p in obras[:5])
-                             + ". Dime cuál con su nombre completo. No he registrado nada.")
-    return None, texto, dicho
+                             + f". Dime cuál con su nombre completo.{sufijo}")
+    return None
 
 
 def presupuesto_citado(business_id: int, presupuesto_id=None,
@@ -1067,7 +1083,10 @@ def _ver_cliente(business_id, cliente, dato=None, llamar=False):
                                    if f.get("status") in {"enviada", "parcial"}), 2)}
 
 
-def _listar_clientes(business_id):
+def _listar_clientes(business_id, ranking=False):
+    if ranking:
+        # «¿Quién es mi mejor cliente?»: por lo facturado (emitido), de más a menos.
+        return {"clientes": db.client_stats(business_id), "ranking": True}
     return {"clientes": db.list_clients(business_id)}
 
 
@@ -1087,8 +1106,18 @@ def _ver_proyectos(business_id):
     return db.project_summary(business_id)
 
 
-def _ver_proyecto(business_id, proyecto_id):
-    project = db.get_project(int(proyecto_id), business_id)
+def _ver_proyecto(business_id, proyecto_id=None, nombre=None):
+    if not proyecto_id and nombre:
+        # «¿Cómo va la obra de Casa Roca?»: por su nombre o por su cliente.
+        try:
+            obra = obra_por_nombre(business_id, nombre)
+        except ValueError as exc:
+            return {"ok": False, "error": str(exc)}
+        if not obra:
+            return {"ok": False, "error": f"No encuentro ninguna obra abierta «{nombre}». "
+                                          "Pídeme «mis obras» para ver cuáles hay."}
+        proyecto_id = obra["id"]
+    project = db.get_project(int(proyecto_id or 0), business_id)
     return project or {"ok": False, "error": "Proyecto no encontrado."}
 
 
@@ -1129,6 +1158,23 @@ def _ver_equipo(business_id):
         "personas": db.list_workers(business_id, include_inactive=False),
         "jornada_hoy": db.clockins_today(business_id),
     }
+
+
+def _ver_pendientes(business_id):
+    """«¿Qué tengo pendiente?»: lo que espera al autónomo, en un solo vistazo."""
+    from .documents import repo
+    hoy = date.today().isoformat()
+    citas = [j for j in db.jobs_for_date(hoy, business_id)
+             if str(j.get("status") or "") not in db._JOB_DONE_STATES]
+    cobros = db.pending_payments(business_id)
+    borradores = [f for f in db.list_invoices(business_id, limit=200)
+                  if f.get("status") == "borrador"]
+    presupuestos = [p for p in db.list_quotes(business_id)
+                    if p.get("status") in {"borrador", "enviado"}]
+    return {"citas": citas, "cobros": cobros,
+            "total_cobros": round(sum(float(p.get("total") or 0) for p in cobros), 2),
+            "borradores": borradores, "presupuestos": presupuestos,
+            "documentos": len(repo.list_pending_review(business_id))}
 
 
 def _ver_documentos_pendientes(business_id):
@@ -1189,6 +1235,7 @@ _DISPATCH = {
     "crear_tarea_proyecto": _crear_tarea_proyecto,
     "ver_equipo": _ver_equipo,
     "ver_documentos_pendientes": _ver_documentos_pendientes,
+    "ver_pendientes": _ver_pendientes,
     "ver_solicitudes_gestoria": _ver_solicitudes_gestoria,
     "ver_control_noesis": _ver_control_noesis,
 }

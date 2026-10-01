@@ -1,5 +1,27 @@
 ﻿# Registro de cambios
 
+## 2026-10-01 (20) — Ronda local: clientes, obras, recordatorios y pendientes
+
+Simulación por `whatsapp.handle_inbound` con ~40 frases de autónomo; lo que acababa en
+el parte general o en una respuesta equivocada:
+
+- «Añade a Pedro como cliente, teléfono 612…» y «guarda a Laura en clientes con
+  correo …»: ahora son altas con sus datos (antes «cambiar datos» de una ficha).
+- «¿Quién es mi mejor cliente?» / «qué cliente me paga más»: ranking por facturado
+  con su cuota. La lista de clientes dice cuántos hay. «¿Cuánto he ganado este año?»
+  va al resumen.
+- «Manda un whatsapp a Juan diciendo…» con la ficha «Juan García»: el borrador busca
+  la ficha por lo que va detrás de «a» (`internal_brain._find_client`).
+- Obras: «crea una obra para Juan: reforma cocina 8000 euros» prepara la tarjeta
+  «Abrir obra» (sin alta implícita de clientes); «¿cómo va la obra de Casa Roca?» da
+  esa obra (`ver_proyecto` por nombre, `tools.obra_por_nombre`).
+- «Recuérdame llamar a Juan mañana a las 10» / «tengo que visitar a Ana el lunes»:
+  cita con tarjeta. «Apunta una nota: …» dice que las notas aún no se guardan.
+- «¿Qué tengo pendiente?»: citas de hoy, cobros, borradores, presupuestos sin
+  respuesta y documentos por revisar (`ver_pendientes`, solo lectura).
+- Pruebas: `test_charla_whatsapp` (2 nuevas, 1 ajustada), `test_conversation_safety`
+  (la escritura no admitida de ejemplo pasa a `crear_tarea_proyecto`).
+
 ## 2026-10-01 (19) — Abreviaturas de móvil, fecha de la IA y resumen de la semana
 
 Segunda tanda de la ronda real por WhatsApp Web:

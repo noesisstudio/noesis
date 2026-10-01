@@ -822,6 +822,43 @@ def _cambio_de_cita(text: str, norm: str) -> tuple[str, dict] | None:
     return (tool, args)
 
 
+_VERBO_RECADO = (r"(llamar|telefonear|escribir|visitar|ir\s+a\s+ver|pasar\s+a\s+ver|"
+                 r"mandar(?:le)?\s+\S+|enviar(?:le)?\s+\S+|cobrar|ver)")
+
+
+def _recordatorio_como_cita(text: str, norm: str) -> tuple[str, dict] | None:
+    """«Recuérdame llamar a Juan mañana a las 10», «tengo que visitar a Ana el lunes».
+
+    No hay recordatorios sueltos: se agenda como cita con ese cliente, que sale en
+    el parte y en la agenda. Pasa por la tarjeta de SÍ como cualquier cita; sin
+    cliente o sin día no se adivina.
+    """
+    m = re.match(r"^(?:recuerdame|recuerda(?:me)?\s+que\s+tengo\s+que|recordatorio\s+(?:de|para)|"
+                 r"tengo\s+que|he\s+de|hay\s+que)\s+" + _VERBO_RECADO + r"\s+(?:a|al)\s+(.+)$", norm)
+    if not m:
+        return None
+    when = parse_date(text)
+    if not when:
+        return None
+    crudo = str(text or "").strip().rstrip(".!")
+    resto = crudo[len(crudo) - len(m.group(2)):]
+    palabras, nombre = resto.split(), []
+    for i, palabra in enumerate(palabras):
+        plano = _norm(palabra).strip(",.;")
+        siguiente = _norm(palabras[i + 1]) if i + 1 < len(palabras) else ""
+        if plano in _CORTE_NOMBRE or plano[:1].isdigit() or (
+                plano in {"el", "la", "de", "por"} and re.match(_DIA_DICHO + r"|manana|tarde", siguiente)):
+            break
+        nombre.append(palabra)
+    cliente = _limpiar_cliente(" ".join(nombre))
+    if not cliente:
+        return None
+    verbo = re.sub(r"\s+", " ", m.group(1)).strip()
+    return ("agendar_trabajo", {"cliente": cliente,
+                                "descripcion": verbo[:1].upper() + verbo[1:],
+                                "fecha_hora": when})
+
+
 _RECHAZA_PRESUPUESTO = (r"\b(?:rechaz\w*|rebutj\w*|no lo quiere|no le interesa|"
                         r"(?:ha|han|me ha|me han) dicho que no|dice que no)\b")
 _ACEPTA_PRESUPUESTO = (r"\b(?:acept\w*|aprueb\w*|aprobad\w*|accept\w*|"
@@ -1531,7 +1568,11 @@ def _dato_de_cliente(text: str) -> tuple[str, dict] | None:
         valor = m.group("valor").strip(" ,;:")
         if (not cliente or not valor or len(cliente.split()) > 6
                 or re.search(r"\b(?:factura|presupuesto|ticket|tiquet|gasto|proyecto)\b",
-                             _norm(cliente))):
+                             _norm(cliente))
+                # «Añade a Pedro como cliente, teléfono …» es un alta, no un dato
+                # de una ficha que ya existe.
+                or re.search(r"\b(?:como|com|en)\s+(?:un\s+|una\s+|mis\s+|los\s+|els\s+)?"
+                             r"(?:nuev[oa]\s+)?(?:client|proveedor|proveidor)", _norm(cliente))):
             return None
         if arg in {"nif", "telefono"}:
             valor = re.sub(r"[\s.\-]", "", valor)
@@ -2176,6 +2217,23 @@ def _parse(text: str) -> tuple[str, dict] | None:
     if decision:
         return decision
 
+    # «¿Qué tengo pendiente?», «qué me queda por hacer»: todo lo que espera, no el parte.
+    if re.fullmatch(r"(?:y\s+)?(?:que|q)\s+(?:tengo|me\s+queda|hay|tenemos)\s+(?:de\s+)?"
+                    r"(?:pendiente|pendientes|por\s+hacer)(?:\s+(?:hoy|ahora))?\s*\??|"
+                    r"(?:mis\s+)?pendientes|lo\s+pendiente|que\s+(?:hago|hay\s+que\s+hacer)\s+ahora\s*\??|"
+                    r"que\s+tinc\s+pendent\s*\??", norm.strip(" ?¿!.")):
+        return ("ver_pendientes", {})
+    # «Apunta una nota: …»: notas sueltas no se guardan todavía; se dice, en vez de
+    # pedir una cita que nadie ha pedido.
+    if re.match(r"^(?:apunta|anota|guarda|apuntame|anotame)\s+(?:una\s+|esta\s+)?nota\b", norm):
+        return (NEED_REVIEW, {"reply": (
+            "Notas sueltas todavía no las guardo. Si es algo que hacer con un cliente, "
+            "dímelo como cita («agenda a Juan mañana a las 10 para comprar tubos») o "
+            "como recordatorio («recuérdame llamar a Juan mañana a las 10»). No he "
+            "guardado nada.")})
+    recordar = _recordatorio_como_cita(text, norm)
+    if recordar:
+        return recordar
     consulta = _consulta_de_agenda(text, norm)
     if consulta:
         return consulta
@@ -2294,6 +2352,12 @@ def _parse(text: str) -> tuple[str, dict] | None:
             grupos = inversa.groups()
             papel, nombre = ((grupos[1], grupos[0]) if _norm(grupos[1]).startswith(("client", "prove"))
                              else (grupos[0], grupos[1]))
+            # «Añade a Pedro como cliente, teléfono 612…»: los datos van detrás del
+            # papel y se perdían; se juntan con el nombre como en el orden directo.
+            cola = text[inversa.end():].strip(" ,.;:")
+            if cola and re.search(r"\d|@|\b(?:telefono|tel|movil|correo|email|nif|cif|dni|"
+                                  r"direccion)\b", _norm(cola)):
+                nombre = f"{nombre.strip()}, {cola}"
             # «Hazme un presupuesto a cliente Juan…» no da de alta a «un presupuesto».
             if not re.search(r"\b(?:factura\w*|presupuest\w*|ticket|tiquet|gasto\w*|cita\w*|"
                              r"trabajo\w*|albaran\w*|recordatorio\w*)\b", _norm(nombre)):
@@ -2318,8 +2382,17 @@ def _parse(text: str) -> tuple[str, dict] | None:
         return (NEED_USER_INVITE, {})
 
     # --- Crear proyecto sencillo, local y sin IA
-    if re.search(r"proyect|project", norm) and re.search(
+    if re.search(r"proyect|project|\bobra\b", norm) and re.search(
             r"\b(crea|crear|creame|nuevo|nueva|abre|abrir|monta|obre)\b", norm):
+        # «Crea una obra para Juan: reforma cocina 8000 euros»: cliente delante.
+        para = re.search(rf"(?:proyecto|projecte|obra)\s+(?:para|de|per\s+a)\s+([^:,]{{2,60}}?)\s*[:,]\s*(.+?)"
+                         rf"\s+(?:(?:de|por|per)\s+)?({_AMOUNT_RE})\s*(?:€|euros?|eur)?\s*$", text, re.I)
+        if para:
+            nombre = _limpiar_concepto(para.group(2).strip())
+            if nombre:
+                return ("crear_proyecto", {"nombre": nombre[:1].upper() + nombre[1:],
+                                           "presupuesto": _amount_value(para.group(3)),
+                                           "cliente": _limpiar_cliente(para.group(1))})
         # El conector antes del importe es opcional: «el proyecto Casa Roca 12000
         # euros» no encajaba y acababa listando proyectos en vez de crear uno.
         m = re.search(
@@ -2635,6 +2708,14 @@ def _parse(text: str) -> tuple[str, dict] | None:
         return ("ver_cobros_pendientes", {})
 
     # --- Operativa conectada
+    # «¿Cómo va la obra de Casa Roca?»: una obra concreta, no la lista entera.
+    una_obra = re.search(r"\b(?:como\s+va|como\s+esta|como\s+llevo|que\s+tal\s+va|estado\s+de|"
+                         r"numeros\s+de|margen\s+de|detalle\s+de)\s+(?:la\s+obra|el\s+proyecto|"
+                         r"la\s+reforma)\s+(?:de\s+(?:la\s+|el\s+)?|del\s+)?(.{2,60}?)\s*\??$", norm)
+    if una_obra:
+        crudo = text.strip().rstrip("?¿!. ")
+        nombre = crudo[len(crudo) - len(una_obra.group(1)):] if len(crudo) >= len(una_obra.group(1)) else una_obra.group(1)
+        return ("ver_proyecto", {"nombre": nombre.strip()})
     if re.search(r"\b(proyectos?|obras?)\b", norm):
         return ("ver_proyectos", {})
     if re.search(r"(equipo|trabajadores?|quien ha fichado|fichajes? de hoy)", norm):
@@ -2678,7 +2759,8 @@ def _parse(text: str) -> tuple[str, dict] | None:
         return ("ver_impuestos", args)
 
     # --- Resumen / ingresos
-    if re.search(r"(cuanto.*factur(?:ad|e\b|amos|aste|o\b)|ingresos|resumen|como va|como voy|que tal va|"
+    if re.search(r"(cuanto.*factur(?:ad|e\b|amos|aste|o\b)|cuanto\s+(?:he\s+)?(?:ganad[oa]|gane|gano|"
+                 r"llevo\s+ganado)|ganancias?|ingresos|resumen|como va|como voy|que tal va|"
                  r"balance|beneficio|facturacion|este mes|mis numeros|cuanto llevo|"
                  # Catalán: «quant he facturat», «com va», «aquest mes».
                  r"quant.*facturat|ingressos|com va|com vaig|com anem|benefici|"
@@ -2686,6 +2768,11 @@ def _parse(text: str) -> tuple[str, dict] | None:
         return ("resumen_negocio", _periodo_del_resumen(norm))
 
     # --- Clientes
+    if re.search(r"\bmejor(?:es)?\s+client|\bclient\w*\s+que\s+mas\s+(?:me\s+)?(?:factur|pag|gast)|"
+                 r"\bquien\s+me\s+(?:factura|paga|compra)\s+mas\b|\btop\s+client|"
+                 r"\bclient\w*\s+(?:me\s+)?(?:paga|factura|compra)\s+mas\b|"
+                 r"\bmillors?\s+client", norm):
+        return ("listar_clientes", {"ranking": True})
     if re.search(r"\bclients?\b|\bclientes\b", norm):
         return ("listar_clientes", {})
 
@@ -3105,11 +3192,49 @@ def format_reply(tool: str, result: dict) -> str:
             lines.append("Si querías el trimestre que acaba de empezar, dime «IVA de este "
                          "trimestre».")
         return "\n".join(lines)
+    if tool == "ver_pendientes":
+        r = result
+        lineas = ["📌 Lo que tienes pendiente:"]
+        if r["citas"]:
+            lineas.append(f"• Hoy: {_cuenta(len(r['citas']), 'cita', 'citas')} — " + "; ".join(
+                f"{str(j.get('scheduled_for') or '')[11:16] or 'sin hora'} "
+                f"{j.get('client_name') or ''}".strip() for j in r["citas"][:4]))
+        if r["cobros"]:
+            lineas.append(f"• Por cobrar: {_eur(r['total_cobros'])} en "
+                          f"{_cuenta(len(r['cobros']), 'factura', 'facturas')} («quién me debe»)")
+        if r["borradores"]:
+            ids = ", ".join(f"#{f['id']}" for f in r["borradores"][:5])
+            lineas.append(f"• {_cuenta(len(r['borradores']), 'factura en borrador', 'facturas en borrador')} "
+                          f"sin emitir ({ids}): «emitir factura N»")
+        if r["presupuestos"]:
+            lineas.append(f"• {_cuenta(len(r['presupuestos']), 'presupuesto', 'presupuestos')} "
+                          "sin respuesta («mis presupuestos»)")
+        if r["documentos"]:
+            lineas.append(f"• {_cuenta(r['documentos'], 'documento', 'documentos')} por revisar en Documentos")
+        if len(lineas) == 1:
+            return "Nada pendiente: ni citas hoy, ni cobros, ni borradores. Buen momento para facturar lo hecho."
+        return "\n".join(lineas)
     if tool == "listar_clientes":
         cs = result["clientes"]
         if not cs:
             return "Aún no tienes clientes guardados."
-        return "👥 Tus clientes: " + ", ".join(c["name"] for c in cs) + "."
+        if result.get("ranking"):
+            con_ventas = [c for c in cs if float(c.get("facturado") or 0) > 0]
+            if not con_ventas:
+                return ("Todavía no has emitido facturas, así que no hay ranking de clientes. "
+                        f"Tienes {_cuenta(len(cs), 'cliente', 'clientes')} en la agenda.")
+            total = sum(float(c["facturado"]) for c in con_ventas)
+            lineas = ["🏆 Tus mejores clientes por lo facturado:"]
+            for n, c in enumerate(con_ventas[:5], start=1):
+                cuota = round(float(c["facturado"]) / total * 100) if total else 0
+                lineas.append(f"{n}. {c['name']} — {_eur(c['facturado'])} "
+                              f"({_cuenta(int(c.get('n_facturas') or 0), 'factura', 'facturas')}, {cuota} %)")
+            if len(con_ventas) == 1 or float(con_ventas[0]["facturado"]) / total >= 0.5:
+                lineas.append("Ojo: depender tanto de un cliente es un riesgo si un día falla.")
+            return "\n".join(lineas)
+        nombres = ", ".join(c["name"] for c in cs[:30])
+        mas = f" y {len(cs) - 30} más" if len(cs) > 30 else ""
+        return f"👥 Tienes {_cuenta(len(cs), 'cliente', 'clientes')}: {nombres}{mas}."
     if tool == "ver_proyectos":
         projects = result.get("projects") or []
         if not projects:
@@ -3125,6 +3250,22 @@ def format_reply(tool: str, result: dict) -> str:
                 f"margen {_eur(project['margin'])}"
             )
         return "\n".join(lines)
+    if tool == "ver_proyecto":
+        if result.get("ok") is False:
+            return result.get("error") or "No encuentro esa obra."
+        p = result
+        lineas = [f"🧰 **{p.get('name')}**" + (f" · {p['client_name']}" if p.get("client_name") else ""),
+                  f"Presupuesto {_eur(p.get('budget') or 0)} · gastado {_eur(p.get('actual_cost') or 0)} "
+                  f"({p.get('cost_pct') or 0:g} %) · margen **{_eur(p.get('margin') or 0)}**"]
+        if p.get("actual_hours"):
+            lineas.append(f"Horas: {p['actual_hours']:g}"
+                          + (f" de {p['planned_hours']:g} previstas" if p.get("planned_hours") else ""))
+        trabajos = p.get("jobs") or []
+        if trabajos:
+            lineas.append(f"Trabajos: {len(trabajos)}")
+        if (p.get("margin") or 0) < 0:
+            lineas.append("⚠️ Ya has gastado más de lo presupuestado.")
+        return "\n".join(lineas)
     if tool == "crear_proyecto":
         project = result["proyecto"]
         return (

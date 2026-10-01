@@ -92,7 +92,26 @@ def _find_client(business_id: int, text: str) -> dict | None:
         if client.get("name") and _contains_phrase(text, client["name"])
     ]
     matches.sort(key=lambda item: len(item.get("name") or ""), reverse=True)
-    return matches[0] if matches else None
+    if matches:
+        return matches[0]
+    # «Dile a Juan que llego tarde» con la ficha «Juan García»: se prueba lo que va
+    # detrás de «a / al / para» (tres, dos y una palabra) y solo vale si encaja con
+    # una única ficha. Antes contestaba «dime a qué cliente escribimos».
+    m = re.search(r"\b(?:a|al|para|per\s+a)\s+((?:[^\s,.;:]+\s*){1,3})", text, re.I)
+    if not m:
+        return None
+    palabras = m.group(1).split()
+    for n in range(len(palabras), 0, -1):
+        candidato = " ".join(palabras[:n])
+        if nlu._norm(candidato) in {"que", "el", "la", "un", "una", "mi", "su", "las", "los"}:
+            continue
+        try:
+            ficha = db.resolve_client_reference(candidato, business_id)
+        except ValueError:
+            return None
+        if ficha:
+            return ficha
+    return None
 
 
 def _requested_channel(text: str, client: dict | None, *, default: str) -> str:
