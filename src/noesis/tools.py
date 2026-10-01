@@ -496,7 +496,8 @@ def _ver_agenda(business_id, fecha, hasta=None):
         from datetime import timedelta
         tope = (date.fromisoformat(fecha) + timedelta(days=31)).isoformat()
         hasta = min(hasta, tope)
-        jobs = db.jobs_between(fecha, hasta, business_id)
+        jobs = [j for j in db.jobs_between(fecha, hasta, business_id)
+                if str(j.get("status") or "") not in db._JOB_DEAD_STATES]
         return {"fecha": fecha, "hasta": hasta, "n": len(jobs), "trabajos": jobs}
     jobs = db.jobs_for_date(fecha, business_id)
     return {"fecha": fecha, "n": len(jobs), "trabajos": jobs}
@@ -816,6 +817,135 @@ def _ver_presupuestos(business_id, cliente=None):
             **({"cliente": cliente} if cliente else {})}
 
 
+def presupuesto_citado(business_id: int, presupuesto_id=None,
+                       cliente=None) -> dict:
+    """El presupuesto del que se habla, por su número o por su cliente.
+
+    Por cliente solo vale si tiene uno sin decidir: con dos se pide el número, que
+    elegir uno por nuestra cuenta es aceptar el presupuesto equivocado.
+    """
+    if presupuesto_id:
+        presupuesto = db.get_quote(int(presupuesto_id), business_id)
+        if not presupuesto:
+            raise ValueError(f"No tengo ningún presupuesto #{presupuesto_id}. "
+                             "Pídeme «mis presupuestos» para ver sus números.")
+        return presupuesto
+    nombre = str(cliente or "").strip()
+    if not nombre:
+        raise ValueError("Dime qué presupuesto: «acepta el presupuesto 12» o «Juan ha "
+                         "aceptado el presupuesto».")
+    ficha = db.resolve_client_reference(nombre, business_id)
+    if not ficha:
+        raise ValueError(f"No tengo ficha de cliente «{nombre}».")
+    abiertos = [p for p in db.list_quotes(business_id)
+                if p.get("client_id") == ficha["id"]
+                and p.get("status") in {"borrador", "enviado"}]
+    if not abiertos:
+        raise ValueError(f"{ficha['name']} no tiene ningún presupuesto pendiente de "
+                         "respuesta.")
+    if len(abiertos) > 1:
+        lista = ", ".join(f"#{p['id']} ({p.get('concept') or 'sin concepto'})"
+                          for p in abiertos[:5])
+        raise ValueError(f"{ficha['name']} tiene varios presupuestos pendientes: "
+                         f"{lista}. Dime cuál con su número.")
+    return abiertos[0]
+
+
+def _aceptar_presupuesto(business_id, presupuesto_id=None, cliente=None):
+    """Acepta un presupuesto y deja su factura en borrador, sin emitirla.
+
+    Uno que no se marcó como enviado también vale: si el cliente dice que sí, ya
+    lo tiene. Recibe primero su número, como cuando se envía desde la web.
+    """
+    presupuesto = presupuesto_citado(business_id, presupuesto_id, cliente)
+    if presupuesto.get("status") == "borrador":
+        db.mark_quote_sent(presupuesto["id"], business_id)
+    resultado = db.accept_quote(presupuesto["id"], business_id,
+                                decision_source="owner")
+    if not resultado:
+        return {"ok": False, "error": "No existe ese presupuesto."}
+    return {"ok": True, "presupuesto": resultado["quote"],
+            "factura": resultado["invoice"]}
+
+
+def _rechazar_presupuesto(business_id, presupuesto_id=None, cliente=None):
+    presupuesto = presupuesto_citado(business_id, presupuesto_id, cliente)
+    rechazado = db.reject_quote(presupuesto["id"], business_id, decision_source="owner")
+    if not rechazado:
+        return {"ok": False, "error": "No existe ese presupuesto."}
+    return {"ok": True, "presupuesto": rechazado}
+
+
+def cita_citada(business_id: int, cliente=None, trabajo_id=None, dia=None) -> dict:
+    """La cita de la que se habla: por su número, o la próxima de un cliente.
+
+    Con `dia` («la del jueves») se busca ese día. Si el cliente tiene varias
+    próximas y no se dice cuál, se pregunta: mover o cancelar la que no es deja
+    a otro cliente esperando en la puerta.
+    """
+    if trabajo_id:
+        cita = db.get_job(int(trabajo_id), business_id)
+        if not cita:
+            raise ValueError(f"No tengo ninguna cita #{trabajo_id} en tu agenda.")
+        if cita.get("client_id"):
+            ficha = db.get_client(cita["client_id"], business_id) or {}
+            cita["client_name"] = ficha.get("name")
+        return cita
+    nombre = str(cliente or "").strip()
+    if not nombre and not dia:
+        raise ValueError("Dime de qué cliente es la cita: «cancela la cita de Juan».")
+    ficha = None
+    if nombre:
+        ficha = db.resolve_client_reference(nombre, business_id)
+        if not ficha:
+            raise ValueError(f"No tengo ficha de cliente «{nombre}».")
+    from datetime import timedelta
+    hoy = date.today()
+    citas = [j for j in db.jobs_between(hoy.isoformat(),
+                                        (hoy + timedelta(days=120)).isoformat(),
+                                        business_id)
+             if (not ficha or j.get("client_id") == ficha["id"])
+             and str(j.get("status") or "") not in (*db._JOB_DONE_STATES,
+                                                    *db._JOB_DEAD_STATES)]
+    if dia:
+        citas = [j for j in citas if str(j.get("scheduled_for") or "")[:10] == dia[:10]]
+    quien = ficha["name"] if ficha else "Tu agenda"
+    if not citas:
+        cuando = f" para {nlu_dia(dia[:10])}" if dia else ""
+        raise ValueError(f"{quien} no tiene ninguna cita próxima{cuando}"
+                         + (" en tu agenda." if ficha else "."))
+    if len(citas) > 1:
+        lista = "; ".join(f"#{j['id']} {j.get('client_name') or ''} "
+                          f"{nlu_dia(j.get('scheduled_for'))}".replace("  ", " ")
+                          for j in citas[:5])
+        raise ValueError(f"{quien} tiene varias citas próximas{' ese día' if dia and not ficha else ''}: "
+                         f"{lista}. Dime cuál con el cliente, su día o su número.")
+    return citas[0]
+
+
+def nlu_dia(valor) -> str:
+    from .nlu import dia_humano
+    return dia_humano(str(valor or "")) or "sin día"
+
+
+def _cancelar_cita(business_id, cliente=None, trabajo_id=None, dia=None):
+    cita = cita_citada(business_id, cliente, trabajo_id, dia)
+    # Se marca, no se borra: queda en el historial y el calendario sincronizado
+    # la recibe como cancelada en vez de perderla sin aviso.
+    db.update_job_status(cita["id"], "cancelado", business_id)
+    return {"ok": True, "trabajo": {**cita, "status": "cancelado"}}
+
+
+def _mover_cita(business_id, fecha_hora, cliente=None, trabajo_id=None, dia=None):
+    cita = cita_citada(business_id, cliente, trabajo_id, dia)
+    antes = cita.get("scheduled_for")
+    movida = db.reschedule_job(cita["id"], fecha_hora, business_id)
+    if not movida:
+        return {"ok": False, "error": "No existe esa cita."}
+    return {"ok": True, "trabajo": {**movida, "client_name": cita.get("client_name")},
+            "antes": antes}
+
+
 def trabajo_abierto_de(business_id: int, cliente: str) -> tuple[dict | None, dict | None]:
     """El trabajo sin cerrar más cercano de un cliente: `(ficha, trabajo)`."""
     try:
@@ -972,6 +1102,12 @@ _DISPATCH = {
     "listar_clientes": _listar_clientes,
     "ver_cliente": _ver_cliente,
     "ver_presupuestos": _ver_presupuestos,
+    # Solo por el cerebro local y con confirmación: no están en `TOOLS`, así que la
+    # IA externa no puede aceptar ni rechazar presupuestos.
+    "aceptar_presupuesto": _aceptar_presupuesto,
+    "rechazar_presupuesto": _rechazar_presupuesto,
+    "cancelar_cita": _cancelar_cita,
+    "mover_cita": _mover_cita,
     "terminar_trabajo": _terminar_trabajo,
     "ver_perfil_cliente": _ver_perfil_cliente,
     "ver_proyectos": _ver_proyectos,

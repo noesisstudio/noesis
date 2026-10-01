@@ -79,6 +79,12 @@ chat.handle() → _handle_turn()
    puede oír mal.
 9. **Un documento nunca entra solo en las cuentas.** Primero es un borrador; solo la
    confirmación crea el gasto o registra la factura recibida, en la misma transacción.
+10. **Herramientas solo locales** (1-oct): `aceptar_presupuesto`,
+    `rechazar_presupuesto`, `cancelar_cita` y `mover_cita` están en `_DISPATCH` pero
+    no en `TOOLS`, así que ninguna IA puede llamarlas. Solo las propone `nlu.parse()`,
+    siempre con tarjeta de SÍ; con la revisión apagada, `chat.py` remite a la web.
+    Cancelar una cita la marca `cancelado` (no la borra): `jobs_for_date` y la agenda
+    por chat la ocultan, la web la tacha y el `.ics` la publica como CANCELLED.
 
 ## Estado real (28-sep-2026)
 

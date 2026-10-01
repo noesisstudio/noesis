@@ -18,8 +18,12 @@
 - [ ] Orden de mensajes seguidos (con `NOESIS_WHATSAPP_INBOX_ENABLED` apagado un «sí»
       rápido puede adelantarse a su tarjeta) y lentitud en frío (>9 s).
 - [ ] Respuestas locales en catalán cuando el negocio está en catalán.
-- [ ] Por WhatsApp aún no: aceptar/rechazar/facturar un presupuesto, facturas de
-      varias líneas, asignar un gasto a obra o cliente, mover o cancelar una cita.
+- [x] Aceptar/rechazar (y pasar a factura) un presupuesto y mover o cancelar una
+      cita por WhatsApp, con tarjeta de SÍ (1-oct, `Registro-cambios` 13).
+- [x] Avisos de voz con el motivo verdadero: nota larga, dudosa o servicio
+      saturado ya no dicen «mal configurado» (1-oct, `Registro-cambios` 12).
+- [ ] Por WhatsApp aún no: facturas de varias líneas, asignar un gasto a obra o
+      cliente. Mover y cancelar citas en catalán. La web no deja mover una cita.
 - [ ] Revisar las 6 alertas de Dependabot (`pip-audit`).
 - [ ] Founder: borrar de Documentos los tres archivos de prueba (ticket «Ferretería
       La Llave», su sticker y el PDF «Suministros Eléctricos Levante»), revisar el

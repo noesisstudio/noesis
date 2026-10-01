@@ -1,5 +1,18 @@
 ﻿# Registro de QA
 
+## 2026-10-01 (13)
+
+- Conversación simulada por WhatsApp con la revisión encendida: aceptar por cliente
+  y por número, repetirlo, dos pendientes, rechazar sin enviar, NO y SÍ, presupuesto
+  de otro negocio; mover por fecha y por hora, corrección «mejor a las 12», fecha
+  pasada, cancelar con NO y SÍ, agenda sin la cancelada, dos citas próximas, por día
+  sin cliente y cita de otro negocio. 17 frases sueltas comparadas con el analizador
+  anterior (las consultas no cambian).
+- Suite completa **1367 correctas** (314 s). Ruff correcto.
+- No probado: la agenda web con una cita cancelada en el navegador (solo revisado el
+  código) ni nada de esto en producción. Catalán: aceptar y rechazar sí
+  (`accept`, `rebutj`, `pressupost`), mover y cancelar citas no.
+
 ## 2026-10-01 (12)
 
 - Voz: 8 pruebas nuevas (`test_voz_fallos`: Groq 429/413/401, tamaño, fragmento

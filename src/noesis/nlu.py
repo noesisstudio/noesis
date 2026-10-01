@@ -549,6 +549,10 @@ def safety_refusal(text: str) -> str | None:
     if risk:
         return risk.reply
     norm = _norm(text)
+    if _cambio_de_cita(text, norm):
+        # Mover o cancelar una cita sí se prepara: no se borra nada y pasa por
+        # la tarjeta de SÍ (ver `_cambio_de_cita`).
+        return None
     # Verbos conjugados, no prefijos: «Carla Borràs» o «Cancelas» son nombres.
     if re.search(
         r"\b(borr(?:a|ar|ame|alo|ala|alos|alas|ad)|elimin(?:a|ar|ame|alo|ala|alos|alas|ad)|"
@@ -707,6 +711,168 @@ def _limpiar_cliente(nombre: str) -> str:
     while partes and partes[-1].lower().strip(",.") in _CONECTORES_FINALES:
         partes.pop()
     return " ".join(partes).strip(" ,.")
+
+
+_CITA = r"(?:cita|visita|trabajo|feina)"
+_VERBO_CANCELA_CITA = (r"(?:cancela|cancelar|cancelame|cancelala|anula|anular|anulame|anulala|"
+                       r"desconvoca|suspende)")
+_VERBO_MUEVE_CITA = (r"(?:mueve|muevela|mover|moverla|muevame|cambia|cambiame|cambiala|"
+                     r"cambiar|aplaza|aplazame|aplazala|aplazar|retrasa|retrasame|"
+                     r"retrasala|retrasar|adelanta|adelantame|adelantala|adelantar|"
+                     r"reprograma|reprogramame|reprogramala|pasa|pasame|pasala)")
+_DIA_DICHO = (r"(?:hoy|avui|manana|dema|pasado|lunes|martes|miercoles|jueves|viernes|"
+              r"sabado|domingo|dia|\d)")
+# Lo que corta el nombre del cliente: «… de Juan García | del jueves | al lunes».
+_CORTE_NOMBRE = {"del", "al", "para", "a", "que", "y", "por", "este", "esta", "hoy",
+                 "manana", "pasado", "lunes", "martes", "miercoles", "jueves", "viernes",
+                 "sabado", "domingo"}
+
+
+def _cambio_de_cita(text: str, norm: str) -> tuple[str, dict] | None:
+    """«Cancela la cita de Juan», «mueve la visita de Ana al jueves a las 10».
+
+    El verbo tiene que ir pegado a la cita («cancela la cita», «Juan ha
+    cancelado la visita»): «pasa la factura del trabajo» no es mover nada. La
+    cita se nombra por su número o por el cliente, y «del jueves» dice cuál si
+    tiene varias. Antes se remitía a la web, que solo deja borrarla.
+    """
+    if re.match(r"^(?:no|nunca)\b", norm) \
+            or re.search(r"\b(?:factur\w*|presupuest\w*|gast\w*|cobr\w*)\b", norm):
+        return None
+    articulo = r"(?:\s+(?:la|el|mi|su|esa|ese|esta|este))?"
+    cancelar = re.search(rf"\b{_VERBO_CANCELA_CITA}{articulo}\s+{_CITA}\b", norm) \
+        or re.search(rf"\b(?:ha|han)\s+(?:cancelado|anulado){articulo}\s+{_CITA}\b", norm)
+    mover = re.search(rf"\b{_VERBO_MUEVE_CITA}{articulo}\s+{_CITA}\b", norm) \
+        or re.search(rf"\b(?:ha|han)\s+(?:aplazado|movido|cambiado|retrasado|adelantado)"
+                     rf"{articulo}\s+{_CITA}\b", norm)
+    if not cancelar and not mover:
+        return None
+    if "?" in text or "¿" in text:
+        return (NEED_REVIEW, {"reply": (
+            "Sí: dime «cancela la cita de Juan» o «mueve la cita de Juan al jueves a "
+            "las 10». Te enseño la cita y no cambio nada hasta que digas SÍ.")})
+    tool = "cancelar_cita" if cancelar else "mover_cita"
+    args: dict = {}
+    crudo = str(text or "").strip().rstrip(".!")
+    numero = re.search(rf"\b{_CITA}\s*(?:n[uú]mero\s+)?#?\s*(\d{{1,9}})\b", norm)
+    resto = ""
+    if numero:
+        args["trabajo_id"] = int(numero.group(1))
+        resto = norm[numero.end():]
+    else:
+        de_quien = re.search(rf"\b{_CITA}\s+(?:de|con|a|del cliente|de la cliente)\s+(.+)$",
+                             crudo, re.I)
+        quien_dice = re.match(r"^\s*(?:el\s+cliente\s+|la\s+cliente\s+)?(.+?)\s+(?:me\s+)?"
+                              r"(?:ha|han)\s+(?:cancelado|anulado|aplazado|movido|cambiado|"
+                              r"retrasado|adelantado)\b", crudo, re.I)
+        palabras = (de_quien.group(1) if de_quien else
+                    quien_dice.group(1) if quien_dice else "").split()
+        nombre = []
+        for i, palabra in enumerate(palabras):
+            plano = _norm(palabra).strip(",.;")
+            siguiente = _norm(palabras[i + 1]) if i + 1 < len(palabras) else ""
+            if plano in _CORTE_NOMBRE or plano[:1].isdigit() or (
+                    plano in {"el", "la", "de"} and re.match(_DIA_DICHO, siguiente)):
+                break
+            nombre.append(palabra)
+            if palabra.endswith((",", ";")):
+                break
+        cliente = _limpiar_cliente(" ".join(nombre))
+        if cliente:
+            args["cliente"] = cliente
+        if de_quien:
+            resto = _norm(" ".join(palabras[len(nombre):]))
+        else:
+            resto = _norm(crudo[(quien_dice.end() if quien_dice else 0):])
+    origen, destino = "", resto
+    tramo = re.search(r"\bdel?\s+(.+?)\s+(?:al|a el|para el|para)\s+(.+)$", resto)
+    if tramo and re.match(_DIA_DICHO, tramo.group(1)):
+        origen, destino = tramo.group(1), tramo.group(2)
+    elif tool == "cancelar_cita":
+        origen, destino = resto, ""
+    if origen:
+        dia = parse_date(origen)
+        if dia:
+            args["dia"] = dia[:10]
+    # «Cancela la cita de mañana» vale sin cliente (la única de ese día); mover
+    # sin cliente no, que «la de mañana a las 11» no dice cuál es el origen.
+    if not args.get("cliente") and not args.get("trabajo_id") \
+            and (tool == "mover_cita" or not args.get("dia")):
+        return (NEED_REVIEW, {"reply": (
+            "¿Qué cita? Dime de qué cliente es: «cancela la cita de Juan» o «mueve la "
+            "visita de Ana al jueves a las 10». No he cambiado nada.")})
+    if tool == "mover_cita":
+        # Sin hora dicha no se inventa: «al jueves» conserva la hora de la cita.
+        explicita = re.search(r"\ba\s+l(?:a|as|es)\s+\S|\d{1,2}(?:[:.]\d{2})?\s*h\b|"
+                              r"\b(?:por|de)\s+la\s+(?:manana|tarde|noche)\b", destino)
+        fecha = parse_date(destino)
+        if fecha and args.get("dia") and fecha[:10] < args["dia"] \
+                and not re.search(r"\badelant\w*", norm):
+            # «Del martes al viernes» un jueves: el viernes que sigue a ese martes.
+            fecha = parse_date(destino, base=date.fromisoformat(args["dia"]))
+        if fecha:
+            args["nueva_fecha"] = fecha[:10]
+        hora = _parse_time(destino) if explicita else None
+        if hora:
+            args["nueva_hora"] = f"{hora[0]:02d}:{hora[1]:02d}"
+        if not fecha and not hora:
+            return (NEED_REVIEW, {"reply": (
+                "¿A qué día y hora la paso? Dímelo entero: «mueve la cita de "
+                f"{args.get('cliente') or 'Juan'} al jueves a las 10». No he cambiado nada.")})
+    return (tool, args)
+
+
+_RECHAZA_PRESUPUESTO = (r"\b(?:rechaz\w*|rebutj\w*|no lo quiere|no le interesa|"
+                        r"(?:ha|han|me ha|me han) dicho que no|dice que no)\b")
+_ACEPTA_PRESUPUESTO = (r"\b(?:acept\w*|aprueb\w*|aprobad\w*|accept\w*|"
+                       r"(?:ha|han|me ha|me han) dicho que si|dice que si)\b"
+                       r"|\b(?:pasa\w*|convier\w*|convertir\w*|transform\w*)\b.*\b(?:a|en) factura\b"
+                       r"|\bfactura\w* (?:el|del) presupuesto\b")
+_VERBO_DECISION = (r"(?:me\s+)?(?:ha\s+|han\s+)?(?:aceptado|acepta|aprobado|aprueba|"
+                   r"rechazado|rechaza|dicho que (?:s[ií]|no)|dice que (?:s[ií]|no))\b")
+
+
+def _decision_de_presupuesto(text: str, norm: str) -> tuple[str, dict] | None:
+    """«Acepta el presupuesto 12», «Juan ha rechazado el presupuesto».
+
+    Aceptar deja la factura en borrador, así que «pasa el presupuesto a factura»
+    es lo mismo. El presupuesto se nombra por su número (#id, el que sale en «mis
+    presupuestos») o por su cliente, si tiene uno solo sin decidir. Antes se
+    contestaba que por WhatsApp no se hacía.
+    """
+    if not re.search(r"\b(?:presupuesto|pressupost)\b", norm):
+        return None
+    if re.search(_RECHAZA_PRESUPUESTO, norm):
+        tool = "rechazar_presupuesto"
+    elif re.search(_ACEPTA_PRESUPUESTO, norm):
+        tool = "aceptar_presupuesto"
+    else:
+        return None
+    numero = re.search(r"\b(?:presupuesto|pressupost)\s*#?\s*(\d{1,9})\b|#\s*(\d{1,9})\b", norm)
+    # «¿Qué presupuestos tengo aceptados?» es una consulta, no una decisión.
+    if not numero and ("?" in text or "¿" in text or re.search(r"\bpresupuestos\b", norm)):
+        return None
+    if numero:
+        return (tool, {"presupuesto_id": int(numero.group(1) or numero.group(2))})
+    crudo = str(text or "").strip()
+    nombre = ""
+    de_quien = re.search(r"\b(?:presupuesto|pressupost)\s+(?:de|a|para|del|per a)\s+(.+)$",
+                         crudo, re.I)
+    if de_quien:
+        nombre = re.split(r"\s*[,.;!]\s*|\s+(?:y|i|que|a factura|en factura)\s+",
+                          de_quien.group(1), maxsplit=1)[0]
+    else:
+        quien = re.match(r"^\s*(?:ya\s+)?(.+?)\s+" + _VERBO_DECISION, crudo, re.I)
+        if quien:
+            nombre = quien.group(1)
+    nombre = _limpiar_cliente(nombre)
+    if nombre and _norm(nombre) not in {"me", "le", "lo", "se", "ya", "el", "la", "si"} \
+            and len(nombre.split()) <= 5:
+        return (tool, {"cliente": nombre})
+    return (NEED_REVIEW, {"reply": (
+        "¿Qué presupuesto? Dime su número («acepta el presupuesto 12») o el cliente "
+        "(«Juan ha aceptado el presupuesto»). Con «mis presupuestos» te enseño los "
+        "números. No he cambiado nada.")})
 
 
 _IMPORTE_SUELTO = re.compile(
@@ -1982,6 +2148,11 @@ def _parse(text: str) -> tuple[str, dict] | None:
     text = _erratas(text)
     norm = _norm(text)
 
+    # Antes que la negativa general a «cancelar» o «cambiar»: una cita no se borra
+    # (queda cancelada) y todo pasa por la tarjeta de SÍ.
+    cita = _cambio_de_cita(text, norm)
+    if cita:
+        return cita
     refusal = safety_refusal(text)
     if refusal:
         return (NEED_REVIEW, {"reply": refusal})
@@ -1989,17 +2160,9 @@ def _parse(text: str) -> tuple[str, dict] | None:
         rate = re.search(rf"\b{field}\s*(?:(?:del|al)\s*)?(\d+(?:[.,]\d+)?)(?![\w.,])", norm)
         if rate and float(rate.group(1).replace(",", ".")) not in allowed:
             return (NEED_REVIEW, {"reply": "El tipo fiscal indicado no está admitido. Revisa IVA e IRPF en Facturas; no he sustituido el porcentaje por otro."})
-    # Lo que por WhatsApp todavía no se hace se dice con claridad; antes caía en
-    # el parte del negocio y parecía que el bot no había leído el mensaje.
-    if re.search(r"\bpresupuesto\b.*\b(?:acept\w*|rechaz\w*|convier\w*|convertir\w*|"
-                 r"pasa\w* a factura|en factura|a factura)\b|\b(?:acept\w*|rechaz\w*|convier\w*|"
-                 r"convertir\w*|pasa\w*|factura\w*)\b.*\bpresupuesto\s*#?\s*\d|"
-                 r"\b(?:acept\w*|rechaz\w*|convier\w*|convertir\w*)\b.*\bpresupuesto\b|"
-                 r"\bfactura del presupuesto\b", norm):
-        return (NEED_REVIEW, {"reply": (
-            "Aceptar, rechazar o pasar a factura un presupuesto todavía no lo hago por "
-            "WhatsApp. Hazlo en la web, en Presupuestos: con un clic se convierte en "
-            "factura. No he cambiado nada.")})
+    decision = _decision_de_presupuesto(text, norm)
+    if decision:
+        return decision
 
     consulta = _consulta_de_agenda(text, norm)
     if consulta:
@@ -2624,13 +2787,44 @@ def format_reply(tool: str, result: dict) -> str:
                    "aceptado": "aceptado", "rechazado": "rechazado", "caducado": "caducado"}
         lines = [f"📝 {_cuenta(result['n'], 'presupuesto', 'presupuestos')}{quien}:"]
         for p in result["presupuestos"]:
-            lines.append(f"• {p.get('number') or '#' + str(p['id'])} · {p.get('client_name') or ''} · "
+            # El #id va siempre delante: es el número con el que se acepta o
+            # rechaza («acepta el presupuesto 12»), tenga o no número de serie.
+            numero = f" · {p['number']}" if p.get("number") else ""
+            lines.append(f"• #{p['id']}{numero} · {p.get('client_name') or ''} · "
                          f"{p.get('concept') or ''} · {_eur(p.get('total') or 0)} · "
                          f"{estados.get(p.get('status'), p.get('status') or '')}")
         if result["n"] > len(result["presupuestos"]):
             lines.append("…y más en Presupuestos.")
-        lines.append("Enviarlos, aceptarlos o pasarlos a factura se hace en la web, en Presupuestos.")
+        pendiente = next((p for p in result["presupuestos"]
+                          if p.get("status") in {"borrador", "enviado"}), None)
+        if pendiente:
+            lines.append(f"Cuando te contesten, dime «acepta el presupuesto {pendiente['id']}» "
+                         f"(queda su factura en borrador) o «rechaza el presupuesto "
+                         f"{pendiente['id']}».")
         return "\n".join(lines)
+    if tool == "cancelar_cita":
+        t = result["trabajo"]
+        return (f"Cita cancelada: {t.get('client_name') or 'sin cliente'} — "
+                f"{t.get('description') or 'Trabajo'} ({dia_humano(t.get('scheduled_for')) or 'sin día'}). "
+                "Queda en la agenda como cancelada. Si quieres avisarle, dime "
+                f"«escribe a {t.get('client_name') or 'el cliente'} que anulamos la visita».")
+    if tool == "mover_cita":
+        t = result["trabajo"]
+        return (f"📅 Cita movida: {t.get('client_name') or 'sin cliente'} — "
+                f"{t.get('description') or 'Trabajo'}, ahora {dia_humano(t.get('scheduled_for'))} "
+                f"(antes {dia_humano(result.get('antes')) or 'sin día'}). Al cliente no le he "
+                "avisado.")
+    if tool == "aceptar_presupuesto":
+        p, f = result["presupuesto"], result.get("factura") or {}
+        return (f"✅ Presupuesto {p.get('number') or '#' + str(p['id'])} de "
+                f"{p.get('client_name') or 'tu cliente'} aceptado. Su factura #{f.get('id')} "
+                f"({_eur(f.get('total') or 0)}) queda en borrador para que la revises. "
+                f"Cuando esté bien, escribe «emitir factura {f.get('id')}».")
+    if tool == "rechazar_presupuesto":
+        p = result["presupuesto"]
+        return (f"Presupuesto {p.get('number') or '#' + str(p['id'])} de "
+                f"{p.get('client_name') or 'tu cliente'} marcado como rechazado. "
+                "No se ha creado ninguna factura.")
     if tool == "terminar_trabajo":
         if result.get("error"):
             return result["error"] + " No he cambiado nada."

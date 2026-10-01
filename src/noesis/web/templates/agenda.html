@@ -102,6 +102,7 @@ let projects = [];
 el('cal-wd').innerHTML = WD.map(d => `<div class="cal-wd">${d}</div>`).join('');
 
 function iso(d){ return d.toISOString().slice(0,10); }
+function isCancelled(j){ return ['cancelado','cancelada','anulado','anulada'].includes(j.status); }
 function monIndex(d){ return (d.getDay()+6)%7; }  // lunes = 0
 
 async function loadMonth() {
@@ -119,9 +120,10 @@ async function loadMonth() {
   Object.values(byDay).forEach(l => l.sort((a,b)=>(a.scheduled_for||'').localeCompare(b.scheduled_for||'')));
 
   // KPIs del mes en curso (solo días de este mes).
-  const monthJobs = jobs.filter(j => { const d=new Date((j.scheduled_for||'')+''); return d.getMonth()===m && d.getFullYear()===y; });
+  // Una cita cancelada (p. ej. por WhatsApp) se ve tachada pero no cuenta.
+  const monthJobs = jobs.filter(j => { const d=new Date((j.scheduled_for||'')+''); return d.getMonth()===m && d.getFullYear()===y && !isCancelled(j); });
   el('a-total').textContent = monthJobs.length;
-  el('a-today').textContent = (byDay[TODAY]||[]).length;
+  el('a-today').textContent = (byDay[TODAY]||[]).filter(j => !isCancelled(j)).length;
   el('a-unconf').textContent = monthJobs.filter(j => j.status==='pendiente').length;
   el('a-income').textContent = eur(monthJobs.reduce((a,b)=>a+(b.price_estimate||0),0));
 
@@ -134,7 +136,7 @@ async function loadMonth() {
     const out = d.getMonth()!==m;
     const cls = ['cal-cell', out?'out':'', di===TODAY?'today':'', di===selected?'sel':'', list.length?'has':''].filter(Boolean).join(' ');
     const evs = list.slice(0,2).map(j =>
-      `<div class="cal-ev" ${j.worker_color ? `style="border-left:3px solid ${esc(j.worker_color)}"` : ''}>
+      `<div class="cal-ev" style="${j.worker_color ? `border-left:3px solid ${esc(j.worker_color)};` : ''}${isCancelled(j) ? 'text-decoration:line-through;opacity:.6' : ''}">
         <b>${esc(timeShort(j.scheduled_for)||'·')}</b> ${esc(j.client_name||j.description||'')}</div>`).join('');
     const more = list.length>2 ? `<div class="cal-more">+${list.length-2} más</div>` : '';
     cells += `<button class="${cls}" onclick="selectDay('${di}')"><span class="cal-date">${d.getDate()}</span>${evs}${more}</button>`;
@@ -150,7 +152,7 @@ function renderDay() {
   el('day-count').textContent = list.length ? `${list.length} cita(s)` : '';
   el('day-detail').innerHTML = list.length ? `<div class="action-list">${list.map(j => `
     <div class="action-item agenda-job">
-      <span><strong>${esc(timeShort(j.scheduled_for)||'Sin hora')} · ${esc(j.client_name||'Cliente')}</strong>
+      <span><strong ${isCancelled(j) ? 'style="text-decoration:line-through"' : ''}>${esc(timeShort(j.scheduled_for)||'Sin hora')} · ${esc(j.client_name||'Cliente')}</strong>${isCancelled(j) ? ' <span class="badge b-red">Cancelada</span>' : ''}
       <small>${esc(j.description||'Servicio')}${j.zone?' — '+esc(j.zone):''}</small>
       <small>${j.worker_name ? `Asignado a ${esc(j.worker_name)}` : 'Sin asignar'}</small></span>
       <span style="display:flex;align-items:center;gap:8px">

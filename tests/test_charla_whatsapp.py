@@ -848,8 +848,8 @@ class CharlaWhatsappTestCase(unittest.TestCase):
 
     def test_presupuestos_listados_y_pasar_a_factura_se_explica(self):
         business, client = self.make_business("Presupuestos")
-        self.assertIn("todavía no lo hago por WhatsApp",
-                      nlu.parse("pasa el presupuesto 1 a factura")[1]["reply"])
+        self.assertEqual(nlu.parse("pasa el presupuesto 1 a factura"),
+                         ("aceptar_presupuesto", {"presupuesto_id": 1}))
         vacio, _, lista, del_cliente = self.charla(
             business, "que presupuestos tengo",
             f"presupuesto a {client['name']} por reforma del baño 3500 euros",
@@ -1085,8 +1085,196 @@ class CharlaWhatsappTestCase(unittest.TestCase):
             business, f"presupuesto a {client['name']} por baño 1200 euros",
             "acepta el presupuesto 1")
         self.assertRegex(creado, r"Presupuesto #\d+ preparado")
-        self.assertIn("todavía no lo hago por WhatsApp", aceptar)
+        # Sin tarjeta que confirmar (revisión apagada) no se decide desde una frase.
+        self.assertIn("Acéptalo o recházalo en Presupuestos", aceptar)
         self.assertNotIn("Así veo", aceptar)
+        self.assertEqual(db.list_invoices(business["id"]), [])
+
+    def test_aceptar_y_rechazar_presupuestos_por_whatsapp(self):
+        """Ronda 1-oct: aceptar o rechazar un presupuesto se remitía a la web.
+
+        Aceptar deja la factura en borrador y pasa por la tarjeta de SÍ; por
+        cliente solo vale si tiene un único presupuesto sin decidir.
+        """
+        business, client = self.make_business("Presupuestos por chat")
+        nombre = client["name"]
+        bano = db.add_quote(client["id"], "Reforma del baño", 1000, business_id=business["id"])
+        with patch.object(config, "ASSISTANT_REVIEW_ENABLED", True):
+            lista, tarjeta, hecho = self.charla(
+                business, "mis presupuestos", f"{nombre} ha aceptado el presupuesto", "sí")
+            self.assertIn(f"• #{bano['id']} · {nombre}", lista)
+            self.assertIn(f"«acepta el presupuesto {bano['id']}»", lista)
+            self.assertIn("Aceptar el presupuesto y preparar su factura en borrador", tarjeta)
+            self.assertIn("Reforma del baño", tarjeta)
+            self.assertIn("le daré número", tarjeta)
+            self.assertIn("aceptado", hecho)
+            (factura,) = db.list_invoices(business["id"])
+            self.assertEqual((factura["status"], factura["total"]), ("borrador", 1210.0))
+            self.assertIn(f"emitir factura {factura['id']}", hecho)
+            quote = db.get_quote(bano["id"], business["id"])
+            self.assertEqual((quote["status"], quote["invoice_id"]), ("aceptado", factura["id"]))
+
+            # Repetirlo no crea otra factura.
+            (otra_vez,) = self.charla(business, f"acepta el presupuesto {bano['id']}")
+            self.assertIn("ya está aceptado", otra_vez)
+            self.assertEqual(len(db.list_invoices(business["id"])), 1)
+
+            # Dos pendientes del mismo cliente: se pide el número, no se elige.
+            uno = db.add_quote(client["id"], "Pintura", 300, business_id=business["id"])
+            dos = db.add_quote(client["id"], "Suelo", 800, business_id=business["id"])
+            (duda,) = self.charla(business, f"{nombre} ha rechazado el presupuesto")
+            self.assertIn("varios presupuestos pendientes", duda)
+            self.assertIn(f"#{uno['id']}", duda)
+
+            # Rechazar uno sin enviar no tiene sentido: se explica.
+            (sin_enviar,) = self.charla(business, f"rechaza el presupuesto {uno['id']}")
+            self.assertIn("no se llegó a enviar", sin_enviar)
+            db.mark_quote_sent(dos["id"], business["id"])
+            tarjeta, descartado = self.charla(
+                business, f"rechaza el presupuesto {dos['id']}", "no")
+            self.assertIn("Marcar el presupuesto como rechazado", tarjeta)
+            self.assertEqual(db.get_quote(dos["id"], business["id"])["status"], "enviado")
+            _, rechazado = self.charla(business, f"rechaza el presupuesto {dos['id']}", "sí")
+            self.assertIn("marcado como rechazado", rechazado)
+            self.assertEqual(db.get_quote(dos["id"], business["id"])["status"], "rechazado")
+            self.assertEqual(len(db.list_invoices(business["id"])), 1)
+
+            # El presupuesto de otro negocio no existe para este.
+            ajeno, ajeno_cliente = self.make_business("Otro negocio")
+            suyo = db.add_quote(ajeno_cliente["id"], "Ajeno", 50, business_id=ajeno["id"])
+            (no_es_tuyo,) = self.charla(business, f"acepta el presupuesto {suyo['id']}")
+            self.assertIn(f"No tengo ningún presupuesto #{suyo['id']}", no_es_tuyo)
+            self.assertEqual(db.get_quote(suyo["id"], ajeno["id"])["status"], "borrador")
+
+    def test_cancelar_y_mover_citas_por_whatsapp(self):
+        """Ronda 1-oct: mover o cancelar una cita se remitía a la web, que solo borra.
+
+        Cancelar la marca (no la borra) y desaparece de «¿qué tengo?»; mover
+        conserva la hora si solo se dice el día. Todo pasa por la tarjeta de SÍ.
+        """
+        from datetime import timedelta
+
+        business, client = self.make_business("Citas por chat")
+        nombre = client["name"]
+        dia = date.today() + timedelta(days=3)
+        cita = db.add_job(client["id"], "Revisar caldera",
+                          scheduled_for=f"{dia.isoformat()}T10:00",
+                          business_id=business["id"])
+        nuevo = date.today() + timedelta(days=5)
+        with patch.object(config, "ASSISTANT_REVIEW_ENABLED", True):
+            tarjeta, hecho = self.charla(
+                business, f"mueve la cita de {nombre} al {nuevo.day} de "
+                          f"{nlu._MESES[nuevo.month - 1]}", "sí")
+            self.assertIn("Cambiar la cita de día u hora", tarjeta)
+            self.assertIn("Revisar caldera", tarjeta)
+            self.assertIn("a las 10:00", tarjeta)
+            self.assertIn("Al cliente no le aviso", tarjeta)
+            self.assertIn("Cita movida", hecho)
+            self.assertEqual(db.get_job(cita["id"], business["id"])["scheduled_for"][:16],
+                             f"{nuevo.isoformat()}T10:00")
+
+            # «No, mejor a las 12» sobre la tarjeta cambia solo la hora.
+            tarjeta, corregida, _ = self.charla(
+                business, f"cambia la cita de {nombre} a las 11", "no, mejor a las 12", "sí")
+            self.assertIn("a las 11:00", tarjeta)
+            self.assertIn("a las 12:00", corregida)
+            self.assertEqual(db.get_job(cita["id"], business["id"])["scheduled_for"][:16],
+                             f"{nuevo.isoformat()}T12:00")
+
+            # Una fecha pasada no se acepta.
+            (pasada,) = self.charla(business, f"mueve la cita {cita['id']} a hoy a las 0:00")
+            self.assertIn("ya ha pasado", pasada)
+
+            tarjeta, descartada = self.charla(business, f"cancela la cita de {nombre}", "no")
+            self.assertIn("No la borro", tarjeta)
+            self.assertEqual(db.get_job(cita["id"], business["id"])["status"], "pendiente")
+            _, cancelada = self.charla(business, f"{nombre} me ha cancelado la visita", "sí")
+            self.assertIn("Cita cancelada", cancelada)
+            guardada = db.get_job(cita["id"], business["id"])
+            self.assertEqual(guardada["status"], "cancelado")
+            # No se borra, pero ya no es trabajo del día.
+            self.assertEqual(db.jobs_for_date(nuevo.isoformat(), business["id"]), [])
+            (agenda,) = self.charla(business, f"que tengo el {nuevo.day} de "
+                                              f"{nlu._MESES[nuevo.month - 1]}")
+            self.assertNotIn("Revisar caldera", agenda)
+            (otra_vez,) = self.charla(business, f"cancela la cita {cita['id']}")
+            self.assertIn("ya está cancelada", otra_vez)
+
+            # Dos citas próximas: se pregunta cuál, y «la del día» lo resuelve.
+            una = db.add_job(client["id"], "Grifo", scheduled_for=f"{dia.isoformat()}T09:00",
+                             business_id=business["id"])
+            db.add_job(client["id"], "Radiador", scheduled_for=f"{nuevo.isoformat()}T09:00",
+                       business_id=business["id"])
+            (duda,) = self.charla(business, f"cancela la cita de {nombre}")
+            self.assertIn("varias citas próximas", duda)
+            (tarjeta,) = self.charla(
+                business, f"cancela la cita de {nombre} del {dia.day} de "
+                          f"{nlu._MESES[dia.month - 1]}")
+            self.assertIn("Grifo", tarjeta)
+            self.assertEqual(db.get_job(una["id"], business["id"])["status"], "pendiente")
+            # Sin cliente, por el día: la única cita activa de ese día.
+            (por_dia,) = self.charla(
+                business, f"cancela la cita del {nuevo.day} de {nlu._MESES[nuevo.month - 1]}")
+            self.assertIn("Radiador", por_dia)
+
+            # La cita de otro negocio no existe para este.
+            ajeno, ajeno_cliente = self.make_business("Otro con citas")
+            suya = db.add_job(ajeno_cliente["id"], "Ajena",
+                              scheduled_for=f"{dia.isoformat()}T10:00",
+                              business_id=ajeno["id"])
+            (no_es_tuya,) = self.charla(business, f"cancela la cita {suya['id']}")
+            self.assertIn(f"No tengo ninguna cita #{suya['id']}", no_es_tuya)
+            self.assertEqual(db.get_job(suya["id"], ajeno["id"])["status"], "pendiente")
+
+    def test_frases_para_mover_y_cancelar_citas(self):
+        casos = {
+            "cancela la cita de Juan García": ("cancelar_cita", {"cliente": "Juan García"}),
+            "Juan me ha cancelado la visita": ("cancelar_cita", {"cliente": "Juan"}),
+            "cancela el trabajo 12": ("cancelar_cita", {"trabajo_id": 12}),
+            "cambia la cita de Pepe a las 11":
+                ("mover_cita", {"cliente": "Pepe", "nueva_hora": "11:00"}),
+        }
+        for texto, esperado in casos.items():
+            with self.subTest(texto=texto):
+                self.assertEqual(nlu.parse(texto), esperado)
+        movida = nlu.parse("mueve la visita de Ana de la Fuente del martes al viernes")
+        self.assertEqual(movida[0], "mover_cita")
+        self.assertEqual(movida[1]["cliente"], "Ana de la Fuente")
+        # Aplazar «del martes al viernes» es el viernes de después de ese martes.
+        self.assertGreater(movida[1]["nueva_fecha"], movida[1]["dia"])
+        self.assertIn("¿A qué día y hora", nlu.parse("mueve la cita de Juan")[1]["reply"])
+        self.assertIn("¿Qué cita?", nlu.parse("cancela la cita")[1]["reply"])
+        self.assertIn("no cambio nada hasta que digas SÍ",
+                      nlu.parse("¿puedo cancelar la cita de Juan?")[1]["reply"])
+        # Lo que no es una cita sigue con su camino de siempre.
+        self.assertIn("Facturas", nlu.parse("cancela la factura 3")[1]["reply"])
+        self.assertNotEqual(nlu.parse("pasa la factura del trabajo de Juan")[0], "mover_cita")
+        self.assertEqual(nlu.parse("agenda a Juan el jueves a las 10 para la visita")[0],
+                         "agendar_trabajo")
+
+    def test_frases_de_decision_sobre_presupuestos(self):
+        casos = {
+            "acepta el presupuesto 12": ("aceptar_presupuesto", {"presupuesto_id": 12}),
+            "factura del presupuesto 4": ("aceptar_presupuesto", {"presupuesto_id": 4}),
+            "rechaza el presupuesto #3": ("rechazar_presupuesto", {"presupuesto_id": 3}),
+            "Juan García ha aceptado el presupuesto":
+                ("aceptar_presupuesto", {"cliente": "Juan García"}),
+            "acepta el presupuesto de Juan García y pásalo a factura":
+                ("aceptar_presupuesto", {"cliente": "Juan García"}),
+            "Marta me ha dicho que no al presupuesto":
+                ("rechazar_presupuesto", {"cliente": "Marta"}),
+            "el cliente Pepe ha aceptado el presupuesto.":
+                ("aceptar_presupuesto", {"cliente": "Pepe"}),
+        }
+        for texto, esperado in casos.items():
+            with self.subTest(texto=texto):
+                self.assertEqual(nlu.parse(texto), esperado)
+        self.assertIn("¿Qué presupuesto?", nlu.parse("acepta el presupuesto")[1]["reply"])
+        # Crear un presupuesto y consultar no se confunden con decidir.
+        self.assertEqual(nlu.parse("presupuesto a Ana por reforma 1200 euros")[0],
+                         "crear_presupuesto")
+        self.assertIsNone(nlu._decision_de_presupuesto(
+            "¿qué presupuestos tengo aceptados?", "que presupuestos tengo aceptados"))
 
     def test_nombre_de_proyecto_sin_con(self):
         self.assertEqual(

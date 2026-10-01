@@ -4201,6 +4201,16 @@ def update_job_status(job_id, status, business_id) -> None:
                      (status, job_id, business_id))
 
 
+def reschedule_job(job_id, scheduled_for, business_id) -> dict | None:
+    """Cambia el día y la hora de un trabajo del negocio. `None` si no es suyo."""
+    with get_conn() as conn:
+        cur = conn.execute("UPDATE jobs SET scheduled_for=? WHERE id=? AND business_id=?",
+                           (scheduled_for, job_id, business_id))
+        if not cur.rowcount:
+            return None
+    return get_job(job_id, business_id)
+
+
 def delete_job(job_id, business_id) -> None:
     with get_conn() as conn:
         used = conn.execute(
@@ -4237,8 +4247,13 @@ def jobs_for_date(day: str, business_id) -> list[dict]:
             "LEFT JOIN projects p ON p.id=j.project_id "
             "AND p.business_id=j.business_id "
             "WHERE j.business_id=? AND CAST(j.scheduled_for AS TEXT) LIKE ? "
+            # Una cita cancelada no es trabajo del día: ni en el parte ni en
+            # «¿qué tengo hoy?». El calendario y el .ics la siguen viendo por
+            # `jobs_between`, que la marca como cancelada.
+            "AND COALESCE(j.status, '') NOT IN ("
+            + ",".join("?" for _ in _JOB_DEAD_STATES) + ") "
             "ORDER BY j.scheduled_for",
-            (business_id, f"{day}%"),
+            (business_id, f"{day}%", *_JOB_DEAD_STATES),
         ).fetchall()
         return [dict(r) for r in rows]
 

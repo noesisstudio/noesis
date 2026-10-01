@@ -1,5 +1,33 @@
 ﻿# Registro de cambios
 
+## 2026-10-01 (13) — WhatsApp: aceptar o rechazar presupuestos y mover o cancelar citas
+
+- Objetivo (huecos de `sigue.md`): las dos cosas se remitían a la web, y la web ni
+  siquiera deja mover una cita (solo borrarla).
+- Presupuestos: «acepta el presupuesto 12», «pasa el presupuesto 12 a factura»,
+  «Juan ha aceptado el presupuesto», «rechaza el presupuesto 12». Por cliente solo
+  si tiene uno sin decidir; si no, pide el número. Aceptar uno sin enviar le da
+  número primero (`mark_quote_sent`) y deja la factura **en borrador**. Rechazar uno
+  sin enviar se explica. «Mis presupuestos» enseña el `#id` con el que se citan.
+- Citas: «cancela la cita de Juan (del jueves)», «cancela la cita de mañana», «Juan
+  me ha cancelado la visita», «mueve la cita de Juan al jueves a las 10», «cambia la
+  cita de Pepe a las 11», «aplaza la visita de Ana del martes al viernes». Cancelar
+  marca `cancelado`, no borra. Mover conserva la hora o el día que no se dicen; no
+  admite fechas pasadas; «no, mejor a las 12» corrige la tarjeta. Con varias citas
+  próximas pregunta cuál.
+- Archivos: `nlu.py` (`_decision_de_presupuesto`, `_cambio_de_cita`, respuestas;
+  `safety_refusal` deja pasar las citas), `tools.py` (`presupuesto_citado`,
+  `cita_citada` y cuatro herramientas solo locales, fuera de `TOOLS`),
+  `action_review.py` (tarjetas y comprobación al confirmar), `web/chat.py` (sin
+  revisión remite a la web), `db.py` (`reschedule_job`; `jobs_for_date` excluye
+  canceladas), `internal_brain.py` (no confirma citas canceladas),
+  `templates/agenda.html` (cancelada tachada y fuera de contadores).
+- Pruebas: `test_charla_whatsapp` (4 nuevas, 2 ajustadas) y
+  `test_client_name_rules` («cancela la cita de mañana» ya no es una negativa).
+- Riesgo medio: cambia qué ve «¿qué tengo hoy?» y el parte cuando hay canceladas
+  (antes no había forma de cancelar). Diagnóstico: `status` de `jobs`. Rollback:
+  revertir el commit; las citas marcadas `cancelado` se quedan así.
+
 ## 2026-10-01 (12) — Voz: el aviso de fallo dice el motivo verdadero
 
 - Objetivo (de `sigue.md`, prioridad audio): cualquier error al transcribir se

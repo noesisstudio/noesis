@@ -1638,6 +1638,17 @@ def _handle(
                     "tipo_factura": ultima.get("invoice_type") or "F1"}
         if tool == "registrar_pago" and not config.ASSISTANT_REVIEW_ENABLED:
             return {"reply": "Abre la factura en Facturas para revisar y registrar el cobro. No he cambiado su estado.", "source": "local"}
+        if tool in {"aceptar_presupuesto", "rechazar_presupuesto"} \
+                and not config.ASSISTANT_REVIEW_ENABLED:
+            # Sin tarjeta que confirmar, una decisión sobre un presupuesto no se
+            # toma desde una frase suelta.
+            return {"reply": "Acéptalo o recházalo en Presupuestos, donde ves el "
+                             "presupuesto entero. No he cambiado nada.", "source": "local"}
+        if tool in {"cancelar_cita", "mover_cita"} and not config.ASSISTANT_REVIEW_ENABLED:
+            # La web solo deja borrar una cita: no se promete moverla allí.
+            return {"reply": "Cambiar una cita lo hago con una tarjeta para que la "
+                             "confirmes, y aquí no está activa. En Trabajos puedes "
+                             "borrarla. No he cambiado nada.", "source": "local"}
         if tool == nlu.HELP:
             # «¿Qué puedes hacer?» merece la lista; un «hola» suelto, la lectura.
             if nlu.pide_capacidades(message):

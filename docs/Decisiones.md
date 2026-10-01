@@ -2,6 +2,20 @@
 
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
+## Presupuestos y citas se deciden por WhatsApp con tarjeta (2026-10-01)
+
+- **Aceptar o rechazar un presupuesto y mover o cancelar una cita se hacen por
+  WhatsApp**, siempre con la tarjeta de SÍ y nunca por IA: las cuatro herramientas
+  están en `_DISPATCH` pero no en `TOOLS`. Sin la revisión encendida se remite a la
+  web.
+- **Una cita cancelada no se borra**: queda `cancelado`, fuera del día y del parte,
+  tachada en la agenda web y como CANCELLED en el `.ics`. Así no se pierde el
+  historial y el calendario sincronizado se entera.
+- **Aceptar deja la factura en borrador.** Emitirla sigue siendo otra orden con su
+  propia confirmación (y segunda confirmación si llega por voz).
+- Al cliente no se le avisa de nada de esto sin pedirlo: la respuesta sugiere la
+  frase para preparar el mensaje.
+
 ## WhatsApp no deja al usuario sin salida (2026-09-30)
 
 Probado hablando con el bot: varias respuestas eran callejones sin salida. Se fija:

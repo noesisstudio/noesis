@@ -446,7 +446,9 @@ def _build_draft(business_id: int, text: str) -> tuple[CommunicationDraft | None
         word in norm for word in ("confirm", "record", "mensaje", "correo", "envia")
     ):
         end = (date.today() + timedelta(days=90)).isoformat()
-        jobs = db.jobs_between(date.today().isoformat(), end, business_id)
+        # A una cita cancelada no se le manda confirmación ni recordatorio.
+        jobs = [item for item in db.jobs_between(date.today().isoformat(), end, business_id)
+                if str(item.get("status") or "") not in db._JOB_DEAD_STATES]
         if client:
             jobs = [item for item in jobs if item.get("client_id") == client["id"]]
         job = _select_single(jobs, text)

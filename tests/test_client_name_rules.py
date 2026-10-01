@@ -36,9 +36,12 @@ class LocalNameRegressionTests(unittest.TestCase):
         self.assertEqual([c["name"] for c in db.list_clients(self.bid)], ["Carla Borràs"])
 
     def test_delete_verbs_are_still_blocked(self):
-        for text in ("Borra el gasto 5", "bórralo", "elimina la factura 3", "cancela la cita de mañana", "esborra el client"):
+        for text in ("Borra el gasto 5", "bórralo", "elimina la factura 3", "esborra el client"):
             with self.subTest(text=text):
                 self.assertIsNotNone(nlu.safety_refusal(text))
+        # Desde el 1-oct una cita sí se cancela, sin borrarla y con tarjeta de SÍ.
+        self.assertIsNone(nlu.safety_refusal("cancela la cita de mañana"))
+        self.assertEqual(nlu.parse("cancela la cita de mañana")[0], "cancelar_cita")
 
     def test_invoice_in_the_name_of_client(self):
         _tool, args = nlu.parse("hazme una factura a nombre de Carla de 100 euros")

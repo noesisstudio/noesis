@@ -28,6 +28,10 @@ LABELS = {
     "registrar_pago": "Registrar el saldo pendiente como cobrado",
     "enviar_factura": "Emitir factura (la entrega se gestiona por separado)",
     "entregar_factura": "Entregar la factura al cliente",
+    "aceptar_presupuesto": "Aceptar el presupuesto y preparar su factura en borrador",
+    "rechazar_presupuesto": "Marcar el presupuesto como rechazado",
+    "cancelar_cita": "Cancelar la cita",
+    "mover_cita": "Cambiar la cita de día u hora",
 }
 
 
@@ -205,6 +209,85 @@ def _preview(bid: int, tool: str, args: dict) -> tuple[str, dict]:
             + (f" · {destino}" if destino else ""),
             "Se manda al CLIENTE, no a ti.",
         ])
+    if tool in {"cancelar_cita", "mover_cita"}:
+        from datetime import date as _date, datetime as _datetime
+        from .tools import cita_citada
+        cita = cita_citada(bid, args.get("cliente"), args.get("trabajo_id"), args.get("dia"))
+        estado = str(cita.get("status") or "")
+        if estado in db._JOB_DEAD_STATES:
+            raise ValueError("Esa cita ya está cancelada. No he cambiado nada.")
+        if estado in db._JOB_DONE_STATES:
+            raise ValueError("Esa cita ya consta como hecha. No he cambiado nada.")
+        antes = str(cita.get("scheduled_for") or "")
+        if tool == "mover_cita":
+            # La nueva fecha se completa con lo que no se dice: «al jueves» conserva
+            # la hora y «a las 11» conserva el día.
+            dia_antes, _, hora_antes = antes.partition("T")
+            nuevo = str(args.get("fecha_hora") or "")
+            if args.get("nueva_fecha") or args.get("nueva_hora"):
+                dia = str(args.pop("nueva_fecha", "") or dia_antes)[:10]
+                hora = str(args.pop("nueva_hora", "") or hora_antes[:5])
+                if not dia:
+                    raise ValueError("Esa cita no tiene día. Dime el día y la hora nuevos.")
+                nuevo = f"{dia}T{hora}" if hora else dia
+            try:
+                momento = _datetime.fromisoformat(nuevo)
+            except ValueError:
+                raise ValueError("Dime el día y la hora nuevos: «mueve la cita de Juan al "
+                                 "jueves a las 10».") from None
+            # Hora de España, que es la de la agenda: el servidor puede ir en UTC.
+            from zoneinfo import ZoneInfo
+            ahora = _datetime.now(ZoneInfo("Europe/Madrid")).replace(tzinfo=None)
+            if momento.date() < _date.today() or ("T" in nuevo and momento < ahora):
+                raise ValueError("Esa fecha ya ha pasado. Dime un día y una hora que "
+                                 "estén por venir.")
+            if nuevo[:16] == antes[:16]:
+                raise ValueError("La cita ya está en ese día y hora. No he cambiado nada.")
+            args["fecha_hora"] = nuevo
+        # Lo confirmado es esta cita concreta, no «la de Juan».
+        for clave in ("cliente", "dia"):
+            args.pop(clave, None)
+        args["trabajo_id"] = cita["id"]
+        snapshot["job"] = {"id": cita["id"], "status": estado, "scheduled_for": antes}
+        lines.extend([f"Cliente: {cita.get('client_name') or 'sin cliente'}",
+                      f"Trabajo: {cita.get('description') or 'Trabajo'}"])
+        if tool == "mover_cita":
+            lines.extend([f"Antes: {nlu.dia_humano(antes) or 'sin día'}",
+                          f"Ahora: {nlu.dia_humano(args['fecha_hora'])}",
+                          "Al cliente no le aviso: si quieres, pídeme después un mensaje para él."])
+        else:
+            lines.extend([f"Cuándo: {nlu.dia_humano(antes) or 'sin día'}",
+                          "No la borro: queda en la agenda como cancelada. Al cliente no le "
+                          "aviso; si quieres, pídeme después un mensaje para él."])
+    if tool in {"aceptar_presupuesto", "rechazar_presupuesto"}:
+        from .tools import presupuesto_citado
+        quote = presupuesto_citado(bid, args.get("presupuesto_id"), args.get("cliente"))
+        referencia = quote.get("number") or f"#{quote['id']}"
+        if quote.get("status") == "aceptado":
+            factura = f" Su factura es la #{quote['invoice_id']}." if quote.get("invoice_id") else ""
+            raise ValueError(f"El presupuesto {referencia} ya está aceptado.{factura} "
+                             "No he cambiado nada.")
+        if quote.get("status") == "rechazado":
+            raise ValueError(f"El presupuesto {referencia} ya consta como rechazado. "
+                             "No he cambiado nada.")
+        if quote.get("status") not in {"borrador", "enviado"}:
+            raise ValueError(f"El presupuesto {referencia} está {quote.get('status')}: "
+                             "revísalo en Presupuestos. No he cambiado nada.")
+        if tool == "rechazar_presupuesto" and quote.get("status") == "borrador":
+            raise ValueError(f"El presupuesto #{quote['id']} no se llegó a enviar, así "
+                             "que nadie lo ha rechazado. Si ya no vale, bórralo en "
+                             "Presupuestos. No he cambiado nada.")
+        # Lo confirmado es este presupuesto concreto, no «el de Juan».
+        args.pop("cliente", None)
+        args["presupuesto_id"] = quote["id"]
+        snapshot["quote"] = {k: quote.get(k) for k in ("id", "status", "total", "client_id")}
+        lines.extend([f"Presupuesto {referencia} · {quote.get('client_name') or ''}",
+                      f"Concepto: {quote.get('concept') or 'Servicio'}",
+                      f"Total: {nlu._eur(quote.get('total') or 0)}"])
+        if tool == "aceptar_presupuesto":
+            if quote.get("status") == "borrador":
+                lines.append("No estaba marcado como enviado: le daré número al aceptarlo.")
+            lines.append("La factura queda en borrador: no se emite ni se envía.")
     if tool in {"registrar_pago", "enviar_factura"}:
         invoice = db.get_invoice(int(args.get("factura_id", 0)), bid)
         if not invoice:
@@ -280,6 +363,14 @@ def _correccion(text: str, tool: str, args: dict) -> dict | None:
     """Lo que cambia de una propuesta ya hecha. `None` si no es una corrección."""
     if tool == "agendar_trabajo":
         return _correccion_de_cita(text, args)
+    if tool == "mover_cita":
+        # «No, mejor a las 11» sobre la cita que se está moviendo: solo cuenta si
+        # cambia la fecha; cliente, lugar o trabajo no se tocan desde aquí.
+        cambio = _correccion_de_cita(text, args)
+        if cambio and {k: v for k, v in cambio.items() if k != "fecha_hora"} == \
+                {k: v for k, v in args.items() if k != "fecha_hora"}:
+            return cambio
+        return None
     if tool not in {"crear_factura", "crear_presupuesto", "registrar_gasto"}:
         return None
     crudo = str(text or "").strip().strip(".!¡")
