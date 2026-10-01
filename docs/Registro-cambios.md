@@ -1,5 +1,25 @@
 ﻿# Registro de cambios
 
+## 2026-10-01 (2) — Altas con faltas, «hazle…», mayúsculas y trimestre en plazo
+
+Ronda en el WhatsApp real (faltas y altas de clientes) y batería local de ~50 frases.
+
+- Altas: «nuebo», «cliente nuevo: …», «quiero añadir un cliente», «mete a X de
+  cliente», «guárdame este cliente», «tengo una clienta nueva, se llama…», «hazme un
+  cliente», «provedor/probeedor». «Quiero crear un cliente» pregunta el nombre.
+- **«Crea al cliente Pepe y hazle una factura…» metía la segunda orden en el nombre**:
+  se corta y se avisa de que la factura va aparte.
+- «Hazle/prepárale/agéndale…», «a este cliente», «para él» se refieren al último
+  cliente nombrado (antes se pedía crear una ficha llamada «este cliente»).
+- Un nombre escrito todo en minúsculas se guarda con mayúsculas iniciales
+  (`nlu.nombre_presentable`): es el que sale en la factura.
+- En plazo de presentación (1–20 abr/jul/oct, 1–30 ene), «¿cuánto IVA tengo que
+  pagar?» enseña el trimestre cerrado y hasta cuándo se presenta; «este trimestre» y
+  «trimestre pasado» se respetan. El 1-oct se contestaba con el 4T a cero.
+- Regresión propia evitada: «hazme un presupuesto a cliente Juan…» no es un alta.
+- Suite 1340 correctas (incluye el commit `3b648d2`, que solo tenía pruebas dirigidas).
+  Rollback: revertir el commit.
+
 ## 2026-10-01 — Revisión de tickets por WhatsApp
 
 Simulación de una foto de ticket de punta a punta (lectura simulada, resto real).

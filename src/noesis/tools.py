@@ -762,9 +762,21 @@ def _ver_impuestos(business_id, trimestre=None, anio=None):
     hoy = date.today()
     year = int(anio or hoy.year)
     quarter = int(trimestre or (hoy.month - 1) // 3 + 1)
+    plazo = None
+    # En plazo de presentación (1–20 de abril, julio y octubre; 1–30 de enero), «¿cuánto
+    # IVA tengo que pagar?» pregunta por el trimestre que se acaba de cerrar, no por
+    # el que empieza: el 1 de octubre se contestaba con el 4T a cero.
+    limite = 30 if hoy.month == 1 else 20
+    if not trimestre and not anio and hoy.month in (1, 4, 7, 10) and hoy.day <= limite:
+        quarter = (hoy.month - 1) // 3 or 4
+        if hoy.month == 1:
+            year -= 1
+        mes = {1: "enero", 4: "abril", 7: "julio", 10: "octubre"}[hoy.month]
+        plazo = f"se presenta hasta el {limite} de {mes}"
     if quarter not in (1, 2, 3, 4):
         return {"ok": False, "error": "El trimestre debe estar entre 1 y 4."}
-    return {"ok": True, **db.tax_quarter(year, quarter, business_id)}
+    return {"ok": True, **db.tax_quarter(year, quarter, business_id),
+            **({"plazo": plazo} if plazo else {})}
 
 
 def _registrar_gasto(

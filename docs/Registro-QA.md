@@ -1,5 +1,12 @@
 ﻿# Registro de QA
 
+## 2026-10-01 (2)
+
+- WhatsApp real (producción `3b648d2`): «factra … x 150e», «kien me deve», «q tengo
+  mñn», «cuanto iba tengo q pagar» y alta «clinete … tlf» correctos; «nuebo» fallaba.
+  Todo descartado con NO. La primera respuesta tardó más de 9 s (arranque en frío).
+- Suite completa **1340 correctas** (308 s). Ruff correcto.
+
 ## 2026-10-01 — Tickets por WhatsApp
 
 - Simulación de foto de ticket: corrección de total, concepto, foto repetida y foto

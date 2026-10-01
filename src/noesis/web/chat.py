@@ -1402,7 +1402,8 @@ def _finish_order_for_a_new_client(business_id: int, message: str,
         args["cliente"] = nombre
     try:
         cliente = (db.resolve_client_reference(nombre, business_id)
-                   or db.add_client(nombre, business_id=business_id))
+                   or db.add_client(nlu.nombre_presentable(nombre),
+                                    business_id=business_id))
     except ValueError as exc:
         return _party_error_reply(business_id, "cliente", actor, _motivo(str(exc)))
     args["cliente"] = cliente["name"]
@@ -1626,6 +1627,15 @@ def _handle(
             rate = float(business.get("default_vat") or 21)
             args["base"] = round(float(args["base"]) / (1 + rate / 100), 2)
             args["iva"] = rate
+        if (tool in {"crear_factura", "crear_presupuesto", "agendar_trabajo"}
+                and args.get("cliente") == nlu.CLIENTE_DE_LA_CONVERSACION):
+            # «Hazle una factura…», «a este cliente», «para él»: el último nombrado.
+            aludido = _client_from_conversation(business_id)
+            if not aludido:
+                return {"reply": ("No sé a qué cliente te refieres. Dime su nombre, por "
+                                  "ejemplo «factura a Ana López por pintura 200 euros». "
+                                  "No he creado nada."), "source": "local"}
+            args["cliente"] = aludido["name"]
         if tool in {"crear_factura", "crear_presupuesto", "agendar_trabajo"}:
             unresolved = _resolve_last_client(business_id, args)
             if unresolved:

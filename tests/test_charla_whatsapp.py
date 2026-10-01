@@ -572,6 +572,97 @@ class CharlaWhatsappTestCase(unittest.TestCase):
         self.assertIn("no parece un NIF válido", ficha)
         self.assertIn("1 borrador sin emitir", ficha)
 
+    # --- Ronda del 1 de octubre
+
+    def test_mas_formas_de_dar_de_alta_y_faltas(self):
+        casos = {
+            "añademe un cliente nuebo q se llama Marta Soler Vidal":
+                ("crear_cliente", {"nombre": "Marta Soler Vidal"}),
+            "quiero añadir un cliente nuevo llamado Pepe Garcia":
+                ("crear_cliente", {"nombre": "Pepe Garcia"}),
+            "mete a pepe garcia de cliente": ("crear_cliente", {"nombre": "Pepe Garcia"}),
+            "cliente nuevo: pepe garcia, 666 777 888, pepe@gmail.com":
+                ("crear_cliente", {"nombre": "Pepe Garcia", "telefono": "666777888",
+                                   "email": "pepe@gmail.com"}),
+            "guardame este cliente: Pepe Garcia 666777888":
+                ("crear_cliente", {"nombre": "Pepe Garcia", "telefono": "666777888"}),
+            "tengo una clienta nueva, se llama Ana Ruiz":
+                ("crear_cliente", {"nombre": "Ana Ruiz"}),
+            "hazme un cliente nuevo Pepe Garcia": ("crear_cliente", {"nombre": "Pepe Garcia"}),
+            "crea el probeedor Bauhaus": ("crear_proveedor", {"nombre": "Bauhaus"}),
+            "añade un provedor nuevo Leroy Merlin": ("crear_proveedor", {"nombre": "Leroy Merlin"}),
+            "quiero crear un cliente": (nlu.NEED_PARTY_NAME, {"tipo": "cliente"}),
+            "cliente nuevo": (nlu.NEED_PARTY_NAME, {"tipo": "cliente"}),
+        }
+        for texto, esperado in casos.items():
+            with self.subTest(texto=texto):
+                self.assertEqual(nlu.parse(nlu.corregir_erratas(texto)), esperado)
+        # No se da de alta a «un presupuesto».
+        self.assertEqual(
+            nlu.parse("hazme un presupuesto a cliente Juan por 300 euros baño")[0],
+            "crear_presupuesto")
+
+    def test_nombre_en_minusculas_se_guarda_con_mayusculas(self):
+        casos = {"pepe garcia": "Pepe Garcia", "reformas martínez, s.l.": "Reformas Martínez, S.L.",
+                 "jose maria de la fuente": "Jose Maria de la Fuente",
+                 "construcciones ruiz sl": "Construcciones Ruiz SL",
+                 "iPhone Reparaciones": "iPhone Reparaciones", "PEPE": "PEPE"}
+        for escrito, guardado in casos.items():
+            self.assertEqual(nlu.nombre_presentable(escrito), guardado)
+
+    def test_la_segunda_orden_no_es_parte_del_nombre_y_hazle_es_ese_cliente(self):
+        business, _ = self.make_business("Orden doble")
+        with patch.object(config, "ASSISTANT_REVIEW_ENABLED", True):
+            tarjeta, _, factura, _, cita = self.charla(
+                business, "crea al cliente pepe garcia y hazle una factura de 100 euros "
+                "por pintar", "sí", "hazle una factura de 100 euros por pintar", "no",
+                "agéndale una cita el lunes a las 10 para revisar la caldera")
+        self.assertIn("Nombre: Pepe Garcia\n", tarjeta)
+        self.assertIn("«hazle una factura de 100 euros por pintar»", tarjeta)
+        self.assertIn("Cliente: Pepe Garcia", factura)
+        self.assertIn("Cliente: Pepe Garcia", cita)
+        orden = nlu.parse("presupuesto para este cliente por baño 900 euros")
+        self.assertEqual(orden[1]["cliente"], nlu.CLIENTE_DE_LA_CONVERSACION)
+
+    def test_en_plazo_se_ensena_el_trimestre_que_toca_presentar(self):
+        from noesis import tools
+
+        class Octubre(date):
+            @classmethod
+            def today(cls):
+                return cls(2026, 10, 1)
+
+        class Noviembre(date):
+            @classmethod
+            def today(cls):
+                return cls(2026, 11, 5)
+
+        business, _ = self.make_business("Plazo fiscal")
+        with patch.object(tools, "date", Octubre):
+            en_plazo = tools._ver_impuestos(business["id"])
+            pedido = tools._ver_impuestos(business["id"], trimestre=4)
+        with patch.object(tools, "date", Noviembre):
+            fuera = tools._ver_impuestos(business["id"])
+        self.assertTrue(en_plazo["label"].startswith("3T"))
+        self.assertIn("20 de octubre", en_plazo["plazo"])
+        self.assertTrue(pedido["label"].startswith("4T"))
+        self.assertNotIn("plazo", pedido)
+        self.assertTrue(fuera["label"].startswith("4T"))
+        self.assertNotIn("plazo", fuera)
+
+    def test_ticket_ilegible_se_completa_hablando(self):
+        from noesis.documents import review
+        item = review.new_item(fields={}, kind=None, business=None, document_id=1,
+                               source="ninguno", media="image")
+        cambiado, sin_entender = review.apply_correction(item, "son 25 euros de gasolina")
+        self.assertEqual(sin_entender, [])
+        self.assertIn("total", cambiado)
+        self.assertEqual(float(item["fields"]["total"]), 25.0)
+        self.assertEqual(review.render(item).count("gasolina"), 1)
+        from noesis.web import whatsapp_documents
+        self.assertTrue(whatsapp_documents._DESTINO.fullmatch("es de la obra de juan"))
+        self.assertFalse(whatsapp_documents._DESTINO.fullmatch("es de leroy merlin"))
+
     def test_catalan_de_la_ronda(self):
         casos = {
             "crea el client Joan Puig amb telèfon 612345678":
