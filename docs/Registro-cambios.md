@@ -1,5 +1,22 @@
 ﻿# Registro de cambios
 
+## 2026-10-01 (12) — Voz: el aviso de fallo dice el motivo verdadero
+
+- Objetivo (de `sigue.md`, prioridad audio): cualquier error al transcribir se
+  contestaba «el servicio está mal configurado… queda avisado en Ajustes», también
+  con una nota larga, un trozo dudoso o Groq saturado (429).
+- `adapters/transcription.py`: `NotaNoValida(ValueError)` con `motivo` `larga`
+  (más de `MAX_AUDIO_BYTES`, Groq 413, duración o texto excesivos), `dudosa` (audio
+  vacío, fragmento dudoso del modelo local, texto vacío del privado) u `ocupado`
+  (429, modelo local ocupado). Lo demás sigue siendo «mal configurada».
+- `web/whatsapp.py`: motivos nuevos `larga` y `ocupada` con su explicación;
+  `dudosa` va a «no entendida».
+- `web/routers/assistant.py` (voz del chat web): mismo reparto de mensajes, siempre
+  HTTP 422, y ahora pasa el idioma del negocio al transcriptor como ya hacía
+  WhatsApp.
+- Pruebas: `tests/test_voz_fallos.py` (nuevo) y `test_conversation_safety`.
+- Riesgo bajo: `NotaNoValida` hereda de `ValueError`. Rollback: revertir el commit.
+
 ## 2026-10-01 (11) — Se retira `sigue.md`
 
 - El founder dijo «sigue»: lo pendiente de la nota pasa entero a `Tareas-vivas.md`

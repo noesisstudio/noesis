@@ -125,10 +125,20 @@ async def api_chat_audio(business_id: int, request: Request, audio: UploadFile =
     data = await audio.read(config.MAX_AUDIO_BYTES + 1)
     if len(data) > config.MAX_AUDIO_BYTES:
         return audio_error("El audio es demasiado grande.", 413)
+    # El idioma del negocio, igual que por WhatsApp: sin él, una nota corta o con
+    # ruido se puede transcribir como portugués o italiano.
+    language = (db.get_business(business_id) or {}).get("language")
     try:
         text = await run_in_threadpool(
-            tr.transcribe, data, audio.filename or "audio"
+            lambda: tr.transcribe(data, audio.filename or "audio",
+                                  language=language)
         )
+    except transcription.NotaNoValida as exc:
+        if exc.motivo == "larga":
+            return audio_error("La nota es demasiado larga. Grábala en notas más cortas, de menos de dos minutos, o escribe la orden.", 422)
+        if exc.motivo == "ocupado":
+            return audio_error("El servicio de voz está saturado justo ahora. Vuelve a grabar en unos segundos o escribe la orden.", 422)
+        return audio_error("No he entendido bien el audio. Se ha descartado la propuesta anterior; repítelo más despacio o escribe la orden.", 422)
     except Exception:  # noqa: BLE001
         return audio_error("No he podido entender el audio. Se ha descartado la propuesta anterior; escribe de nuevo la orden.", 422)
     if not text:

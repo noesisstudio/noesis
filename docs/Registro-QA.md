@@ -1,5 +1,12 @@
 ﻿# Registro de QA
 
+## 2026-10-01 (12)
+
+- Voz: 8 pruebas nuevas (`test_voz_fallos`: Groq 429/413/401, tamaño, fragmento
+  dudoso, idioma y mensajes de la web) y `test_private_voice` correctas. Suite
+  completa **1365 correctas** (322 s) con este cambio y el de presupuestos (13).
+- Sigue sin probarse una nota de voz real de punta a punta (falta audio ogg/opus).
+
 ## 2026-10-01 (10)
 
 - Chat web simulado con 25 mensajes (revisión encendida). Suite **1355 correctas**

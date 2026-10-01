@@ -275,6 +275,8 @@ class ConversationSafetyTests(unittest.TestCase):
             opener.open.side_effect = urllib.error.HTTPError(transcription.GroqWhisperProvider.ENDPOINT, 429, "error", {}, None)
             failed = asyncio.run(api_chat_audio(self.bid, request, UploadFile(filename="nota-de-voz.webm", file=BytesIO(b"webm-voz"))))
         self.assertEqual(failed.status_code, 422)
+        # Saturado no es «no te entiendo»: se dice que se reintente en un momento.
+        self.assertIn(b"unos segundos", failed.body)
         self.assertEqual(db.list_expenses(self.bid), [])
 
     def test_http_audio_preview_then_text_confirm_and_error_clears_proposal(self):

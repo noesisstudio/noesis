@@ -19,6 +19,35 @@ from urllib.parse import urlsplit
 from typing import Protocol
 
 
+class NotaNoValida(ValueError):
+    """El fallo es de la nota o del momento, no de la configuración.
+
+    `motivo` dice qué contestarle al autónomo: `larga` (que la divida), `dudosa`
+    (que la repita) u `ocupado` (que la reenvíe en unos segundos). Cualquier otro
+    `ValueError` sigue significando «el servicio no responde como debe».
+    """
+
+    def __init__(self, motivo: str, mensaje: str):
+        super().__init__(mensaje)
+        self.motivo = motivo
+
+
+def _comprobar_tamano(audio: bytes) -> None:
+    from .. import config
+
+    if not audio:
+        raise NotaNoValida("dudosa", "Audio vacío.")
+    if len(audio) > config.MAX_AUDIO_BYTES:
+        raise NotaNoValida("larga", "Audio demasiado grande.")
+
+
+def _comprobar_texto(text: str) -> None:
+    from .. import config
+
+    if len(text) > config.MAX_CHAT_CHARS:
+        raise NotaNoValida("larga", "La transcripción es demasiado larga.")
+
+
 class Transcriber(Protocol):
     def transcribe(self, audio: bytes, filename: str = "audio",
                    language: str | None = None) -> str:
@@ -68,7 +97,7 @@ class LocalWhisperProvider:
     def transcribe(self, audio: bytes, filename: str = "audio",
                    language: str | None = None) -> str:
         if not self._lock.acquire(blocking=False):
-            raise ValueError("El transcriptor está ocupado. Inténtalo en unos segundos.")
+            raise NotaNoValida("ocupado", "El transcriptor está ocupado. Inténtalo en unos segundos.")
         try:
             return self._transcribe(audio, filename, language)
         finally:
@@ -76,10 +105,7 @@ class LocalWhisperProvider:
 
     def _transcribe(self, audio: bytes, filename: str = "audio",
                     language: str | None = None) -> str:
-        from .. import config
-
-        if not audio or len(audio) > config.MAX_AUDIO_BYTES:
-            raise ValueError("Audio vacío o demasiado grande.")
+        _comprobar_tamano(audio)
         model = self._load()
         suffix = os.path.splitext(filename)[1] or ".ogg"
         with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as f:
@@ -95,7 +121,7 @@ class LocalWhisperProvider:
                 for frame in container.decode(audio=0):
                     duration += frame.samples / frame.sample_rate
                     if duration > maximum:
-                        raise ValueError("La nota supera la duración máxima. Divídela en notas más cortas.")
+                        raise NotaNoValida("larga", "La nota supera la duración máxima. Divídela en notas más cortas.")
             segments, _info = model.transcribe(
                 path,
                 language=idioma_efectivo(language),
@@ -106,11 +132,10 @@ class LocalWhisperProvider:
             parts = []
             for segment in segments:
                 if getattr(segment, "no_speech_prob", 0) > 0.6 or getattr(segment, "avg_logprob", 0) < -1:
-                    raise ValueError("Hay un fragmento de voz dudoso. Repite la nota o escribe la orden.")
+                    raise NotaNoValida("dudosa", "Hay un fragmento de voz dudoso. Repite la nota o escribe la orden.")
                 parts.append(segment.text.strip())
             text = " ".join(parts).strip()
-            if len(text) > config.MAX_CHAT_CHARS:
-                raise ValueError("La transcripción es demasiado larga.")
+            _comprobar_texto(text)
             return text
         finally:
             try:
@@ -156,8 +181,7 @@ class GroqWhisperProvider:
 
         from .. import config
 
-        if not audio or len(audio) > config.MAX_AUDIO_BYTES:
-            raise ValueError("Audio vacío o demasiado grande.")
+        _comprobar_tamano(audio)
         name = _groq_filename(filename)
         boundary = uuid.uuid4().hex
         parts = []
@@ -197,14 +221,15 @@ class GroqWhisperProvider:
         except urllib.error.HTTPError as exc:
             # Solo el código: el cuerpo de un error podría repetir datos del audio.
             if exc.code == 429:
-                raise ValueError("El servicio de voz está saturado. Inténtalo en unos segundos.") from None
+                raise NotaNoValida("ocupado", "El servicio de voz está saturado. Inténtalo en unos segundos.") from None
+            if exc.code == 413:
+                raise NotaNoValida("larga", "La nota es demasiado grande para el servicio de voz.") from None
             raise ValueError(f"El servicio de voz rechazó la nota (HTTP {exc.code}).") from None
         if len(raw) > 65536:
             raise ValueError("Respuesta de transcripción demasiado grande.")
         text = _json.loads(raw).get("text")
         text = text.strip() if isinstance(text, str) else ""
-        if len(text) > config.MAX_CHAT_CHARS:
-            raise ValueError("La transcripción es demasiado larga.")
+        _comprobar_texto(text)
         return text
 
 
@@ -222,18 +247,17 @@ class PrivateWhisperProvider:
     def transcribe(self, audio: bytes, filename: str = "audio",
                    language: str | None = None) -> str:
         import json
-        from .. import config
 
-        if not audio or len(audio) > config.MAX_AUDIO_BYTES:
-            raise ValueError("Audio vacío o demasiado grande.")
+        _comprobar_tamano(audio)
         request = urllib.request.Request(self.url + "/transcribe", data=audio, headers={"Authorization": "Bearer " + self.token, "Content-Type": "application/octet-stream"})
         with urllib.request.build_opener(_NoRedirect).open(request, timeout=150) as response:
             raw = response.read(65537)
         if len(raw) > 65536:
             raise ValueError("Respuesta de transcripción demasiado grande.")
         text = json.loads(raw).get("text")
-        if not isinstance(text, str) or not text.strip() or len(text) > config.MAX_CHAT_CHARS:
-            raise ValueError("No he entendido la nota con suficiente claridad.")
+        if not isinstance(text, str) or not text.strip():
+            raise NotaNoValida("dudosa", "No he entendido la nota con suficiente claridad.")
+        _comprobar_texto(text.strip())
         return text.strip()
 
 

@@ -797,6 +797,10 @@ _VOZ_SIN_SERVICIO = "sin_servicio"
 _VOZ_MAL_CONFIGURADA = "mal_configurada"
 _VOZ_SIN_DESCARGA = "sin_descarga"
 _VOZ_NO_ENTENDIDA = "no_entendida"
+# Fallos de la nota o del momento, no de la cuenta: antes caían en «mal
+# configurado» y el autónomo leía que había que tocar Ajustes por una nota larga.
+_VOZ_LARGA = "larga"
+_VOZ_OCUPADA = "ocupada"
 
 _VOZ_EXPLICACION = {
     _VOZ_SIN_SERVICIO: (
@@ -811,6 +815,19 @@ _VOZ_EXPLICACION = {
     _VOZ_NO_ENTENDIDA: (
         "He recibido tu nota de voz pero no he entendido lo que decía. Repítela "
         "más despacio o escríbeme la orden en texto."),
+    _VOZ_LARGA: (
+        "Tu nota de voz es demasiado larga para leerla de una vez. Mándamela en "
+        "notas más cortas, de menos de dos minutos, o escríbeme la orden en texto."),
+    _VOZ_OCUPADA: (
+        "El servicio de voz está saturado justo ahora. Vuelve a enviar la nota en "
+        "unos segundos, o escríbeme la orden en texto."),
+}
+
+# Motivo de `transcription.NotaNoValida` -> motivo que se le explica al autónomo.
+_VOZ_POR_MOTIVO = {
+    "larga": _VOZ_LARGA,
+    "dudosa": _VOZ_NO_ENTENDIDA,
+    "ocupado": _VOZ_OCUPADA,
 }
 
 
@@ -838,6 +855,9 @@ def _audio_to_text(audio_id: str,
         return (None, _VOZ_SIN_DESCARGA)
     try:
         texto = transcriber.transcribe(data, "voz.ogg", language=language)
+    except transcription.NotaNoValida as exc:
+        log.info("Nota de voz no transcrita (%s): %s", exc.motivo, exc)
+        return (None, _VOZ_POR_MOTIVO.get(exc.motivo, _VOZ_NO_ENTENDIDA))
     except Exception as exc:  # noqa: BLE001
         log.warning("Fallo transcribiendo audio: %s", exc)
         return (None, _VOZ_MAL_CONFIGURADA)
