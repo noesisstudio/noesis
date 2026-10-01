@@ -175,12 +175,32 @@ def _preview(bid: int, tool: str, args: dict) -> tuple[str, dict]:
             args["base"] = float(base)
         lines.extend([f"Concepto: {args.get('concepto', 'Servicio')}", f"Base: {nlu._eur(base)} · IVA {float(vat):g} %" + (f" · IRPF {float(irpf):g} %" if _muestra_irpf(bid, irpf) else ""), f"Total: {nlu._eur(total)}"])
     if tool == "registrar_gasto":
-        if args.get("proyecto_id"):
-            raise ValueError("Para asignar el gasto a un proyecto, revisa primero el proyecto en Costes. No he asignado nada.")
         amount = Decimal(str(args.get("importe", 0)))
         if not amount.is_finite() or amount <= 0:
             raise ValueError("El gasto debe tener un importe positivo.")
-        lines.extend([f"Concepto: {args.get('concepto') or 'Gasto'}", f"Importe: {nlu._eur(amount)}", "Destino: gastos generales del negocio; sin asignación a cliente."])
+        dicha = None
+        if args.get("proyecto_id"):
+            # Al confirmar, o si lo propone una IA: tiene que ser una obra de este
+            # negocio, y la tarjeta enseña cuál antes del SÍ.
+            obra = db.get_project(int(args["proyecto_id"]), bid)
+            if not obra:
+                raise ValueError("No encuentro esa obra en tu negocio. No he registrado nada.")
+        else:
+            from .tools import obra_del_gasto
+            obra, concepto, dicha = obra_del_gasto(bid, args.get("concepto"))
+            if obra:
+                args.update(concepto=concepto, proyecto_id=obra["id"])
+        lines.extend([f"Concepto: {args.get('concepto') or 'Gasto'}", f"Importe: {nlu._eur(amount)}"])
+        if obra:
+            snapshot["project"] = {"id": obra["id"], "name": obra.get("name")}
+            lines.append(f"Destino: obra «{obra.get('name')}»"
+                         + (f" de {obra['client_name']}" if obra.get("client_name") else "")
+                         + "; cuenta en su coste.")
+        elif dicha:
+            lines.append(f"Destino: gastos generales. No encuentro ninguna obra abierta «{dicha}» "
+                         "en Proyectos; si existe, dime su nombre como sale allí.")
+        else:
+            lines.append("Destino: gastos generales del negocio; sin asignación a cliente.")
     if tool == "agendar_trabajo":
         lines.extend([f"Trabajo: {args.get('descripcion') or 'Trabajo'}", f"Cuándo: {nlu.dia_humano(args.get('fecha_hora')) or 'sin día'}", f"Lugar: {args.get('zona') or 'sin especificar'}"])
     if tool == "entregar_factura":

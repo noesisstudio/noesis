@@ -1,5 +1,13 @@
 ﻿# Registro de QA
 
+## 2026-10-01 (16)
+
+- Conversación simulada: gasto a obra por nombre y por cliente, obra inexistente
+  (queda general y se avisa) y dos obras que encajan (se pregunta, nada guardado).
+  Suite completa **1370 correctas** (368 s). Ruff correcto.
+- Producción tras `96d5b13`: despliegue SUCCESS, `/ready` con esa versión y
+  `cryptography-50.0.2` instalada en la construcción.
+
 ## 2026-10-01 (15)
 
 - 13 frases dictadas comparadas (cuatro de la ronda real; la orden estricta de

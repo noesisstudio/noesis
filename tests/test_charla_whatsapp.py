@@ -1226,6 +1226,39 @@ class CharlaWhatsappTestCase(unittest.TestCase):
             self.assertIn(f"No tengo ninguna cita #{suya['id']}", no_es_tuya)
             self.assertEqual(db.get_job(suya["id"], ajeno["id"])["status"], "pendiente")
 
+    def test_gasto_para_una_obra_se_imputa_a_ella(self):
+        """Ronda 1-oct: asignar un gasto a una obra se remitía a la web."""
+        business, client = self.make_business("Gastos de obra")
+        roca = db.add_project("Reforma Casa Roca", 12000, client_id=client["id"],
+                              business_id=business["id"])
+        with patch.object(config, "ASSISTANT_REVIEW_ENABLED", True):
+            tarjeta, hecho = self.charla(
+                business, "gasté 120 euros en azulejos para la reforma Casa Roca", "sí")
+            self.assertIn("Concepto: azulejos", tarjeta)
+            self.assertIn("Destino: obra «Reforma Casa Roca»", tarjeta)
+            self.assertIn("Gasto registrado", hecho)
+            (gasto,) = db.list_expenses(business["id"])
+            self.assertEqual((gasto["concept"], gasto["project_id"]), ("azulejos", roca["id"]))
+
+            # Por el cliente de la obra también.
+            tarjeta, _ = self.charla(
+                business, f"gasto de 30 euros en tornillos para la obra de {client['name']}", "sí")
+            self.assertIn("Destino: obra «Reforma Casa Roca»", tarjeta)
+
+            # Una obra que no existe no se inventa: queda general y se dice.
+            tarjeta, _ = self.charla(
+                business, "gasté 45 euros en tubos para la obra de Pepe Inexistente", "sí")
+            self.assertIn("No encuentro ninguna obra abierta «Pepe Inexistente»", tarjeta)
+            ultimo = max(db.list_expenses(business["id"]), key=lambda g: g["id"])
+            self.assertIsNone(ultimo.get("project_id"))
+
+            # Dos obras que encajan: se pregunta y no se apunta nada.
+            db.add_project("Reforma Casa Pons", 5000, business_id=business["id"])
+            antes = len(db.list_expenses(business["id"]))
+            (duda,) = self.charla(business, "gasté 10 euros en silicona para la obra Reforma Casa")
+            self.assertIn("varias obras", duda)
+            self.assertEqual(len(db.list_expenses(business["id"])), antes)
+
     def test_frases_para_mover_y_cancelar_citas(self):
         casos = {
             "cancela la cita de Juan García": ("cancelar_cita", {"cliente": "Juan García"}),

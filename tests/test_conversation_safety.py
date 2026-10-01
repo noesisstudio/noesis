@@ -210,10 +210,14 @@ class ConversationSafetyTests(unittest.TestCase):
             action_review.context.reset(token)
 
     def test_expense_project_assignment_is_not_guessed(self):
+        # Una obra de otro negocio tampoco vale aunque se diga su número.
+        other = db.create_business("Otra obra", "otra-obra@example.invalid")["id"]
+        ajena = db.add_project("Obra ajena", 1000, business_id=other)
         token = action_review.context.set({"actor": "web:owner"})
         try:
-            result = json.loads(run_tool("registrar_gasto", {"concepto": "Material", "importe": 20, "proyecto_id": 1}, self.bid))
-            self.assertIn("No he asignado", result["reply"])
+            for proyecto_id in (999999, ajena["id"]):
+                result = json.loads(run_tool("registrar_gasto", {"concepto": "Material", "importe": 20, "proyecto_id": proyecto_id}, self.bid))
+                self.assertIn("No encuentro esa obra", result["reply"])
         finally:
             action_review.context.reset(token)
         self.say("sí")

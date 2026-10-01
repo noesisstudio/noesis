@@ -817,6 +817,45 @@ def _ver_presupuestos(business_id, cliente=None):
             **({"cliente": cliente} if cliente else {})}
 
 
+_OBRA_DEL_GASTO = re.compile(
+    r"\s+(?:para|de|en|per\s+a)\s+(?:la\s+obra|el\s+proyecto|la\s+reforma|el\s+trabajo|"
+    r"l'obra|el\s+projecte|la\s+feina)\s+(?:(?:de|del|d')\s*(?:la\s+|el\s+)?)?(.{2,80})$", re.I)
+
+
+def obra_del_gasto(business_id: int, concepto) -> tuple[dict | None, str, str | None]:
+    """«Material para la obra de Juan»: `(obra, concepto sin la obra, nombre dicho)`.
+
+    La obra es un proyecto sin cerrar del negocio, por su nombre o por su cliente.
+    Si no hay ninguna, el gasto queda general y la tarjeta lo dice; si encajan
+    varias, se pregunta, que imputar a la obra equivocada falsea su margen.
+    """
+    from .nlu import _norm
+    texto = str(concepto or "").strip()
+    m = _OBRA_DEL_GASTO.search(texto)
+    if not m:
+        return None, texto, None
+    dicho = m.group(1).strip(" .,")
+    palabras = _norm(dicho).split()
+    abiertas = [p for p in db.list_projects(business_id)
+                if p.get("status") not in ("terminado", "cancelado")]
+
+    def encaja(nombre) -> bool:
+        candidato = _norm(nombre or "").split()
+        return bool(palabras) and all(p in candidato for p in palabras)
+
+    for criterio in (lambda p: _norm(p.get("name") or "") == _norm(dicho),
+                     lambda p: encaja(p.get("name")),
+                     lambda p: encaja(p.get("client_name"))):
+        obras = [p for p in abiertas if criterio(p)]
+        if len(obras) == 1:
+            return obras[0], texto[:m.start()].strip() or texto, dicho
+        if len(obras) > 1:
+            raise ValueError(f"Hay varias obras que encajan con «{dicho}»: "
+                             + ", ".join(p["name"] for p in obras[:5])
+                             + ". Dime cuál con su nombre completo. No he registrado nada.")
+    return None, texto, dicho
+
+
 def presupuesto_citado(business_id: int, presupuesto_id=None,
                        cliente=None) -> dict:
     """El presupuesto del que se habla, por su número o por su cliente.

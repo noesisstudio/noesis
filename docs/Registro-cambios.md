@@ -1,5 +1,22 @@
 ﻿# Registro de cambios
 
+## 2026-10-01 (16) — Gasto apuntado a una obra por WhatsApp
+
+- Objetivo (hueco de `sigue.md`): «gasté 120 euros en azulejos para la reforma Casa
+  Roca» quedaba como gasto general con la obra metida en el concepto, y un
+  `proyecto_id` se rechazaba («revisa primero el proyecto en Costes»).
+- `tools.obra_del_gasto`: si el concepto acaba en «para la obra / el proyecto / la
+  reforma / el trabajo (de) X», busca X entre las obras abiertas del negocio por
+  nombre exacto, por palabras del nombre o por su cliente. Con una, el gasto se
+  imputa a ella y el concepto queda limpio; con varias, se pregunta y no se apunta
+  nada; con ninguna, queda general y la tarjeta lo dice.
+- `action_review` (tarjeta de `registrar_gasto`): enseña el destino; un
+  `proyecto_id` solo vale si es una obra de este negocio.
+- A un **cliente** sin obra no se puede imputar: `expenses` no tiene `client_id`
+  (haría falta migración). Queda en Tareas vivas.
+- Pruebas: `test_charla_whatsapp` (1 nueva) y `test_conversation_safety` (obra
+  inexistente y de otro negocio). Rollback: revertir el commit.
+
 ## 2026-10-01 (15) — Facturas de varias líneas dictadas como se hablan
 
 - Objetivo (hueco de `sigue.md`): «factura a Juan por 3 horas a 40 euros la hora»

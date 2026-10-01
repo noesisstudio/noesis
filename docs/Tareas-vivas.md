@@ -24,7 +24,8 @@
       saturado ya no dicen «mal configurado» (1-oct, `Registro-cambios` 12).
 - [x] Facturas de varias líneas dictadas («3 horas a 40 euros la hora y material
       45 euros») con tarjeta de SÍ (1-oct, 15).
-- [ ] Por WhatsApp aún no: asignar un gasto a obra o cliente. Mover y cancelar citas en catalán. La web no deja mover una cita.
+- [x] Gasto imputado a una obra abierta por WhatsApp (1-oct, 16).
+- [ ] Imputar un gasto a un cliente sin obra: `expenses` no tiene `client_id`. Mover y cancelar citas en catalán. La web no deja mover una cita.
 - [x] Alertas de Dependabot: eran de `cryptography` 47; subida a 50 (1-oct, 14).
 - [ ] Founder: borrar de Documentos los tres archivos de prueba (ticket «Ferretería
       La Llave», su sticker y el PDF «Suministros Eléctricos Levante»), revisar el
