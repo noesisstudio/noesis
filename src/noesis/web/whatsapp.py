@@ -300,6 +300,46 @@ def _worker_plan_reply(worker: dict) -> str:
     return "\n".join(lines)
 
 
+_FICHAJE_DICHO = (
+    ("entrada", r"entro|entrada|entrar|he llegado|ya he llegado|ya estoy|ya estoy aqui|llego|"
+                r"empiezo|empiezo ya|comienzo|inicio|ficho|fichar|ficho entrada|fichar entrada|"
+                r"fichar la entrada|buenos dias empiezo|buenos dias entro|empezamos"),
+    ("salida", r"salgo|salida|salir|me voy|ya me voy|termino|termino por hoy|he terminado por hoy|"
+               r"acabo|acabo por hoy|plego|fin|fin de jornada|ficho salida|fichar salida|"
+               r"fichar la salida|ya he salido|hasta manana"),
+    ("pausa", r"pausa|paro|paro a comer|descanso|voy a comer|a comer|almuerzo|me paro|"
+              r"hago una pausa|parada"),
+    ("reanudar", r"reanudo|reanudar|vuelvo|ya he vuelto|he vuelto|sigo|continuo|seguimos|"
+                 r"vuelta|de vuelta"),
+    ("hoy", r"que tengo hoy|que tengo|que me toca|que me toca hoy|mi parte|parte de hoy|"
+            r"trabajos de hoy|que hago hoy"),
+)
+
+
+def _worker_command(normalized: str) -> str:
+    """Pasa a comando lo que un trabajador escribe de verdad para fichar.
+
+    Solo valían «entrada», «salida», «pausa» y «reanudar» exactos: «entro», «ya he
+    llegado», «me voy», «Entrada.» o «entrda» recibían la lista de comandos y el
+    fichaje no quedaba hecho.
+    """
+    from difflib import get_close_matches
+
+    limpio = _searchable_text(normalized)
+    cola = re.search(r"(?:\s+(?:en|al|del|de)(?:\s+el)?)?(?:\s+trabajo)?\s+(\d+)$", limpio)
+    cuerpo = limpio[:cola.start()].strip() if cola else limpio
+    numero = f" {cola.group(1)}" if cola else ""
+    for comando, formas in _FICHAJE_DICHO:
+        if re.fullmatch(formas, cuerpo):
+            return comando + ("" if comando == "hoy" else numero)
+    if " " not in cuerpo and len(cuerpo) >= 4:
+        parecido = get_close_matches(cuerpo, ["entrada", "salida", "pausa", "reanudar"],
+                                     n=1, cutoff=0.8)
+        if parecido:
+            return parecido[0] + numero
+    return normalized
+
+
 def _try_worker_clock(from_phone: str, text: str) -> dict | None:
     """Fichaje y parte de campo por WhatsApp para una persona vinculada."""
     worker = db.get_worker_by_phone(from_phone)
@@ -330,7 +370,7 @@ def _try_worker_clock(from_phone: str, text: str) -> dict | None:
             "clocked": False,
             "subscription_required": True,
         }
-    normalized = (text or "").strip().lower().replace("#", "")
+    normalized = _worker_command((text or "").strip().lower().replace("#", ""))
     if normalized in {"hoy", "mis trabajos", "trabajos", "mis tareas", "tareas"}:
         return {
             "business_id": worker["business_id"],
@@ -511,7 +551,9 @@ def _try_worker_clock(from_phone: str, text: str) -> dict | None:
         return {
             "business_id": worker["business_id"],
             "worker_id": worker["id"],
-            "reply": f"{action.capitalize()} registrada a las {hour}{linked}.",
+            # «Reanudar registrada» no es castellano: se vuelve del descanso.
+            "reply": (f"{'Vuelta' if action == 'reanudar' else action.capitalize()} "
+                      f"registrada a las {hour}{linked}."),
             "clocked": True,
         }
 
@@ -522,7 +564,8 @@ def _try_worker_clock(from_phone: str, text: str) -> dict | None:
         "worker_id": worker["id"],
         "reply": (
             "Escribe HOY para ver tu parte; ENTRADA, PAUSA, REANUDAR o SALIDA "
-            "para fichar; y HECHO Tn para cerrar una tarea."
+            "para fichar; y HECHO Tn para cerrar una tarea. También me vale "
+            "«entro», «paro a comer», «vuelvo» o «me voy»."
         ),
         "clocked": False,
     }

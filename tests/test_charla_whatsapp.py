@@ -880,6 +880,29 @@ class CharlaWhatsappTestCase(unittest.TestCase):
         (pendiente,) = self.charla(business, "que me falta por facturar")
         self.assertIn("parece hecho", pendiente)
 
+    def test_fichar_como_se_dice(self):
+        casos = {"Entrada.": "entrada", "entro": "entrada", "ya he llegado": "entrada",
+                 "entrda": "entrada", "entro en el trabajo 12": "entrada 12", "me voy": "salida",
+                 "salgo": "salida", "paro a comer": "pausa", "vuelvo": "reanudar",
+                 "qué tengo hoy?": "hoy"}
+        for escrito, comando in casos.items():
+            self.assertEqual(whatsapp._worker_command(escrito.lower()), comando, escrito)
+        for intacto in ("hola", "hecho t3", "coste 25,40 material", "entrar a robar"):
+            self.assertEqual(whatsapp._worker_command(intacto), intacto)
+        from noesis.adapters import billing as billing_adapter
+        business, _ = self.make_business("Fichajes")
+        operaria = db.create_worker(business["id"], "Marta Operaria")
+        db.bind_worker_phone(business["id"], operaria["access_code"], "+34 611 222 333")
+        respuestas = []
+        with patch.object(whatsapp, "send", side_effect=lambda phone, text, **kw:
+                          respuestas.append(text) or True), \
+                patch.object(billing_adapter, "has_entitlement", return_value=True):
+            for numero, texto in enumerate(("ya he llegado", "paro a comer", "vuelvo", "Salgo.")):
+                whatsapp.handle_inbound({"id": f"wamid.fichar.{numero}",
+                                         "from": "34611222333", "text": texto})
+        self.assertEqual([r.split(" registrada")[0] for r in respuestas],
+                         ["Entrada", "Pausa", "Vuelta", "Salida"])
+
     def test_catalan_de_la_ronda(self):
         casos = {
             "crea el client Joan Puig amb telèfon 612345678":

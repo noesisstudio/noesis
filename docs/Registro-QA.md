@@ -1,5 +1,15 @@
 ﻿# Registro de QA
 
+## 2026-10-01 (8) — PDF real y despliegue `ce9c164`
+
+- **PDF real de una factura de proveedor por WhatsApp (producción)**: «Factura
+  recibida», proveedor, CIF, número, fecha, vencimiento, base, IVA y total correctos.
+  El mismo PDF reenviado: «Ya lo tenía guardado y lo he vuelto a leer». Descartados
+  con NO; el documento queda archivado en Documentos del founder como prueba.
+- En real: ticket de mostrador (tarjeta correcta), «qué presupuestos tengo», «dile a
+  … que llego tarde». Todo descartado.
+- Fichaje simulado con un trabajador vinculado. Suite **1353 correctas** (320 s).
+
 ## 2026-10-01 (7)
 
 - Simulación de presupuestos, tickets, trabajos y proyectos (24 mensajes). Suite

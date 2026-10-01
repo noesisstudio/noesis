@@ -1,5 +1,15 @@
 ﻿# Registro de cambios
 
+## 2026-10-01 (8) — Fichaje de trabajadores como se dice y canal del mensaje
+
+- Trabajadores por WhatsApp: «entro», «ya he llegado», «me voy», «paro a comer»,
+  «vuelvo», «Entrada.» con punto o «entrda» fichan (`whatsapp._worker_command`).
+  Antes solo valían ENTRADA/SALIDA/PAUSA/REANUDAR exactos y lo demás recibía la
+  lista de comandos sin fichar. «Reanudar registrada» pasa a «Vuelta registrada».
+- La propuesta de mensaje al cliente dice por dónde saldrá y a qué dirección
+  («enviarlo por correo a …»).
+- Suite 1353 correctas. Rollback: revertir el commit.
+
 ## 2026-10-01 (7) — Tickets de mostrador, presupuestos y trabajos por WhatsApp
 
 - **Ticket de venta sin comprador fallaba con la revisión encendida** («No encuentro

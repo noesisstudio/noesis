@@ -600,11 +600,14 @@ def prepare_response(
             draft.pending_payload(),
             ttl_minutes=120,
         )
+        # Por dónde saldrá y a qué dirección: antes solo decía «enviarlo».
+        por = (f"por correo a {draft.recipient_address}" if draft.channel == "email"
+               else f"por WhatsApp al {draft.recipient_address}")
         return {
             "reply": (
                 f"He preparado este mensaje para **{draft.recipient_name}**:\n\n"
                 f"{preview}\n\n**Todavía no lo he enviado.** Responde SÍ para "
-                "enviarlo o NO para descartarlo."
+                f"enviarlo {por}, o NO para descartarlo."
             ),
             "source": "local_internal",
             "draft": draft.pending_payload(),
