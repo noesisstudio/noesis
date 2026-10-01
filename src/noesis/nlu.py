@@ -1648,6 +1648,9 @@ _ABREVIATURAS = (
     (re.compile(r"(\d)\s*(?:euors|eurso|euos|erous|eurs|euroz|uros|leuros|pavos|napos|"
                 r"lereles)(?![\w\d])", re.I), r"\1 euros"),
     (re.compile(r"(?<![\w\d])presu(?![\w\d])", re.I), "presupuesto"),
+    # «la factura número 72», «factura nº 72»: el número va pegado a la palabra.
+    (re.compile(r"\b(factura|ticket|tiquet|presupuesto|trabajo)\s+(?:n[uú]mero|num\.?|n[ºo°]\.?)"
+                r"\s*(?=#?\d)", re.I), r"\1 "),
     (re.compile(r"(?<![\w\d])ajend(a\w*)(?![\w\d])", re.I), r"agend\1"),
     (re.compile(r"(?<![\w\d])en[bv]i(a\w*)(?![\w\d])", re.I), r"envi\1"),
     (re.compile(r"(?<![\w\d])(?:resumn|resumne|rsumen|resuemn)(?![\w\d])", re.I), "resumen"),
@@ -1743,9 +1746,28 @@ def normalizar_entrada(text: str) -> str:
     return crudo
 
 
+def _numero_de_documento_dicho(text: str) -> str:
+    """«Emite la factura uno», «la factura número setenta y dos está cobrada».
+
+    Por voz el número del documento llega en letra y sin «euros», así que el
+    conversor de importes no lo toca. Solo se convierte justo detrás de la palabra
+    que nombra el documento.
+    """
+    palabra = "|".join(sorted(_PALABRA_NUMERO, key=len, reverse=True))
+
+    def cifra(m: re.Match) -> str:
+        valor = _numero_en_letra(_norm(m.group(2)).split())
+        return f"{m.group(1)}{valor}" if valor and 0 < valor < 1_000_000 else m.group(0)
+
+    return re.sub(
+        rf"\b((?:factura|ticket|tiquet|presupuesto|trabajo|borrador)\s+(?:n[uú]mero\s+)?)"
+        rf"((?:(?:{palabra})\s+)*(?:{palabra}))\b(?!\s*(?:€|euros?))",
+        cifra, text, flags=re.I)
+
+
 def _erratas(text: str) -> str:
     """Corrige faltas en las palabras clave y abreviaturas de móvil."""
-    text = text or ""
+    text = _numero_de_documento_dicho(text or "")
     sin_muletilla = _MULETILLA_INICIAL.sub("", text.strip())
     if sin_muletilla.strip(" ,.…!¡?¿"):
         text = sin_muletilla
@@ -1877,6 +1899,7 @@ def _repetir_factura(text: str) -> tuple[str, dict] | None:
     Las cuotas y los trabajos repetidos se facturan así. Lo que se cambia —el
     cliente o el importe— se dice detrás; el resto sale de la última factura.
     """
+    text = _cifras_dictadas(text)  # «pero de quinientos euros»
     m = _OTRA_IGUAL.match(_norm(text).strip(" .!"))
     if not m:
         return None
@@ -1948,6 +1971,10 @@ def _parse(text: str) -> tuple[str, dict] | None:
     # «El 21 por ciento» es como se dice un porcentaje hablando. Sin traducirlo,
     # «ciento» acababa siendo el concepto de la factura.
     text = re.sub(r"(\d+(?:[.,]\d+)?)\s*por\s*ciento\b", r"\1%", text, flags=re.I)
+    # Whisper cierra cada frase con un punto, y muchas reglas miran el final de la
+    # frase. «S.L.» conserva el suyo.
+    if text.rstrip().endswith(".") and not text.rstrip().endswith("..."):
+        text = _recortar(text.rstrip()) if text.strip() else text
     text = _cifras_dictadas(text)
     text = _erratas(text)
     norm = _norm(text)

@@ -903,6 +903,24 @@ class CharlaWhatsappTestCase(unittest.TestCase):
         self.assertEqual([r.split(" registrada")[0] for r in respuestas],
                          ["Entrada", "Pausa", "Vuelta", "Salida"])
 
+    def test_voz_numeros_de_documento_y_punto_final(self):
+        casos = {
+            "Emite la factura uno.": ("enviar_factura", {"factura_id": 1}),
+            "la factura número setenta y dos está cobrada": ("registrar_pago", {"factura_id": 72}),
+            "emitir factura nº 3": ("enviar_factura", {"factura_id": 3}),
+            "Hazme otra igual pero de quinientos euros.": (nlu.REPETIR_FACTURA, {"base": 500.0}),
+        }
+        for dicho, esperado in casos.items():
+            with self.subTest(dicho=dicho):
+                self.assertEqual(nlu.parse(nlu.corregir_erratas(dicho)), esperado)
+        ticket = nlu.parse(nlu.corregir_erratas("Ticket de venta por desplazamiento, treinta euros."))
+        self.assertEqual((ticket[1]["concepto"], ticket[1]["base"]), ("desplazamiento", 30.0))
+        # Un nombre que suena a número no se toca, ni la forma societaria pierde su punto.
+        self.assertEqual(nlu.parse("factura a Tres Torres por pintar 100")[1]["cliente"],
+                         "Tres Torres")
+        self.assertEqual(nlu.parse("Crea el cliente Reformas Martínez, S.L.")[1]["nombre"],
+                         "Reformas Martínez, S.L.")
+
     def test_catalan_de_la_ronda(self):
         casos = {
             "crea el client Joan Puig amb telèfon 612345678":

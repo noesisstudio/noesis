@@ -1,5 +1,17 @@
 ﻿# Registro de cambios
 
+## 2026-10-01 (9) — Voz: número del documento en letra y punto final
+
+Repaso de regresión por la ruta de nota de voz (33 frases).
+
+- «Emite la factura uno», «la factura número setenta y dos está cobrada», «factura
+  nº 3»: el número del documento dicho en letra o con «número» delante
+  (`nlu._numero_de_documento_dicho`). «Tres Torres» sigue siendo un nombre.
+- «Hazme otra igual pero de quinientos euros».
+- El punto con el que Whisper cierra la frase rompía reglas que miran el final:
+  «Ticket de venta por desplazamiento, treinta euros.» perdía el concepto.
+- Suite 1354 correctas. Rollback: revertir el commit.
+
 ## 2026-10-01 (8) — Fichaje de trabajadores como se dice y canal del mensaje
 
 - Trabajadores por WhatsApp: «entro», «ya he llegado», «me voy», «paro a comer»,

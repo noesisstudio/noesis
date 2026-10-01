@@ -1,5 +1,10 @@
 ﻿# Registro de QA
 
+## 2026-10-01 (9)
+
+- Regresión por la ruta de voz con 33 frases tras los cambios del día: sin
+  retrocesos; tres casos nuevos corregidos. Suite **1354 correctas** (320 s).
+
 ## 2026-10-01 (8) — PDF real y despliegue `ce9c164`
 
 - **PDF real de una factura de proveedor por WhatsApp (producción)**: «Factura
