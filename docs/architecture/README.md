@@ -88,4 +88,6 @@ cada operación; no se posponen a Fase 15. Reporting por dimensión espera a Fas
 El estado verificable vive en `docs/project-state.json`; las pruebas en
 `docs/Registro-QA.md`. Fase 0 no añade tablas ni cambia la versión de esquema.
 Sus flags están reservados y no tienen consumidores financieros. El rollback
-consiste en revertir el commit de fundamentos, sin tocar datos ni huellas.
+consiste en revertir los cambios de fundamentos, sin tocar datos ni huellas y
+conservando las actualizaciones de seguridad del lockfile. Evidencia y alcance
+exactos en el informe de cierre.

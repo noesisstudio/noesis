@@ -7,7 +7,7 @@
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
   "schema_version": 61,
   "conversation_transport_candidate_2026_09_24": "Local no publicado: esquemas 59/60, memoria por actor y transporte previo a vinculacion. NOESIS_CONVERSATION_ISOLATION_ENABLED y NOESIS_WHATSAPP_INBOX_ENABLED false por defecto. FIFO, acuse tras commit, incidencias sin replay automatico. 96 pruebas dirigidas correctas (71.801 s) y 460 backend/webhook correctas (397.517 s); Ruff, secretos y verdad documental correctos. Suite completa 1197 corresponde al bloque previo. Requiere CI PostgreSQL, procedimiento de revision/retencion y Meta real antes de activar.",
-  "verified_test_count": 1380,
+  "verified_test_count": 1396,
   "whatsapp_rounds_2026_10_01": "Producción hasta c52d3e2: presupuestos, citas (cancelar/mover), facturas de varias líneas, gasto a obra, abrir obra, ranking de clientes, pendientes, resumen semanal y abreviaturas de móvil por WhatsApp, todo con tarjeta de SÍ. Probado en real por WhatsApp Web (descartado con NO) y en simulador local. cryptography 50. Voz real sin probar.",
   "release_gate_2026_09_25": "CI 36131891167 completamente verde sobre 9357a39: 1223 tests en 555.019 s, seguridad, migraciones SQLite, 36 rutas PostgreSQL y rollback/compatibilidad/recuperacion. Cambios posteriores solo documentales. Founder autoriza publicar; mantener flags nuevos apagados y Meta intacto. Verificar ready tras despliegue.",
   "validation_2026_09_21": "CI 35578171354 verde sobre 1dc65aa1a79a6bcacfd1057b1b2afd317d7734e5: 974 pruebas (402.446 s), seguridad, Node, migraciones SQLite y humos PostgreSQL con compatibilidad anterior/rollback. Railway b88619b7-6da0-4b68-83ab-fec3194a9897 SUCCESS; health/ready verifican release 1dc65aa1a79a y esquema 56. Cierre documental sin cambios de runtime.",
@@ -15,9 +15,18 @@
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
-    "current_repository_candidate_deployed": false,
+    "current_repository_candidate_deployed": true,
     "verified_release_2026_09_25": "0fd05e81ade203b176837cd84ee086a1b94ae749 desplegado: Railway f9210b88-2726-4f50-b701-36a86e8a9d0b SUCCESS, ready esquema 60. health/ready/portada/login HTTP200. Copia PostgreSQL creada y restauracion comprobada (ok true, 4.31 s). Flags CONVERSATION_ISOLATION_ENABLED y WHATSAPP_INBOX_ENABLED verificados False. Meta sin modificar. Contratos locales del socio excluidos.",
-    "pending_after_deploy": "Codigo df113b1fbe18 publicado el 24-sep tras CI 36012914685 verde (1189 tests); Railway b668b4c1-d161-4f7c-a0fb-a763ede45d2a SUCCESS, ready esquema 58. QA autenticada: summary, series, analysis, costs/breakdown, expenses e invoices 200; gasto 45 y borradores 120/95.40 conservados. Copia previa restaurada/verificada. Sin cambiar flags: revision y planificador ya estaban activos; aprendizaje apagado. Pendientes: Meta real, Stripe live, restauracion externa, legal y piloto. Contrato local del socio no incluido."
+    "pending_after_deploy": "Codigo df113b1fbe18 publicado el 24-sep tras CI 36012914685 verde (1189 tests); Railway b668b4c1-d161-4f7c-a0fb-a763ede45d2a SUCCESS, ready esquema 58. QA autenticada: summary, series, analysis, costs/breakdown, expenses e invoices 200; gasto 45 y borradores 120/95.40 conservados. Copia previa restaurada/verificada. Sin cambiar flags: revision y planificador ya estaban activos; aprendizaje apagado. Pendientes: Meta real, Stripe live, restauracion externa, legal y piloto. Contrato local del socio no incluido.",
+    "financial_core_phase0_release": {
+      "commit": "9c538e37311b41bef7beca35f34bf55933de1cfe",
+      "deployment": "eda63f25-eab3-45b2-91cc-9abbbdd254be",
+      "status": "SUCCESS",
+      "health": 200,
+      "ready": 200,
+      "schema": 61,
+      "financial_flags": "absent; verified defaults false"
+    }
   },
   "pricing_eur_ex_vat": {
     "autonomo": 29,
@@ -184,7 +193,7 @@
   "admin_workspace_release": "seven_departments_scoped_monthly_api_usage_owner_phone_search_mobile_disclosure_explicit_metric_sources_refresh_no_schema_changes_deployment_verification_after_push",
   "financial_core": {
     "authorized_phase": 0,
-    "status": "implemented_locally_remote_ci_pending",
+    "status": "phase0_complete",
     "next_phase_authorized": false,
     "governance": "docs/architecture/README.md",
     "closure": "docs/architecture/FASE-0-cierre.md",
@@ -206,8 +215,12 @@
       "full_suite_run": 1396,
       "full_suite_initial_environment_errors": 1,
       "environment_error_retest_passed": true,
-      "remote_ci_run": false,
-      "dependency_regression_passed": 619
+      "remote_ci_run": 36984999111,
+      "dependency_regression_passed": 619,
+      "remote_ci_conclusion": "success",
+      "remote_full_suite_passed": 1396,
+      "remote_full_suite_seconds": 542.91,
+      "remote_postgres_passed": 6
     },
     "dependency_gate": "pypdf 6.19.0 and urllib3 2.8.0; pip-audit clean after lock refresh",
     "not_implemented": [

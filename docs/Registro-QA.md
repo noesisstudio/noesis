@@ -1,5 +1,18 @@
 ﻿# Registro de QA
 
+## 2026-10-02 — Cierre remoto de Financial Core, Fase 0
+
+- [CI 36984999111](https://github.com/noesisstudio/noesis/actions/runs/36984999111) verde sobre
+  `9c538e3`: **1396/1396 tests en 542,910 s**, 6/6 PostgreSQL adicionales,
+  36 rutas calientes, migraciones, baseline anterior y rollback, seguridad,
+  secretos, lint, Node y verdad documental correctos.
+- Railway `eda63f25-eab3-45b2-91cc-9abbbdd254be` SUCCESS. /health y /ready 200,
+  release `9c538e37311b`, esquema 61. Las cinco variables del Financial Core
+  están ausentes; defaults false verificados. Sin activación ni cambios de entorno.
+- Cierre posterior exclusivamente documental; enlaces y hashes de referencias
+  comprobados. El resultado local previo se conserva abajo por trazabilidad.
+- Fase 0 cumple los criterios de salida. Fase 1 no autorizada ni iniciada.
+
 ## 2026-10-02 — Financial Core, solo Fase 0
 
 - Nuevas: 16 Money/flags/SQLite y 6 contra PostgreSQL 16.15 real, correctas.
@@ -19,7 +32,7 @@
 - Sin nuevas tablas ni migración; esquema 61. Sin asientos/eventos/reporting ni
   cambios funcionales VERI*FACTU. Los cinco flags quedan false y sin consumidores.
 - [Informe, autoauditoría y criterios](architecture/FASE-0-cierre.md).
-  CI remota y despliegue se registrarán al verificarse, sin inferirlos de QA local.
+  CI remota y despliegue verificados en la entrada de cierre superior.
 
 ## 2026-10-01 (22)
 

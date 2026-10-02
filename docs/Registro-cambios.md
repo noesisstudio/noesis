@@ -1,5 +1,17 @@
 ﻿# Registro de cambios
 
+## 2026-10-02 — Cierre verificable de Fase 0
+
+- Objetivo: registrar la evidencia final del código 9c538e3, sin nuevos cambios
+  funcionales. Archivos: estado JSON/Markdown, tareas, QA, bitácora, índice y cierre de fase.
+- Pruebas: CI 36984999111 verde (1396 + 6 PostgreSQL, migraciones, 36 rutas y
+  controles), despliegue Railway SUCCESS, /health y /ready 200, esquema 61,
+  cinco flags false por defecto. Validación local documental y diff correctos.
+- Límite: no Fase 1 ni validación AEAT/Meta real. Riesgo: confundir el cierre
+  documental con código diferente; el runtime validado es 9c538e3. Diagnóstico:
+  consultar run y release. Rollback documental: revertir esta entrada/commit,
+  sin datos ni migraciones. El cierre documental no repite la suite ya validada.
+
 ## 2026-10-02 — Financial Core: fundamentos de Fase 0
 
 - Objetivo: Money/Decimal, persistencia exacta prestada y gobernanza heredable del

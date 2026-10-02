@@ -1,6 +1,13 @@
 # Informe de cierre — Fase 0 del Financial Core
 
-Fecha: 2-oct-2026. Alcance: exclusivamente fundamentos. Fase 1 no iniciada.
+Fecha: 2-oct-2026. **Resultado: PASS, Fase 0 cerrada.** Alcance: exclusivamente fundamentos. Fase 1 no iniciada.
+
+Código `9c538e37311b41bef7beca35f34bf55933de1cfe` publicado en main;
+[CI 36984999111 verde](https://github.com/noesisstudio/noesis/actions/runs/36984999111).
+Railway `eda63f25-eab3-45b2-91cc-9abbbdd254be` SUCCESS sobre ese código;
+/health y /ready 200 con release 9c538e37311b y esquema 61. Las cinco variables
+no están definidas en producción y sus valores por defecto verificados son false.
+El commit posterior de cierre solo registra evidencia documental, sin tocar runtime.
 
 ## 1. Diagnóstico y unidades ejecutadas
 
@@ -61,7 +68,7 @@ lecturas ausentes y rechazo de afinidad NUMERIC binaria de SQLite.
 |---|---|---|
 | Nuevas Money/SQLite/flags | PASS | 16/16 |
 | Nuevo contrato PostgreSQL 16.15 real | PASS | 6/6; instancia local descartable, no mocks |
-| Suite general | PASS con incidencia de entorno resuelta | 1.396 ejecutadas en 1003,041 s: 1.395 correctas; `test_secrets_gate` falló por ausencia de detect-secrets en Python global y pasó al repetirse en el entorno sincronizado (1/1) |
+| Suite general final de CI | PASS | 1.396/1.396 en 542,910 s; Python 3.13, entorno sincronizado con lockfile final |
 | Regresión tras actualizar dependencias | PASS | 619/619 en 478,270 s; PDF, documentos, recibidas, WhatsApp, correo, adaptador, backend y fundamentos |
 | SQLite upgrade/downgrade/upgrade | PASS | 0 → 61 → 0 → 61 |
 | PostgreSQL históricos | PASS | Upgrade desde 32 con factura emitida |
@@ -75,7 +82,11 @@ lecturas ausentes y rechazo de afinidad NUMERIC binaria de SQLite.
 | pip-audit | PASS | Sin vulnerabilidades conocidas en entorno sincronizado |
 | Lockfile | PASS | uv lock --check |
 | Verdad documental y diff | PASS | check_project_truth y git diff --check |
-| CI remota sobre entrega final | PENDIENTE | No afirmar verde hasta tener ejecución verificable |
+| CI remota sobre código final | PASS | Run 36984999111, ambos jobs correctos; 6 PostgreSQL adicionales, 36 rutas y seguridad |
+
+Incidencia local previa: 1.396 pruebas en 1003,041 s, con 1.395 correctas y un
+error por detect-secrets ausente en Python global. La prueba pasó en el entorno
+sincronizado y la CI final pasó la suite entera; no se ocultó ni aceptó el error.
 
 No hay type checker configurado en este repositorio. Los scripts PostgreSQL
 heredados emitieron avisos al terminar hilos del pool; acabaron con exit 0 y sus
@@ -137,7 +148,9 @@ políticas fiscales ni activación de flags.
 | Separación Domain/Operational Events y Economic Events | PASS |
 | SQLite/PostgreSQL, precisión, rollback y compatibilidad probados | PASS |
 | Autoauditoría y ausencia de implementación fuera de fase | PASS |
-| CI verde de la entrega final | PENDIENTE |
+| CI verde del código final | PASS |
+
+**Todos los criterios de salida de Fase 0: PASS.**
 
 No se han construido economic_events, journal_entries, journal_lines, plan
 contable, Open Items, Tax Ledger, reporting, asientos ni cambios funcionales en

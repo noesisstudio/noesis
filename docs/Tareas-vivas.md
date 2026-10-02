@@ -2,10 +2,10 @@
 
 ## Financial Core — Fase 0 (2-oct-2026)
 
-- [x] Fundamentos implementados localmente; ADR, Money, acceso exacto, flags y gobernanza.
+- [x] Fundamentos implementados; ADR, Money, acceso exacto, flags y gobernanza.
 - [x] Contrato real SQLite/PostgreSQL, rollback común y compatibilidad legacy.
-- [ ] Publicar y obtener CI remota verde antes de declarar cumplido
-      el criterio estricto del Master Plan. Main auto-despliega; registrar aquí el resultado después de verificarlo.
+- [x] Publicado `9c538e3`; CI 36984999111 verde y Railway SUCCESS; health/ready
+      200, esquema 61, cinco flags apagados. [Cierre](architecture/FASE-0-cierre.md): PASS.
 - [ ] Fase 1 exige nueva orden expresa. Leer [gobernanza](architecture/README.md),
       catálogo corregido en ADR-002 y [cierre](architecture/FASE-0-cierre.md).
       No construir un log operativo genérico ni adelantar General Ledger.
