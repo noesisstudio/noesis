@@ -2,14 +2,17 @@
 
 > Para Financial Core, leer [gobernanza y ADR](docs/architecture/README.md) y
 > [guía 08](docs/areas/08-financial-core.md). Fase 0 cerrada; Fase 1
-> planificada y aprobada como referencia. 1.1–1.3 aceptadas; solo 1.4 autorizada:
-> escritores prestados, snapshots, precisión/revisiones y locks. Sin productores.
+> planificada y aprobada como referencia. 1.1–1.4 aceptadas; solo 1.5 autorizada:
+> emisión capturada F1/F2 y R1–R5, sin otros productores ni activación.
 > Leer [plan](docs/architecture/FASE-1-plan.md),
 > [contrato v1](docs/architecture/ECONOMIC-EVENTS-v1.md),
 > [operaciones](docs/architecture/FINANCIAL-OPERATIONS-v1.md),
 > [persistencia](docs/architecture/ECONOMIC-PERSISTENCE-v1.md),
 > [writers](docs/architecture/BORROWED-WRITERS-v1.md) y ADR-006/007/008.
-> No avanzar a 1.5. La fachada legacy posee la transacción; un writer prestado
+> Para emisión capturada, leer [ADR-009](docs/architecture/ADR-009-invoice-capture.md),
+> [API](docs/architecture/INVOICE-CAPTURE-v1.md) y
+> [cierre de 1.5](docs/architecture/FASE-1.5-cierre.md).
+> No avanzar a 1.6. La fachada legacy posee la transacción; un writer prestado
 > nunca abre otra conexión, hace commit/rollback ni I/O externo.
 > Las referencias no autorizan ejecutar otras unidades.
 
@@ -30,8 +33,9 @@
 - Eventos/links incorporados son append-only en aplicación y BD. Referencias
   tipadas y FKs compuestas por negocio; ninguna cascada borra evidencia.
   `EconomicEvents` recibe `FinancialSession`; el llamador posee la transacción.
-  SQLite exige transacción exterior antes de append. No conectar productores,
-  inventar revisiones de origen ni activar flags sin otra orden.
+  SQLite exige transacción exterior antes de append. Solo InvoiceCapture conecta
+  emisión/rectificación: operación/aprobación + writer + evento + resultado
+  en un commit, cobertura obligatoria e inmutable. No otros productores ni flags.
 
 Este archivo es la fuente de verdad compartida para cualquier agente de IA que
 trabaje en el repositorio. Léelo entero antes de tocar nada. La visión y el contexto

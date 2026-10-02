@@ -1,5 +1,18 @@
 # 06 · RGPD y seguridad
 
+## Emisión capturada de 1.5
+
+Solo el servicio interno y el adaptador con operación aprobada producen ahora
+`invoice.issued`/`invoice.rectified`; los canales externos esperan 1.8 y los flags
+siguen apagados. `invoice_economic_coverage` es evidencia inmutable y figura en
+el inventario de baja: con evidencia se rechaza la baja destructiva antes de
+borrar; sin evidencia se conserva la baja legacy. La exportación, retención y
+el cierre con conservación del núcleo siguen pendientes antes de activar los
+canales o las cuentas (1.10). Esta entrega no resuelve esos pendientes.
+Ver [cierre 1.5](../architecture/FASE-1.5-cierre.md).
+
+Las secciones de infraestructura 1.2 siguientes describen su entrega histórica.
+
 ## Evidencia financiera de 1.2
 
 [Operaciones v1](../architecture/FINANCIAL-OPERATIONS-v1.md): dos tablas internas,
@@ -109,10 +122,11 @@ con caducidad · procedimiento de brechas (72 h)
 
 - [ ] ¿Una tabla nueva con datos de un negocio está en `delete_business_cascade` y en
       `export_business_data`? La prueba de borrado lo exige para el borrado; la
-      exportación hay que comprobarla a mano. Excepción de infraestructura 1.2–1.3:
-      financial_operations/authorizations y economic_events/links tienen baja bloqueada con evidencia y
-      no productores; exportación/retención/cierre son gates obligatorios antes
-      de conectar productores o activar el núcleo. No tratar el pendiente como resuelto.
+      exportación hay que comprobarla a mano. Evidencia del núcleo 1.2–1.5:
+      financial_operations/authorizations, economic_events/links y
+      invoice_economic_coverage tienen baja bloqueada con evidencia;
+      exportación/retención/cierre son gates obligatorios antes de activar
+      cuentas o canales. No tratar el pendiente como resuelto.
 - [ ] ¿Algún dato personal va a un proveedor que no esté en la matriz?
 - [ ] ¿Algún log, evento o mensaje de error lleva correos, teléfonos, NIF o contenido?
 - [ ] ¿Un script de terceros nuevo carga sin consentimiento o fuera de la CSP?

@@ -1,5 +1,14 @@
 # Fase 1: referencia aprobada y autorización incremental
 
+## Orden vigente — exclusivamente 1.5
+
+Fases 1.1–1.4 aceptadas; solo emisión capturada F1/F2 y rectificativas R1–R5.
+Servicio `invoice_capture/`: operaciones/aprobación durable + writer1.4 + evento
+v2 + resultado en un commit. Migración65: cobertura inmutable con FKs diferidas;
+v1/legacy/fiscalidad conservados. Flags apagados; otros productores y1.6 no autorizados.
+[ADR-009](ADR-009-invoice-capture.md), [API](INVOICE-CAPTURE-v1.md),
+[entradas auditadas](FASE-1.5-entrada-audit.md). Los alcances inferiores son históricos.
+
 La planificación de Economic Event Layer fue aprobada por el titular el
 2-oct-2026. Esa aprobación fija arquitectura de referencia, **no ejecución de
 todas sus unidades**. Fase 0 y 1.1–1.3 aceptadas. La orden vigente autoriza solo

@@ -1,5 +1,18 @@
 ﻿# Registro de cambios
 
+## 2026-10-02 — Fase 1.5, emisión capturada exclusivamente
+
+Objetivo: operación/aprobación + emisión fiscal + evento primario + resultado en
+una transacción. invoice_capture, payloadv2, cobertura65, adaptador explícito y guard db;
+validador de comando previo a replay; protección de baja. Arquitectura/guías/estado/QA.
+Pruebas: general1508/1508, SQLite78/78, PG110/110; nueve fallos,
+stale/replay/tenants/Decimal/bypass y golden fiscal1.4; gates locales pasan.
+Sin AEAT/Meta, CI remota o despliegue verificados. Flags apagados y no1.6.
+Riesgo: legacy binario declarado, serialización por tenant, canales pendientes1.8.
+Diagnóstico: cobertura/operación/evento/huellas; rollback conserva65 y evidencia,
+downgrade bloqueado con captura, jamás borrar evidencia para bajar esquema.
+[Cierre y criterios](architecture/FASE-1.5-cierre.md).
+
 ## 2026-10-02 — Exclusivamente 1.4: escritores prestados y frontera exacta
 
 - Objetivo: componer efectos legacy en transacción exterior, sin productores EE.

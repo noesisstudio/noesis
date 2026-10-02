@@ -6745,12 +6745,15 @@ def _create_invoice_record(conn, business_id: int, invoice_id: int) -> dict:
     ).fetchone())
 
 
-def issue_invoice(invoice_id: int, business_id: int, payment_term_days: int | None=None, *, _issued_at_override: str | None=None) -> dict:
+def issue_invoice(invoice_id: int, business_id: int, payment_term_days: int | None=None, *, _issued_at_override: str | None=None, capture_requested: bool=False) -> dict:
     """Emite una factura una sola vez, numera y congela sus datos fiscales.
 
     ``_issued_at_override`` existe únicamente para construir cuentas demo con
     historia coherente. No se expone en las rutas de producto.
     """
+    if capture_requested or config.FINANCIAL_CORE_ENABLED:
+        from .financial_operations.contracts import StateError
+        raise StateError("Emisión capturada requiere operación y autorización durable; usar InvoiceCapture.")
     from .financial_writers import invoices as writers
     from .financial_writers.boundary import observe
     with get_conn() as conn:
@@ -14008,9 +14011,10 @@ def delete_business_cascade(business_id) -> bool:
                 "La cuenta tiene facturas emitidas que deben conservarse. "
                 "Solicita una baja con conservación fiscal."
             )
-        # La baja no destruye evidencia durable del núcleo todavía sin productores.
+        # La baja no destruye evidencia durable del núcleo financiero.
         for financial_table in ("financial_operations", "financial_authorizations",
-                                "economic_events", "economic_event_links"):
+                                "economic_events", "economic_event_links",
+                                "invoice_economic_coverage"):
             if conn.execute(
                 f"SELECT 1 FROM {financial_table} WHERE business_id=? LIMIT 1",
                 (business_id,),
@@ -14031,7 +14035,7 @@ def delete_business_cascade(business_id) -> bool:
         # Primero confirma todas las eliminaciones referenciales en la base de datos.
         for table in (
             # Vacías tras la comprobación anterior; no borrar evidencia para la baja.
-            "economic_event_links", "economic_events", "economic_event_sequences",
+            "invoice_economic_coverage", "economic_event_links", "economic_events", "economic_event_sequences",
             "financial_authorizations", "financial_operations",
             "gestoria_invitations", "gestoria_business_access",
             "whatsapp_pending_actions", "whatsapp_links", "whatsapp_outbox",

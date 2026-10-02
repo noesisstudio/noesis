@@ -1,5 +1,34 @@
 ﻿# Registro de QA
 
+## 2026-10-02 — Cierre exclusivo de Fase 1.5
+
+- SQLite: **24/24** pruebas nuevas de productores; dirigidas **78/78 OK**
+  (48.445 s), incluyendo operaciones29, contratos21 y baja4.
+- PostgreSQL16.15 real: **27/27** productores, **110/110 OK** combinado
+  (37.109 s): writers18, eventos27, operaciones32 y fundamentos6.
+  Carreras de dos conexiones sobre operación/factura; seis emisiones capturadas
+  en dos series con una legacy concurrente: siete números y cadena única, seis EE.
+- Suite general final: **1508/1508 OK**, 1053.342 s. Legado financiero,
+  VERI*FACTU, web, herramientas, WhatsApp, documentos y fases previas sin regresión.
+- Primera suite:1503, un fallo por omitir cobertura en inventario de baja; corregido
+  con protección de evidencia y prueba en ambos motores. Repetición intermedia
+  interrumpida para endurecer requisito v2; solo la ejecución completa final acredita cierre.
+- Nueve fallos inyectados revierten tablas y permiten retry; pruebas alcanzan el
+  intento de commit para bypass sin cobertura y cobertura con v1/factura no emitida.
+  Stale, replay/conflicto, precisión/contexto Decimal, float/moneda/versión/campos,
+  céntimos, multiempresa, inmutabilidad y paridad golden fiscal en ambos motores correctos.
+- Migraciones SQLite0→65→0→65, 64→65→64→65 con bytes/links/hashes v1 conservados;
+  PostgreSQL histórico32→35→65 y rollback65→55→54→53→54→55→65 con datos preservados.
+  Downgrade con captura/v2 bloqueado. 36 rutas PG, copia/restauración, privacidad,
+  conversación, deduplicación y recuperación correctas; HTTP local200 en health/ready/portada/login.
+- Ruff, Bandit (gate high/high de CI), pip-audit sin vulnerabilidades conocidas,
+  uv lock --check, secretos incluidos nuevos archivos, Node3/3, verdad documental,
+  enlaces y diff pasan. No dependencias nuevas ni cambios de flags.
+- Autoauditorías de la orden (14 respuestas) y Master Plan§44 documentadas;
+  **18 PASS / 0 FAIL**. Sin aceptación AEAT, CI remota ni despliegue verificados.
+
+[Cierre y autoauditoría](architecture/FASE-1.5-cierre.md). No avanzar a 1.6.
+
 ## 2026-10-02 — Cierre de exclusivamente Fase 1.4
 
 - Suite general final 1484/1484 OK (1029,546 s). Primera 1481: tres fallos

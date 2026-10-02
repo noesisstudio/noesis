@@ -1,5 +1,10 @@
 # Economic Events: contrato v1
 
+Nota de continuidad 1.5: primer productor real de emisión/rectificativa autorizado.
+v1 conserva bytes/hash. Solo estos dos hechos incorporan payloadv2 y cobertura65.
+Leer [ADR-009](ADR-009-invoice-capture.md) y [API](INVOICE-CAPTURE-v1.md).
+El resto de límites de las entregas anteriores se interpreta históricamente.
+
 Contrato entregado en **1.1**, sin alterar su canonicalización en 1.3. Implementación pura en
 `src/noesis/economic_events/contracts.py`; sin acceso a datos ni productores.
 Catálogo cerrado de once hechos. No hay un sistema genérico de Domain Events.

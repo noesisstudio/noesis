@@ -249,6 +249,9 @@ def _schema(raw: object, fields: tuple[Field, ...]) -> Mapping[str, object]:
         elif field.kind == "expense_snapshot":
             value = _schema(value, _EXPENSE)
             _expense(value)
+        elif field.kind == "invoice_evidence":
+            from .invoice_payload import validate_evidence
+            value = validate_evidence(value)
         else:
             value = {"money": _money, "date": _date, "text": _text,
                      "id": _positive_id}[field.kind](value)
@@ -285,9 +288,11 @@ def validate_payload(event_type: EventType | str, payload: Mapping[str, object],
     """Copia y congela un payload v1; campos ausentes opcionales se fijan a null."""
     event_type = EventType(event_type)
     spec = CATALOG[event_type]
-    if type(payload_version) is not int or payload_version != spec.payload_version:
+    supported = (1, 2) if event_type in _ISSUED else (1,)
+    if type(payload_version) is not int or payload_version not in supported:
         raise ValueError("Versión de payload desconocida.")
-    result = _schema(payload, spec.fields)
+    fields = spec.fields + (Field("evidence", "invoice_evidence"),) if payload_version == 2 else spec.fields
+    result = _schema(payload, fields)
     if event_type in _ISSUED:
         kinds = ("F1", "F2") if event_type == EventType.INVOICE_ISSUED else (
             "R1", "R2", "R3", "R4", "R5")
@@ -296,6 +301,9 @@ def validate_payload(event_type: EventType | str, payload: Mapping[str, object],
         if event_type == EventType.INVOICE_RECTIFIED and result["rectification_method"] != "I":
             raise ValueError("v1 admite solo rectificación por diferencias (I).")
         _breakdown(result)
+        if payload_version == 2:
+            from .invoice_payload import check_totals
+            check_totals(result)
         if event_type == EventType.INVOICE_ISSUED and any(
                 result[key] < 0 for key in ("total", "base", "vat_amount", "irpf_amount")):
             raise ValueError("Factura ordinaria requiere importes no negativos.")

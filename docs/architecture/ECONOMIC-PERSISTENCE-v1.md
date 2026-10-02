@@ -1,5 +1,10 @@
 # Economic Events: persistencia v1, exclusivamente Fase 1.3
 
+Nota de continuidad 1.5: primer productor real de emisión/rectificativa autorizado.
+v1 conserva bytes/hash. Solo estos dos hechos incorporan payloadv2 y cobertura65.
+Leer [ADR-009](ADR-009-invoice-capture.md) y [API](INVOICE-CAPTURE-v1.md).
+El resto de límites de las entregas anteriores se interpreta históricamente.
+
 Contrato puro: [ECONOMIC-EVENTS-v1](ECONOMIC-EVENTS-v1.md), sin cambios de bytes/hash.
 Decisión: [ADR-007](ADR-007-economic-persistence.md). Migración 63 sobre main 62.
 Solo tests llaman a esta capa. No productores, efectos financieros, hooks, nuevas

@@ -1,5 +1,15 @@
 # Tareas vivas
 
+## Financial Core — exclusivamente 1.5
+
+- [x] Auditoría de entradas y productor único sobre writer1.4.
+- [x] Payloadv2 compatible con v1; cobertura obligatoria, evento v2 y stale completo.
+- [x] Pruebas: suite general1508, SQLite78, PostgreSQL110, gates y autoauditoría18PASS.
+- [ ] No1.6 autorizada. Canales/recurrentes1.8, históricos1.9, activación/retención1.10.
+- [ ] CI remota/despliegue no verificados; aceptación AEAT y pendientes fiscales previos.
+
+[Informe de cierre](architecture/FASE-1.5-cierre.md); secciones siguientes históricas.
+
 ## Financial Core — exclusivamente 1.4
 
 - [x] Auditoría previa y extracción de un núcleo prestado por dominio.

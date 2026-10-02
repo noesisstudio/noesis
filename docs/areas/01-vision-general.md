@@ -1,5 +1,14 @@
 # 01 · Visión general
 
+## Orden vigente — exclusivamente 1.5
+
+Fases 1.1–1.4 aceptadas; solo emisión capturada F1/F2 y rectificativas R1–R5.
+Servicio `invoice_capture/`: operaciones/aprobación durable + writer1.4 + evento
+v2 + resultado en un commit. Migración65: cobertura inmutable con FKs diferidas;
+v1/legacy/fiscalidad conservados. Flags apagados; otros productores y1.6 no autorizados.
+[ADR-009](../architecture/ADR-009-invoice-capture.md), [API](../architecture/INVOICE-CAPTURE-v1.md),
+[entradas auditadas](../architecture/FASE-1.5-entrada-audit.md). Los alcances inferiores son históricos.
+
 ## Frontera 1.4 vigente
 
 La orden posterior autoriza solo 1.4; 1.5 espera autorización. `db.py` conserva

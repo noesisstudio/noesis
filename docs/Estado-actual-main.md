@@ -1,5 +1,15 @@
 # Estado actual del producto
 
+## 2-oct — Financial Core 1.5 cerrada
+
+**1.5 cerrada: 18 PASS / 0 FAIL; suite general 1508/1508 OK.**
+Solo emisión F1/F2 y rectificativas R1–R5, autorización durable, payload v2,
+cobertura65 y resultado en una transacción. Servicio interno y adaptador conectados;
+web/tools/chat/WhatsApp/recurrentes esperan1.8. Flags apagados, no1.6.
+[Cierre](architecture/FASE-1.5-cierre.md), [ADR-009](architecture/ADR-009-invoice-capture.md),
+[API](architecture/INVOICE-CAPTURE-v1.md). CI remota/despliegue no verificados.
+Los alcances inferiores describen entregas históricas; manda este alcance.
+
 ## 2-oct — Financial Core, frontera 1.4 cerrada
 
 **1.4 cerrada: 17 PASS / 0 FAIL; suite general 1484/1484 OK.**

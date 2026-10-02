@@ -1,4 +1,4 @@
-"""Servicio transaccional interno; solo tests usan ejecutores en esta subfase.
+"""Servicio transaccional interno; ejecutores de servidor de confianza.
 
 Los ejecutores futuros recibirán la misma FinancialSession. No llamadas externas,
 conexiones propias ni commits en un ejecutor: efecto y resultado se confirman juntos.
@@ -35,7 +35,7 @@ def _timestamp(value):
 
 
 class FinancialOperations:
-    """No se expone a tools, HTTP, chat, WhatsApp ni al modelo de IA."""
+    """Infraestructura interna de dominio; sin acceso directo del modelo de IA."""
 
     def __init__(self, business_id):
         self.business_id = positive_id(business_id)
@@ -172,11 +172,13 @@ class FinancialOperations:
             if row["revoked_at"] is None:
                 repo.revoke_mandate(row, _now())
 
-    def execute(self, principal, operation_uuid, executor, *, revision_reader=None):
+    def execute(self, principal, operation_uuid, executor, *, revision_reader=None, request_validator=None):
         """Claim por lock; efecto+resultado comparten commit exterior, sin estado executing."""
         with self._transaction(principal) as (session, repo):
             row = repo.load(operation_uuid, principal.user_id)
             operation = Operation.from_row(row)
+            if request_validator is not None:
+                request_validator(session, operation.request)
             if operation.state == OperationState.COMMITTED:
                 return operation  # Reintento tras perder la respuesta: no llamar al ejecutor.
             if operation.state != OperationState.APPROVED:

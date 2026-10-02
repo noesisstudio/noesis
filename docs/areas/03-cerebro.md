@@ -1,5 +1,13 @@
 # 03 · Cerebro: el chat y WhatsApp
 
+## Frontera de emisión capturada 1.5
+
+El nuevo servicio interno exige Principal/EntryIdentity y aprobación durable1.2.
+Chat/tools/WhatsApp todavía no enlazan pending al recibo durable; esperan1.8.
+No añadir IDs/autoridad del modelo ni activar flags. Capture solicitado sin ese
+contexto falla cerrado; nunca fallback a emisión legacy. Auditoría de entradas y
+API en [ADR-009](../architecture/ADR-009-invoice-capture.md).
+
 ## Confirmación documental componible (1.4)
 
 `documents.service` conserva APIs/canales; sus confirmaciones delegan en writers

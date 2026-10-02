@@ -1,5 +1,17 @@
 # Financial Core: punto de entrada y continuidad
 
+## Orden vigente — exclusivamente 1.5
+
+Fases 1.1–1.4 aceptadas; solo emisión capturada F1/F2 y rectificativas R1–R5.
+Servicio `invoice_capture/`: operaciones/aprobación durable + writer1.4 + evento
+v2 + resultado en un commit. Migración65: cobertura inmutable con FKs diferidas;
+v1/legacy/fiscalidad conservados. Flags apagados; otros productores y1.6 no autorizados.
+[ADR-009](ADR-009-invoice-capture.md), [API](INVOICE-CAPTURE-v1.md),
+[entradas auditadas](FASE-1.5-entrada-audit.md) e
+[informe de cierre](FASE-1.5-cierre.md). Los alcances inferiores son históricos.
+
+## Referencia histórica de 1.4
+
 Decisión del titular, 2-oct-2026: Fase 0 aceptada y cerrada; planificación de
 Fase 1 aprobada como referencia; 1.1–1.3 aceptadas. **Solo 1.4 autorizada**:
 escritores prestados, snapshots, revisiones y precisión en la frontera legacy.
@@ -41,6 +53,7 @@ especializada; ninguna especificación interna certifica cumplimiento.
 | [006](ADR-006-financial-operations.md) | Operación, aprobación, resultado e idempotencia durables |
 | [007](ADR-007-economic-persistence.md) | Eventos/links inmutables, FKs tipadas, contador y migración protegida |
 | [008](ADR-008-borrowed-writers.md) | Un núcleo por dominio, commit exterior, precisión/procedencia, revisiones y locks |
+| [009](ADR-009-invoice-capture.md) | Productor único de emisión, autorización exacta, cobertura diferida y replay |
 
 ## Secuencia y límites de fase
 
@@ -83,13 +96,14 @@ cada operación; no se posponen a Fase 15. Reporting por dimensión espera a Fas
   desplegado. No rellenar carencias con stubs ni marcar fases futuras completadas.
 - Detenerse tras el cierre; el próximo modelo comienza aquí, no en el chat.
 
-## Pendientes de ejecución de Fase 1 después de 1.4
+## Pendientes de ejecución de Fase 1 después de 1.5
 
 - Conservar el catálogo cerrado v1: `quote.accepted` y `job.completed` son
   operativos y no se insertarán en Economic Events. No crear un bus genérico.
 - Integrar la identidad/idempotencia durable de 1.2 en los canales y puentes
-  futuros; no conectar productores sin otra orden. Persistencia de 1.3 solo
-  invocada por tests sintéticos; writers/revisiones reales preparados en 1.4, todavía sin invocación desde canales del Core.
+  futuros; no conectar otros productores sin otra orden. InvoiceCapture conecta
+  exclusivamente emisión y rectificativas desde servicio interno/adaptador con
+  operación aprobada; los canales externos y recurrentes esperan 1.8.
 - Capturar cobros parciales, completos y conciliados por su escritor común.
 - No inferir un pago real a proveedor desde el estado legacy `pagada`.
 - Cubrir correcciones/bajas de gastos y recibidas; no crear snapshots obsoletos.

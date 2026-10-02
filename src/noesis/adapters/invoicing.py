@@ -30,6 +30,11 @@ class InternalInvoicingProvider:
     def __init__(self, payment_term_days: int | None = None):
         self.payment_term_days = payment_term_days
 
+    def issue_captured(self, business_id, principal, operation_uuid):
+        """Solo contexto autenticado de servidor, nunca argumentos de herramienta IA."""
+        from ..invoice_capture.service import InvoiceCapture
+        return InvoiceCapture(business_id).execute(principal, operation_uuid)
+
     def issue(self, invoice: dict, client: dict) -> dict:
         from .. import db
         business_id = invoice.get("business_id")

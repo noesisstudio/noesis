@@ -1,5 +1,10 @@
 # API interna de escritores prestados v1
 
+Nota de continuidad 1.5: primer productor real de emisión/rectificativa autorizado.
+v1 conserva bytes/hash. Solo estos dos hechos incorporan payloadv2 y cobertura65.
+Leer [ADR-009](ADR-009-invoice-capture.md) y [API](INVOICE-CAPTURE-v1.md).
+El resto de límites de las entregas anteriores se interpreta históricamente.
+
 Leer [ADR-008](ADR-008-borrowed-writers.md) y [mapa previo](FASE-1.4-writers-audit.md).
 No conectar estos writers a Economic Events sin autorización de otra unidad.
 
