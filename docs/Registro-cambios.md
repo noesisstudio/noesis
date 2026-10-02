@@ -1,5 +1,22 @@
 ﻿# Registro de cambios
 
+## 2026-10-02 — Financial Core: exclusivamente Fase 1.3
+
+- Objetivo: persistencia inmutable, exacta y multiempresa de once Economic Events.
+- Archivos: economic_events/{schema,repository,service,persistence}, migración 63,
+  mantenimiento de baja en db.py; tests SQLite/PostgreSQL y workers; CI PostgreSQL;
+  AGENTS, ADR-007/contrato/cierre/plan, guías 01/06/08, arquitectura, mapa, decisiones,
+  estado JSON/Markdown, tareas y QA actualizados juntos.
+- Pruebas y autoauditoría: [QA](Registro-QA.md), [cierre](architecture/FASE-1.3-cierre.md).
+- Límites externos: tests/datos locales sintéticos; sin AEAT, Meta, históricos
+  reales, productores, flags activados, proveedores o dependencias nuevas.
+- Riesgo: conexión/commit fuera de la transacción prestada, inventar revisiones
+  o confundir autorización estructural con validación de dominio. Antes de
+  productores: loaders, locks, snapshots autorizados, exportación/retención.
+- Diagnóstico: business_id, UUID/slot/key, source/revisión, autorización, secuencia,
+  hashes y links. No reparar incoherencias. Rollback: 63→62 solo vacío;
+  con evidencia conservar esquema/datos. No avanzar a 1.4.
+
 ## 2026-10-02 — Financial Core: solo infraestructura 1.2
 
 - Objetivo: operación independiente del resultado, idempotencia del efecto futuro,

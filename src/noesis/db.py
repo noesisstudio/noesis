@@ -14990,7 +14990,8 @@ def delete_business_cascade(business_id) -> bool:
                 "Solicita una baja con conservación fiscal."
             )
         # La baja no destruye evidencia durable del núcleo todavía sin productores.
-        for financial_table in ("financial_operations", "financial_authorizations"):
+        for financial_table in ("financial_operations", "financial_authorizations",
+                                "economic_events", "economic_event_links"):
             if conn.execute(
                 f"SELECT 1 FROM {financial_table} WHERE business_id=? LIMIT 1",
                 (business_id,),
@@ -15011,6 +15012,7 @@ def delete_business_cascade(business_id) -> bool:
         # Primero confirma todas las eliminaciones referenciales en la base de datos.
         for table in (
             # Vacías tras la comprobación anterior; no borrar evidencia para la baja.
+            "economic_event_links", "economic_events", "economic_event_sequences",
             "financial_authorizations", "financial_operations",
             "gestoria_invitations", "gestoria_business_access",
             "whatsapp_pending_actions", "whatsapp_links", "whatsapp_outbox",

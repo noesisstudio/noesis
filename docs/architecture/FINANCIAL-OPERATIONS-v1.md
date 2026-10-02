@@ -1,7 +1,8 @@
 # Financial Operations v1 — infraestructura de Fase 1.2
 
-No hay productores conectados. No se persisten Economic Events, links, asientos,
-Open Items, Tax Ledger ni reporting. Los cinco flags financieros permanecen
+No hay productores conectados. 1.2 no persiste Economic Events: esa capa se añade
+exclusivamente en [1.3](ECONOMIC-PERSISTENCE-v1.md). Sin asientos, Open Items,
+Tax Ledger ni reporting. Los cinco flags financieros permanecen
 apagados y sin nuevos consumidores. El API interno solo se invoca en tests.
 
 ## Entrada, identidad y contenido

@@ -12,7 +12,7 @@ autoridad financiera determinista. Estado, alcance y órdenes futuras en
 Servicio propietario de la transacción
   → db.get_conn() (pool y commit/rollback existentes)
     → operación legacy con conn.execute()
-    → futuro repositorio(business_id, FinancialSession(conn))
+    → repositorio(business_id, FinancialSession(conn))
       → conn.execute_exact() → NUMERIC/Decimal sin normalización legacy
 ```
 
@@ -33,7 +33,20 @@ Servicio propietario de la transacción
   negocio/creador/sesión, autorización durable, mandato exacto, ejecución compartida
   y recuperación sin repetir efecto. Sin productores registrados.
 - `financial_operations/schema.py`: DDL/guards de migración 62, registrada en
-  migrations.py; dos tablas, sin economic_events.
+  migrations.py; dos tablas de operaciones/autorizaciones.
+- `economic_events/schema.py`: migración 63, events/links y contador mínimo;
+  FKs reales a seis tipos de fuente, triggers de inmutabilidad y conjunto de
+  relaciones sellado. Downgrade vacío; bloquear con evidencia durable.
+- `economic_events/repository.py`: FinancialSession prestada, SQL por negocio,
+  contador serializado; no permisos/conexión/commit/rollback propios.
+- `economic_events/service.py`: append/read, autorización de 1.2, revisión de
+  origen mediante lector confiable obligatorio, replay/conflicto, SAVEPOINT para
+  revertir contador/evento/links aun si se captura el error dentro de la transacción.
+  El llamador posee la transacción exterior; SQLite debe abrirla antes de append.
+- `economic_events/persistence.py`: StoredEvent y verificación estricta al leer,
+  content_hash v1 intacto + record_hash para metadatos durables. No reparar.
+- [Persistencia v1](../architecture/ECONOMIC-PERSISTENCE-v1.md) y ADR-007 antes
+  de tocar esta capa. Ningún productor puede importarla en 1.3.
 - [Operaciones v1](../architecture/FINANCIAL-OPERATIONS-v1.md) y ADR-006 son la
   puerta de lectura antes de modificar esta infraestructura.
 - `config.py` y `.env.example`: cinco flags reservados, apagados, sin consumidores.
@@ -51,12 +64,17 @@ genérico. Los registros fiscales/seguridad/producto conservan responsabilidades
 
 ## Estado y pruebas
 
-Fase 0 cerrada y 1.1 aceptada; solo 1.2 autorizada: tablas de operaciones y
-autorización, sin productores/efectos reales ni cambios funcionales VERI*FACTU. No convertir lecturas antiguas a Decimal de forma
+Fase 0, 1.1 y 1.2 aceptadas; solo 1.3 autorizada: persistencia de eventos/links,
+sin productores/efectos reales ni cambios funcionales VERI*FACTU. 1.4 no autorizada.
+No convertir lecturas antiguas a Decimal de forma
 global. SQLite nuevo: dinero TEXT y cálculo Decimal; no aritmética SQL sobre TEXT.
 
 - `tests/test_financial_operations.py` y `financial_operations_contract.py`: mismo
   contrato de operación/autorización/rollback en SQLite y PostgreSQL.
+- `tests/economic_persistence_contract.py` y `test_economic_persistence.py`:
+  once tipos, SQL inmutable, FKs, replay/conflicto, hashes, rollback y migraciones.
+- `python -m unittest tests.postgres_economic_persistence.EconomicPersistencePostgres`:
+  mismo contrato y concurrencia real de conexiones/procesos; paso específico CI.
 - `python -m tests.postgres_financial_operations`: concurrencia de conexiones y
   procesos, crash real; esquema aislado local /noesis_ci, conectado a CI.
 - `tests/test_economic_events.py`: once tipos, versiones, campos cerrados, relaciones,

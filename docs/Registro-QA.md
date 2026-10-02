@@ -1,5 +1,32 @@
 ﻿# Registro de QA
 
+## 2026-10-02 — Financial Core, exclusivamente 1.3
+
+- SQLite nuevos: 26/26 (18,695 s); catálogo once tipos, precisión/fechas/hashes,
+  inmutabilidad SQL, FKs/cross-business, slots/replay/conflicto, contador, links,
+  rollback parcial/exterior, migración limpia/actual/vacía/protegida.
+- PostgreSQL 16.15 real: 65/65 (12,396 s): 27 eventos, 32 operaciones y 6
+  fundamentos. Ocho eventos/cuatro conexiones, dos procesos/replay, dos procesos
+  con conflicto y distintas operaciones; secuencias únicas y estado sin parcial.
+- Humo PostgreSQL: histórico sintético 32→63, 36 rutas, código anterior d3740a0
+  sobre schema63 y rollback/re-upgrade, privacidad/conversación/deduplicación,
+  aislamiento/exportación/marketing correctos. Todo en esquema local descartable.
+- Ruff, Bandit, pip-audit (sin vulnerabilidades conocidas) y Node 3/3 correctos.
+  uv lock --check, secretos incluidos nuevos archivos, verdad documental,
+  enlaces y diff correctos. uv solo instalado en carpeta temporal de QA.
+- Suite general final: **1472/1472 OK**, 1053,797 s; legado financiero,
+  VERI*FACTU, WhatsApp/chat/documentos y Fases 0/1.1/1.2 sin regresiones.
+  Revalidación dirigida tras anotar NIF sintéticos: 2/2 SQLite (2,015 s).
+  Catálogo once tipos PostgreSQL revalidado tras anotación: 1/1 (2,005 s).
+  Autoauditoría específica y Master Plan §44: **41 PASS / 0 FAIL**.
+- Incidencias de fixtures: productor fiscal debía configurarse antes de activar
+  modo; downgrade vacío PG requería esquema propio porque había eventos durables
+  de otras pruebas, correctamente protegidos. NIF sintéticos anotados sin ampliar
+  baseline de secretos. Tests ajustados sin relajar producto.
+- Sin hooks/consumidores reales, flags financieros intactos, AEAT/Meta/producción
+  no utilizados. [Contrato](architecture/ECONOMIC-PERSISTENCE-v1.md),
+  [cierre y autoauditoría](architecture/FASE-1.3-cierre.md). No avanzar a 1.4.
+
 ## 2026-10-02 — Financial Core, solo 1.2
 
 - 29 pruebas SQLite nuevas + 21 contratos de eventos + 16 fundamentos: 66/66

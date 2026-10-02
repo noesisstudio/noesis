@@ -2,10 +2,13 @@
 
 > Para Financial Core, leer [gobernanza y ADR](docs/architecture/README.md) y
 > [guía 08](docs/areas/08-financial-core.md). Fase 0 cerrada; Fase 1
-> planificada y aprobada como referencia. 1.1 aceptada; 1.2 (operaciones y autorización durable) cerrada. Ninguna unidad posterior autorizada.
+> planificada y aprobada como referencia. 1.1 y 1.2 aceptadas; solo 1.3 autorizada:
+> persistencia inmutable de Economic Events, cerrada sin productores. 1.4 no autorizada.
 > Leer [plan](docs/architecture/FASE-1-plan.md) y
 > [contrato v1](docs/architecture/ECONOMIC-EVENTS-v1.md),
-> [operaciones](docs/architecture/FINANCIAL-OPERATIONS-v1.md) y ADR-006. No avanzar a 1.3.
+> [operaciones](docs/architecture/FINANCIAL-OPERATIONS-v1.md),
+> [persistencia](docs/architecture/ECONOMIC-PERSISTENCE-v1.md) y ADR-006/007.
+> No avanzar a 1.4.
 > Las referencias no autorizan ejecutar otras unidades.
 
 ## Contrato del Financial Core
@@ -22,6 +25,11 @@
 - Economic Events son hechos financieros, no un log genérico. `quote.accepted`
   y `job.completed` son operativos; solo una regla explícita posterior puede
   producir una obligación o reconocimiento diferente y trazable.
+- Eventos/links incorporados son append-only en aplicación y BD. Referencias
+  tipadas y FKs compuestas por negocio; ninguna cascada borra evidencia.
+  `EconomicEvents` recibe `FinancialSession`; el llamador posee la transacción.
+  SQLite exige transacción exterior antes de append. No conectar productores,
+  inventar revisiones de origen ni activar flags sin otra orden.
 
 Este archivo es la fuente de verdad compartida para cualquier agente de IA que
 trabaje en el repositorio. Léelo entero antes de tocar nada. La visión y el contexto

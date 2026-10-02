@@ -1,1 +1,1 @@
-"""Contratos económicos puros; sin persistencia, productores ni efectos financieros."""
+"""Contratos puros y persistencia de hechos; sin productores ni efectos financieros."""

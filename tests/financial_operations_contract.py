@@ -374,7 +374,7 @@ class OperationsContract:
         self.reserve()
         with self.assertRaises(ValueError):
             migrations.downgrade(61)
-        self.assertEqual(migrations.current_version(), 62)
+        self.assertEqual(migrations.current_version(), migrations.LATEST_VERSION)
         with db.get_conn() as conn:
             if conn.dialect == "sqlite":
                 names = [r["name"] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()]
@@ -383,7 +383,10 @@ class OperationsContract:
                                                         "WHERE table_schema=current_schema()").fetchall()]
         self.assertIn("financial_operations", names)
         self.assertIn("financial_authorizations", names)
-        self.assertFalse({"economic_events", "economic_event_links", "journal_entries", "journal_lines", "open_items", "tax_ledger"} & set(names))
+        if migrations.LATEST_VERSION >= 63:
+            self.assertIn("economic_events", names)
+            self.assertIn("economic_event_links", names)
+        self.assertFalse({"journal_entries", "journal_lines", "open_items", "tax_ledger"} & set(names))
 
     def test_canonical_order_relevant_changes_and_float_rejection(self):
         reordered = replace(self.request, parameters=dict(reversed(list(self.request.parameters.items()))))

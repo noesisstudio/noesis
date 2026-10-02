@@ -1,15 +1,16 @@
 # Financial Core: punto de entrada y continuidad
 
 Decisión del titular, 2-oct-2026: Fase 0 aceptada y cerrada; planificación de
-Fase 1 aprobada como referencia y 1.1 aceptada. **1.2 cerrada**; su alcance es solo:
-operaciones, idempotencia, autorización y resultados durables. Sin persistencia
-de Economic Events ni productores. **1.3 no autorizada**. No convertir Economic Events
+Fase 1 aprobada como referencia; 1.1 y 1.2 aceptadas. **Solo 1.3 autorizada**:
+persistencia inmutable de Economic Events y relaciones, repositorio y validación,
+cerrada sin productores. **1.4 no autorizada**. No convertir Economic Events
 en un registro genérico de acontecimientos de Noesis.
 
 Continuidad: [plan incremental](FASE-1-plan.md),
 [contrato y catálogo v1](ECONOMIC-EVENTS-v1.md) y
 [cierre de 1.1](FASE-1.1-cierre.md),
-[operaciones v1](FINANCIAL-OPERATIONS-v1.md) y [cierre de 1.2](FASE-1.2-cierre.md).
+[operaciones v1](FINANCIAL-OPERATIONS-v1.md) y [cierre de 1.2](FASE-1.2-cierre.md),
+[persistencia v1](ECONOMIC-PERSISTENCE-v1.md) y [cierre de 1.3](FASE-1.3-cierre.md).
 
 ## Orden de lectura y autoridad
 
@@ -36,6 +37,7 @@ especializada; ninguna especificación interna certifica cumplimiento.
 | [004](ADR-004-money-decimal.md) | Decimal, moneda, precisión y persistencia exacta |
 | [005](ADR-005-accounting-periods.md) | Fechas, períodos y cierres futuros |
 | [006](ADR-006-financial-operations.md) | Operación, aprobación, resultado e idempotencia durables |
+| [007](ADR-007-economic-persistence.md) | Eventos/links inmutables, FKs tipadas, contador y migración protegida |
 
 ## Secuencia y límites de fase
 
@@ -78,12 +80,13 @@ cada operación; no se posponen a Fase 15. Reporting por dimensión espera a Fas
   desplegado. No rellenar carencias con stubs ni marcar fases futuras completadas.
 - Detenerse tras el cierre; el próximo modelo comienza aquí, no en el chat.
 
-## Pendientes de ejecución de Fase 1 después de 1.2
+## Pendientes de ejecución de Fase 1 después de 1.3
 
 - Conservar el catálogo cerrado v1: `quote.accepted` y `job.completed` son
   operativos y no se insertarán en Economic Events. No crear un bus genérico.
 - Integrar la identidad/idempotencia durable de 1.2 en los canales y puentes
-  futuros; no conectar productores ni persistir eventos sin otra orden.
+  futuros; no conectar productores sin otra orden. Persistencia de 1.3 solo
+  invocada por tests sintéticos; revisiones reales/puente exacto esperan 1.4.
 - Capturar cobros parciales, completos y conciliados por su escritor común.
 - No inferir un pago real a proveedor desde el estado legacy `pagada`.
 - Cubrir correcciones/bajas de gastos y recibidas; no crear snapshots obsoletos.
@@ -100,3 +103,8 @@ Sus flags están reservados y no tienen consumidores financieros. El rollback
 consiste en revertir los cambios de fundamentos, sin tocar datos ni huellas y
 conservando las actualizaciones de seguridad del lockfile. Evidencia y alcance
 exactos en el informe de cierre.
+
+1.3 registra la migración 63 sobre main 62 verificado. Rollback vacío permitido;
+con eventos/links durables la bajada y la baja destructiva se bloquean. No revertir
+código de migración antes de comprobar datos. Las clausuras anteriores describen
+su entrega histórica; el estado superior, JSON y QA reflejan la orden vigente.

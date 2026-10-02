@@ -7,6 +7,7 @@ from collections.abc import Callable
 from datetime import datetime
 
 from .clockin_integrity import clockin_seal
+from .economic_events.schema import upgrade as _upgrade_economic_events, downgrade as _downgrade_economic_events
 from .financial_operations.schema import (
     upgrade as _upgrade_financial_operations,
     downgrade as _downgrade_financial_operations,
@@ -4414,6 +4415,7 @@ MIGRATIONS: tuple[Migration, ...] = (
      _downgrade_oauth_credentials),
     (62, "operaciones_financieras_durables",
      _upgrade_financial_operations, _downgrade_financial_operations),
+    (63, "economic_events_durables", _upgrade_economic_events, _downgrade_economic_events),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 
@@ -4505,6 +4507,8 @@ def downgrade(target: int | None = None) -> int:
     from . import db
 
     with db.get_conn() as conn:
+        # SQLite DDL debe compartir rollback con todos los pasos de la bajada.
+        conn.execute("BEGIN IMMEDIATE")
         current = _current_version(conn)
         target = max(0, current - 1) if target is None else target
         if target < 0 or target >= current:

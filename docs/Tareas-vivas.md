@@ -1,12 +1,28 @@
 # Tareas vivas
 
+## Financial Core — exclusivamente 1.3
+
+- [x] Orden explícita posterior a aceptación de 1.2; main real 62 verificado.
+- [x] Migración 63, tres tablas, FKs tipadas, append-only, contador, repositorio
+  y servicio sobre FinancialSession; sin productores ni efectos reales.
+- [x] SQLite/PostgreSQL reales, concurrencia, replay/conflictos y rollback:
+  evidencia actualizada en [cierre](architecture/FASE-1.3-cierre.md) y QA.
+- [x] 1.1 y 1.2 publicadas en main por petición expresa (`7aa116c`/`ca79797`).
+- [ ] 1.4 no autorizada: puente transaccional legacy, loaders/revisiones reales,
+  proyección del comando aprobado al snapshot y orden de locks con escritores.
+- [ ] Ningún productor, canal/recurrente, backfill o activación autorizados.
+- [ ] Exportación/cierre/retención de evidencia antes de productores/activación.
+- [ ] Comprobar CI remota y despliegue; los resultados locales no los acreditan.
+
+Las secciones 1.2/1.1 inferiores conservan el contexto de sus entregas anteriores.
+
 ## Financial Core — solo 1.2
 
 - [x] 1.1 aceptada; orden explícita de 1.2 con tablas de operación/autorización.
 - [x] API interno y migración mínima; no productores o eventos durables.
 - [x] Cierre de tests/autoauditoría en [informe](architecture/FASE-1.2-cierre.md).
-- [ ] 1.3 no autorizada: no persistir economic_events/economic_event_links.
-- [ ] Publicación/CI remota de 1.1–1.2 no realizada; cambios locales de main.
+- [x] Orden posterior autoriza 1.3; persistencia y límites en sección superior.
+- [x] Publicación de 1.1–1.2 realizada; CI/despliegue no se deducen del push.
 - [ ] Antes de productores: integrar identidades auténticas de canal y enlace con
   revisión; loaders/locks de origen por negocio, snapshots/defaults completos,
   semántica del comando, ejecutor común sin conexiones/commits independientes.
@@ -18,9 +34,8 @@
 - [x] Planificación aprobada como arquitectura de referencia y documentada.
 - [x] 1.1 contratos implementados sin persistencia ni productores.
 - [x] Orden posterior autoriza 1.2; estado y límites en sección superior.
-- [ ] 1.3 y posteriores no autorizadas: repositorios/migraciones, puentes,
-  productores, históricos y activación siguen pendientes.
-- [ ] Publicación/CI remota de 1.1 no realizada en esta entrega local.
+- [x] Persistencia 1.3 autorizada posteriormente; 1.4 y posteriores pendientes.
+- [x] Publicación de 1.1 realizada después de su cierre local.
 - [ ] En las fases apropiadas, comprobar existencia/pertenencia de referencias,
   autorización estable e idempotencia de operación; el contrato no las prueba.
 - Continuidad: [índice](architecture/README.md), [plan](architecture/FASE-1-plan.md),

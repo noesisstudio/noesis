@@ -1,9 +1,11 @@
 # Economic Events: contrato v1
 
-Entrega autorizada: **1.1 exclusivamente**. Implementación pura en
+Contrato entregado en **1.1**, sin alterar su canonicalización en 1.3. Implementación pura en
 `src/noesis/economic_events/contracts.py`; sin acceso a datos ni productores.
 Catálogo cerrado de once hechos. No hay un sistema genérico de Domain Events.
 `quote.accepted`, `job.completed` y `supplier_payment.made` se rechazan.
+La capa durable de 1.3 se especifica en [persistencia v1](ECONOMIC-PERSISTENCE-v1.md);
+no añade tipos ni conecta productores. 1.4 no autorizada.
 
 ## Sobre y autoridad
 

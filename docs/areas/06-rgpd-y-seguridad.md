@@ -109,8 +109,8 @@ con caducidad · procedimiento de brechas (72 h)
 
 - [ ] ¿Una tabla nueva con datos de un negocio está en `delete_business_cascade` y en
       `export_business_data`? La prueba de borrado lo exige para el borrado; la
-      exportación hay que comprobarla a mano. Excepción de infraestructura 1.2:
-      financial_operations/authorizations tienen baja bloqueada con evidencia y
+      exportación hay que comprobarla a mano. Excepción de infraestructura 1.2–1.3:
+      financial_operations/authorizations y economic_events/links tienen baja bloqueada con evidencia y
       no productores; exportación/retención/cierre son gates obligatorios antes
       de conectar productores o activar el núcleo. No tratar el pendiente como resuelto.
 - [ ] ¿Algún dato personal va a un proveedor que no esté en la matriz?

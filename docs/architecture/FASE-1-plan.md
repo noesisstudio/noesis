@@ -2,11 +2,13 @@
 
 La planificación de Economic Event Layer fue aprobada por el titular el
 2-oct-2026. Esa aprobación fija arquitectura de referencia, **no ejecución de
-todas sus unidades**. 1.1 queda aceptada. La orden posterior autoriza solo **1.2: operaciones,
-autorización durable e idempotencia**, incluidas sus tablas y resultados.
-Fase 0 está cerrada. 1.3 y siguientes esperan otra orden explícita.
+todas sus unidades**. 1.1 y 1.2 aceptadas. La orden vigente autoriza solo
+**1.3: persistencia inmutable de Economic Events**, sin productores.
+Fase 0 está cerrada. 1.4 y siguientes esperan otra orden explícita.
 Precisión respecto al plan inicial: la persistencia mínima de operaciones y
-autorizaciones se adelanta a 1.2 por petición expresa; Economic Events no se persiste.
+autorizaciones se adelanta a 1.2 por petición expresa; 1.3 añade eventos/links y
+contador mínimo. [Contrato durable](ECONOMIC-PERSISTENCE-v1.md),
+[ADR-007](ADR-007-economic-persistence.md), [cierre](FASE-1.3-cierre.md).
 
 ## Arquitectura que se conserva
 
@@ -36,7 +38,7 @@ orígenes y relaciones tipados con claves compuestas, uniques e índices por neg
 versiones, procedencia histórica y fechas conocidas/desconocidas diferenciadas.
 La representación será NUMERIC/Decimal en PostgreSQL y TEXT exacto en SQLite.
 No crear una FK polimórfica insegura ni un estado `posted` sin motor contable.
-El detalle de migración debe contrastarse con `main` antes de autorizar 1.3.
+Se contrastó main vigente 62: 1.3 registra 63. El puente legacy sigue pendiente.
 
 Cuando el evento sea obligatorio, mutación original + operación + evento se
 confirmarán en la **misma transacción**. Cualquier fallo revierte todo; sin
@@ -57,7 +59,7 @@ no inventar un evento nuevo sin otra decisión de alcance.
 |---|---|---|
 | 1.1 | `economic_events/contracts.py`, catálogo, validación, canonicalización y tests | Fase 0; sin migración/efectos; cierre documentado |
 | 1.2 | Operaciones, autorización y resultados durables, API interno y migración 62 | Orden posterior explícita; deduplicar efecto futuro; concurrencia/rollback/reintentos probados sin productores |
-| 1.3 | Persistencia, repositorios y constraints de Economic Events y relaciones | 1.2 ya persiste operaciones/autorizaciones; nueva migración de eventos requiere otra orden |
+| 1.3 | Persistencia, repositorios y constraints de Economic Events y relaciones | Orden explícita recibida; migración 63, sin productores; cierre independiente |
 | 1.4 | Frontera transaccional y puente legacy exacto | 1.3; rollback de ambas partes y aislamiento; no duplicar infraestructura |
 | 1.5 | Emisión y rectificativas | 1.4; invariantes fiscales/huellas/numeración conservadas |
 | 1.6 | Cobros y conciliación bancaria | 1.4–1.5; parciales y reintentos sin doble caja |

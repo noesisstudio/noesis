@@ -1,5 +1,19 @@
 # Arquitectura
 
+## Economic Events — persistencia 1.3, sin productores
+
+Migración 63: economic_events, economic_event_links y contador mínimo por negocio.
+Contrato puro de 1.1 intacto; repositorio sobre FinancialSession prestada; servicio
+append/read con permisos/autorización de 1.2, fuentes reales tipadas, revisión
+confiable y SAVEPOINT. Commit exterior del llamador. NUMERIC exacto PostgreSQL /
+TEXT canónico SQLite; hash del sobre y hash adicional de metadatos. Triggers
+append-only, FKs compuestas, slots/uniques y contador serializado. Links sellados
+en la incorporación; correction/void son eventos nuevos. Downgrade/baja bloqueados
+con evidencia durable. [ADR-007](architecture/ADR-007-economic-persistence.md),
+[API y schema](architecture/ECONOMIC-PERSISTENCE-v1.md).
+Sin productores, accounting_date, posting, GL, Open Items, Tax Ledger, reporting,
+AEAT o flags activados. 1.4 no autorizada. Las secciones inferiores son históricas.
+
 ## Operaciones financieras — solo infraestructura 1.2
 
 `financial_operations/` añade contratos, repositorio y servicio sobre db.get_conn
@@ -11,7 +25,7 @@ resultado, previa revalidación de acceso. [ADR-006](architecture/ADR-006-financ
 y [contrato](architecture/FINANCIAL-OPERATIONS-v1.md). Migración 62: solo dos tablas.
 La baja legacy no borra evidencia durable: funciona con tablas vacías y rechaza
 explícitamente si contienen registros. Retención/cierre quedan pendientes antes de productores.
-No se integra con productores ni persiste Economic Events. 1.3 no autorizada.
+1.2 no integra productores ni persiste eventos; 1.3 añade solo la capa descrita arriba.
 
 ## Financial Core: fundamentos incorporados
 
@@ -35,7 +49,7 @@ reserva el paquete. Fase 1.1 añade `economic_events/contracts.py`: once tipos,
 payloads/sobre inmutables, canonicalización y hashes, exclusivamente en memoria.
 [Contrato v1](architecture/ECONOMIC-EVENTS-v1.md). Sin persistencia ni productores;
 no hay General Ledger, migraciones, asientos, nuevas rutas, reporting ni cambios
-funcionales VERI*FACTU. 1.2 espera autorización expresa.
+funcionales VERI*FACTU. El estado vigente se describe en la sección superior.
 
 Objetivo: máximo posible **interno/cerrado**, mínimo de APIs externas (coste y
 privacidad). Ver [[Investigación]] y [[Decisiones]].

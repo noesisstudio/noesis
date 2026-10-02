@@ -1,5 +1,23 @@
 # Estado actual del producto
 
+## 2-oct — Financial Core, persistencia 1.3
+
+**1.3 cerrada: 41 PASS / 0 FAIL; suite general 1472/1472 OK.**
+Orden vigente: exclusivamente 1.3; **1.4 no autorizada**. Migración 63 sobre main
+62: eventos/links inmutables y contador por negocio; fuente real con FK tipada,
+operación/autorización por tenant, slots/idempotencia, hashes/fechas/dinero exactos.
+Servicio append/read sobre FinancialSession prestada, sin conexión/commit propio
+ni productores. SAVEPOINT restaura contador/evento/links ante fallo capturado.
+Bajada y baja destructiva bloqueadas con evidencia; sin evidencia se mantiene
+el comportamiento legacy. Cinco flags financieros intactos y apagados.
+[Contrato durable](architecture/ECONOMIC-PERSISTENCE-v1.md),
+[ADR-007](architecture/ADR-007-economic-persistence.md), [cierre](architecture/FASE-1.3-cierre.md).
+Validación final en QA/JSON. 1.1 y 1.2 se publicaron por orden expresa en main
+(`7aa116c`, `ca79797`); sus referencias inferiores a entrega local son históricas.
+No se afirma CI remota/despliegue sin evidencia. Sin backfill ni cambios funcionales
+en facturas, cobros, banco, recibidas, gastos, documentos, VERI*FACTU o WhatsApp.
+La Fase 1 completa sigue abierta; solo cierra esta unidad.
+
 ## 2-oct — Financial Core, infraestructura 1.2
 
 **1.2 cerrada: 36 PASS / 0 FAIL; suite general 1446/1446.**

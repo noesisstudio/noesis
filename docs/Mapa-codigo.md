@@ -1,5 +1,24 @@
 # Mapa de código
 
+## Financial Core — persistencia 1.3
+
+- `src/noesis/economic_events/contracts.py`: contrato puro v1 sin cambios.
+- `schema.py`: migración 63, tres tablas, FKs tipadas/compuestas, guards y bajada
+  protegida. `migrations.py` registra 63 y transacción exterior de downgrade.
+- `repository.py`: SQL por negocio sobre FinancialSession; contador y lookup de
+  identidades, inserts de links/evento. Sin permisos/commit/rollback/conexión.
+- `service.py`: EconomicEvents.append/read, revisión confiable, autorización de
+  1.2, replay/conflicto y SAVEPOINT; ningún productor conectado.
+- `persistence.py`: StoredEvent, content_hash v1 y record_hash de metadatos;
+  reconstrucción/revalidación estricta al leer, sin reparación.
+- `db.py`: únicamente extiende la conservación/baja vacía a estas tablas.
+- `tests/{economic_persistence_contract,test_economic_persistence,postgres_economic_persistence,economic_events_worker}.py`:
+  contrato compartido en ambos motores, carreras reales y fallos transaccionales.
+- `.github/workflows/ci.yml`: gate adicional de eventos PostgreSQL.
+- [Contrato durable](architecture/ECONOMIC-PERSISTENCE-v1.md),
+  [ADR-007](architecture/ADR-007-economic-persistence.md), [cierre](architecture/FASE-1.3-cierre.md).
+  No avanzar a 1.4. Las secciones anteriores son inventarios históricos.
+
 ## Financial Core — infraestructura 1.2
 
 - `src/noesis/financial_operations/contracts.py`: comandos/snapshots, Principal,
@@ -30,7 +49,7 @@
 - [Contrato](architecture/ECONOMIC-EVENTS-v1.md),
   [plan autorizado](architecture/FASE-1-plan.md),
   [cierre/autoauditoría](architecture/FASE-1.1-cierre.md).
-- Ningún productor importa el paquete; sin persistencia, tablas ni consumidores.
+- Ningún productor importa el paquete; 1.1 no añade tablas. Persistencia 1.3 arriba.
 
 ## Financial Core — Fase 0
 

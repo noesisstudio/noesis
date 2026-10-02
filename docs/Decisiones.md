@@ -1,5 +1,18 @@
 # Decisiones
 
+## 2026-10-02 — Persistencia de Economic Events, solo 1.3
+
+[ADR-007](architecture/ADR-007-economic-persistence.md): tres tablas, FKs reales
+tipadas por negocio, append-only en BD/aplicación y links sellados con el sobre
+v1. Contador mínimo serializado, slots/identidades independientes del hash,
+NUMERIC sin typmod para impedir redondeo implícito y TEXT decimal en SQLite.
+content_hash de 1.1 intacto + record_hash de metadatos. FinancialSession prestada,
+SAVEPOINT sin commit exterior propio, revisión confiable obligatoria; no se
+inventa revisión universal legacy. Downgrade/baja protegidos con evidencia.
+No productores, backfill, posting/accounting_date, GL/Open Items/Tax Ledger,
+reporting, cambios fiscales o activación. 1.4 no autorizada. Validación de dominio
+del comando y adaptadores reales esperan las unidades correspondientes.
+
 ## 2026-10-02 — Infraestructura durable, solo 1.2
 
 La nueva orden exige persistencia mínima de operaciones/autorizaciones en 1.2;
