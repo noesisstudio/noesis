@@ -1,5 +1,16 @@
 # Decisiones
 
+## 2026-10-02 — Infraestructura durable, solo 1.2
+
+La nueva orden exige persistencia mínima de operaciones/autorizaciones en 1.2;
+se precisa el plan inicial que la situaba en 1.3. Sin persistencia de eventos.
+[ADR-006](architecture/ADR-006-financial-operations.md): identidad no es contenido,
+reserva unique atómica, locks, aprobación independiente de pending, efecto/resultado
+con un solo commit, recuperación con permisos actuales. Mandato exacto con
+caducidad/revocación; procedencia desconocida no concede autorización humana.
+No estado executing/leases, productores, workflow engine ni cambios fiscales.
+Rollback de migración bloqueado con datos durables. 1.3 no autorizada.
+
 ## 2026-10-02 — Economic Events: solo contratos 1.1
 
 Aprobada la arquitectura de Fase 1 como referencia y ejecución solo de 1.1.

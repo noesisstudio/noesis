@@ -1,5 +1,24 @@
 # Mapa de código
 
+## Financial Core — infraestructura 1.2
+
+- `src/noesis/financial_operations/contracts.py`: comandos/snapshots, Principal,
+  identities de siete canales, canonicalización/hash, estados, Operation.
+- `repository.py`: SQL filtrado por negocio, reserva unique atómica, registros
+  durables y transitions; FinancialSession prestada sin commit propio.
+- `service.py`: permisos/revisiones, prepare/authorize/execute/recover,
+  grant/revoke mandate, reject/cancel; sin productores/dispatcher de comandos.
+- `schema.py` + `migrations.py`: migración 62, dos tablas, guards e índices/FKs.
+- `db.py`: baja preservada con tablas vacías; rechazo explícito con evidencia durable.
+- `tests/test_platform.py`: reconoce PK/UNIQUE declarados en tablas para validar FKs.
+- `action_review.py`: solo docstring de la puerta futura; lógica legacy intacta.
+- `tests/test_financial_operations.py`, `financial_operations_contract.py`,
+  `postgres_financial_operations.py`, `financial_operations_worker.py`: contrato
+  en dos motores, concurrencia y crash de proceso; nuevo paso de CI.
+- [Operaciones v1](architecture/FINANCIAL-OPERATIONS-v1.md),
+  [ADR-006](architecture/ADR-006-financial-operations.md),
+  [cierre](architecture/FASE-1.2-cierre.md).
+
 ## Financial Core — Fase 1.1
 
 - `src/noesis/economic_events/__init__.py`: paquete de contratos puros.

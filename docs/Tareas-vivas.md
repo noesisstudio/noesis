@@ -1,10 +1,23 @@
 # Tareas vivas
 
+## Financial Core — solo 1.2
+
+- [x] 1.1 aceptada; orden explícita de 1.2 con tablas de operación/autorización.
+- [x] API interno y migración mínima; no productores o eventos durables.
+- [x] Cierre de tests/autoauditoría en [informe](architecture/FASE-1.2-cierre.md).
+- [ ] 1.3 no autorizada: no persistir economic_events/economic_event_links.
+- [ ] Publicación/CI remota de 1.1–1.2 no realizada; cambios locales de main.
+- [ ] Antes de productores: integrar identidades auténticas de canal y enlace con
+  revisión; loaders/locks de origen por negocio, snapshots/defaults completos,
+  semántica del comando, ejecutor común sin conexiones/commits independientes.
+- [ ] Integrar exportación/baja/retención de evidencia y actor de automatización
+  antes de activar productores. No inventar autorización histórica o autoridad IA.
+
 ## Financial Core — ejecución incremental de Fase 1
 
 - [x] Planificación aprobada como arquitectura de referencia y documentada.
 - [x] 1.1 contratos implementados sin persistencia ni productores.
-- [ ] 1.2 requiere otra orden explícita; no iniciar comandos/autorizaciones.
+- [x] Orden posterior autoriza 1.2; estado y límites en sección superior.
 - [ ] 1.3 y posteriores no autorizadas: repositorios/migraciones, puentes,
   productores, históricos y activación siguen pendientes.
 - [ ] Publicación/CI remota de 1.1 no realizada en esta entrega local.

@@ -159,6 +159,9 @@ jobs:
       - name: Validar precisión y transacciones del Financial Core
         run: uv run python -m tests.postgres_financial_core
 
+      - name: Validar operaciones, autorización y concurrencia PostgreSQL
+        run: uv run python -m tests.postgres_financial_operations
+
       - name: Obtener código base para rollback seguro
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

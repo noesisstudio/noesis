@@ -14989,6 +14989,16 @@ def delete_business_cascade(business_id) -> bool:
                 "La cuenta tiene facturas emitidas que deben conservarse. "
                 "Solicita una baja con conservación fiscal."
             )
+        # La baja no destruye evidencia durable del núcleo todavía sin productores.
+        for financial_table in ("financial_operations", "financial_authorizations"):
+            if conn.execute(
+                f"SELECT 1 FROM {financial_table} WHERE business_id=? LIMIT 1",
+                (business_id,),
+            ).fetchone():
+                raise ValueError(
+                    "La cuenta tiene evidencia financiera durable que debe conservarse. "
+                    "Solicita una baja con conservación de evidencia."
+                )
         clockins = conn.execute(
             "SELECT COUNT(*) AS total FROM worker_clockins WHERE business_id=?",
             (business_id,),
@@ -15000,6 +15010,8 @@ def delete_business_cascade(business_id) -> bool:
             )
         # Primero confirma todas las eliminaciones referenciales en la base de datos.
         for table in (
+            # Vacías tras la comprobación anterior; no borrar evidencia para la baja.
+            "financial_authorizations", "financial_operations",
             "gestoria_invitations", "gestoria_business_access",
             "whatsapp_pending_actions", "whatsapp_links", "whatsapp_outbox",
             # El número propio del negocio y su bandeja: sin esto, cualquier

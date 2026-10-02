@@ -1,5 +1,17 @@
 # 03 · Cerebro: el chat y WhatsApp
 
+## Puerta financiera futura tras 1.2
+
+`action_review.respond()` conserva su funcionamiento: elimina pending antes de
+llamar run_tool fuera de la transacción. Esa fila temporal no es autorización
+financiera durable. No se conecta FinancialOperations a este camino en 1.2.
+Antes de su futura integración, leer [protocolo](../architecture/FINANCIAL-OPERATIONS-v1.md):
+identidad estable de canal autenticado, request fijo, recibo durable de aprobación
+antes de consumir pending y ejecución con la misma conexión prestada.
+No interpretar de nuevo un sí ni aceptar claves/actores de argumentos IA.
+Los tests prueban que un recibo independiente sobrevive al borrar una propuesta;
+no afirman que los canales legacy ya utilicen esa garantía.
+
 > Financial Core: leer [guía 08](08-financial-core.md) y [ADR](../architecture/README.md).
 > Nuevos dominios en repositorios especializados con transacción compartida;
 > Decimal/NUMERIC y aprobación validada en servidor. La IA carece de autoridad

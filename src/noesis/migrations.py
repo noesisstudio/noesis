@@ -7,6 +7,10 @@ from collections.abc import Callable
 from datetime import datetime
 
 from .clockin_integrity import clockin_seal
+from .financial_operations.schema import (
+    upgrade as _upgrade_financial_operations,
+    downgrade as _downgrade_financial_operations,
+)
 
 
 def _types(dialect: str) -> dict[str, str]:
@@ -4408,6 +4412,8 @@ MIGRATIONS: tuple[Migration, ...] = (
     (61, "cuentas_conectadas",
      _upgrade_oauth_credentials,
      _downgrade_oauth_credentials),
+    (62, "operaciones_financieras_durables",
+     _upgrade_financial_operations, _downgrade_financial_operations),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

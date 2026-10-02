@@ -1,13 +1,15 @@
 # Financial Core: punto de entrada y continuidad
 
 Decisión del titular, 2-oct-2026: Fase 0 aceptada y cerrada; planificación de
-Fase 1 aprobada como referencia. Ejecutar **solo 1.1**, contratos puros, sin
-persistencia ni productores. **1.2 no autorizada**. No convertir Economic Events
+Fase 1 aprobada como referencia y 1.1 aceptada. **1.2 cerrada**; su alcance es solo:
+operaciones, idempotencia, autorización y resultados durables. Sin persistencia
+de Economic Events ni productores. **1.3 no autorizada**. No convertir Economic Events
 en un registro genérico de acontecimientos de Noesis.
 
 Continuidad: [plan incremental](FASE-1-plan.md),
 [contrato y catálogo v1](ECONOMIC-EVENTS-v1.md) y
-[cierre de 1.1](FASE-1.1-cierre.md).
+[cierre de 1.1](FASE-1.1-cierre.md),
+[operaciones v1](FINANCIAL-OPERATIONS-v1.md) y [cierre de 1.2](FASE-1.2-cierre.md).
 
 ## Orden de lectura y autoridad
 
@@ -33,6 +35,7 @@ especializada; ninguna especificación interna certifica cumplimiento.
 | [003](ADR-003-double-entry-ledger.md) | Invariantes futuras del ledger, sin implementarlo |
 | [004](ADR-004-money-decimal.md) | Decimal, moneda, precisión y persistencia exacta |
 | [005](ADR-005-accounting-periods.md) | Fechas, períodos y cierres futuros |
+| [006](ADR-006-financial-operations.md) | Operación, aprobación, resultado e idempotencia durables |
 
 ## Secuencia y límites de fase
 
@@ -75,12 +78,12 @@ cada operación; no se posponen a Fase 15. Reporting por dimensión espera a Fas
   desplegado. No rellenar carencias con stubs ni marcar fases futuras completadas.
 - Detenerse tras el cierre; el próximo modelo comienza aquí, no en el chat.
 
-## Pendientes de ejecución de Fase 1 después de 1.1
+## Pendientes de ejecución de Fase 1 después de 1.2
 
 - Conservar el catálogo cerrado v1: `quote.accepted` y `job.completed` son
   operativos y no se insertarán en Economic Events. No crear un bus genérico.
-- Implementar la identidad/idempotencia de operación del plan aprobado,
-  sin deduplicar solo el evento posterior; requiere autorización de 1.2.
+- Integrar la identidad/idempotencia durable de 1.2 en los canales y puentes
+  futuros; no conectar productores ni persistir eventos sin otra orden.
 - Capturar cobros parciales, completos y conciliados por su escritor común.
 - No inferir un pago real a proveedor desde el estado legacy `pagada`.
 - Cubrir correcciones/bajas de gastos y recibidas; no crear snapshots obsoletos.

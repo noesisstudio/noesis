@@ -1,5 +1,18 @@
 # Arquitectura
 
+## Operaciones financieras — solo infraestructura 1.2
+
+`financial_operations/` añade contratos, repositorio y servicio sobre db.get_conn
++ FinancialSession, sin otro pool. Reserva unique por negocio/namespace/key,
+aprobación mínima durable y resultado con el mismo commit que el ejecutor futuro.
+PostgreSQL usa locks de fila; SQLite BEGIN IMMEDIATE. No hay estado executing
+persistido ni commit de resultado separado. Reintento tras commit recupera el
+resultado, previa revalidación de acceso. [ADR-006](architecture/ADR-006-financial-operations.md)
+y [contrato](architecture/FINANCIAL-OPERATIONS-v1.md). Migración 62: solo dos tablas.
+La baja legacy no borra evidencia durable: funciona con tablas vacías y rechaza
+explícitamente si contienen registros. Retención/cierre quedan pendientes antes de productores.
+No se integra con productores ni persiste Economic Events. 1.3 no autorizada.
+
 ## Financial Core: fundamentos incorporados
 
 [Gobernanza y ADR](architecture/README.md), [guía 08](areas/08-financial-core.md).

@@ -2,8 +2,11 @@
 
 La planificación de Economic Event Layer fue aprobada por el titular el
 2-oct-2026. Esa aprobación fija arquitectura de referencia, **no ejecución de
-todas sus unidades**. La siguiente orden autoriza solo **1.1: contratos**.
-Fase 0 está aceptada y cerrada. 1.2 y siguientes esperan otra orden explícita.
+todas sus unidades**. 1.1 queda aceptada. La orden posterior autoriza solo **1.2: operaciones,
+autorización durable e idempotencia**, incluidas sus tablas y resultados.
+Fase 0 está cerrada. 1.3 y siguientes esperan otra orden explícita.
+Precisión respecto al plan inicial: la persistencia mínima de operaciones y
+autorizaciones se adelanta a 1.2 por petición expresa; Economic Events no se persiste.
 
 ## Arquitectura que se conserva
 
@@ -53,8 +56,8 @@ no inventar un evento nuevo sin otra decisión de alcance.
 | Unidad | Entrega de referencia | Dependencia / riesgo / salida |
 |---|---|---|
 | 1.1 | `economic_events/contracts.py`, catálogo, validación, canonicalización y tests | Fase 0; sin migración/efectos; cierre documentado |
-| 1.2 | Contratos de comandos y autorización estable | 1.1; deduplicar operación antes del efecto; reintentos/identidades probados |
-| 1.3 | Persistencia, repositorios y constraints de eventos/operaciones/autorizaciones | 1.2; migración revisada; SQLite/PostgreSQL, relaciones y concurrencia |
+| 1.2 | Operaciones, autorización y resultados durables, API interno y migración 62 | Orden posterior explícita; deduplicar efecto futuro; concurrencia/rollback/reintentos probados sin productores |
+| 1.3 | Persistencia, repositorios y constraints de Economic Events y relaciones | 1.2 ya persiste operaciones/autorizaciones; nueva migración de eventos requiere otra orden |
 | 1.4 | Frontera transaccional y puente legacy exacto | 1.3; rollback de ambas partes y aislamiento; no duplicar infraestructura |
 | 1.5 | Emisión y rectificativas | 1.4; invariantes fiscales/huellas/numeración conservadas |
 | 1.6 | Cobros y conciliación bancaria | 1.4–1.5; parciales y reintentos sin doble caja |

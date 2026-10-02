@@ -1,5 +1,20 @@
 # Estado actual del producto
 
+## 2-oct — Financial Core, infraestructura 1.2
+
+**1.2 cerrada: 36 PASS / 0 FAIL; suite general 1446/1446.**
+1.1 aceptada; 1.2 implementa operaciones, autorización mínima durable, idempotencia
+y resultado recuperable. Migración 62: solo financial_operations y
+financial_authorizations más índice de actor/FKs y guards. Ningún productor usa
+el servicio; Economic Events sigue siendo contrato en memoria. Sin GL/asientos,
+Open Items, Tax Ledger, reporting o cambios funcionales de VERI*FACTU.
+La baja de cuentas sin evidencia mantiene su comportamiento; si hay operaciones
+o mandatos durables, se bloquea explícitamente sin borrar datos.
+Flags financieros apagados. [Contrato](architecture/FINANCIAL-OPERATIONS-v1.md),
+[ADR](architecture/ADR-006-financial-operations.md), [cierre](architecture/FASE-1.2-cierre.md).
+Resultados finales en QA/JSON; candidato local sin push/despliegue de 1.2.
+**No avanzar a 1.3.**
+
 ## 2-oct — Financial Core, contratos 1.1
 
 Fase 0 permanece cerrada. Plan de Fase 1 aprobado como referencia; implementada

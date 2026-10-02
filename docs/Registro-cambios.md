@@ -1,5 +1,26 @@
 ﻿# Registro de cambios
 
+## 2026-10-02 — Financial Core: solo infraestructura 1.2
+
+- Objetivo: operación independiente del resultado, idempotencia del efecto futuro,
+  autorización mínima durable y recuperación tras perder respuesta.
+- Archivos: financial_operations (contratos, repositorio, servicio, DDL), migración
+  62 registrada en migrations.py, docstring de action_review, db.py conserva la
+  baja sin evidencia y bloquea explícitamente su destrucción; verificador DDL
+  reconoce PK/UNIQUE de CREATE TABLE; tests en ambos
+  motores/procesos y nuevo paso CI. ADR-006, contrato/plan/cierre, AGENTS, guías,
+  arquitectura/mapa/decisiones, estado/tareas/QA/bitácora actualizados juntos.
+- Migración: solo dos tablas e índice compuesto de usuario necesario para FK;
+  guards, uniques, FKs, resultado versionado y estado. Sin Economic Events durables.
+- Pruebas: [QA](Registro-QA.md) y [cierre/autoauditoría](architecture/FASE-1.2-cierre.md).
+- Límites: ningún productor, cambio contable/fiscal/VERI*FACTU, nuevo reporting,
+  GL/Open Items/Tax Ledger. Flags intactos, sin dependencias nuevas. Local, sin push.
+- Riesgo: ejecutar callbacks con conexiones/commits propios o IO externo, confiar
+  en clave/actor de IA o confundir request estructural con validación de dominio.
+  Diagnóstico: contrato v1, namespace/key, permiso/creador, request/hash, revisiones
+  y autorización. Rollback de esquema solo vacío; conservar durable si tiene datos.
+  No avanzar a 1.3.
+
 ## 2026-10-02 — Financial Core: solo Fase 1.1
 
 - Objetivo: contratos económicos puros, catálogo cerrado v1 de once hechos,

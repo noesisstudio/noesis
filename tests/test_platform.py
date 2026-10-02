@@ -67,6 +67,13 @@ class PostgresDDLOrderTest(unittest.TestCase):
                     if mu:
                         cols = tuple(c.strip() for c in mu.group(2).split(","))
                         uniques.add((mu.group(1), cols))
+                    # Las claves declaradas dentro de CREATE TABLE también
+                    # son únicas y permiten referencias a la propia tabla.
+                    table = re.search(r"CREATE TABLE (?:IF NOT EXISTS )?(\w+)", stmt)
+                    if table:
+                        for key in re.finditer(r"(?:PRIMARY KEY|UNIQUE)\(([^()]*)\)", stmt):
+                            uniques.add((table.group(1), tuple(
+                                c.strip() for c in key.group(1).split(","))))
                     for m in re.finditer(r"REFERENCES (\w+)\((.*?)\)", stmt):
                         cols = tuple(c.strip() for c in m.group(2).split(","))
                         if len(cols) == 2:

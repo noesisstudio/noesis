@@ -1,5 +1,17 @@
 # 06 · RGPD y seguridad
 
+## Evidencia financiera de 1.2
+
+[Operaciones v1](../architecture/FINANCIAL-OPERATIONS-v1.md): dos tablas internas,
+sin productores conectados. Autorizaciones guardan UUID/hash/revisión, actor por
+ID y permiso/canal/instante; no conversaciones, teléfonos o tokens. Históricos
+separan recorded_by de un actor original desconocido, sin autorización ejecutable.
+Acceso por negocio, usuario activo, sesión y creador; UUID no concede permiso.
+Baja actual funciona con tablas vacías; si contienen operaciones o mandatos,
+rechaza con ValueError explícito antes de borrar datos. Retención/exportación y
+cierre con conservación siguen pendientes antes de activar productores; no
+borrar evidencia durable por rollback automático.
+
 > Financial Core: leer [guía 08](08-financial-core.md) y [ADR](../architecture/README.md).
 > Nuevos dominios en repositorios especializados con transacción compartida;
 > Decimal/NUMERIC y aprobación validada en servidor. La IA carece de autoridad
@@ -97,7 +109,10 @@ con caducidad · procedimiento de brechas (72 h)
 
 - [ ] ¿Una tabla nueva con datos de un negocio está en `delete_business_cascade` y en
       `export_business_data`? La prueba de borrado lo exige para el borrado; la
-      exportación hay que comprobarla a mano.
+      exportación hay que comprobarla a mano. Excepción de infraestructura 1.2:
+      financial_operations/authorizations tienen baja bloqueada con evidencia y
+      no productores; exportación/retención/cierre son gates obligatorios antes
+      de conectar productores o activar el núcleo. No tratar el pendiente como resuelto.
 - [ ] ¿Algún dato personal va a un proveedor que no esté en la matriz?
 - [ ] ¿Algún log, evento o mensaje de error lleva correos, teléfonos, NIF o contenido?
 - [ ] ¿Un script de terceros nuevo carga sin consentimiento o fuera de la CSP?

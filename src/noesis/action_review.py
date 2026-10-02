@@ -574,7 +574,13 @@ def _correccion_de_cita(text: str, args: dict) -> dict | None:
 
 
 def respond(bid: int, actor: str, text: str) -> dict | None:
-    """Consume una propuesta exacta; no interpreta de nuevo lo confirmado."""
+    """Consume una propuesta exacta; no interpreta de nuevo lo confirmado.
+
+    Camino legacy conservado en Fase 1.2. Una futura conexión financiera debe
+    preparar y confirmar FinancialOperations.authorize antes de consumir la fila
+    temporal, y ejecutar por su transacción compartida; nunca usar esta eliminación
+    como evidencia de autorización. Protocolo en docs/architecture/FINANCIAL-OPERATIONS-v1.md.
+    """
     norm = nlu._norm(text)
     # «si, genera el pdf» es un sí: antes no lo era, la propuesta se quedaba sin
     # confirmar y la frase se reinterpretaba como una petición nueva. Lo que

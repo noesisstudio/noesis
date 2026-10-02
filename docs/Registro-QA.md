@@ -1,5 +1,36 @@
 ﻿# Registro de QA
 
+## 2026-10-02 — Financial Core, solo 1.2
+
+- 29 pruebas SQLite nuevas + 21 contratos de eventos + 16 fundamentos: 66/66
+  correctas (18,002 s). Mismo contrato en PostgreSQL 16.15 real: 32/32 (5,192 s),
+  incluidas dos conexiones, dos procesos, conflicto y crash real del proceso.
+- Timeout después de commit, fallos antes/después de efecto/persistencia de
+  resultado, estado no falsamente committed, mandatos/caducidad/revocación,
+  revisiones antiguas, actor/empresa y autorización durable sin pending: correctos.
+- Incidencias iniciales de tests: mock de datetime rompía isinstance y fixture
+  de caducidad reutilizaba identidad con otro request; corregidos los tests y
+  ambos contratos repetidos correctos. Ruff detectó dos imports sin usar, corregidos.
+- Primera suite general: 1445 ejecutadas, tres fallos en cobertura de baja,
+  reconocimiento de PK/UNIQUE inline y SQLSTATE de triggers. Corregidos: baja
+  sin evidencia preservada/con evidencia bloqueada; verificador DDL reconoce
+  claves inline; guards devuelven 23514. Regresión focal 8/8. Se añade test de
+  conservación en ambos motores. Suite general final **1446/1446 OK** (913,915 s),
+  con todos los cambios de código y el test nuevo. Secretos (archivos nuevos
+  incluidos), enlaces, diff y verdad documental correctos; autoauditoría: **36
+  PASS / 0 FAIL**. 1.2 cerrada; 1.3 no iniciada.
+- Migraciones: SQLite limpia/61→62 con datos y 62→61→62 / 0→62→0→62 correctos;
+  PostgreSQL instalación limpia, 61→62→61→62 con datos preservados y actualización
+  histórica 32→62 con factura emitida. Bajada con datos durables bloqueada.
+- Humo PostgreSQL en base nueva local: 36 rutas sin 5xx. Código anterior d3740a0
+  (schema 53) sobre BD 62: emisión/cobro/exportación correctos; rollback a 53 y
+  re-upgrade conserva datos. Gate release: privacidad/HTTP/aislamiento/exportación,
+  conversación/deduplicación y marketing correctos. Resultados restantes,
+  suite completa y autoauditoría en [cierre](architecture/FASE-1.2-cierre.md).
+- Ruff completo, Bandit, lock --check, pip-audit y Node 3/3 correctos.
+- Sin productores, eventos durables o efectos reales nuevos. Action_review cambia
+  solo docstring. Sin cambios de flags, dependencias o VERI*FACTU. Local, no publicado.
+
 ## 2026-10-02 — Financial Core, contratos 1.1
 
 - 21 nuevas de contratos y 16 de Money/flags/SQLite: 37/37 correctas en el último run (0,226 s).
