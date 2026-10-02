@@ -18,8 +18,11 @@ un presupuesto o completar un trabajo no produce automáticamente un hecho
 financiero. Una regla de negocio posterior deberá justificarlo con evidencia.
 
 Fase 0 incorpora contratos y cinco flags reservados apagados. `accounting/` solo
-reserva el paquete. No hay General Ledger, eventos económicos, migraciones,
-asientos, nuevas rutas, reporting ni cambios funcionales VERI*FACTU.
+reserva el paquete. Fase 1.1 añade `economic_events/contracts.py`: once tipos,
+payloads/sobre inmutables, canonicalización y hashes, exclusivamente en memoria.
+[Contrato v1](architecture/ECONOMIC-EVENTS-v1.md). Sin persistencia ni productores;
+no hay General Ledger, migraciones, asientos, nuevas rutas, reporting ni cambios
+funcionales VERI*FACTU. 1.2 espera autorización expresa.
 
 Objetivo: máximo posible **interno/cerrado**, mínimo de APIs externas (coste y
 privacidad). Ver [[Investigación]] y [[Decisiones]].

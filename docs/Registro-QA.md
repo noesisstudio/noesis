@@ -1,5 +1,25 @@
 ﻿# Registro de QA
 
+## 2026-10-02 — Financial Core, contratos 1.1
+
+- 21 nuevas de contratos y 16 de Money/flags/SQLite: 37/37 correctas en el último run (0,226 s).
+- PostgreSQL 16.15 real, /noesis_ci local: 6/6 del contrato de fundamentos (0,162 s).
+  Humo en base nueva noesis_phase11_smoke, migrada 0→61: 36 rutas sin 5xx.
+  Primera conexión probó un rol inexistente; corregida a noesis. Primer humo
+  sobre base reutilizada falló en outbox ya consumida; se repitió con base nueva.
+  El primer intento en base nueva sin migrar fue rechazado; migrada y repetido OK.
+  No modificar producto ni esconder intentos fallidos como un run verde.
+- Ruff completo, Bandit, uv lock --check, pip-audit y Node 3/3 correctos.
+- Suite general 1414/1414 (874,087 s). Descubrió 18 nuevas iniciales; las tres
+  añadidas después y el discriminante final de rectificación se revalidaron en
+  el run dirigido final de 37. No declarar un run general de 1417.
+- SQLite 0→61→0→61 correcto. Secretos (incluidos archivos nuevos), verdad
+  documental, enlaces y diff correctos. Autoauditoría/criterios:
+  [cierre](architecture/FASE-1.1-cierre.md); todos PASS para 1.1.
+- Sin efectos financieros, tablas/migraciones nuevas, productores o cambios
+  funcionales legacy/VERI*FACTU. SQLite/PostgreSQL no persisten Economic Events.
+  Sin CI remota ni despliegue de esta unidad; flags apagados; 1.2 no autorizada.
+
 ## 2026-10-02 — Cierre remoto de Financial Core, Fase 0
 
 - [CI 36984999111](https://github.com/noesisstudio/noesis/actions/runs/36984999111) verde sobre

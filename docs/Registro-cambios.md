@@ -1,5 +1,22 @@
 ﻿# Registro de cambios
 
+## 2026-10-02 — Financial Core: solo Fase 1.1
+
+- Objetivo: contratos económicos puros, catálogo cerrado v1 de once hechos,
+  snapshots/sobre inmutables, validaciones, canonicalización y hashes exactos.
+- Archivos: nuevo paquete economic_events y tests; contrato/plan/cierre en
+  docs/architecture, ADR-002, AGENTS, guías 01/08, arquitectura/mapa/decisiones,
+  estado, tareas y QA. Sin modificar runtime existente, esquema, flags o dependencias.
+- Pruebas: nuevas y regresiones/gates en [QA](Registro-QA.md) y
+  [cierre con autoauditoría](architecture/FASE-1.1-cierre.md).
+- Límites: sin productores, persistencia, operaciones/autorizaciones, posting,
+  GL, Open Items, Tax Ledger, reporting ni cambios funcionales VERI*FACTU.
+  Candidato local; CI remota/despliegue de esta unidad no realizados.
+- Riesgo: confundir validación/hash con permiso, autenticidad o idempotencia.
+  Diagnóstico: catálogo v1, datos canónicos y referencias; verificar fuentes en
+  la futura capa transaccional. Rollback: revertir esta unidad, sin tocar datos.
+  Detenerse; 1.2 no autorizada.
+
 ## 2026-10-02 — Cierre verificable de Fase 0
 
 - Objetivo: registrar la evidencia final del código 9c538e3, sin nuevos cambios

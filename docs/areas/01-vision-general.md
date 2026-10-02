@@ -7,7 +7,9 @@ Los servicios poseen la transacción de `db.get_conn()`; los repositorios por do
 reciben `FinancialSession` y `business_id`. No añadir grandes bloques financieros a
 `db.py`, conexiones independientes ni autoridad financiera a la IA. El núcleo nuevo
 usa Decimal/NUMERIC (TEXT canónico en SQLite); legacy mantiene sus contratos.
-Solo Fase 0: sin tablas económicas, asientos ni consumidores nuevos.
+Fase 0 cerrada y solo 1.1 autorizada: contratos puros en `economic_events/`,
+sin tablas económicas, productores, asientos ni consumidores nuevos.
+[Catálogo v1](../architecture/ECONOMIC-EVENTS-v1.md); no avanzar a 1.2.
 
 > Léela antes de un cambio que cruce varias zonas o cuando no sepas dónde vive algo.
 > Figura 1 del [mapa visual](../02-tecnico/Mapa-Bynoesis.html).

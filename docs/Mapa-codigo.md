@@ -1,5 +1,18 @@
 # Mapa de código
 
+## Financial Core — Fase 1.1
+
+- `src/noesis/economic_events/__init__.py`: paquete de contratos puros.
+- `src/noesis/economic_events/contracts.py`: EventType, SourceType, FutureImpact,
+  RelationType, catálogo inmutable EventSpec/Field v1, validate_payload,
+  canonical_payload, payload_hash, EconomicEvent/EventRelation y content_hash.
+- `tests/test_economic_events.py`: contratos, casos negativos, precisión,
+  snapshots congelados, referencias declaradas, vector canónico y hashes.
+- [Contrato](architecture/ECONOMIC-EVENTS-v1.md),
+  [plan autorizado](architecture/FASE-1-plan.md),
+  [cierre/autoauditoría](architecture/FASE-1.1-cierre.md).
+- Ningún productor importa el paquete; sin persistencia, tablas ni consumidores.
+
 ## Financial Core — Fase 0
 
 - `src/noesis/core/money.py`: Currency EUR, parse_money, quantize_currency y Money.

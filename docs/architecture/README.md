@@ -1,8 +1,13 @@
 # Financial Core: punto de entrada y continuidad
 
-Decisión del titular, 2-oct-2026: ejecutar **solo Fase 0**, como entrega
-independiente. La Fase 1 requiere una orden nueva. No convertir Economic Events
+Decisión del titular, 2-oct-2026: Fase 0 aceptada y cerrada; planificación de
+Fase 1 aprobada como referencia. Ejecutar **solo 1.1**, contratos puros, sin
+persistencia ni productores. **1.2 no autorizada**. No convertir Economic Events
 en un registro genérico de acontecimientos de Noesis.
+
+Continuidad: [plan incremental](FASE-1-plan.md),
+[contrato y catálogo v1](ECONOMIC-EVENTS-v1.md) y
+[cierre de 1.1](FASE-1.1-cierre.md).
 
 ## Orden de lectura y autoridad
 
@@ -70,11 +75,12 @@ cada operación; no se posponen a Fase 15. Reporting por dimensión espera a Fas
   desplegado. No rellenar carencias con stubs ni marcar fases futuras completadas.
 - Detenerse tras el cierre; el próximo modelo comienza aquí, no en el chat.
 
-## Pendientes que condicionan Fase 1
+## Pendientes de ejecución de Fase 1 después de 1.1
 
-- Revisar su catálogo: `quote.accepted` y `job.completed` son operativos; no se
-  insertarán automáticamente en Economic Events. No crear un bus genérico.
-- Diseñar clave idempotente de la operación, no solo del evento posterior.
+- Conservar el catálogo cerrado v1: `quote.accepted` y `job.completed` son
+  operativos y no se insertarán en Economic Events. No crear un bus genérico.
+- Implementar la identidad/idempotencia de operación del plan aprobado,
+  sin deduplicar solo el evento posterior; requiere autorización de 1.2.
 - Capturar cobros parciales, completos y conciliados por su escritor común.
 - No inferir un pago real a proveedor desde el estado legacy `pagada`.
 - Cubrir correcciones/bajas de gastos y recibidas; no crear snapshots obsoletos.

@@ -1,12 +1,25 @@
 # Tareas vivas
 
+## Financial Core — ejecución incremental de Fase 1
+
+- [x] Planificación aprobada como arquitectura de referencia y documentada.
+- [x] 1.1 contratos implementados sin persistencia ni productores.
+- [ ] 1.2 requiere otra orden explícita; no iniciar comandos/autorizaciones.
+- [ ] 1.3 y posteriores no autorizadas: repositorios/migraciones, puentes,
+  productores, históricos y activación siguen pendientes.
+- [ ] Publicación/CI remota de 1.1 no realizada en esta entrega local.
+- [ ] En las fases apropiadas, comprobar existencia/pertenencia de referencias,
+  autorización estable e idempotencia de operación; el contrato no las prueba.
+- Continuidad: [índice](architecture/README.md), [plan](architecture/FASE-1-plan.md),
+  [catálogo](architecture/ECONOMIC-EVENTS-v1.md), [cierre](architecture/FASE-1.1-cierre.md).
+
 ## Financial Core — Fase 0 (2-oct-2026)
 
 - [x] Fundamentos implementados; ADR, Money, acceso exacto, flags y gobernanza.
 - [x] Contrato real SQLite/PostgreSQL, rollback común y compatibilidad legacy.
 - [x] Publicado `9c538e3`; CI 36984999111 verde y Railway SUCCESS; health/ready
       200, esquema 61, cinco flags apagados. [Cierre](architecture/FASE-0-cierre.md): PASS.
-- [ ] Fase 1 exige nueva orden expresa. Leer [gobernanza](architecture/README.md),
+- [x] Plan de Fase 1 aprobado; solo 1.1 autorizada por la orden posterior. Leer [gobernanza](architecture/README.md),
       catálogo corregido en ADR-002 y [cierre](architecture/FASE-0-cierre.md).
       No construir un log operativo genérico ni adelantar General Ledger.
 

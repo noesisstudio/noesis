@@ -1,5 +1,17 @@
 # Decisiones
 
+## 2026-10-02 — Economic Events: solo contratos 1.1
+
+Aprobada la arquitectura de Fase 1 como referencia y ejecución solo de 1.1.
+Catálogo v1 cerrado de once hechos: [especificación](architecture/ECONOMIC-EVENTS-v1.md).
+Sobre y snapshots inmutables; business_id obligatorio, referencias declaradas
+por negocio; la existencia/autorización reales exigirán capas posteriores.
+Decimal/EUR, céntimos finales exactos sin redondeo implícito, JSON monetario como
+string. Hash de payload tipado separado del hash del sobre, sin deduplicación
+de operaciones. Banco conciliado/anulación fiscal son evidencia; no crean caja,
+extinguen deuda ni revierten asientos. Sin productores ni persistencia.
+1.2 no autorizada. Plan y cierre durable en `docs/architecture/`.
+
 ## 2026-10-02 — Financial Core: solo fundamentos
 
 Aceptados [ADR-001 a 005](architecture/README.md): monolito modular, repositorios

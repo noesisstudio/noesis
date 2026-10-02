@@ -1,5 +1,17 @@
 # Estado actual del producto
 
+## 2-oct — Financial Core, contratos 1.1
+
+Fase 0 permanece cerrada. Plan de Fase 1 aprobado como referencia; implementada
+solo 1.1: contrato puro, catálogo cerrado de once hechos, snapshots/sobre
+inmutables, validación exacta, canonicalización y hashes. Ningún productor
+conectado; sin tablas, migración, autorización/operaciones, asientos o reporting.
+Schema 61 y flags reservados apagados. Legacy y VERI*FACTU sin cambios.
+[Contrato](architecture/ECONOMIC-EVENTS-v1.md),
+[plan](architecture/FASE-1-plan.md), [cierre](architecture/FASE-1.1-cierre.md).
+Validación final en QA/JSON; candidato local, sin publicación de esta unidad.
+**No avanzar a 1.2 sin otra orden.**
+
 ## 2-oct — Financial Core, Fase 0 cerrada
 
 Implementados Money/Decimal, vista exacta sobre la conexión/transacción existente,
@@ -10,7 +22,7 @@ ni cambios funcionales de VERI*FACTU. Eventos operativos separados de económico
 Publicado código `9c538e3`, CI 36984999111 verde: 1396 tests más 6 PostgreSQL,
 36 rutas y todos los gates. Railway SUCCESS, health/ready 200, esquema 61 y
 flags apagados. [Cierre y PASS/FAIL](architecture/FASE-0-cierre.md): todos PASS.
-No empezar Fase 1 sin nueva orden. Los avisos de seguridad
+La orden posterior autoriza exclusivamente 1.1 (véase estado superior). Los avisos de seguridad
 en el lockfile se corrigieron con pypdf 6.19.0 y urllib3 2.8.0.
 
 ## 24-sep — Diagnóstico operativo local

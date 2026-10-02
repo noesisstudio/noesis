@@ -22,6 +22,10 @@ Servicio propietario de la transacción
 - `core/persistence.py`: conexión prestada, sin commit/rollback/cierre propio.
 - `db.py`: fachada legacy e infraestructura común; no nuevos motores financieros.
 - `accounting/__init__.py`: reserva, sin ledger ni posting.
+- `economic_events/contracts.py`: catálogo cerrado v1, payloads/sobre inmutables,
+  validaciones, dinero exacto y canonicalización sin efectos ni datos.
+  [Especificación completa](../architecture/ECONOMIC-EVENTS-v1.md).
+  No importar este módulo desde productores antes de otra autorización.
 - `config.py` y `.env.example`: cinco flags reservados, apagados, sin consumidores.
 
 Toda futura lectura/escritura de dominio exige business_id; las relaciones entre
@@ -37,10 +41,12 @@ genérico. Los registros fiscales/seguridad/producto conservan responsabilidades
 
 ## Estado y pruebas
 
-Fase 0 solamente: sin tablas nuevas, migración, nuevas operaciones financieras ni
+Fase 0 cerrada; solo 1.1 autorizada, sin tablas nuevas, migración, nuevas operaciones financieras ni
 cambios funcionales de VERI*FACTU. No convertir lecturas antiguas a Decimal de forma
 global. SQLite nuevo: dinero TEXT y cálculo Decimal; no aritmética SQL sobre TEXT.
 
+- `tests/test_economic_events.py`: once tipos, versiones, campos cerrados, relaciones,
+  fechas, Decimal y canonicalización/hash; no necesita SQLite ni PostgreSQL.
 - `tests/test_financial_core.py`: Money, flags y contrato SQLite.
 - `tests/financial_core_contract.py`: persistencia y transacción compartidas.
 - `python -m tests.postgres_financial_core`: mismo contrato en PostgreSQL local

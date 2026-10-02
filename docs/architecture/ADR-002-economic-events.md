@@ -1,6 +1,8 @@
 # ADR-002 · Hechos económicos separados de acontecimientos operativos
 
-- Estado: aceptado; diseño para Fase 1, sin implementación en Fase 0.
+- Estado: aceptado; Fase 0 cerrada; contratos puros implementados exclusivamente en 1.1.
+- Especificación: [catálogo cerrado v1](ECONOMIC-EVENTS-v1.md). Persistencia,
+  productores y autorización estable siguen pendientes; 1.2 no autorizada.
 - Precisión del titular (2-oct-2026): `economic_events` no será un event log genérico.
 
 ## Decisión

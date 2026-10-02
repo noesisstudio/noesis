@@ -1,8 +1,11 @@
 # AGENTS.md - Manual del proyecto Bynoesis
 
 > Para Financial Core, leer [gobernanza y ADR](docs/architecture/README.md) y
-> [guía 08](docs/areas/08-financial-core.md). Solo está autorizada la Fase 0;
-> las referencias no autorizan fases posteriores. El cierre queda en esa carpeta.
+> [guía 08](docs/areas/08-financial-core.md). Fase 0 cerrada; Fase 1
+> planificada y aprobada como referencia. Solo 1.1 (contratos) está autorizada.
+> Leer [plan](docs/architecture/FASE-1-plan.md) y
+> [contrato v1](docs/architecture/ECONOMIC-EVENTS-v1.md). No avanzar a 1.2.
+> Las referencias no autorizan ejecutar otras unidades.
 
 ## Contrato del Financial Core
 
@@ -98,7 +101,7 @@ o cambiar algo de esa zona; si el cambio la contradice, actualízala en el mismo
 
 | Si el cambio toca… | Guía |
 |---|---|
-| Financial Core, `core/`, `accounting/`, exactitud y repositorios financieros | [08 · Financial Core](docs/areas/08-financial-core.md) |
+| Financial Core, `core/`, `economic_events/`, `accounting/`, exactitud y repositorios financieros | [08 · Financial Core](docs/areas/08-financial-core.md) |
 | Varias zonas, `web/server.py`, `web/deps.py`, `db.py` en general, `migrations.py`, `config.py` | [01 · Visión general](docs/areas/01-vision-general.md) |
 | `web/routers/pages.py`, `portal.py`, `gestoria*.py`, `admin.py`, `account.py` (alta y sesión), `web/templates/`, `web/static/`, `sales.py`, `economics*.py` | [02 · Ramas de la empresa](docs/areas/02-ramas-de-la-empresa.md) |
 | `web/chat.py`, `nlu.py`, `agent.py`, `tools.py`, `action_review.py`, `internal_brain.py`, `learning.py`, `local_invoice.py`, `intent_safety.py`, `web/whatsapp*.py`, `adapters/ai.py`, `adapters/transcription.py`, `adapters/extraction.py`, `documents/` (salvo `inbound_email.py`) | [03 · Cerebro](docs/areas/03-cerebro.md) |

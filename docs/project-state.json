@@ -7,7 +7,7 @@
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
   "schema_version": 61,
   "conversation_transport_candidate_2026_09_24": "Local no publicado: esquemas 59/60, memoria por actor y transporte previo a vinculacion. NOESIS_CONVERSATION_ISOLATION_ENABLED y NOESIS_WHATSAPP_INBOX_ENABLED false por defecto. FIFO, acuse tras commit, incidencias sin replay automatico. 96 pruebas dirigidas correctas (71.801 s) y 460 backend/webhook correctas (397.517 s); Ruff, secretos y verdad documental correctos. Suite completa 1197 corresponde al bloque previo. Requiere CI PostgreSQL, procedimiento de revision/retencion y Meta real antes de activar.",
-  "verified_test_count": 1396,
+  "verified_test_count": 1414,
   "whatsapp_rounds_2026_10_01": "Producción hasta c52d3e2: presupuestos, citas (cancelar/mover), facturas de varias líneas, gasto a obra, abrir obra, ranking de clientes, pendientes, resumen semanal y abreviaturas de móvil por WhatsApp, todo con tarjeta de SÍ. Probado en real por WhatsApp Web (descartado con NO) y en simulador local. cryptography 50. Voz real sin probar.",
   "release_gate_2026_09_25": "CI 36131891167 completamente verde sobre 9357a39: 1223 tests en 555.019 s, seguridad, migraciones SQLite, 36 rutas PostgreSQL y rollback/compatibilidad/recuperacion. Cambios posteriores solo documentales. Founder autoriza publicar; mantener flags nuevos apagados y Meta intacto. Verificar ready tras despliegue.",
   "validation_2026_09_21": "CI 35578171354 verde sobre 1dc65aa1a79a6bcacfd1057b1b2afd317d7734e5: 974 pruebas (402.446 s), seguridad, Node, migraciones SQLite y humos PostgreSQL con compatibilidad anterior/rollback. Railway b88619b7-6da0-4b68-83ab-fec3194a9897 SUCCESS; health/ready verifican release 1dc65aa1a79a y esquema 56. Cierre documental sin cambios de runtime.",
@@ -15,7 +15,7 @@
     "url": "https://bynoesis.com",
     "last_baseline_deployment": "verified",
     "readiness": "verified",
-    "current_repository_candidate_deployed": true,
+    "current_repository_candidate_deployed": false,
     "verified_release_2026_09_25": "0fd05e81ade203b176837cd84ee086a1b94ae749 desplegado: Railway f9210b88-2726-4f50-b701-36a86e8a9d0b SUCCESS, ready esquema 60. health/ready/portada/login HTTP200. Copia PostgreSQL creada y restauracion comprobada (ok true, 4.31 s). Flags CONVERSATION_ISOLATION_ENABLED y WHATSAPP_INBOX_ENABLED verificados False. Meta sin modificar. Contratos locales del socio excluidos.",
     "pending_after_deploy": "Codigo df113b1fbe18 publicado el 24-sep tras CI 36012914685 verde (1189 tests); Railway b668b4c1-d161-4f7c-a0fb-a763ede45d2a SUCCESS, ready esquema 58. QA autenticada: summary, series, analysis, costs/breakdown, expenses e invoices 200; gasto 45 y borradores 120/95.40 conservados. Copia previa restaurada/verificada. Sin cambiar flags: revision y planificador ya estaban activos; aprendizaje apagado. Pendientes: Meta real, Stripe live, restauracion externa, legal y piloto. Contrato local del socio no incluido.",
     "financial_core_phase0_release": {
@@ -192,11 +192,11 @@
   ],
   "admin_workspace_release": "seven_departments_scoped_monthly_api_usage_owner_phone_search_mobile_disclosure_explicit_metric_sources_refresh_no_schema_changes_deployment_verification_after_push",
   "financial_core": {
-    "authorized_phase": 0,
-    "status": "phase0_complete",
+    "authorized_phase": "1.1",
+    "status": "phase1_1_contracts_complete_local",
     "next_phase_authorized": false,
     "governance": "docs/architecture/README.md",
-    "closure": "docs/architecture/FASE-0-cierre.md",
+    "closure": "docs/architecture/FASE-1.1-cierre.md",
     "schema_changed": false,
     "operational_events_are_economic_events": false,
     "money_contract": "Decimal; EUR HALF_UP; PostgreSQL NUMERIC; SQLite canonical TEXT; legacy unchanged",
@@ -208,7 +208,22 @@
       "NOESIS_NEW_TAX_ENGINE_ENABLED": false,
       "NOESIS_NEW_BANK_RECONCILIATION_ENABLED": false
     },
-    "validation": {
+    "dependency_gate": "pypdf 6.19.0 and urllib3 2.8.0; pip-audit clean after lock refresh",
+    "not_implemented": [
+      "economic_events_persistence",
+      "economic_event_producers",
+      "financial_operations",
+      "financial_authorizations",
+      "journal_entries",
+      "journal_lines",
+      "chart_of_accounts",
+      "open_items",
+      "tax_ledger",
+      "new_reporting",
+      "posting",
+      "VERIFACTU_changes"
+    ],
+    "phase0_validation": {
       "new_sqlite_money_flags": 16,
       "new_postgres": 6,
       "postgres_hot_routes": 36,
@@ -222,17 +237,44 @@
       "remote_full_suite_seconds": 542.91,
       "remote_postgres_passed": 6
     },
-    "dependency_gate": "pypdf 6.19.0 and urllib3 2.8.0; pip-audit clean after lock refresh",
-    "not_implemented": [
-      "economic_events",
-      "journal_entries",
-      "journal_lines",
-      "chart_of_accounts",
-      "open_items",
-      "tax_ledger",
-      "new_reporting",
-      "posting",
-      "VERIFACTU_changes"
-    ]
+    "plan": "docs/architecture/FASE-1-plan.md",
+    "contracts": "docs/architecture/ECONOMIC-EVENTS-v1.md",
+    "phase0_complete": true,
+    "phase1_complete": false,
+    "validation": {
+      "contracts": 21,
+      "money_flags_sqlite": 16,
+      "full_suite": 1414,
+      "full_suite_seconds": 874.087,
+      "full_suite_conclusion": "OK",
+      "final_targeted": 37,
+      "final_targeted_seconds": 0.226,
+      "full_suite_contracts_discovered": 18,
+      "later_added_contracts_validated": 3,
+      "postgres_foundations": 6,
+      "postgres_hot_routes": 36,
+      "sqlite_migration_cycle": "0->61->0->61",
+      "ruff": true,
+      "bandit": true,
+      "secrets": true,
+      "dependency_audit": true,
+      "lock_check": true,
+      "project_truth": true,
+      "node": 3,
+      "autoaudit": true,
+      "remote_ci": false,
+      "deployed": false
+    },
+    "event_contract": {
+      "types": 11,
+      "payload_version": 1,
+      "canonical_version": 1,
+      "persistence": false,
+      "producers": false,
+      "financial_effects": false,
+      "business_id_required": true,
+      "money_json": "decimal strings",
+      "ai_authority": false
+    }
   }
 }
