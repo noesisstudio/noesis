@@ -57,7 +57,7 @@ jobs:
         run: uv run ruff check src tests
 
       - name: Validar demostración pública y calendario sin red
-        run: node --test tests/public_marketing.test.cjs tests/public_calendar.test.cjs tests/admin_economia.test.cjs
+        run: node --test tests/public_marketing.test.cjs tests/public_calendar.test.cjs tests/admin_economia.test.cjs tests/financial_channels.test.cjs
 
       - name: Validar la font de veritat del projecte
         shell: bash
@@ -176,6 +176,9 @@ jobs:
 
       - name: Validar recibidas y gastos capturados, continuidad y carreras reales
         run: uv run python -m unittest tests.postgres_purchasing_capture.PurchasingCapturePostgres
+
+      - name: Validar bridges, autorizaciones, procesos y retries de canales
+        run: uv run python -m unittest tests.postgres_financial_channels.FinancialChannelsPostgres
 
       - name: Obtener código base para rollback seguro
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

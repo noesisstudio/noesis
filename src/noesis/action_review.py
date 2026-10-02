@@ -581,6 +581,18 @@ def respond(bid: int, actor: str, text: str) -> dict | None:
     temporal, y ejecutar por su transacción compartida; nunca usar esta eliminación
     como evidencia de autorización. Protocolo en docs/architecture/FINANCIAL-OPERATIONS-v1.md.
     """
+    from . import config
+    if config.FINANCIAL_CORE_ENABLED:
+        from .financial_channels.tools import respond as captured_respond, CAPTURED_TOOLS
+        try:
+            captured = captured_respond(bid, actor, text)
+            if captured is not None:
+                return captured
+            old = db.get_pending_action(bid, actor)
+            if old and old['kind'] == 'reviewed_tool' and json.loads(old['payload']).get('tool') in CAPTURED_TOOLS:
+                return {'reply':'Esta propuesta necesita una nueva revisión financiera. Repite la orden.', 'source':'local'}
+        except (ValueError, TypeError, PermissionError) as exc:
+            return {'reply':str(exc), 'source':'local', 'action_result':'failed'}
     norm = nlu._norm(text)
     # «si, genera el pdf» es un sí: antes no lo era, la propuesta se quedaba sin
     # confirmar y la frase se reinterpretaba como una petición nueva. Lo que

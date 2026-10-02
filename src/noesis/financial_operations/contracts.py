@@ -194,6 +194,18 @@ class EntryIdentity:
         return cls._derive(EntryNamespace.DOCUMENT_REVIEW, [positive_id(document_id), positive_id(revision)])
 
     @classmethod
+    def whatsapp_scoped(cls, provider, recipient, business_id, message_id, action_index=1, version=1):
+        if any(not isinstance(v, str) or not v.strip() or len(v) > 256 for v in (provider, recipient, message_id)):
+            raise ValueError('Provider/receptor/recibo real requeridos.')
+        return cls._derive(EntryNamespace.WHATSAPP, [provider, recipient, positive_id(business_id),
+                          message_id, positive_id(action_index), positive_id(version)])
+
+    @classmethod
+    def reviewed_document(cls, review_uuid, document_id, item=1, version=1):
+        return cls._derive(EntryNamespace.DOCUMENT_REVIEW, [uuid_text(review_uuid), positive_id(document_id),
+                          positive_id(item), positive_id(version)])
+
+    @classmethod
     def recurring(cls, schedule_id, cycle):
         if type(cycle) is not date:
             raise ValueError("Ciclo civil explícito requerido.")

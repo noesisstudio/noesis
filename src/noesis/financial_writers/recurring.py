@@ -7,7 +7,9 @@ from . import invoices, readers
 from .boundary import run
 
 
-def _mutate_cycle(conn, recurring_id, business_id, scheduled_for, *, today=None):
+def _mutate_cycle(conn, recurring_id, business_id, scheduled_for, *, today=None, draft_only=False):
+    from noesis import config
+    draft_only = draft_only or config.FINANCIAL_CORE_ENABLED
     today = today or db.date.today()
     lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
     schedule = conn.execute(
@@ -57,7 +59,7 @@ def _mutate_cycle(conn, recurring_id, business_id, scheduled_for, *, today=None)
         notes=schedule.get("notes"),
         payment_method=schedule.get("payment_method"),
     )
-    if schedule.get("auto_issue"):
+    if schedule.get("auto_issue") and not draft_only:
         invoice = invoices._mutate_issue_invoice(conn, invoice["id"], business_id)
     next_day = db._advance_recurring_day(
         db.date.fromisoformat(scheduled_for), schedule["cadence"], int(schedule["interval_count"])
@@ -70,6 +72,12 @@ def _mutate_cycle(conn, recurring_id, business_id, scheduled_for, *, today=None)
         "WHERE id=? AND business_id=?",
         (invoice["id"], completed_at, run_row["id"], business_id),
     )
+    if draft_only:
+        from noesis.financial_channels.recurring import template_hash
+        exact_schedule = conn.execute_exact('SELECT * FROM recurring_invoices WHERE business_id=? AND id=?',
+                                            (business_id,recurring_id)).fetchone()
+        conn.execute('UPDATE recurring_invoice_runs SET financial_template_hash=? WHERE id=? AND business_id=?',
+                     (template_hash(exact_schedule),run_row['id'],business_id))
     conn.execute(
         "UPDATE recurring_invoices SET next_run_on=?,status=?,last_generated_at=?,updated_at=? "
         "WHERE id=? AND business_id=?",
@@ -78,12 +86,12 @@ def _mutate_cycle(conn, recurring_id, business_id, scheduled_for, *, today=None)
     return invoice
 
 
-def generate_cycle(borrowed, recurring_id, business_id, scheduled_for, *, today=None, legacy=False):
+def generate_cycle(borrowed, recurring_id, business_id, scheduled_for, *, today=None, legacy=False, draft_only=False):
     return run(
         _mutate_cycle,
         borrowed,
         (recurring_id, business_id, scheduled_for),
-        {"today": today},
+        {"today": today, "draft_only": draft_only},
         kind="invoice",
         legacy=legacy,
     )

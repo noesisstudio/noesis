@@ -6296,6 +6296,9 @@ def set_recurring_invoice_status(
 
 def process_due_recurring_invoices(*, today: date | None = None, limit: int = 100) -> list[dict]:
     """Genera una vez cada vencimiento; emitir automáticamente es opt-in."""
+    if config.FINANCIAL_CORE_ENABLED:
+        from .financial_channels.recurring import process_due
+        return process_due(today=today,limit=limit)
     from .financial_writers import recurring
     from .financial_writers.boundary import observe
     today = today or date.today()
@@ -14039,7 +14042,7 @@ def delete_business_cascade(business_id) -> bool:
                 "Solicita una baja con conservación fiscal."
             )
         # La baja no destruye evidencia durable del núcleo financiero.
-        for financial_table in ("financial_operations", "financial_authorizations",
+        for financial_table in ("financial_channel_proposals", "financial_channel_receipts", "financial_operations", "financial_authorizations",
                                 "economic_events", "economic_event_links",
                                 "invoice_economic_coverage", "payment_economic_coverage",
                                 "bank_import_coverage", "bank_match_coverage", "bank_payment_links",
@@ -14063,6 +14066,7 @@ def delete_business_cascade(business_id) -> bool:
             )
         # Primero confirma todas las eliminaciones referenciales en la base de datos.
         for table in (
+            'financial_channel_receipts', 'financial_channel_proposals',
             # Vacías tras la comprobación anterior; no borrar evidencia para la baja.
             "supplier_invoice_economic_coverage", "expense_economic_coverage",
             "bank_match_coverage", "bank_import_coverage", "payment_economic_coverage", "bank_payment_links",

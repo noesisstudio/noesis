@@ -1,6 +1,19 @@
 # AGENTS.md - Manual del proyecto Bynoesis
 
-## Orden vigente — exclusivamente Fase1.7
+## Orden vigente — exclusivamente Fase 1.8
+
+Fases 1.1–1.7 aceptadas. Solo bridges autenticados de web, chat/tools,
+WhatsApp, revisión documental y recurrentes hacia los cinco Capture existentes.
+Identidad durable, request exacto, autorización humana antes de consumir pending,
+ejecución idempotente y recuperación de respuesta. La IA solo propone.
+Recurrentes: borrador + confirmación humana por vencimiento; auto_issue no es
+mandato. CSV: revisión por fila, upload no autoriza. Cinco flags OFF. No 1.9,
+activación, nuevos eventos, GL, Tax Ledger, Open Items ni cambios de VERI*FACTU.
+Leer [orden](docs/architecture/FASE-1.8-orden.md), [inventario previo](docs/architecture/FASE-1.8-entrada-audit.md), [ADR-012](docs/architecture/ADR-012-financial-channels.md), [contrato de canales](docs/architecture/FINANCIAL-CHANNELS-v1.md) y [cierre](docs/architecture/FASE-1.8-cierre.md).
+Las órdenes y cierres inferiores son históricos; no amplían esta autorización.
+
+
+## Referencia histórica de Fase 1.7
 
 1.1–1.6 aceptadas. SupplierInvoiceCapture/ExpenseCapture conectan solo
 supplier_invoice.confirmed/corrected/voided y expense.confirmed/voided v1.
@@ -16,8 +29,8 @@ del manual siguen vigentes.
 
 > Para Financial Core, leer [gobernanza y ADR](docs/architecture/README.md) y
 > [guía 08](docs/areas/08-financial-core.md). Fase 0 cerrada; Fase 1
-> planificada y aprobada como referencia. 1.1–1.6 aceptadas; solo 1.7 autorizada:
-> recibidas y gastos, con cobertura por revisión y conservación del origen;
+> planificada y aprobada como referencia. 1.1–1.7 aceptadas; solo 1.8 autorizada:
+> bridges de canal con identidad y aprobación durable;
 > flags apagados y sin activación.
 > Leer [plan](docs/architecture/FASE-1-plan.md),
 > [contrato v1](docs/architecture/ECONOMIC-EVENTS-v1.md),

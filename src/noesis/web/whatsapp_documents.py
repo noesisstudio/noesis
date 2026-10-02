@@ -229,6 +229,11 @@ def _unfinished(pending: dict | None) -> int:
 
 
 def _save(business_id: int, phone: str, payload: dict) -> None:
+    if config.FINANCIAL_CORE_ENABLED:
+        from uuid import uuid4
+        payload.setdefault('review_uuid',str(uuid4()))
+        for item in payload.get('items',[]):
+            item.setdefault('financial_revision',1)
     db.set_pending_action(
         business_id, review_key(phone), PENDING_KIND, payload,
         ttl_minutes=REVIEW_TTL_MINUTES,
@@ -429,6 +434,34 @@ def _register(business: dict, item: dict, values: dict) -> str:
     return f"Archivado como {review.ARCHIVE_LABELS.get(kind, kind)} ✅."
 
 
+def complete_captured(business_id, phone, response):
+    """Avanzar la cola documental después del commit; replay conserva el efecto."""
+    doc_id = response.get('document_id')
+    if response.get('action_result') != 'completed' or doc_id is None:
+        return
+    with db.get_conn() as conn:
+        conn.execute('BEGIN IMMEDIATE')
+        row = conn.execute('SELECT * FROM whatsapp_pending_actions WHERE business_id=? AND phone=?' +
+                           (' FOR UPDATE' if conn.dialect == 'postgres' else ''),
+                           (business_id,review_key(phone))).fetchone()
+        if not row or row['kind'] != PENDING_KIND:
+            return
+        payload = json.loads(row['payload'])
+        index = int(payload.get('index',0))
+        if payload['items'][index].get('document_id') != doc_id:
+            return
+        payload['items'][index]['done'] = True
+        payload['index'] = index + 1
+        conn.execute('DELETE FROM whatsapp_pending_actions WHERE business_id=? AND phone=? AND id=?',
+                     (business_id,review_key(phone),row['id']))
+        if payload['index'] < len(payload['items']):
+            conn.execute('INSERT INTO whatsapp_pending_actions (business_id,phone,kind,payload,expires_at,created_at) '
+                         'VALUES (?,?,?,?,?,?)',(business_id,review_key(phone),PENDING_KIND,
+                         json.dumps(payload,ensure_ascii=False),row['expires_at'],db._now()))
+            response['reply'] += '\n\n' + review.render(payload['items'][payload['index']],
+                                                      position=payload['index']+1,count=len(payload['items']))
+
+
 def _close_origin(business_id: int, payload: dict) -> None:
     """Un original con varias facturas sin separar queda revisado al terminar la cola."""
     doc_id = payload.get("document_id")
@@ -460,6 +493,35 @@ def _confirm_current(business: dict, phone: str, payload: dict) -> str:
     items = payload["items"]
     index = int(payload["index"])
     item = items[index]
+    if config.FINANCIAL_CORE_ENABLED and item.get('mode') in {'gasto','recibida'}:
+        from dataclasses import replace
+        from noesis.financial_channels import ChannelContext, FinancialChannels, current
+        from noesis.financial_operations.contracts import EntryIdentity
+        ctx = current.get()
+        if not isinstance(ctx,ChannelContext) or ctx.business_id != business['id']:
+            return 'Falta un mensaje autenticado. Revisa y confirma el documento en la web.'
+        state = review.evaluate(item,exact=True)
+        if not state['ready']:
+            return review.render(item,position=index+1,count=len(items))
+        doc_id = item.get('document_id')
+        if not doc_id or item.get('origin_document_id'):
+            return 'Este lote necesita revisión individual en Documentos; no he registrado nada.'
+        _save(business['id'],phone,payload)
+        v = state['values']
+        if item['mode'] == 'gasto':
+            fields = {'document_id':doc_id,'concept':v.get('concept') or v.get('supplier') or 'Ticket',
+                      'amount':v['total'],'spent_on':v.get('issued_on'),'vat_amount':v.get('vat_amount')}
+            command = 'expense.confirm'
+        else:
+            fields = {key:v.get(key) for key in ('number','concept','issued_on','due_on','base','vat_amount','irpf_amount','total')}
+            fields.update(document_id=doc_id,supplier_name=v.get('supplier'),supplier_nif=v.get('supplier_nif'))
+            command = 'supplier_invoice.confirm'
+        if v.get('vat_rate') is not None:
+            fields['vat_rate'] = str(v['vat_rate'])
+        identity = EntryIdentity.reviewed_document(payload['review_uuid'],doc_id,index+1,item.get('financial_revision',1))
+        document_ctx = replace(ctx,identity=identity,transport_identity=ctx.identity)
+        result = FinancialChannels(document_ctx).propose({'command':command,'target_id':None,'fields':fields},pending_actor=ctx.actor)
+        return result['reply']
     state = review.evaluate(item)
     if not state["ready"]:
         reasons = state["issues"] + [f"Me falta {missing}." for missing in state["missing"]]
@@ -543,6 +605,8 @@ def handle_reply(business: dict, phone: str, text: str) -> str | None:
     if channel._is_yes(text) or folded in _CONFIRM_WORDS:
         return _confirm_current(business, phone, payload)
     if len(items) - index > 1 and _CONFIRM_ALL.fullmatch(folded):
+        if config.FINANCIAL_CORE_ENABLED:
+            return 'Confirma cada documento por separado; TODAS no autoriza un lote financiero.'
         return _confirm_all(business, phone, payload)
     if _STOP.fullmatch(folded):
         db.clear_pending_action(business_id, review_key(phone))
@@ -562,6 +626,8 @@ def handle_reply(business: dict, phone: str, text: str) -> str | None:
     correction = re.sub(r"^\s*no\s*[,.:;]?\s+(?=\S)", "", text, flags=re.I)
     changed, unknown = review.apply_correction(item, correction)
     if changed:
+        if config.FINANCIAL_CORE_ENABLED:
+            item['financial_revision'] = item.get('financial_revision',1) + 1
         _save(business_id, phone, payload)
         labels = list(dict.fromkeys(review.LABELS.get(field, field) for field in changed))
         reply = "Cambiado: " + ", ".join(labels) + "."

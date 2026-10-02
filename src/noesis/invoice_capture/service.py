@@ -123,7 +123,7 @@ class InvoiceCapture:
             raise StateError("Una emisión ordinaria no rectifica otro evento.")
         return source.revision
 
-    def prepare(self, principal, identity, request):
+    def prepare(self, principal, identity, request, *, preparation_recorder=None):
         if not isinstance(identity, EntryIdentity) or not isinstance(request, FinancialRequest):
             raise TypeError("Identidad autenticada y request de revisión requeridos.")
         with self.operations._transaction(principal) as (session, repo):
@@ -131,6 +131,8 @@ class InvoiceCapture:
             operation = repo.prepare(principal, identity, request, _now())
             if operation.state == OperationState.PREPARED:
                 self.operations._revision(session, request, self._validate)
+            if preparation_recorder is not None:
+                preparation_recorder(session, operation)
             return operation
 
     def authorize(self, principal, operation_uuid, **approval):

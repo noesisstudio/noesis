@@ -1,5 +1,15 @@
 # Captura interna de recibidas y gastos v1 — exclusivamente Fase1.7
 
+## Conexión vigente de Fase 1.8
+
+Los contratos de esta entrega permanecen vigentes. Los cinco Capture se invocan
+ahora desde bridges autenticados, detrás del gate apagado del Core. La autoridad
+sigue en FinancialOperations; la IA prepara, nunca aprueba. No cambian catálogo,
+payloads, fiscalidad ni writers. [ADR-012](ADR-012-financial-channels.md) y
+[contrato de canales](FINANCIAL-CHANNELS-v1.md). Los límites de no conexión en el
+cierre original describen aquella entrega histórica, no esta fase autorizada.
+
+
 [Orden humana](FASE-1.7-orden.md), [auditoría previa](FASE-1.7-entrada-audit.md),
 [ADR-011](ADR-011-purchasing-capture.md). No1.8 ni activación. Catálogo/payloads
 [v1](ECONOMIC-EVENTS-v1.md) y canonicalización intactos.

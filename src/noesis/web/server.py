@@ -40,6 +40,7 @@ from .routers import (
     clients,
     documents,
     finance,
+    financial_actions,
     gestoria,
     gestoria_portal,
     invoicing,
@@ -403,6 +404,7 @@ app.include_router(account.router)
 
 # ================================================================= API ====== #
 app.include_router(finance.router)
+app.include_router(financial_actions.router)
 app.include_router(team.router)
 app.include_router(clients.router)
 app.include_router(invoicing.router)

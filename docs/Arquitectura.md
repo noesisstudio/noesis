@@ -1,5 +1,42 @@
 # Arquitectura
 
+## 2026-10-02 — Fase 1.8, canales financieros
+
+```text
+Canal autenticado + recibo durable
+  → financial_channels (interpretación cerrada, tarjeta exacta)
+    → Capture.review / prepare (request + enlace + acuse review)
+    → humano confirma op/hash/revisión
+    → Capture.authorize (auth + recibo yes + pending CAS en commit)
+    → Capture.execute (writer + cobertura + EE + result en commit)
+  → respuesta HTTP / outbox Meta / PDF después del efecto
+```
+
+Monolito modular: repositorios financieros especializados y la infraestructura
+existente de conexiones/transacciones; FinancialSession/execute_exact mantiene
+Decimal/NUMERIC (SQLite TEXT canónico), sin normalización financiera a float.
+Orden compartido de locks: negocio antes de operación y origen/pending/recurrencia.
+La IA no selecciona ejecutores ni acredita aprobación.
+
+Solo integración de canales con los Capture existentes, sin 1.9 ni activación.
+`financial_channels/` enlaza propuestas y recibos mínimos con operaciones y
+aprobaciones; no añade un motor financiero ni un event log operativo. Web exige
+sesión/CSRF y UUID; chat turno/slot; WhatsApp provider/receptor/negocio/wamid;
+documentos review UUID/documento/item/revisión; recurrentes schedule/vencimiento.
+Autorización + recibo + consumo de pending atómicos; efecto posterior reintentable
+con la misma operación. Scheduler genera borradores y exige confirmación humana;
+no mandato abierto. Migración 68, enlaces inmutables y huella mínima de plantilla.
+Cinco flags siguen OFF, guards capturados conservados y opt-in sin fallback.
+Cierre técnico: **31 PASS / 0 FAIL**. Nuevas SQLite41/PG41, PostgreSQL total234,
+general1617 (1298.519 s), Node9 y gates locales PASS. Último transporte de
+revisión revalidado en ambos motores/HTTP/Node; alcance exacto en el [cierre](architecture/FASE-1.8-cierre.md).
+Incluye autoauditorías, límites externos y diagnóstico/rollback.
+Pendientes externos: CI remoto/despliegue y Meta real no certificados aquí;
+activación y otra fase solo con nueva orden. CSV antiguo sin cuenta/batch y audio sin UUID quedan bloqueados
+para mutaciones capturadas. Históricos, retención/export financiero y rollout
+siguen en fases posteriores expresamente autorizadas.
+
+
 ## Orden vigente — exclusivamente Fase1.7
 
 1.1–1.6 aceptadas. SupplierInvoiceCapture/ExpenseCapture conectan solo

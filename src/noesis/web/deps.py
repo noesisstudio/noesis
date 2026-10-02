@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from datetime import date, datetime
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -38,6 +39,7 @@ def _asset_version() -> str:
 TEMPLATES.env.globals["asset_v"] = _asset_version()
 # Dominio público: lo usan las etiquetas canónicas y de compartición social.
 TEMPLATES.env.globals["base_url"] = config.BASE_URL
+TEMPLATES.env.globals['financial_core_enabled'] = lambda: config.FINANCIAL_CORE_ENABLED
 TEMPLATES.env.globals["public_signup_available"] = config.public_signup_available()
 TEMPLATES.env.globals["public_contact_email"] = config.PUBLIC_CONTACT_EMAIL
 # Vacío: la web pública no pinta aviso de cookies ni carga Google Analytics.
@@ -370,6 +372,19 @@ async def auth_guard(request: Request, call_next):
                 f"/b/{own_business_id}/suscripcion?status=readonly",
                 status_code=303,
             )
+    from ..financial_channels.tools import legacy_financial_path
+    financial_path = legacy_financial_path(path, request.method) or (
+            request.method == 'POST' and re.fullmatch(r'/b/[0-9]+/bank-import', path))
+    capture_requested = request.headers.get('x-noesis-financial-capture') == '1'
+    if financial_path and not config.FINANCIAL_CORE_ENABLED and request.headers.get('content-type','').startswith('application/json'):
+        try:
+            body = await _read_json(request)
+            capture_requested = capture_requested or body.get('capture_requested') is True
+        except ValueError:
+            pass  # La ruta conserva su validación; no interpreta esto como opt-in.
+    if financial_path and (config.FINANCIAL_CORE_ENABLED or capture_requested):
+            return JSONResponse({'error':'Esta acción necesita revisión financiera y confirmación exacta.',
+                                 'code':'financial_review_required'}, status_code=409)
     return await call_next(request)
 
 

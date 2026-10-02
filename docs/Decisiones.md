@@ -1,5 +1,26 @@
 # Decisiones
 
+## 2026-10-02 — Fase 1.8, canales financieros
+
+Solo integración de canales con los Capture existentes, sin 1.9 ni activación.
+`financial_channels/` enlaza propuestas y recibos mínimos con operaciones y
+aprobaciones; no añade un motor financiero ni un event log operativo. Web exige
+sesión/CSRF y UUID; chat turno/slot; WhatsApp provider/receptor/negocio/wamid;
+documentos review UUID/documento/item/revisión; recurrentes schedule/vencimiento.
+Autorización + recibo + consumo de pending atómicos; efecto posterior reintentable
+con la misma operación. Scheduler genera borradores y exige confirmación humana;
+no mandato abierto. Migración 68, enlaces inmutables y huella mínima de plantilla.
+Cinco flags siguen OFF, guards capturados conservados y opt-in sin fallback.
+Cierre técnico: **31 PASS / 0 FAIL**. Nuevas SQLite41/PG41, PostgreSQL total234,
+general1617 (1298.519 s), Node9 y gates locales PASS. Último transporte de
+revisión revalidado en ambos motores/HTTP/Node; alcance exacto en el [cierre](architecture/FASE-1.8-cierre.md).
+Incluye autoauditorías, límites externos y diagnóstico/rollback.
+Pendientes externos: CI remoto/despliegue y Meta real no certificados aquí;
+activación y otra fase solo con nueva orden. CSV antiguo sin cuenta/batch y audio sin UUID quedan bloqueados
+para mutaciones capturadas. Históricos, retención/export financiero y rollout
+siguen en fases posteriores expresamente autorizadas.
+
+
 ## 2026-10-02 — ADR-011, cobertura económica de compras por revisión
 
 Dos coberturas específicas con reserva previa a correct/void y adjunción única.

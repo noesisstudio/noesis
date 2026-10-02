@@ -1,5 +1,17 @@
 # 02 · Ramas de la empresa
 
+## Financial Core — canales capturados
+
+Con el Core activo, los canales financieros pasan por `financial_channels/` y
+Capture: identidad de servidor, propuesta congelada, autorización durable antes
+de consumir el pending y ejecución idempotente. La IA no autoriza ni recibe
+writers/identidades. Con flags OFF permanece legacy no capturado; opt-in explícito
+nunca hace fallback. Fuente capturada conserva guards. Recurrentes preparan
+borradores sin emitir; CSV se confirma por fila. Documento/OCR no es autoridad.
+[Contrato y límites](../architecture/FINANCIAL-CHANNELS-v1.md),
+[ADR-012](../architecture/ADR-012-financial-channels.md). Ningún flag activado.
+
+
 > Léela antes de tocar una pantalla, un portal, `/admin`, la web pública o los
 > flujos de alta. Figura 2 del [mapa visual](../02-tecnico/Mapa-Bynoesis.html).
 

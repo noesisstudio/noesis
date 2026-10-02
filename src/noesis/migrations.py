@@ -4344,6 +4344,16 @@ def _downgrade_payment_bank_capture(conn):
     downgrade(conn)
 
 
+def _upgrade_financial_channels(conn):
+    from .financial_channels.schema import upgrade
+    upgrade(conn)
+
+
+def _downgrade_financial_channels(conn):
+    from .financial_channels.schema import downgrade
+    downgrade(conn)
+
+
 def _upgrade_purchasing_capture(conn):
     from .purchasing_capture.schema import upgrade
     upgrade(conn)
@@ -4461,6 +4471,7 @@ MIGRATIONS: tuple[Migration, ...] = (
     (65, "cobertura_emision_capturada", _upgrade_invoice_capture, _downgrade_invoice_capture),
     (66, "cobertura_cobros_banco_capturados", _upgrade_payment_bank_capture, _downgrade_payment_bank_capture),
     (67, "cobertura_recibidas_gastos_capturados", _upgrade_purchasing_capture, _downgrade_purchasing_capture),
+    (68, "enlaces_canales_financieros", _upgrade_financial_channels, _downgrade_financial_channels),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

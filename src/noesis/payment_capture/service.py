@@ -154,7 +154,7 @@ class PaymentCapture:
             raise StateError('Contexto de liquidación stale; revisar de nuevo.')
         return source.revision
 
-    def prepare(self, principal, identity, request):
+    def prepare(self, principal, identity, request, *, preparation_recorder=None):
         if not isinstance(identity, EntryIdentity) or not isinstance(request, FinancialRequest):
             raise TypeError('Identidad y request tipados requeridos.')
         with self.operations._transaction(principal) as (session, repo):
@@ -162,6 +162,8 @@ class PaymentCapture:
             operation = repo.prepare(principal, identity, request, _now())
             if operation.state == OperationState.PREPARED:
                 self._validate(session, request, principal)
+            if preparation_recorder is not None:
+                preparation_recorder(session, operation)
             return operation
 
     def authorize(self, principal, operation_uuid, **approval):

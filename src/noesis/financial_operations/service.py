@@ -123,19 +123,28 @@ class FinancialOperations:
         return row
 
     def authorize(self, principal, operation_uuid, *, channel, approved_hash, approved_revision,
-                  kind=AuthorizationKind.HUMAN, mandate_uuid=None, revision_reader=None, request_validator=None):
+                  kind=AuthorizationKind.HUMAN, mandate_uuid=None, revision_reader=None, request_validator=None,
+                  approval_recorder=None):
         """La revisión temporal se puede consumir solo DESPUÉS de confirmar este recibo."""
         kind, channel = AuthorizationKind(kind), EntryNamespace(channel)
         with self._transaction(principal) as (session, repo):
+            guard = getattr(self, "_channel_guard", None)
+            if guard is not None:
+                guard(session, None, "lock")
             row = repo.load(operation_uuid, principal.user_id)
             operation = Operation.from_row(row)
             request = operation.request
+            guard = getattr(self, "_channel_guard", None)
+            if guard is not None:
+                guard(session, operation, "authorize")
             if approved_hash != request.request_hash or approved_revision != request.expected_revision:
                 raise StateError("Contenido/revisión aprobados no coinciden.")
             if approved_revision is not None and type(approved_revision) is not int:
                 raise StateError("Revisión aprobada inválida.")
             if row["state"] != OperationState.PREPARED.value:
                 if row["state"] in (OperationState.APPROVED.value, OperationState.COMMITTED.value):
+                    if approval_recorder is not None:
+                        approval_recorder(session, operation)
                     return operation
                 raise StateError("Operación terminal no autorizable.")
             if kind == AuthorizationKind.HISTORICAL_UNKNOWN and row["authorization_uuid"] is not None:
@@ -164,7 +173,10 @@ class FinancialOperations:
                 now=_now(), mandate_uuid=mandate_uuid)
             repo.transition(row, OperationState.PREPARED if historical else OperationState.APPROVED,
                             _now(), authorization_uuid=authorization_uuid)
-            return Operation.from_row(repo.load(operation_uuid, principal.user_id))
+            operation = Operation.from_row(repo.load(operation_uuid, principal.user_id))
+            if approval_recorder is not None:
+                approval_recorder(session, operation)
+            return operation
 
     def revoke_mandate(self, principal, mandate_uuid):
         with self._transaction(principal) as (_, repo):
@@ -177,8 +189,14 @@ class FinancialOperations:
     def execute(self, principal, operation_uuid, executor, *, revision_reader=None, request_validator=None):
         """Claim por lock; efecto+resultado comparten commit exterior, sin estado executing."""
         with self._transaction(principal) as (session, repo):
+            guard = getattr(self, "_channel_guard", None)
+            if guard is not None:
+                guard(session, None, "lock")
             row = repo.load(operation_uuid, principal.user_id)
             operation = Operation.from_row(row)
+            guard = getattr(self, "_channel_guard", None)
+            if guard is not None:
+                guard(session, operation, "execute")
             if request_validator is not None:
                 request_validator(session, operation.request)
             if operation.state == OperationState.COMMITTED:

@@ -1,5 +1,15 @@
 # ADR-002 · Hechos económicos separados de acontecimientos operativos
 
+## Conexión vigente de Fase 1.8
+
+Los contratos de esta entrega permanecen vigentes. Los cinco Capture se invocan
+ahora desde bridges autenticados, detrás del gate apagado del Core. La autoridad
+sigue en FinancialOperations; la IA prepara, nunca aprueba. No cambian catálogo,
+payloads, fiscalidad ni writers. [ADR-012](ADR-012-financial-channels.md) y
+[contrato de canales](FINANCIAL-CHANNELS-v1.md). Los límites de no conexión en el
+cierre original describen aquella entrega histórica, no esta fase autorizada.
+
+
 Nota vigente1.7: cinco productores de recibidas/gastos v1 con cobertura por
 revisión, continuidad, void lógico y guards. Catálogo/canonicalización intactos.
 [ADR-011](ADR-011-purchasing-capture.md), [API](PURCHASING-CAPTURE-v1.md).

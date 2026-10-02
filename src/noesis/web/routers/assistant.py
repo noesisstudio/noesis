@@ -28,6 +28,7 @@ def api_assistant_memories(business_id: int):
 @router.get("/api/{business_id}/assistant/learning")
 def api_assistant_learning(business_id: int, days: int = 7):
     from ... import learning
+
     return {**learning.report(business_id, days), "rules": learning.rules(business_id)}
 
 
@@ -36,8 +37,12 @@ async def api_assistant_remember(business_id: int, request: Request):
     try:
         body = await _read_json(request)
         memory = db.remember(
-            business_id, body.get("key"), body.get("value"),
-            source="user", confidence=100, user_confirmed=True,
+            business_id,
+            body.get("key"),
+            body.get("value"),
+            source="user",
+            confidence=100,
+            user_confirmed=True,
         )
     except (ValueError, TypeError) as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
@@ -84,6 +89,7 @@ def api_assistant_actions(business_id: int, limit: int = 30):
     """Historial auditable de lo que Bynoesis propuso o llegó a ejecutar."""
     return {"items": db.list_assistant_actions(business_id, limit=limit)}
 
+
 @router.post("/api/{business_id}/chat")
 async def api_chat(business_id: int, request: Request):
     try:
@@ -97,25 +103,63 @@ async def api_chat(business_id: int, request: Request):
         )
     page = str(body.get("page") or "").strip() or None
     business = db.get_business(business_id) or {}
-    if (
-        getattr(request.state, "subscription_read_only", False)
-        and business.get("is_demo")
-    ):
-        return await run_in_threadpool(
-            chat.handle_read_only, business_id, message, page
-        )
-    return await run_in_threadpool(chat.handle, business_id, message, page, actor_id=f"{request.session.get('uid')}:{request.session.get('sv', 0)}")
+    if getattr(request.state, "subscription_read_only", False) and business.get("is_demo"):
+        return await run_in_threadpool(chat.handle_read_only, business_id, message, page)
+    financial_context = None
+    if config.FINANCIAL_CORE_ENABLED:
+        from ...financial_channels import ChannelContext
+        from ...financial_operations.contracts import Principal
+
+        try:
+            from dataclasses import replace
+
+            if set(body) - {"message", "page", "message_uuid", "proposal_ref"}:
+                raise ValueError("Campos de mensaje desconocidos.")
+            financial_context = ChannelContext.web(
+                business_id,
+                Principal(request.session["uid"], request.session.get("sv", 0)),
+                body["message_uuid"],
+                chat=True,
+                message=message,
+            )
+            if body.get("proposal_ref") is not None:
+                reference = body["proposal_ref"]
+                if set(reference) != {"operation_uuid", "request_hash", "revision"}:
+                    raise ValueError("Referencia de tarjeta cerrada requerida.")
+                financial_context = replace(
+                    financial_context,
+                    confirmation_target=(
+                        reference["operation_uuid"],
+                        reference["request_hash"],
+                        reference["revision"],
+                    ),
+                )
+        except (ValueError, KeyError, TypeError) as exc:
+            return JSONResponse(
+                {"error": f"Identidad durable del mensaje requerida: {exc}"}, status_code=400
+            )
+    return await run_in_threadpool(
+        chat.handle,
+        business_id,
+        message,
+        page,
+        actor_id=f"{request.session.get('uid')}:{request.session.get('sv', 0)}",
+        financial_context=financial_context,
+    )
 
 
 @router.post("/api/{business_id}/chat/audio")
 async def api_chat_audio(business_id: int, request: Request, audio: UploadFile = File(...)):
     # Nota de voz -> texto (Whisper privado, Groq o local) -> cerebro local.
     from ...adapters import transcription
+
     actor_id = f"{request.session.get('uid')}:{request.session.get('sv', 0)}"
+
     def audio_error(message: str, status: int):
-        if config.ASSISTANT_REVIEW_ENABLED:
+        if config.ASSISTANT_REVIEW_ENABLED and not config.FINANCIAL_CORE_ENABLED:
             db.clear_pending_action(business_id, f"web:{actor_id}")
         return JSONResponse({"error": message}, status_code=status)
+
     try:
         tr = transcription.get_transcriber()
     except ValueError:
@@ -130,26 +174,34 @@ async def api_chat_audio(business_id: int, request: Request, audio: UploadFile =
     language = (db.get_business(business_id) or {}).get("language")
     try:
         text = await run_in_threadpool(
-            lambda: tr.transcribe(data, audio.filename or "audio",
-                                  language=language)
+            lambda: tr.transcribe(data, audio.filename or "audio", language=language)
         )
     except transcription.NotaNoValida as exc:
         if exc.motivo == "larga":
-            return audio_error("La nota es demasiado larga. Grábala en notas más cortas, de menos de dos minutos, o escribe la orden.", 422)
+            return audio_error(
+                "La nota es demasiado larga. Grábala en notas más cortas, de menos de dos minutos, o escribe la orden.",
+                422,
+            )
         if exc.motivo == "ocupado":
-            return audio_error("El servicio de voz está saturado justo ahora. Vuelve a grabar en unos segundos o escribe la orden.", 422)
-        return audio_error("No he entendido bien el audio. Se ha descartado la propuesta anterior; repítelo más despacio o escribe la orden.", 422)
+            return audio_error(
+                "El servicio de voz está saturado justo ahora. Vuelve a grabar en unos segundos o escribe la orden.",
+                422,
+            )
+        return audio_error(
+            "No he entendido bien el audio. Se ha descartado la propuesta anterior; repítelo más despacio o escribe la orden.",
+            422,
+        )
     except Exception:  # noqa: BLE001
-        return audio_error("No he podido entender el audio. Se ha descartado la propuesta anterior; escribe de nuevo la orden.", 422)
+        return audio_error(
+            "No he podido entender el audio. Se ha descartado la propuesta anterior; escribe de nuevo la orden.",
+            422,
+        )
     if not text:
         return audio_error("El audio estaba vacío o no se entendió.", 422)
     result = await run_in_threadpool(
-        lambda: chat.handle(business_id, text, channel="audio",
-                            actor_id=actor_id, voice=True)
+        lambda: chat.handle(business_id, text, channel="audio", actor_id=actor_id, voice=True)
     )
     return {"transcription": text, **result}
-
-
 
 
 @router.post("/api/{business_id}/language")

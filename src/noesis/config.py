@@ -52,8 +52,8 @@ ASSISTANT_REVIEW_ENABLED = env_bool("NOESIS_ASSISTANT_REVIEW_ENABLED", False)
 ASSISTANT_LEARNING_ENABLED = env_bool("NOESIS_ASSISTANT_LEARNING_ENABLED", False)
 CONVERSATION_ISOLATION_ENABLED = env_bool("NOESIS_CONVERSATION_ISOLATION_ENABLED", False)
 WHATSAPP_INBOX_ENABLED = env_bool("NOESIS_WHATSAPP_INBOX_ENABLED", False)
-# Fundamentos del Financial Core: reservados, sin consumidores en Fase 0.
-# No activan eventos, asientos, impuestos, informes ni cambios fiscales.
+# Financial Core: bridges de Capture probados, apagados hasta activación autorizada.
+# Los flags de ledger/impuestos/reporting siguen reservados, sin motores nuevos.
 FINANCIAL_CORE_ENABLED = env_bool("NOESIS_FINANCIAL_CORE_ENABLED", False)
 LEDGER_REPORTING_ENABLED = env_bool("NOESIS_LEDGER_REPORTING_ENABLED", False)
 OPEN_ITEMS_ENABLED = env_bool("NOESIS_OPEN_ITEMS_ENABLED", False)

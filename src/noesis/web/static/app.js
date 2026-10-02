@@ -16,16 +16,105 @@ const apiResponse = async r => {
   return data;
 };
 const api = (path) => fetch(`/api/${BIZ}${path}`).then(apiResponse);
-const apiPost = (path, body) => fetch(`/api/${BIZ}${path}`, {
+const rawPost = (path, body) => fetch(`/api/${BIZ}${path}`, {
   method: 'POST', headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify(body || {})
 }).then(apiResponse);
-const apiPatch = (path, body) => fetch(`/api/${BIZ}${path}`, {
+const apiPost = (path, body) => window.NOESIS_FINANCIAL_CORE
+  ? financialRequest(path, body || {}, 'POST') : rawPost(path, body);
+const rawPatch = (path, body) => fetch(`/api/${BIZ}${path}`, {
   method: 'PATCH', headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify(body || {})
 }).then(apiResponse);
-const apiDelete = (path) => fetch(`/api/${BIZ}${path}`, { method: 'DELETE' })
+const apiPatch = (path, body) => window.NOESIS_FINANCIAL_CORE
+  ? financialRequest(path, body || {}, 'PATCH') : rawPatch(path, body);
+const rawDelete = (path) => fetch(`/api/${BIZ}${path}`, { method: 'DELETE' })
   .then(apiResponse);
+const apiDelete = (path) => window.NOESIS_FINANCIAL_CORE
+  ? financialRequest(path, {}, 'DELETE') : rawDelete(path);
+
+// Conserva el recibo hasta obtener respuesta; doble clic comparte la promesa.
+const financialFlights = new Map();
+const financialChatKey = `noesis:${BIZ}:${window.NOESIS_SESSION}:shown-proposal`;
+let financialChatProposal = window.NOESIS_FINANCIAL_CORE ? JSON.parse(sessionStorage.getItem(financialChatKey) || 'null') : null;
+const financialDecimal = value => window.NOESIS_FINANCIAL_CORE ? String(value).replace(',', '.') : parseFloat(String(value).replace(',', '.'));
+function financialIntent(path, body, method) {
+  let m;
+  if (method === 'POST' && (m = path.match(/^\/invoices\/(\d+)\/(send|pay|payments)$/))) {
+    return {command:m[2] === 'send' ? 'invoice.issue' : 'customer_payment.record', target_id:Number(m[1]),
+      fields:m[2] === 'send' ? {} : m[2] === 'pay' ? {mode:'remaining'} : body};
+  }
+  if (method === 'POST' && (m = path.match(/^\/bank-transactions\/(\d+)\/confirm$/)))
+    return {command:'bank_transaction.match',target_id:Number(m[1]),fields:{}};
+  if (method === 'POST' && path === '/expenses')
+    return {command:'expense.confirm',target_id:null,fields:body};
+  if (method === 'POST' && path === '/received-invoices')
+    return {command:'supplier_invoice.confirm',target_id:null,fields:body};
+  if (method === 'PATCH' && (m = path.match(/^\/received-invoices\/(\d+)$/)))
+    return {command:'supplier_invoice.correct',target_id:Number(m[1]),fields:{...body,reason:'Corrección revisada en la web'}};
+  if (method === 'DELETE' && (m = path.match(/^\/(expenses|received-invoices)\/(\d+)$/)))
+    return {command:m[1] === 'expenses' ? 'expense.void' : 'supplier_invoice.void',target_id:Number(m[2]),fields:{reason:'Retirada confirmada en la web'}};
+  if (method === 'POST' && (m = path.match(/^\/documents\/(\d+)\/to-expense$/)))
+    return {command:'expense.confirm',target_id:null,fields:{...body,document_id:Number(m[1])}};
+  return null;
+}
+async function financialRequest(path, body, method) {
+  if (path === '/chat') {
+    const key = `noesis:${BIZ}:${window.NOESIS_SESSION}:chat-retry`;
+    const stored = JSON.parse(localStorage.getItem(key) || 'null');
+    const receipt = stored && stored.message === body.message ? stored : {message:body.message,message_uuid:crypto.randomUUID(),proposal_ref:financialChatProposal};
+    localStorage.setItem(key,JSON.stringify(receipt));
+    const result = await rawPost(path,{...body,message_uuid:receipt.message_uuid,proposal_ref:receipt.proposal_ref});
+    if (result.confirmation_required && result.operation_uuid) {
+      financialChatProposal = {operation_uuid:result.operation_uuid,request_hash:result.request_hash,revision:result.revision};
+      sessionStorage.setItem(financialChatKey,JSON.stringify(financialChatProposal));
+    } else if (['completed','discarded'].includes(result.action_result)) {
+      financialChatProposal = null;
+      sessionStorage.removeItem(financialChatKey);
+    }
+    localStorage.removeItem(key);
+    return result;
+  }
+  const intent = financialIntent(path,body,method);
+  if (!intent) return method === 'POST' ? rawPost(path,body) : method === 'PATCH' ? rawPatch(path,body) : rawDelete(path);
+  for (const key of ['amount','total','base','vat_rate','vat_amount','irpf_amount']) {
+    if (typeof intent.fields[key] === 'number') throw new Error('Usa el importe decimal escrito en el formulario.');
+  }
+  const key = `noesis:${BIZ}:${window.NOESIS_SESSION}:${method}:${path}`;
+  if (financialFlights.has(key)) return financialFlights.get(key);
+  const flight = (async () => {
+    let record = JSON.parse(localStorage.getItem(key) || 'null');
+    const content = JSON.stringify(intent);
+    if (record && record.content !== content) throw new Error('Hay una acción pendiente de respuesta. Recupérala antes de cambiar sus datos.');
+    if (!record) record = {action_uuid:crypto.randomUUID(),confirmation_uuid:crypto.randomUUID(),content};
+    localStorage.setItem(key,JSON.stringify(record));
+    // Identificar una rectificativa desde el borrador real, antes de review.
+    if (intent.command === 'invoice.issue') {
+      const invoice = await api(`/invoices/${intent.target_id}`);
+      if (String(invoice.invoice_type || '').startsWith('R')) intent.command = 'invoice.rectify';
+    }
+    const prepare = {action_uuid:record.action_uuid,intent};
+    if (intent.fields.document_id) {
+      record.review_uuid ||= crypto.randomUUID();
+      prepare.document_review = {review_uuid:record.review_uuid,document_id:intent.fields.document_id,item:1,revision:1};
+      localStorage.setItem(key,JSON.stringify(record));
+    }
+    let result = await rawPost('/financial-actions/prepare',prepare);
+    if (result.confirmation_required || record.decision) {
+      if (!record.decision) {
+        record.decision = confirm(result.reply) ? 'yes' : 'no';
+        localStorage.setItem(key,JSON.stringify(record));
+      }
+      result = await rawPost('/financial-actions/confirm',{action_uuid:record.confirmation_uuid,
+        operation_uuid:result.operation_uuid,request_hash:result.request_hash,revision:result.revision,decision:record.decision});
+    }
+    localStorage.removeItem(key);
+    if (result.action_result === 'discarded') throw new Error('Descartado. No he cambiado ningún registro.');
+    return result.result || result;
+  })();
+  financialFlights.set(key,flight);
+  try { return await flight; } finally { financialFlights.delete(key); }
+}
 
 /* Icono de papelera reutilizable para botones de borrar. */
 const TRASH = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';

@@ -152,10 +152,10 @@ class BankCapture:
             raise StateError('Revisión de conciliación stale.')
         return source.revision
 
-    def prepare(self, principal, identity, request):
+    def prepare(self, principal, identity, request, *, preparation_recorder=None):
         if request.command_type == CommandType.BANK_TRANSACTION_IMPORT and identity != EntryIdentity.imported(request.parameters['batch'], request.parameters['row']):
             raise StateError('Identidad de operación debe coincidir con batch/fila.')
-        return PaymentCapture.prepare(self, principal, identity, request)
+        return PaymentCapture.prepare(self, principal, identity, request, preparation_recorder=preparation_recorder)
 
     @_decimal_context
     def execute(self, principal, operation_uuid):

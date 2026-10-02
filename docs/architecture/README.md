@@ -1,6 +1,19 @@
 # Financial Core: punto de entrada y continuidad
 
-## Orden vigente — exclusivamente Fase1.7
+## Orden vigente — exclusivamente Fase 1.8
+
+Fases 1.1–1.7 aceptadas. Solo bridges autenticados de web, chat/tools,
+WhatsApp, revisión documental y recurrentes hacia los cinco Capture existentes.
+Identidad durable, request exacto, autorización humana antes de consumir pending,
+ejecución idempotente y recuperación de respuesta. La IA solo propone.
+Recurrentes: borrador + confirmación humana por vencimiento; auto_issue no es
+mandato. CSV: revisión por fila, upload no autoriza. Cinco flags OFF. No 1.9,
+activación, nuevos eventos, GL, Tax Ledger, Open Items ni cambios de VERI*FACTU.
+Leer [orden](FASE-1.8-orden.md), [inventario previo](FASE-1.8-entrada-audit.md), [ADR-012](ADR-012-financial-channels.md), [contrato de canales](FINANCIAL-CHANNELS-v1.md) y [cierre](FASE-1.8-cierre.md).
+Las órdenes y cierres inferiores son históricos; no amplían esta autorización.
+
+
+## Referencia histórica de Fase 1.7
 
 1.1–1.6 aceptadas. SupplierInvoiceCapture/ExpenseCapture conectan solo
 supplier_invoice.confirmed/corrected/voided y expense.confirmed/voided v1.
@@ -13,7 +26,7 @@ OpenItems/reporting nuevo. Legacy no capturado conserva comportamiento.
 [API](PURCHASING-CAPTURE-v1.md), [cierre](FASE-1.7-cierre.md).
 Las secciones inferiores describen entregas históricas; no son la orden vigente.
 
-## Orden vigente — exclusivamente 1.6
+## Referencia histórica de Fase 1.6
 
 Fases 1.1–1.5 aceptadas. Solo PaymentCapture y BankCapture: cobro real v1,
 importación bancaria v1 y match v1 Evidence-only, sobre writers existentes.

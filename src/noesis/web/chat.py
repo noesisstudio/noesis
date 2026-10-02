@@ -2074,15 +2074,37 @@ def _conversation_agent_key(business_id: int):
 
 def handle(business_id: int, message: str, page: str | None = None, *,
            channel: str = "web", actor_phone: str | None = None,
-           actor_id: str | None = None, voice: bool = False) -> dict:
+           actor_id: str | None = None, voice: bool = False, financial_context=None) -> dict:
     from ..conversation_context import current
     actor = f"wa:{actor_phone}" if channel == "whatsapp" else f"web:{actor_id or 'owner'}"
     token = current.set((business_id, actor))
+    from ..financial_channels import current as financial_current, FinancialChannels
+    if financial_context is not None and (financial_context.business_id != business_id or financial_context.actor != actor):
+        raise PermissionError('Contexto de otra conversación.')
+    financial_token = financial_current.set(financial_context)
     try:
+        if config.FINANCIAL_CORE_ENABLED and financial_context is not None:
+            replay = FinancialChannels(financial_context).replay()
+            if replay is not None:
+                return replay
         return _handle_turn(business_id, message, page, channel=channel,
                             actor_phone=actor_phone, actor_id=actor_id, voice=voice)
     finally:
+        financial_current.reset(financial_token)
         current.reset(token)
+
+
+def _clear_turn_proposal(business_id, actor):
+    if config.FINANCIAL_CORE_ENABLED:
+        from ..financial_channels import current, FinancialChannels
+        ctx = current.get()
+        if ctx is not None and ctx.business_id == business_id and ctx.actor == actor:
+            if FinancialChannels(ctx).cancel_pending():
+                return
+        pending = db.get_pending_action(business_id,actor)
+        if pending and pending['kind'] == 'financial_capture':
+            raise PermissionError('No borrar una propuesta financiera sin contexto autenticado.')
+    db.clear_pending_action(business_id,actor)
 
 
 def _handle_turn(
@@ -2110,7 +2132,7 @@ def _handle_turn(
     except Exception:  # noqa: BLE001
         log.exception("No se pudo guardar la entrada del asistente para %s.", business_id)
     from .. import action_review, learning
-    enabled = config.ASSISTANT_REVIEW_ENABLED
+    enabled = config.ASSISTANT_REVIEW_ENABLED or config.FINANCIAL_CORE_ENABLED
     actor = f"wa:{actor_phone}" if channel == "whatsapp" else f"web:{actor_id or 'owner'}"
     # El historial guarda lo que se escribió; lo que se interpreta va normalizado.
     message = nlu.normalizar_entrada(message)
@@ -2122,7 +2144,7 @@ def _handle_turn(
             return {"reply": "No he podido revisar la memoria. No he ejecutado nada; escribe la orden completa de nuevo.", "source": "local"}
     message = turn["message"]
     if "reply" in turn and enabled:
-        db.clear_pending_action(business_id, actor)
+        _clear_turn_proposal(business_id, actor)
     # Un «sí» a «no tengo ficha de X, ¿la creo?» se atiende aquí, antes que la
     # revisión: si no, contesta «no hay ninguna propuesta pendiente de confirmar»
     # y la orden se pierde. Es el fallo que se veía en WhatsApp.
@@ -2141,7 +2163,7 @@ def _handle_turn(
             if _es_solo_consulta(message):
                 propuesta_viva = db.get_pending_action(business_id, actor)
             else:
-                db.clear_pending_action(business_id, actor)
+                _clear_turn_proposal(business_id, actor)
             if nlu._norm(message).startswith("corregir:"):
                 message = message.split(":", 1)[1].strip()
         state = {"actor": actor}

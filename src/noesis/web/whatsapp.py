@@ -2028,7 +2028,7 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
                 audio_id, language=(business or {}).get("language"))
             text = text or ""
             if not text:
-                if business and config.ASSISTANT_REVIEW_ENABLED:
+                if business and config.ASSISTANT_REVIEW_ENABLED and not config.FINANCIAL_CORE_ENABLED:
                     db.clear_pending_action(business["id"], f"wa:{phone}")
                     db.clear_pending_action(business["id"], phone)
                 if business and motivo_voz:
@@ -2213,6 +2213,50 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
                 db.clear_pending_action(business["id"], f"wa:{phone}")
             results.append(_ingest_document(business, phone, message))
             _finish_inbound_message(message_id, claimed_ids)
+            continue
+
+        if config.FINANCIAL_CORE_ENABLED:
+            from ..financial_channels import ChannelContext, FinancialChannels, current as financial_current
+            from ..financial_operations.contracts import Principal
+            from . import whatsapp_documents
+            if es_gesto:
+                send(phone,'Para confirmar dinero responde SÍ o NO con palabras.',business_id=business['id'])
+                _finish_inbound_message(message_id,claimed_ids)
+                continue
+            user = db.get_user_by_email(business.get('owner_email')) if business.get('owner_email') else None
+            if not message_id or not recipient_id or not user or user['business_id'] != business['id']:
+                send(phone,'No puedo confirmar dinero sin identificar este mensaje y al titular. Revisa la acción en la web.',business_id=business['id'])
+                _finish_inbound_message(message_id,claimed_ids)
+                continue
+            ctx = ChannelContext.whatsapp(business['id'],Principal(user['id'],user['session_version']),
+                                          message_id,recipient_id,phone,message=text)
+            from ..financial_channels.whatsapp import bind_reply, review_key as financial_review_key
+            ctx = bind_reply(ctx,message.get('reply_to'))
+            bridge = FinancialChannels(ctx)
+            reply = bridge.replay()
+            token = financial_current.set(ctx)
+            try:
+                if reply is None and not db.get_pending_action(business['id'],ctx.actor):
+                    document_reply = whatsapp_documents.handle_reply(business,phone,text)
+                    if document_reply is not None:
+                        reply = {'reply':document_reply}
+                        saved = db.get_pending_action(business['id'],ctx.actor)
+                        if saved and saved['kind'] == 'financial_capture':
+                            payload = json.loads(saved['payload'])
+                            if payload['preview'] in document_reply:
+                                reply.update(confirmation_required=True,operation_uuid=payload['operation_uuid_ref'],
+                                             request_hash=payload['request_hash'],revision=payload['revision'])
+                if reply is None:
+                    reply = chat.handle(business['id'],text,channel='whatsapp',actor_phone=phone,financial_context=ctx)
+            finally:
+                financial_current.reset(token)
+            invoice_ids = reply.get('invoice_ids',[])
+            whatsapp_documents.complete_captured(business['id'],phone,reply)
+            send(phone,reply.get('reply',''),business_id=business['id'],invoice_id=invoice_ids[0] if len(invoice_ids)==1 else None,
+                 idempotency_key=financial_review_key(reply))
+            _attach_new_invoice_pdf(business,phone,invoice_ids)
+            results.append({'business_id':business['id'],'financial_review':True})
+            _finish_inbound_message(message_id,claimed_ids)
             continue
 
         # La revisión de herramientas comparte contrato con la web. Su clave

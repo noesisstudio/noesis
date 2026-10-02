@@ -545,10 +545,10 @@ async function confirmReceived() {
     supplier_nif: el('r-supplier-nif').value.trim(),
     number: el('r-number').value.trim(),
     issued_on: el('r-issued').value || null,
-    base: el('r-base').value ? parseFloat(el('r-base').value) : null,
-    vat_rate: el('r-vat').value ? parseFloat(el('r-vat').value) : null,
-    vat_amount: el('r-vat-amount').value ? parseFloat(el('r-vat-amount').value) : null,
-    total: el('r-total').value ? parseFloat(el('r-total').value) : null,
+    base: el('r-base').value ? financialDecimal(el('r-base').value) : null,
+    vat_rate: el('r-vat').value ? financialDecimal(el('r-vat').value) : null,
+    vat_amount: el('r-vat-amount').value ? financialDecimal(el('r-vat-amount').value) : null,
+    total: el('r-total').value ? financialDecimal(el('r-total').value) : null,
   };
   if (!body.total) { msg.textContent = 'El total es obligatorio.'; return; }
   // Suyo: confirmación explícita de que va a Costes y no a Facturas emitidas.
@@ -623,11 +623,16 @@ async function toExpense(id, amount) {
   if (!amt) {
     const v = prompt('No he leído el importe. ¿Cuánto es el gasto (€)?');
     if (!v) return;
-    amt = parseFloat(v.replace(',', '.'));
+    amt = financialDecimal(v);
     if (!amt) return;
   }
   try {
-    await apiPost(`/documents/${id}/to-expense`, { amount: amt });
+    const fields = { amount: window.NOESIS_FINANCIAL_CORE ? String(amt) : amt };
+    if (window.NOESIS_FINANCIAL_CORE) {
+      fields.concept = prompt('Concepto del gasto', 'Gasto del documento');
+      if (!fields.concept) return;
+    }
+    await apiPost(`/documents/${id}/to-expense`, fields);
     el('d-msg').textContent = 'Gasto registrado desde el documento.';
     renderList();
   } catch (e) { el('d-msg').textContent = e.message; }

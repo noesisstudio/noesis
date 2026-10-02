@@ -1,5 +1,37 @@
 # Mapa de código
 
+## 2026-10-02 — Fase 1.8, canales financieros
+
+| Ruta | Responsabilidad |
+|---|---|
+| src/noesis/financial_channels/service.py | Contexto autenticado, enlaces/recibos, preview, prepare/confirm/replay; no motor de dinero |
+| src/noesis/financial_channels/tools.py | Tools finitos, SÍ/NO/corrección ligada a tarjeta exacta |
+| src/noesis/financial_channels/whatsapp.py | Cita Meta saliente validada por negocio/teléfono en outbox |
+| src/noesis/financial_channels/recurring.py | Draft/run por vencimiento, huella y validación de contexto |
+| src/noesis/financial_channels/schema.py | Migración68, FKs e inmutabilidad de evidencia mínima |
+| src/noesis/web/routers/financial_actions.py | API autenticada prepare/confirm/recover/CSV por fila |
+| tests/financial_channels_contract.py y worker | Contrato común SQLite/PG, HTTP/webhook, procesos y crash |
+| tests/financial_channels.test.cjs | Identidad durable del navegador, tarjeta por pestaña, retry y doble submit |
+
+Solo integración de canales con los Capture existentes, sin 1.9 ni activación.
+`financial_channels/` enlaza propuestas y recibos mínimos con operaciones y
+aprobaciones; no añade un motor financiero ni un event log operativo. Web exige
+sesión/CSRF y UUID; chat turno/slot; WhatsApp provider/receptor/negocio/wamid;
+documentos review UUID/documento/item/revisión; recurrentes schedule/vencimiento.
+Autorización + recibo + consumo de pending atómicos; efecto posterior reintentable
+con la misma operación. Scheduler genera borradores y exige confirmación humana;
+no mandato abierto. Migración 68, enlaces inmutables y huella mínima de plantilla.
+Cinco flags siguen OFF, guards capturados conservados y opt-in sin fallback.
+Cierre técnico: **31 PASS / 0 FAIL**. Nuevas SQLite41/PG41, PostgreSQL total234,
+general1617 (1298.519 s), Node9 y gates locales PASS. Último transporte de
+revisión revalidado en ambos motores/HTTP/Node; alcance exacto en el [cierre](architecture/FASE-1.8-cierre.md).
+Incluye autoauditorías, límites externos y diagnóstico/rollback.
+Pendientes externos: CI remoto/despliegue y Meta real no certificados aquí;
+activación y otra fase solo con nueva orden. CSV antiguo sin cuenta/batch y audio sin UUID quedan bloqueados
+para mutaciones capturadas. Históricos, retención/export financiero y rollout
+siguen en fases posteriores expresamente autorizadas.
+
+
 ## Financial Core — archivos nuevos de 1.7
 
 - `purchasing_capture/service.py`: SupplierInvoiceCapture/ExpenseCapture, revisión,

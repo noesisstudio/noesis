@@ -1297,6 +1297,9 @@ def run_tool(
                 ensure_ascii=False)
         tool_input["factura_id"] = coinciden[0]["id"]
     try:
+        from .financial_channels.tools import CAPTURED_TOOLS, propose_tool
+        if config.FINANCIAL_CORE_ENABLED and name in CAPTURED_TOOLS:
+            return json.dumps(propose_tool(business_id, name, tool_input), ensure_ascii=False)
         from . import action_review
         proposed = action_review.propose(business_id, name, tool_input)
         if proposed is not None:

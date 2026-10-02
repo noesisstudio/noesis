@@ -154,7 +154,7 @@ def _quantize(value: Decimal) -> Decimal:
     return value.quantize(CENT, rounding=ROUND_HALF_UP)
 
 
-def derive(fields: dict, irpf_percent=None) -> tuple[dict, list[str]]:
+def derive(fields: dict, irpf_percent=None, *, exact=False) -> tuple[dict, list[str]]:
     """Completa lo que se deduce con certeza aritmética; nunca inventa un dato."""
     base = money(fields.get("base"))
     vat = money(fields.get("vat_amount"))
@@ -202,20 +202,22 @@ def derive(fields: dict, irpf_percent=None) -> tuple[dict, list[str]]:
                 break
 
     values = dict(fields)
+    def output(value):
+        return (format(value, '.2f') if exact else float(value)) if value is not None else None
     values.update({
-        "base": float(base) if base is not None else None,
-        "vat_amount": float(vat) if vat is not None else None,
-        "irpf_amount": float(irpf) if irpf is not None else None,
-        "total": float(total) if total is not None else None,
+        "base": output(base),
+        "vat_amount": output(vat),
+        "irpf_amount": output(irpf),
+        "total": output(total),
         "vat_rate": int(rate) if rate is not None else None,
     })
     return values, derived
 
 
-def evaluate(item: dict) -> dict:
+def evaluate(item: dict, *, exact=False) -> dict:
     """Valores, avisos que bloquean, datos que faltan y si ya se puede confirmar."""
     user = set(item.get("user") or [])
-    values, derived = derive(item.get("fields") or {}, item.get("irpf_percent"))
+    values, derived = derive(item.get("fields") or {}, item.get("irpf_percent"), exact=exact)
     mode = item.get("mode")
     issues = list(invoice_draft_issues(values)) if mode in ("gasto", "recibida", "emitida") else []
     for conflict in item.get("conflicts") or []:

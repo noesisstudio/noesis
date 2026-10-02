@@ -33,7 +33,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Bynoesis">
   <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
-  <script>window.NOESIS_BIZ = {{ business.id }}; window.NOESIS_PAGE = {{ active|tojson }};</script>
+  <script>window.NOESIS_BIZ = {{ business.id }}; window.NOESIS_PAGE = {{ active|tojson }}; window.NOESIS_FINANCIAL_CORE = {{ financial_core_enabled()|tojson }}; window.NOESIS_SESSION = {{ (request.session.get('uid') ~ ':' ~ request.session.get('sv', 0))|tojson }};</script>
 </head>
 <body class="{{ 'subscription-readonly' if subscription_read_only else '' }}">
 <div class="app">
