@@ -53,10 +53,12 @@ def _date(value: str) -> str:
     raise ValueError(f"No entiendo la fecha «{raw[:30]}» del extracto.")
 
 
-def _amount_decimal(value: str) -> Decimal:
+def _amount_decimal(value: str, *, exact=False) -> Decimal:
     raw = str(value or "").strip().replace("\u00a0", "").replace(" ", "")
     negative = raw.startswith("(") and raw.endswith(")")
     raw = raw.strip("()").replace("€", "").replace("EUR", "").replace("eur", "")
+    if exact and re.search(r"[^0-9,.-]", raw):
+        raise ValueError('Importe CSV exacto inválido.')
     raw = re.sub(r"[^0-9,.-]", "", raw)
     if "," in raw and "." in raw:
         if raw.rfind(",") > raw.rfind("."):
@@ -74,6 +76,8 @@ def _amount_decimal(value: str) -> Decimal:
     if not number.is_finite() or number == 0:
         raise ValueError("El extracto contiene un importe vacío o igual a cero.")
     with localcontext(Context(prec=50,rounding=ROUND_HALF_EVEN)):
+        if exact and number != number.quantize(Decimal('0.01')):
+            raise ValueError('Fracción de céntimo no admitida en captura CSV.')
         return number.quantize(Decimal("0.01"))
 
 
@@ -121,8 +125,24 @@ def _fingerprint(booked_on: str, amount: float, description: str,
     return hashlib.sha256(source.encode("utf-8")).hexdigest()
 
 
-def import_csv(business_id: int, content: bytes) -> dict:
+def capture_csv_rows(content: bytes):
+    """Parseo puro exacto: SHA del archivo y ordinal estable por fila no vacía."""
+    rows = []
+    for index, row in enumerate(_rows(content), 1):
+        # Fecha valor no demuestra fecha de operación. Legacy conserva su parser;
+        # la captura falla cerrada si el CSV solo ofrece aquella fecha.
+        rows.append((str(index), {'booked_on': _date(_first(row, tuple(f for f in _DATE_FIELDS if f != 'fechavalor'))),
+            'amount': _amount_decimal(_first(row, _AMOUNT_FIELDS), exact=True),
+            'description': _first(row, _DESCRIPTION_FIELDS),
+            'counterparty': _first(row, _COUNTERPARTY_FIELDS), 'reference': _first(row, _REFERENCE_FIELDS)}))
+    return hashlib.sha256(content).hexdigest(), rows
+
+
+def import_csv(business_id: int, content: bytes, *, capture_requested=False) -> dict:
     """Importa y propone coincidencias; devuelve solo contadores operativos."""
+    if capture_requested or db.config.FINANCIAL_CORE_ENABLED:
+        from .financial_operations.contracts import StateError
+        raise StateError('Captura CSV requiere batch/cuenta/fila y autorización durable; usar BankCapture.')
     created = 0
     duplicates = 0
     occurrences: dict[tuple[str, float, str, str, str], int] = {}

@@ -1,5 +1,17 @@
 # Decisiones
 
+## Orden vigente — exclusivamente 1.6
+
+[ADR-010](architecture/ADR-010-payment-bank-capture.md): PaymentCapture y BankCapture
+comparten autorización/TX y productor de pago. Parcial fija importe y valida capacidad;
+full congela liquidación. Cuenta/batch/fila prueban retry; contenido solo señala
+ambigüedad. Tres coberturas específicas y link inmutable, sin framework ni ledger.
+Match solo Evidence: no segunda caja. Payloadv1 intacto, EUR/Decimal y origen binario
+declarado; cursor exacto del writer conserva Decimal al leer y adapta fechas.
+No proveedor autenticado existente de banco/pago: frontera interna, canales en1.8.
+Sin1.7, backfill, supplier payment, GL, Tax, OpenItems ni flags activos.
+Las siguientes órdenes son históricas.
+
 ## Orden vigente — exclusivamente 1.5
 
 Fases 1.1–1.4 aceptadas; solo emisión capturada F1/F2 y rectificativas R1–R5.

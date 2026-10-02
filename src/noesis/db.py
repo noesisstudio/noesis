@@ -6841,8 +6841,11 @@ def _set_invoice_payment_state(
         )
 
 
-def add_invoice_payment(invoice_id, amount, *, business_id: int, method=None, paid_at=None, note=None) -> dict:
+def add_invoice_payment(invoice_id, amount, *, business_id: int, method=None, paid_at=None, note=None, capture_requested=False) -> dict:
     """Registra un cobro sin alterar el registro fiscal inmutable de la factura."""
+    if capture_requested or config.FINANCIAL_CORE_ENABLED:
+        from .financial_operations.contracts import StateError
+        raise StateError('Cobro capturado requiere operación y autorización durable; usar PaymentCapture.')
     from .financial_writers import payments as writers
     from .financial_writers.boundary import observe
     with get_conn() as conn:
@@ -6882,8 +6885,11 @@ def invoice_paid_amount(invoice_id, business_id) -> float | None:
     return round(float(row["total"]), 2)
 
 
-def mark_invoice_paid(invoice_id, business_id) -> dict | None:
+def mark_invoice_paid(invoice_id, business_id, *, capture_requested=False) -> dict | None:
     """Registra el importe restante; repetir la operación no duplica el cobro."""
+    if capture_requested or config.FINANCIAL_CORE_ENABLED:
+        from .financial_operations.contracts import StateError
+        raise StateError('Cobro completo capturado requiere saldo revisado y autorización; usar PaymentCapture.')
     from .financial_writers import payments as writers
     from .financial_writers.boundary import observe
     with get_conn() as conn:
@@ -7562,8 +7568,11 @@ def pending_payments(business_id) -> list[dict]:
 
 
 # ----------------------------------------------------- Conciliación bancaria ---
-def add_bank_transaction(business_id: int, *, import_hash: str, booked_on: str, amount: float, description: str='', counterparty: str='', reference: str='', currency: str='EUR') -> dict | None:
+def add_bank_transaction(business_id: int, *, import_hash: str, booked_on: str, amount: float, description: str='', counterparty: str='', reference: str='', currency: str='EUR', capture_requested=False) -> dict | None:
     """Guarda un movimiento una sola vez; nunca lo convierte en cobro solo."""
+    if capture_requested or config.FINANCIAL_CORE_ENABLED:
+        from .financial_operations.contracts import StateError
+        raise StateError('Importación capturada requiere identidad y autorización; usar BankCapture.')
     from .financial_writers import bank as writers
     from .financial_writers.boundary import observe
     with get_conn() as conn:
@@ -7619,8 +7628,11 @@ def suggest_bank_transaction(transaction_id: int, business_id: int, invoice_id: 
     return result.legacy_value()
 
 
-def confirm_bank_transaction(transaction_id: int, business_id: int) -> dict:
+def confirm_bank_transaction(transaction_id: int, business_id: int, *, capture_requested=False) -> dict:
     """Confirma una sugerencia y registra el cobro en la misma transacción."""
+    if capture_requested or config.FINANCIAL_CORE_ENABLED:
+        from .financial_operations.contracts import StateError
+        raise StateError('Conciliación capturada requiere operación y autorización; usar BankCapture.')
     from .financial_writers import bank as writers
     from .financial_writers.boundary import observe
     with get_conn() as conn:
@@ -14014,7 +14026,8 @@ def delete_business_cascade(business_id) -> bool:
         # La baja no destruye evidencia durable del núcleo financiero.
         for financial_table in ("financial_operations", "financial_authorizations",
                                 "economic_events", "economic_event_links",
-                                "invoice_economic_coverage"):
+                                "invoice_economic_coverage", "payment_economic_coverage",
+                                "bank_import_coverage", "bank_match_coverage", "bank_payment_links"):
             if conn.execute(
                 f"SELECT 1 FROM {financial_table} WHERE business_id=? LIMIT 1",
                 (business_id,),
@@ -14035,6 +14048,7 @@ def delete_business_cascade(business_id) -> bool:
         # Primero confirma todas las eliminaciones referenciales en la base de datos.
         for table in (
             # Vacías tras la comprobación anterior; no borrar evidencia para la baja.
+            "bank_match_coverage", "bank_import_coverage", "payment_economic_coverage", "bank_payment_links",
             "invoice_economic_coverage", "economic_event_links", "economic_events", "economic_event_sequences",
             "financial_authorizations", "financial_operations",
             "gestoria_invitations", "gestoria_business_access",

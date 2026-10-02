@@ -1,5 +1,17 @@
 # Tareas vivas
 
+## Financial Core — orden vigente exclusivamente 1.6
+
+- [x] Contratos v1, servicios internos, cobertura/identidad y vínculo durable.
+- [x] 25 PASS / 0 FAIL. SQLite125 y PG149 OK; general1538 con una aserción de formato DDL corregida y revalidación final33/39 OK. Ruff/Bandit/dependencias/secretos/Node/verdad/enlaces/migraciones PASS.
+- [ ] No iniciar 1.7 sin nueva orden del titular.
+- [ ] Canales 1.8, históricos 1.9 y exportación/retención/activación 1.10 pendientes.
+- [ ] Proveedor bancario con identidad universal y resolución/unificación de duplicados
+      no implementados; coincidencia entre extractos requiere decisión humana explícita.
+- [ ] CI remota/despliegue y aceptación AEAT no verificados en esta entrega.
+
+[Cierre](architecture/FASE-1.6-cierre.md). Los límites anteriores son históricos.
+
 ## Financial Core — exclusivamente 1.5
 
 - [x] Auditoría de entradas y productor único sobre writer1.4.

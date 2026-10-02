@@ -2,8 +2,8 @@
 
 > Para Financial Core, leer [gobernanza y ADR](docs/architecture/README.md) y
 > [guía 08](docs/areas/08-financial-core.md). Fase 0 cerrada; Fase 1
-> planificada y aprobada como referencia. 1.1–1.4 aceptadas; solo 1.5 autorizada:
-> emisión capturada F1/F2 y R1–R5, sin otros productores ni activación.
+> planificada y aprobada como referencia. 1.1–1.5 aceptadas; solo 1.6 autorizada:
+> cobros, importación bancaria y evidencia de match; flags apagados y sin activación.
 > Leer [plan](docs/architecture/FASE-1-plan.md),
 > [contrato v1](docs/architecture/ECONOMIC-EVENTS-v1.md),
 > [operaciones](docs/architecture/FINANCIAL-OPERATIONS-v1.md),
@@ -12,7 +12,11 @@
 > Para emisión capturada, leer [ADR-009](docs/architecture/ADR-009-invoice-capture.md),
 > [API](docs/architecture/INVOICE-CAPTURE-v1.md) y
 > [cierre de 1.5](docs/architecture/FASE-1.5-cierre.md).
-> No avanzar a 1.6. La fachada legacy posee la transacción; un writer prestado
+> Leer [ADR-010](docs/architecture/ADR-010-payment-bank-capture.md),
+> [API de cobros/banco](docs/architecture/PAYMENT-BANK-CAPTURE-v1.md),
+> [orden autorizada](docs/architecture/FASE-1.6-orden.md) y
+> [cierre de 1.6](docs/architecture/FASE-1.6-cierre.md).
+> No avanzar a 1.7. La fachada legacy posee la transacción; un writer prestado
 > nunca abre otra conexión, hace commit/rollback ni I/O externo.
 > Las referencias no autorizan ejecutar otras unidades.
 
@@ -25,6 +29,9 @@
 - `Decimal/NUMERIC` es el contrato del núcleo; SQLite usa TEXT decimal canónico
   para preservar exactitud. No pasar por normalización legacy a float ni usar
   REAL, SUM/CAST binarios o JSON numérico para importes nuevos.
+- Cobros capturados requieren settles a factura capturada; banco requiere identidad
+  cuenta/batch/fila. Match es Evidence-only y nunca segunda caja. Coberturas
+  específicas y link bank→payment impiden commit sin eventos; no backfill legacy.
 - La IA propone; no autoriza, contabiliza, liquida ni cambia reglas financieras.
   El servicio valida permisos, aprobación, invariantes e idempotencia.
 - Economic Events son hechos financieros, no un log genérico. `quote.accepted`

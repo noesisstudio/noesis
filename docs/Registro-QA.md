@@ -1,5 +1,31 @@
 ﻿# Registro de QA
 
+## 2026-10-02 — Cierre exclusivo de Fase 1.6
+
+- SQLite: **30/30** nuevas de 1.6; regresiones dirigidas **125/125 OK** (134.378 s).
+- PostgreSQL16.15: **39/39** nuevas de 1.6; combinado **149/149 OK** (76.823 s),
+  incluyendo emisión27, writers18, eventos27, operaciones32 y fundamentos6.
+- Suite general: **1538 ejecutadas en 1140.814 s; 1537 PASS y una aserción de
+  formato DDL fallida**, corregida cambiando únicamente espacios de ERRCODE.
+  El SQLSTATE real ya era23514. Revalidación final **33/33 SQLite/DDL OK**
+  (28.607 s) y **39/39 PostgreSQL OK** (19.497 s). No quedan fallos pendientes;
+  no afirmar una segunda ejecución general completa sin fallos.
+- Ocho fallos match, cinco manuales y fallo import: rollback completo;
+  omisión de cada evento/ejecutor sin reserva no puede commit.
+- Procesos PG: mismo UUID, parciales válidos/exceso, parcial/full, dos full,
+  mismo match/distintos matches e import repetido: sin sobrecobro ni duplicados.
+- Migraciones SQLite0→66→0→66; 65→66→65→66 con origen legacy conservado;
+  PG histórico32→66, rollback protegido con link y ciclo aislado66→55→54→53→54→55→66.
+  36 rutas, copia/restauración, privacidad y conversación correctas; HTTP local200
+  en health/ready/portada/login. Código base53 sobre esquema66: emisión/cobro/export OK.
+- Ruff, Bandit high/high de CI, pip-audit sin vulnerabilidades conocidas, uv lock,
+  secretos incluidos nuevos archivos, Node3/3, verdad documental, enlaces y diff PASS.
+- **25 criterios PASS / 0 FAIL**, dos autoauditorías documentadas. Flags OFF;
+  ningún avance1.7, canal nuevo ni consumidor financiero. CI remota/despliegue no verificados.
+ Fixtures compartidas de cobros/banco, regresiones de emisión,
+writers, operaciones, persistencia, baja; procesos PostgreSQL y ocho fallos match.
+Cierre interno validado; sin activación de cuentas/canales.
+
 ## 2026-10-02 — Cierre exclusivo de Fase 1.5
 
 - SQLite: **24/24** pruebas nuevas de productores; dirigidas **78/78 OK**

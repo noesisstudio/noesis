@@ -1,5 +1,21 @@
 # Mapa de código
 
+## Financial Core — 1.6
+
+- `payment_capture/service.py`: review parcial/full, validación de factura/saldo,
+  workflow autorizado, reserva y productor común customer_payment.received v1.
+- `bank_capture/service.py`: identidad/import/review CSV, ambigüedad explícita,
+  review/match y dos eventos con slots diferentes; sin doble caja.
+- `payment_capture/schema.py`: tres coberturas, link durable, FKs/guards y rollback66.
+- `financial_writers/bank.py`: vínculo del pago nuevo dentro de confirmación existente.
+- `financial_writers/boundary.py`: cursor exacto sin normalización monetaria pública.
+- `banking.py`: parseo CSV puro exacto; import legacy preservado.
+- `financial_operations/service.py`: validador confiable dentro de authorize, incluso
+  imports sin revisión de entidad todavía existente.
+- `db.py`: guards finos capture_requested y mantenimiento del inventario de baja.
+- `tests/payment_bank_capture_contract.py`, SQLite/PG/worker: regresiones, concurrencia
+  de procesos y rollback/semántica. [API](architecture/PAYMENT-BANK-CAPTURE-v1.md).
+
 ## Orden vigente — exclusivamente 1.5
 
 Fases 1.1–1.4 aceptadas; solo emisión capturada F1/F2 y rectificativas R1–R5.

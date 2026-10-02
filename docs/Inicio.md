@@ -1,5 +1,11 @@
 # 🧭 Bynoesis — Inicio
 
+## Continuidad del Financial Core
+
+Orden vigente: exclusivamente1.6; [gobernanza](architecture/README.md),
+[contrato cobros/banco](architecture/PAYMENT-BANK-CAPTURE-v1.md) y
+[cierre verificable](architecture/FASE-1.6-cierre.md). No inferir permiso para1.7.
+
 [Financial Core: gobernanza, ADR y cierre de Fase 0](architecture/README.md). Leer antes de continuar cualquier fase financiera.
 
 Mapa de contenido (MOC) del proyecto. Abre esta carpeta como *vault* en Obsidian y

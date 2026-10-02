@@ -1,5 +1,14 @@
 # API canónica de emisión capturada — 1.5
 
+Nota vigente 1.6: se añaden PaymentCapture/BankCapture sobre el writer existente,
+con autorización durable, cobertura específica y resultado en un commit.
+customer_payment.received v1 = cobro real; bank_transaction.imported v1 = evidencia;
+bank_transaction.matched v1 = Evidence-only, nunca segunda caja. No cambia
+canonicalización ni catálogo. [ADR-010](ADR-010-payment-bank-capture.md) y
+[API](PAYMENT-BANK-CAPTURE-v1.md). Cursor exacto del writer conserva Decimal;
+link bank→payment durable. Canales1.8 pendientes, flags OFF; no avanzar1.7.
+Las notas inferiores describen el alcance histórico de cada entrega.
+
 ```python
 capture = InvoiceCapture(business_id)  # negocio de sesión, nunca argumento IA
 request = capture.review(principal, invoice_id, payment_term_days=None)

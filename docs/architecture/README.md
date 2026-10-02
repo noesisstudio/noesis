@@ -1,6 +1,16 @@
 # Financial Core: punto de entrada y continuidad
 
-## Orden vigente — exclusivamente 1.5
+## Orden vigente — exclusivamente 1.6
+
+Fases 1.1–1.5 aceptadas. Solo PaymentCapture y BankCapture: cobro real v1,
+importación bancaria v1 y match v1 Evidence-only, sobre writers existentes.
+Coberturas específicas, vínculo bank→payment, identidad cuenta/batch/fila,
+aprobación durable y resultado en una transacción. Flags OFF. No avanzar 1.7.
+[Orden](FASE-1.6-orden.md), [ADR-010](ADR-010-payment-bank-capture.md),
+[API](PAYMENT-BANK-CAPTURE-v1.md), [auditoría de entradas](FASE-1.6-entrada-audit.md)
+y [cierre](FASE-1.6-cierre.md). Lo inferior conserva historia, no autoridad vigente.
+
+## Referencia histórica de 1.5
 
 Fases 1.1–1.4 aceptadas; solo emisión capturada F1/F2 y rectificativas R1–R5.
 Servicio `invoice_capture/`: operaciones/aprobación durable + writer1.4 + evento
@@ -54,6 +64,7 @@ especializada; ninguna especificación interna certifica cumplimiento.
 | [007](ADR-007-economic-persistence.md) | Eventos/links inmutables, FKs tipadas, contador y migración protegida |
 | [008](ADR-008-borrowed-writers.md) | Un núcleo por dominio, commit exterior, precisión/procedencia, revisiones y locks |
 | [009](ADR-009-invoice-capture.md) | Productor único de emisión, autorización exacta, cobertura diferida y replay |
+| [010](ADR-010-payment-bank-capture.md) | Cobro real, identidad bancaria, vínculo durable y match como evidencia |
 
 ## Secuencia y límites de fase
 

@@ -123,7 +123,7 @@ class FinancialOperations:
         return row
 
     def authorize(self, principal, operation_uuid, *, channel, approved_hash, approved_revision,
-                  kind=AuthorizationKind.HUMAN, mandate_uuid=None, revision_reader=None):
+                  kind=AuthorizationKind.HUMAN, mandate_uuid=None, revision_reader=None, request_validator=None):
         """La revisión temporal se puede consumir solo DESPUÉS de confirmar este recibo."""
         kind, channel = AuthorizationKind(kind), EntryNamespace(channel)
         with self._transaction(principal) as (session, repo):
@@ -142,6 +142,8 @@ class FinancialOperations:
                 existing = repo.authorization(row["authorization_uuid"])
                 if existing["kind"] == kind.value:
                     return operation
+            if request_validator is not None:
+                request_validator(session, request)
             self._revision(session, request, revision_reader)
             if kind == AuthorizationKind.MANDATE:
                 if mandate_uuid is None:

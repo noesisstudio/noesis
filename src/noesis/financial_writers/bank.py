@@ -149,7 +149,7 @@ def _mutate_confirm_bank_transaction(conn, transaction_id: int, business_id: int
             if value
         )
     )[:500]
-    db._insert_invoice_payment(
+    payment_id = db._insert_invoice_payment(
         conn, invoice, amount, "extracto_bancario", f"{movement['booked_on']}T12:00:00", note
     )
     db._set_invoice_payment_state(
@@ -167,6 +167,10 @@ def _mutate_confirm_bank_transaction(conn, transaction_id: int, business_id: int
     conn.execute(
         "UPDATE bank_transactions SET status='confirmed', confirmed_at=? WHERE id=? AND business_id=?",
         (now, transaction_id, business_id),
+    )
+    conn.execute(
+        "INSERT INTO bank_payment_links (business_id,bank_transaction_id,payment_id) VALUES (?,?,?)",
+        (business_id, transaction_id, payment_id),
     )
     return readers.get_bank_transaction(conn, transaction_id, business_id) or {}
 

@@ -4334,6 +4334,16 @@ def _downgrade_invoice_capture(conn):
     downgrade(conn)
 
 
+def _upgrade_payment_bank_capture(conn):
+    from .payment_capture.schema import upgrade
+    upgrade(conn)
+
+
+def _downgrade_payment_bank_capture(conn):
+    from .payment_capture.schema import downgrade
+    downgrade(conn)
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
     (2, "integridad_multiempresa", _upgrade_tenant_integrity, _downgrade_tenant_integrity),
@@ -4439,6 +4449,7 @@ MIGRATIONS: tuple[Migration, ...] = (
     (64, "revisiones_origen_financiero", _upgrade_financial_source_revisions,
      _downgrade_financial_source_revisions),
     (65, "cobertura_emision_capturada", _upgrade_invoice_capture, _downgrade_invoice_capture),
+    (66, "cobertura_cobros_banco_capturados", _upgrade_payment_bank_capture, _downgrade_payment_bank_capture),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

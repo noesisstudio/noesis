@@ -1,6 +1,7 @@
 """Composición real de todos los escritores, compartida por SQLite/PostgreSQL."""
 
 from datetime import date
+from contextlib import contextmanager
 from decimal import Decimal
 from unittest.mock import patch
 
@@ -428,18 +429,36 @@ class BorrowedWritersContract:
                 self.assertEqual(saved["invoice_type"], typ)
 
     def test_migration64_down_up_preserves_business_money(self):
-        rid = db.add_received_invoice("2.68", business_id=self.bid)["id"]
+        with self.source_revision_migration_scope():
+            rid = db.add_received_invoice("2.68", business_id=self.bid)["id"]
+            # Retirar primero migraciones dependientes; no saltar guards nuevos.
+            migrations.downgrade(63)
+            self.assertEqual(db.get_received_invoice(rid,self.bid)['total'],2.68)
+            migrations.upgrade()
+            with db.get_conn() as conn:
+                self.assertEqual(snapshot(conn,self.bid,'received_invoice',rid).revision,1)
+
+    @contextmanager
+    def source_revision_migration_scope(self):
+        if not config.DATABASE_URL:
+            yield
+            return
+        from urllib.parse import quote
+        from uuid import uuid4
+        schema = 'writers_migration_' + uuid4().hex
         with db.get_conn() as conn:
-            migrations._downgrade_financial_source_revisions(conn)
-            self.assertEqual(
-                conn.execute(
-                    "SELECT total FROM received_invoices WHERE business_id=? AND id=?",
-                    (self.bid, rid),
-                ).fetchone()["total"],
-                2.68,
-            )
-            migrations._upgrade_financial_source_revisions(conn)
-            self.assertEqual(snapshot(conn, self.bid, "received_invoice", rid).revision, 1)
+            conn.execute(f'CREATE SCHEMA {schema}')
+        db.close_pool()
+        try:
+            with patch.object(config,'DATABASE_URL',self.original_url+'?options='+quote('-csearch_path='+schema)):
+                migrations.upgrade()
+                self.seed()
+                yield
+                db.close_pool()
+        finally:
+            with db.get_conn() as conn:
+                conn.execute(f'DROP SCHEMA {schema} CASCADE')
+            db.close_pool()
 
     def test_no_events_or_flags_changed(self):
         with db.get_conn() as conn:

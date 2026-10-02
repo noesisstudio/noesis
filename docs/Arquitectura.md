@@ -1,5 +1,16 @@
 # Arquitectura
 
+## Financial Core — orden vigente 1.6
+
+Monolito modular, repositorios/domain services con FinancialSession y db.get_conn
+compartidos. PaymentCapture/BankCapture componen Operations y writers 1.4; no nueva
+lógica financiera grande en db.py. Decimal/NUMERIC/TEXT y JSON string. IA propone,
+no autoriza. Capturas incluyen cobertura específica, evento(s), vínculo y resultado
+en el mismo commit. Match es evidencia, nunca segundo cobro. Cuenta/batch/fila
+identifican importaciones sin prometer identidad universal por contenido.
+[ADR-010](architecture/ADR-010-payment-bank-capture.md),
+[contrato](architecture/PAYMENT-BANK-CAPTURE-v1.md). Flags OFF; no1.7 ni canales.
+
 ## Orden vigente — exclusivamente 1.5
 
 Fases 1.1–1.4 aceptadas; solo emisión capturada F1/F2 y rectificativas R1–R5.

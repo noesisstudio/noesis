@@ -1,5 +1,19 @@
 # 06 · RGPD y seguridad
 
+## Actualización vigente — 1.6
+
+PaymentCapture y BankCapture son servicios internos; [API](../architecture/PAYMENT-BANK-CAPTURE-v1.md)
+y [ADR-010](../architecture/ADR-010-payment-bank-capture.md). Reutilizan writers,
+conexión y TX compartidas, sin nueva lógica grande en db.py ni autoridad IA.
+Cobro = caja; imported = evidencia/Treasury; match = Evidence-only. Captura exige
+factura/importación original y cobertura completa. Sin backfill ni canales 1.8.
+Flags OFF; las llamadas legacy conservan respuesta y comportamiento financiero.
+La confirmación nueva conserva vínculo durable, y un movimiento capturado falla
+cerrado si se intenta confirmar por legacy sin sus eventos.
+Las nuevas coberturas y bank_payment_links figuran en baja: vacías permiten legacy;
+con evidencia bloquean borrado. Retención/exportación/cierre siguen como gates 1.10.
+Las secciones inferiores reflejan entregas anteriores.
+
 ## Emisión capturada de 1.5
 
 Solo el servicio interno y el adaptador con operación aprobada producen ahora

@@ -212,7 +212,8 @@ class WriterConnection:
         if exact:
             self.prepared_values.append((sql, exact))
         adapted = tuple(float(v) if isinstance(v, Decimal) else v for v in params)
-        cursor = self.conn.execute(sql, adapted)
+        cursor = (self.conn.execute(sql, adapted) if self.legacy else
+                  _WriterCursor(self.conn.execute_exact(sql, adapted)))
         if sql.lstrip().startswith("INSERT INTO invoice_payments"):
             row = cursor.fetchone()
             self.payments.append(int(row["id"]))
@@ -234,6 +235,34 @@ class _CapturedCursor:
     def fetchone(self):
         row, self.row = self.row, None
         return row
+
+
+class _WriterCursor:
+    """Fechas compatibles con el motor prestado; nunca Decimal → float al leer.
+
+    REAL/DOUBLE de origen permanece binario hasta el snapshot explícito.
+    No utiliza la normalización monetaria de la fachada pública.
+    """
+
+    def __init__(self, cursor):
+        self.cursor = cursor
+
+    @property
+    def rowcount(self):
+        return self.cursor.rowcount
+
+    @staticmethod
+    def _row(row):
+        from ..db import Record
+        if row is None:
+            return None
+        return Record((k,v.isoformat() if isinstance(v,(date,datetime)) else v) for k,v in row.items())
+
+    def fetchone(self):
+        return self._row(self.cursor.fetchone())
+
+    def fetchall(self):
+        return [self._row(row) for row in self.cursor.fetchall()]
 
 
 def positive_money(value, label, *, legacy=False):

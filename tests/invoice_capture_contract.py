@@ -254,7 +254,7 @@ class InvoiceCaptureContract:
                     conn.execute(statement, (self.bid,))
         with self.assertRaises(ValueError):
             migrations.downgrade(64)
-        self.assertEqual(migrations.current_version(), 65)
+        self.assertEqual(migrations.current_version(), migrations.LATEST_VERSION)
 
     def test_migration_empty_cycle_preserves_legacy(self):
         with self.migration_scope():

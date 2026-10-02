@@ -1,5 +1,13 @@
 # Estado actual del producto
 
+## 2-oct — Financial Core 1.6 cerrada
+
+Solo cobros/importación/match capturados, esquema 66. PaymentCapture y BankCapture
+internos, payloads v1, cobertura obligatoria y vínculo bank→payment. Match solo
+Evidence: un pago, dos eventos. Flags OFF; no 1.7 ni canales 1.8.
+[Contrato](architecture/PAYMENT-BANK-CAPTURE-v1.md), [cierre](architecture/FASE-1.6-cierre.md).
+25 PASS / 0 FAIL. SQLite125 y PG149 OK; general1538 con una aserción de formato DDL corregida y revalidación final33/39 OK. Ruff/Bandit/dependencias/secretos/Node/verdad/enlaces/migraciones PASS. CI remota/despliegue no verificados. Lo inferior es histórico.
+
 ## 2-oct — Financial Core 1.5 cerrada
 
 **1.5 cerrada: 18 PASS / 0 FAIL; suite general 1508/1508 OK.**

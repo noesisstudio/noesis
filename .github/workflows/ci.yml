@@ -171,6 +171,9 @@ jobs:
       - name: Validar emisión capturada, atomicidad y concurrencia PostgreSQL
         run: uv run python -m unittest tests.postgres_invoice_capture.InvoiceCapturePostgres
 
+      - name: Validar cobros e identidad bancaria capturados y carreras de procesos
+        run: uv run python -m unittest tests.postgres_payment_bank_capture.PaymentBankCapturePostgres
+
       - name: Obtener código base para rollback seguro
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

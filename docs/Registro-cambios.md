@@ -1,5 +1,19 @@
 ﻿# Registro de cambios
 
+## 2026-10-02 — Fase 1.6, cobros e identidad bancaria capturados
+
+Objetivo: PaymentCapture/BankCapture + writers existentes + cobertura + EE + resultado
+atómicos. Áreas: servicios de captura, migración66, límite exacto de writer, link
+bancario, fachadas capture_requested, CSV puro, tests compartidos/procesos y CI.
+Documentación/ADR/estado/QA actualizados en la misma entrega. 25 PASS / 0 FAIL. SQLite125 y PG149 OK; general1538 con una aserción de formato DDL corregida y revalidación final33/39 OK. Ruff/Bandit/dependencias/secretos/Node/verdad/enlaces/migraciones PASS.
+Riesgo: origen REAL/DOUBLE declarado y cuenta/batch/fila sin ID universal del banco;
+ambigüedad entre extractos exige resolución, sin deducción de pago a proveedor.
+Límites externos: flags OFF; sin canales 1.8, aceptación AEAT, CI/despliegue verificados.
+Diagnóstico: UUID operación, slots payment/import/match, coberturas y bank_payment_links.
+Rollback: flags OFF/código compatible; conservar66/evidencia. Downgrade/baja con
+coberturas o links bloqueados; no borrar pruebas de cobro para retirar código.
+[Cierre](architecture/FASE-1.6-cierre.md), [API](architecture/PAYMENT-BANK-CAPTURE-v1.md).
+
 ## 2026-10-02 — Fase 1.5, emisión capturada exclusivamente
 
 Objetivo: operación/aprobación + emisión fiscal + evento primario + resultado en

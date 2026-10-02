@@ -1,5 +1,14 @@
 # Economic Events: persistencia v1, exclusivamente Fase 1.3
 
+Nota vigente 1.6: se añaden PaymentCapture/BankCapture sobre el writer existente,
+con autorización durable, cobertura específica y resultado en un commit.
+customer_payment.received v1 = cobro real; bank_transaction.imported v1 = evidencia;
+bank_transaction.matched v1 = Evidence-only, nunca segunda caja. No cambia
+canonicalización ni catálogo. [ADR-010](ADR-010-payment-bank-capture.md) y
+[API](PAYMENT-BANK-CAPTURE-v1.md). Cursor exacto del writer conserva Decimal;
+link bank→payment durable. Canales1.8 pendientes, flags OFF; no avanzar1.7.
+Las notas inferiores describen el alcance histórico de cada entrega.
+
 Nota de continuidad 1.5: primer productor real de emisión/rectificativa autorizado.
 v1 conserva bytes/hash. Solo estos dos hechos incorporan payloadv2 y cobertura65.
 Leer [ADR-009](ADR-009-invoice-capture.md) y [API](INVOICE-CAPTURE-v1.md).

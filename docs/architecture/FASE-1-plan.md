@@ -1,6 +1,16 @@
 # Fase 1: referencia aprobada y autorización incremental
 
-## Orden vigente — exclusivamente 1.5
+## Orden vigente — exclusivamente 1.6
+
+Fases1.1–1.5 aceptadas. PaymentCapture/BankCapture sobre los writers reales:
+cobro v1, imported v1 y match v1 Evidence-only, autorización durable y cobertura
+con resultado en un commit. [Orden explícita](FASE-1.6-orden.md),
+[ADR-010](ADR-010-payment-bank-capture.md), [API](PAYMENT-BANK-CAPTURE-v1.md),
+[cierre](FASE-1.6-cierre.md). La orden incorpora import/CSV a la referencia1.6.
+No autoriza1.7, canales1.8, históricos1.9 ni activación1.10. Flags OFF.
+Los siguientes alcances son históricos.
+
+## Referencia histórica de 1.5
 
 Fases 1.1–1.4 aceptadas; solo emisión capturada F1/F2 y rectificativas R1–R5.
 Servicio `invoice_capture/`: operaciones/aprobación durable + writer1.4 + evento

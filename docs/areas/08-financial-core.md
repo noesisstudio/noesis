@@ -1,6 +1,16 @@
 # 08 · Financial Core
 
-## Orden vigente — exclusivamente 1.5
+## Orden vigente — exclusivamente 1.6
+
+Fases 1.1–1.5 aceptadas. Solo PaymentCapture y BankCapture: cobro real v1,
+importación bancaria v1 y match v1 Evidence-only, sobre writers existentes.
+Coberturas específicas, vínculo bank→payment, identidad cuenta/batch/fila,
+aprobación durable y resultado en una transacción. Flags OFF. No avanzar 1.7.
+[Orden](../architecture/FASE-1.6-orden.md), [ADR-010](../architecture/ADR-010-payment-bank-capture.md),
+[API](../architecture/PAYMENT-BANK-CAPTURE-v1.md), [auditoría de entradas](../architecture/FASE-1.6-entrada-audit.md)
+y [cierre](../architecture/FASE-1.6-cierre.md). Lo inferior conserva historia, no autoridad vigente.
+
+## Referencia histórica de 1.5
 
 Fases 1.1–1.4 aceptadas; solo emisión capturada F1/F2 y rectificativas R1–R5.
 Servicio `invoice_capture/`: operaciones/aprobación durable + writer1.4 + evento

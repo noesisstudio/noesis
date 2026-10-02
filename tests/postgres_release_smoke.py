@@ -5,8 +5,11 @@ El rollback descarta las tablas nuevas a propósito, no datos de clientes reales
 """
 
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+import runpy
 from unittest.mock import patch
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit, urlunsplit
+from uuid import uuid4
 
 from starlette.testclient import TestClient
 
@@ -210,9 +213,50 @@ def _conversation_transport() -> None:
     print("Conversación PostgreSQL: aislamiento, reserva, deduplicación y rollback OK.")
 
 
-if __name__ == "__main__":
+def main():
     _guard()
-    _rollback()
-    _conversation_transport()
+    # El humo principal ahora conserva bank→payment: no borrar evidencia para
+    # hacer pasar un downgrade. Probar su bloqueo y aislar el ciclo histórico.
+    with db.get_conn() as conn:
+        retained = conn.execute('SELECT 1 FROM bank_payment_links LIMIT 1').fetchone()
+    if retained:
+        before = _snapshot()
+        try:
+            migrations.downgrade(65)
+        except ValueError:
+            assert migrations.current_version() == migrations.LATEST_VERSION
+            assert _snapshot() == before
+        else:
+            raise AssertionError('El downgrade retiró un vínculo de pago durable.')
+    schema = 'release_rollback_' + uuid4().hex
+    with db.get_conn() as conn:
+        conn.execute(f'CREATE SCHEMA {schema}')
+    url = urlsplit(config.DATABASE_URL)
+    isolated_url = urlunsplit((url.scheme,url.netloc,url.path,'options='+quote('-csearch_path='+schema),''))
+    db.close_pool()
+    try:
+        with patch.object(config,'DATABASE_URL',isolated_url):
+            migrations.upgrade(32)
+            seed = runpy.run_path(str(Path(__file__).with_name('postgres_migration_smoke.py')))
+            assert seed['main']() == 0
+            with db.get_conn() as conn:
+                client = conn.execute('SELECT id,business_id FROM clients ORDER BY id LIMIT 1').fetchone()
+            db.add_invoice(client['id'],'Borrador del rollback',100,business_id=client['business_id'])
+            db.update_fiscal(client['business_id'],nif='A12345678',address='Calle CI 1')  # pragma: allowlist secret
+            current_client = db.add_client('Cliente actual',business_id=client['business_id'],
+                nif='B12345674',address='Calle CI 2')  # pragma: allowlist secret
+            issued = db.add_invoice(current_client['id'],'Emisión del rollback',100,business_id=client['business_id'])
+            db.issue_invoice(issued['id'],client['business_id'])
+            _rollback()
+            _conversation_transport()
+            db.close_pool()
+    finally:
+        with db.get_conn() as conn:
+            conn.execute(f'DROP SCHEMA {schema} CASCADE')
+        db.close_pool()
     _public_counters()
     _privacy()
+
+
+if __name__ == "__main__":
+    main()
