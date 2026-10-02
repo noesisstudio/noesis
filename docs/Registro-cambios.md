@@ -1,5 +1,18 @@
 ﻿# Registro de cambios
 
+## 2026-10-02 — Contrato de suscripción del socio incorporado
+
+- Objetivo: añadir al repositorio los tres archivos locales del borrador de
+  contrato (`docs/05-legal-y-rgpd/contratos/`: Markdown, HTML y PDF), sin cambiar
+  su contenido ni el código del producto.
+- Pruebas: inventario de Git, PDF de 45 páginas A4 y revisión de portada y cierre;
+  comprobaciones de secretos, verdad documental y `git diff --check` antes del push.
+- Límites externos: borrador pendiente de revisión jurídica y fiscal; no son
+  condiciones publicadas ni listas para firmar.
+- Riesgo: confundir el borrador con un contrato vigente. Diagnóstico: consultar
+  `Tareas-vivas` y los textos legales publicados. Rollback: revertir este commit
+  documental; no requiere migración.
+
 ## 2026-10-01 (22) — Céntimos dictados y citas en catalán
 
 - `nlu._cifras_dictadas`: «apunta un gasto de cuarenta y cinco con cincuenta de
