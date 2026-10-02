@@ -63,7 +63,7 @@ class EconomicPersistenceContract:
 
     def _empty_migration_roundtrip(self):
         self.assertEqual(migrations.downgrade(62), 62)
-        self.assertEqual(migrations.upgrade(), 63)
+        self.assertEqual(migrations.upgrade(), migrations.LATEST_VERSION)
         with db.get_conn() as conn:
             for kind, table in (("invoice", "invoices"), ("expense", "expenses")):
                 self.assertIsNotNone(
@@ -602,7 +602,7 @@ class EconomicPersistenceContract:
                 )
         with self.assertRaises(ValueError):
             migrations.downgrade(62)
-        self.assertEqual(migrations.current_version(), 63)
+        self.assertEqual(migrations.current_version(), migrations.LATEST_VERSION)
         with self.assertRaises(ValueError):
             db.delete_business_cascade(self.bid)
         self.assertEqual(self.rows(), (1, 0, 1))

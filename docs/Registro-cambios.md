@@ -1,5 +1,25 @@
 ﻿# Registro de cambios
 
+## 2026-10-02 — Exclusivamente 1.4: escritores prestados y frontera exacta
+
+- Objetivo: componer efectos legacy en transacción exterior, sin productores EE.
+- Áreas/archivos: financial_writers por dominio, db/core/locks, banking,
+  documents repo/service, gate de append, migración 64; contrato/fixtures/worker
+  SQLite/PostgreSQL y gate CI. AGENTS, ADR-008, mapa previo/API/cierre, arquitectura,
+  guías 01/03/04/07/08, estado/tareas/QA/decisiones y JSON actualizados juntos.
+- Pruebas y autoauditoría: [cierre](architecture/FASE-1.4-cierre.md) y
+  [QA](Registro-QA.md); matriz de veinte caminos, revisiones, concurrencia,
+  rollback, huellas/XML/QR comparados con main anterior y gates.
+- Límites externos: datos locales sintéticos, sin AEAT/Meta/banco externo,
+  productores, flags activados ni dependencias nuevas. 1.5 no autorizada.
+- Riesgo: dinero legacy sigue binario; gate serializa por negocio. Bajas siguen
+  físicas y banco no guarda enlace durable todavía. No reconstruir historia.
+- Diagnóstico: tenant/origen/revisión/huella/procedencia, lock de negocio/cadena,
+  número/run/payment_id y diferencias antes/después bajo misma transacción.
+- Rollback: revertir código conservando 64; bajar revisiones solo sin evidencia
+  mutable. Evitar escritores de versiones con protocolos de lock distintos en
+  paralelo. Nunca borrar/recalcular factura fiscal emitida ni evidencia durable.
+
 ## 2026-10-02 — Financial Core: exclusivamente Fase 1.3
 
 - Objetivo: persistencia inmutable, exacta y multiempresa de once Economic Events.

@@ -1,5 +1,21 @@
 # Mapa de código
 
+## Financial Core — frontera 1.4
+
+- `financial_writers/`: invoices, payments, purchasing, bank, documents y recurring;
+  único núcleo extraído, fachadas públicas compatibles en db/documents.service.
+- `boundary.py`: resultados/snapshots inmutables, entrada y parámetros Decimal,
+  procedencia binaria, revisión/expected_revision y captura de payment_id.
+- `readers.py`: consultas/proveedor prestados; repo documental tiene variantes.
+- `schema.py` + migrations: 64, revisiones de recibidas/gastos/banco.
+- `core/locks.py`: locks transaccionales compartidos de negocio y cadena fiscal.
+- `economic_events/service.py`: gate común antes de su contador, sin productores.
+- `tests/borrowed_writers_contract.py`, `test_borrowed_writers.py`,
+  `postgres_borrowed_writers.py`, worker y fixture fiscal de main anterior; gate CI.
+- [Mapa previo](architecture/FASE-1.4-writers-audit.md),
+  [API](architecture/BORROWED-WRITERS-v1.md), [cierre](architecture/FASE-1.4-cierre.md).
+  No avanzar a 1.5; los inventarios inferiores son históricos.
+
 ## Financial Core — persistencia 1.3
 
 - `src/noesis/economic_events/contracts.py`: contrato puro v1 sin cambios.

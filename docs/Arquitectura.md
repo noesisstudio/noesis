@@ -1,5 +1,17 @@
 # Arquitectura
 
+## Escritores prestados — Fase 1.4
+
+`financial_writers/{invoices,payments,purchasing,bank,documents,recurring}` extrae
+el núcleo de mutación existente. Fachada db/service posee conexión/BEGIN/commit;
+writer recibe Connection/FinancialSession, devuelve WriterResult inmutable y
+snapshots leídos dentro de esa transacción. Infraestructura/pool compartidos.
+Mig.64: tres revisiones monotónicas, sin migrar REAL/DOUBLE monetario legacy.
+Lock por negocio y cadena común fiscal; huellas/XML/QR conservados. No productores
+ni flags. [ADR-008](architecture/ADR-008-borrowed-writers.md),
+[API](architecture/BORROWED-WRITERS-v1.md). Solo 1.4 autorizada; no avanzar a 1.5.
+Las secciones inferiores describen entregas anteriores.
+
 ## Economic Events — persistencia 1.3, sin productores
 
 Migración 63: economic_events, economic_event_links y contador mínimo por negocio.

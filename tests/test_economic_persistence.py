@@ -55,7 +55,7 @@ class EconomicPersistenceSQLite(EconomicPersistenceContract, unittest.TestCase):
     def test_complete_empty_migration_cycle(self):
         self.assertEqual(migrations.downgrade(0), 0)
         self.assertEqual(migrations.current_version(), 0)
-        self.assertEqual(migrations.upgrade(), 63)
+        self.assertEqual(migrations.upgrade(), migrations.LATEST_VERSION)
 
 
 if __name__ == "__main__":

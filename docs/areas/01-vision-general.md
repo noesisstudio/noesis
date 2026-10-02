@@ -1,5 +1,14 @@
 # 01 · Visión general
 
+## Frontera 1.4 vigente
+
+La orden posterior autoriza solo 1.4; 1.5 espera autorización. `db.py` conserva
+infraestructura y fachada; `financial_writers/` recibe Connection/FinancialSession
+prestada. El propietario inicia/termina transacción. No segunda conexión dentro
+de writer ni nuevo motor. [ADR-008](../architecture/ADR-008-borrowed-writers.md)
+fija gate por negocio, cadena fiscal, revisiones y procedencia monetaria legacy.
+Migración 64 solo añade revisiones mutables. No productores ni flags activados.
+
 ## Fundamentos financieros (2-oct-2026)
 
 Monolito modular: [guía 08](08-financial-core.md) y [ADRs](../architecture/README.md).

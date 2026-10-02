@@ -1,5 +1,13 @@
 # 07 · Lo automático: reloj, colas y copias
 
+## Vencimiento recurrente (1.4)
+
+El scheduler sigue invocando `db.process_due_recurring_invoices`. Cada vencimiento
+reserva run, crea borrador con el motor normal, emite solo con opt-in y finaliza/
+avanza en una transacción exterior. Error reintentable se registra tras rollback;
+no se crea un motor fiscal paralelo ni se reparan huérfanos anteriores.
+Identidad estable (recurring_id, scheduled_for); sin Financial Core conectado.
+
 > Léela antes de tocar `web/scheduler.py`, cualquier cola (`*_outbox`,
 > `whatsapp_ingress`), `web/backups.py` o una tarea que deba ocurrir sin que nadie
 > la pida. Figura 7 del [mapa visual](../02-tecnico/Mapa-Bynoesis.html).

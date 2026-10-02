@@ -77,7 +77,8 @@ def _normalise_row(row) -> Record | None:
         values = ((key, row[key]) for key in row.keys())
     else:
         values = ((str(index), value) for index, value in enumerate(row))
-    return Record((key, _normalise_value(value)) for key, value in values)
+    return Record((key, _normalise_value(value)) for key, value in values
+                  if key != "_financial_revision")
 
 
 class Cursor:
@@ -5525,6 +5526,7 @@ def _normalize_invoice_lines(
     fallback_base=None,
     fallback_vat=config.DEFAULT_VAT_RATE,
     allow_negative: bool = False,
+    _exact: bool = False,
 ) -> list[dict]:
     if not lines:
         lines = [{
@@ -5567,22 +5569,23 @@ def _normalize_invoice_lines(
         kind = (raw.get("kind") or "servicio").strip().lower()
         if kind not in PRODUCT_KINDS:
             raise ValueError("El tipo de línea debe ser 'producto' o 'servicio'.")
+        adapt = (lambda value: value) if _exact else float
         normalized.append({
             "position": position,
             "description": description,
             "kind": kind,
-            "quantity": float(quantity),
-            "unit_price": float(unit_price.quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)),
-            "discount_rate": float(discount),
+            "quantity": adapt(quantity),
+            "unit_price": adapt(unit_price.quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)),
+            "discount_rate": adapt(discount),
             "vat_rate": vat_rate,
-            "base": float(base),
-            "vat_amount": float(vat),
-            "total": float((base + vat).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)),
+            "base": adapt(base),
+            "vat_amount": adapt(vat),
+            "total": adapt((base + vat).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)),
         })
     return normalized
 
 
-def _invoice_totals(lines: list[dict], irpf_rate) -> dict:
+def _invoice_totals(lines: list[dict], irpf_rate, *, _exact: bool = False) -> dict:
     irpf_rate = _tax_rate(irpf_rate, "El IRPF", {0, 7, 15})
     base = sum((Decimal(str(line["base"])) for line in lines), Decimal("0"))
     vat = sum((Decimal(str(line["vat_amount"])) for line in lines), Decimal("0"))
@@ -5593,246 +5596,40 @@ def _invoice_totals(lines: list[dict], irpf_rate) -> dict:
     )
     total = (base + vat - irpf).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
     rates = {line["vat_rate"] for line in lines}
+    adapt = (lambda value: value) if _exact else float
     return {
-        "base": float(base),
+        "base": adapt(base),
         "vat_rate": next(iter(rates)) if len(rates) == 1 else -1,
-        "vat_amount": float(vat),
+        "vat_amount": adapt(vat),
         "irpf_rate": irpf_rate,
-        "irpf_amount": float(irpf),
-        "total": float(total),
+        "irpf_amount": adapt(irpf),
+        "total": adapt(total),
     }
 
 
-def add_invoice(client_id, concept, base, vat_rate=config.DEFAULT_VAT_RATE,
-                irpf_rate=0, *, business_id: int, lines=None,
-                invoice_type: str = "F1", series_id: int | None = None,
-                operation_date: str | None = None, notes: str | None = None,
-                payment_method: str | None = None,
-                legal_mention: str | None = None, gross_total=None) -> dict:
+def add_invoice(client_id, concept, base, vat_rate=config.DEFAULT_VAT_RATE, irpf_rate=0, *, business_id: int, lines=None, invoice_type: str='F1', series_id: int | None=None, operation_date: str | None=None, notes: str | None=None, payment_method: str | None=None, legal_mention: str | None=None, gross_total=None) -> dict:
     """Crea una factura calculando IVA y retención de IRPF.
 
     Total = base + IVA − IRPF retenido (así sale el importe que el cliente paga).
     """
-    if not get_client(client_id, business_id):
-        raise ValueError("El cliente no pertenece a este negocio.")
-    invoice_type = (invoice_type or "F1").strip().upper()
-    if invoice_type not in {"F1", "F2"}:
-        raise ValueError("Solo se pueden crear facturas completas o simplificadas.")
-    normalized = _normalize_invoice_lines(
-        lines, fallback_concept=concept, fallback_base=base,
-        fallback_vat=vat_rate,
-    )
-    totals = _invoice_totals(normalized, irpf_rate)
-    if gross_total is not None:
-        gross = Decimal(str(gross_total)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-        if len(normalized) != 1 or not gross.is_finite() or gross <= 0:
-            raise ValueError("El precio final requiere una única línea positiva.")
-        # Repartir el céntimo residual del precio final sin cambiar el importe
-        # acordado. Solo la creación IVA incluido usa esta vía explícita.
-        difference = gross - Decimal(str(totals["total"]))
-        if abs(difference) > Decimal("0.01"):
-            raise ValueError("El precio final no coincide con el desglose calculado.")
-        if difference and normalized[0]['vat_rate'] == 0:
-            raise ValueError("Revisa el redondeo del precio final sin IVA antes de guardar.")
-        normalized[0]["vat_amount"] = float(Decimal(str(normalized[0]["vat_amount"])) + difference)
-        normalized[0]["total"] = float(Decimal(str(normalized[0]["total"])) + difference)
-        totals = _invoice_totals(normalized, irpf_rate)
-    concept = normalized[0]["description"]
-    if len(normalized) > 1:
-        concept = f"{concept} y {len(normalized) - 1} línea(s) más"
-    if operation_date:
-        try:
-            operation_date = date.fromisoformat(str(operation_date)).isoformat()
-        except ValueError as exc:
-            raise ValueError("La fecha de operación no es válida.") from exc
-    notes = (notes or "").strip() or None
-    payment_method = (payment_method or "").strip() or None
-    legal_mention = (legal_mention or "").strip() or None
-    for value, label, maximum in (
-        (notes, "Las notas", 2000),
-        (payment_method, "La forma de pago", 120),
-        (legal_mention, "La mención legal", 500),
-    ):
-        if value and len(value) > maximum:
-            raise ValueError(f"{label} supera {maximum} caracteres.")
+    from .financial_writers import invoices as writers
+    from .financial_writers.boundary import observe
     with get_conn() as conn:
-        conn.execute("BEGIN IMMEDIATE")
-        document_type = _series_document_type(invoice_type)
-        if series_id is None:
-            series = _ensure_default_invoice_series(conn, business_id, document_type)
-            series_id = series["id"]
-        else:
-            series = conn.execute(
-                "SELECT * FROM invoice_series WHERE id=? AND business_id=? "
-                "AND active=TRUE",
-                (series_id, business_id),
-            ).fetchone()
-            if not series or series["document_type"] != document_type:
-                raise ValueError("La serie no corresponde al tipo de factura.")
-        row = conn.execute(
-            "INSERT INTO invoices (business_id, client_id, concept, base, vat_rate, "
-            "vat_amount, irpf_rate, irpf_amount, total, status, invoice_type, "
-            "series_id, operation_date, notes, payment_method, legal_mention, "
-            "currency, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'borrador', "
-            "?, ?, ?, ?, ?, ?, 'EUR', ?) RETURNING id",
-            (
-                business_id, client_id, concept, totals["base"],
-                totals["vat_rate"], totals["vat_amount"], totals["irpf_rate"],
-                totals["irpf_amount"], totals["total"], invoice_type, series_id,
-                operation_date, notes, payment_method, legal_mention, _now(),
-            ),
-        ).fetchone()
-        new_id = row["id"]
-        created_at = _now()
-        for line in normalized:
-            conn.execute(
-                "INSERT INTO invoice_lines "
-                "(business_id, invoice_id, position, description, kind, quantity, "
-                "unit_price, discount_rate, vat_rate, base, vat_amount, total, "
-                "created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (
-                    business_id, new_id, line["position"], line["description"],
-                    line["kind"], line["quantity"], line["unit_price"], line["discount_rate"],
-                    line["vat_rate"], line["base"], line["vat_amount"],
-                    line["total"], created_at,
-                ),
-            )
-    return get_invoice(new_id, business_id)
+        conn.execute('BEGIN IMMEDIATE')
+        result = writers.add_invoice(conn, client_id, concept, base, vat_rate, irpf_rate, business_id=business_id, lines=lines, invoice_type=invoice_type, series_id=series_id, operation_date=operation_date, notes=notes, payment_method=payment_method, legal_mention=legal_mention, gross_total=gross_total, legacy=True)
+    observe(result)
+    return result.legacy_value()
 
 
-def create_rectifying_invoice(
-    original_invoice_id: int,
-    business_id: int,
-    *,
-    concept: str,
-    base,
-    vat_rate=config.DEFAULT_VAT_RATE,
-    irpf_rate=0,
-    invoice_type: str = "R1",
-    rectification_type: str = "I",
-    reason: str,
-    lines=None,
-    series_id: int | None = None,
-) -> dict:
+def create_rectifying_invoice(original_invoice_id: int, business_id: int, *, concept: str, base, vat_rate=config.DEFAULT_VAT_RATE, irpf_rate=0, invoice_type: str='R1', rectification_type: str='I', reason: str, lines=None, series_id: int | None=None) -> dict:
     """Crea una rectificativa por diferencias; el original nunca se modifica."""
-    original = get_invoice(original_invoice_id, business_id)
-    if not original or original.get("status") not in {
-        "enviada", "parcial", "cobrada"
-    }:
-        raise ValueError("Solo se puede rectificar una factura ya emitida.")
-    if get_invoice_cancellation_record(original_invoice_id, business_id):
-        raise ValueError(
-            "El registro fiscal de esta factura está anulado; no puede rectificarse."
-        )
-    invoice_type = (invoice_type or "").strip().upper()
-    if invoice_type not in {"R1", "R2", "R3", "R4", "R5"}:
-        raise ValueError("El tipo de factura rectificativa no es válido.")
-    if invoice_type == "R5" and original.get("invoice_type") != "F2":
-        raise ValueError("R5 solo puede rectificar una factura simplificada F2.")
-    if invoice_type != "R5" and original.get("invoice_type") == "F2":
-        raise ValueError("Una factura simplificada F2 debe rectificarse como R5.")
-    rectification_type = (rectification_type or "").strip().upper()
-    if rectification_type != "I":
-        raise ValueError(
-            "Bynoesis solo prepara rectificativas por diferencias. "
-            "La rectificación por sustitución requiere revisión fiscal."
-        )
-    concept = (concept or "").strip()
-    reason = (reason or "").strip()
-    if not concept or len(concept) > 500:
-        raise ValueError("El concepto es obligatorio y no puede superar 500 caracteres.")
-    if len(reason) < 3 or len(reason) > 1000:
-        raise ValueError("El motivo de rectificación es obligatorio.")
-    normalized = _normalize_invoice_lines(
-        lines,
-        fallback_concept=concept,
-        fallback_base=base,
-        fallback_vat=vat_rate,
-        allow_negative=True,
-    )
-    totals = _invoice_totals(normalized, irpf_rate)
-    if totals["base"] == 0:
-        raise ValueError("La base rectificada debe ser distinta de cero.")
-    concept = normalized[0]["description"]
-    if len(normalized) > 1:
-        concept = f"{concept} y {len(normalized) - 1} línea(s) más"
+    from .financial_writers import invoices as writers
+    from .financial_writers.boundary import observe
     with get_conn() as conn:
-        conn.execute("BEGIN IMMEDIATE")
-        lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
-        current_original = conn.execute(
-            "SELECT * FROM invoices WHERE id=? AND business_id=?" + lock,
-            (original_invoice_id, business_id),
-        ).fetchone()
-        if not current_original or current_original["status"] not in {
-            "enviada", "parcial", "cobrada"
-        }:
-            raise ValueError("Solo se puede rectificar una factura ya emitida.")
-        cancelled = conn.execute(
-            "SELECT 1 FROM invoice_cancellation_records "
-            "WHERE invoice_id=? AND business_id=? LIMIT 1",
-            (original_invoice_id, business_id),
-        ).fetchone()
-        if cancelled:
-            raise ValueError(
-                "El registro fiscal de esta factura está anulado; no puede rectificarse."
-            )
-        pending = conn.execute(
-            "SELECT id FROM invoices WHERE business_id=? "
-            "AND rectifies_invoice_id=? AND status='borrador' LIMIT 1",
-            (business_id, original_invoice_id),
-        ).fetchone()
-        if pending:
-            raise ValueError(
-                "Ya existe una rectificativa en borrador para esta factura. "
-                "Revísala antes de crear otra."
-            )
-        original = dict(current_original)
-        if invoice_type == "R5" and original.get("invoice_type") != "F2":
-            raise ValueError("R5 solo puede rectificar una factura simplificada F2.")
-        if invoice_type != "R5" and original.get("invoice_type") == "F2":
-            raise ValueError("Una factura simplificada F2 debe rectificarse como R5.")
-        if series_id is None:
-            series = _ensure_default_invoice_series(
-                conn, business_id, "rectifying"
-            )
-            series_id = series["id"]
-        else:
-            series = conn.execute(
-                "SELECT * FROM invoice_series WHERE id=? AND business_id=? "
-                "AND document_type='rectifying' AND active=TRUE",
-                (series_id, business_id),
-            ).fetchone()
-            if not series:
-                raise ValueError("La serie rectificativa no es válida.")
-        row = conn.execute(
-            "INSERT INTO invoices (business_id, client_id, concept, base, vat_rate, "
-            "vat_amount, irpf_rate, irpf_amount, total, status, invoice_type, "
-            "rectifies_invoice_id, rectification_type, rectification_reason, "
-            "series_id, currency, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, "
-            "'borrador', ?, ?, ?, ?, ?, 'EUR', ?) RETURNING id",
-            (
-                business_id, original["client_id"], concept, totals["base"],
-                totals["vat_rate"], totals["vat_amount"], totals["irpf_rate"],
-                totals["irpf_amount"], totals["total"], invoice_type,
-                original_invoice_id, rectification_type, reason, series_id, _now(),
-            ),
-        ).fetchone()
-        new_id = row["id"]
-        created_at = _now()
-        for line in normalized:
-            conn.execute(
-                "INSERT INTO invoice_lines "
-                "(business_id, invoice_id, position, description, kind, quantity, "
-                "unit_price, discount_rate, vat_rate, base, vat_amount, total, "
-                "created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (
-                    business_id, new_id, line["position"], line["description"],
-                    line["kind"], line["quantity"], line["unit_price"], line["discount_rate"],
-                    line["vat_rate"], line["base"], line["vat_amount"],
-                    line["total"], created_at,
-                ),
-            )
-    return get_invoice(new_id, business_id)
+        conn.execute('BEGIN IMMEDIATE')
+        result = writers.create_rectifying_invoice(conn, original_invoice_id, business_id, concept=concept, base=base, vat_rate=vat_rate, irpf_rate=irpf_rate, invoice_type=invoice_type, rectification_type=rectification_type, reason=reason, lines=lines, series_id=series_id, legacy=True)
+    observe(result)
+    return result.legacy_value()
 
 
 def update_rectifying_invoice_draft(
@@ -6497,105 +6294,25 @@ def set_recurring_invoice_status(
     )
 
 
-def process_due_recurring_invoices(
-    *, today: date | None = None, limit: int = 100
-) -> list[dict]:
+def process_due_recurring_invoices(*, today: date | None = None, limit: int = 100) -> list[dict]:
     """Genera una vez cada vencimiento; emitir automáticamente es opt-in."""
+    from .financial_writers import recurring
+    from .financial_writers.boundary import observe
     today = today or date.today()
     with get_conn() as conn:
-        rows = conn.execute(
-            "SELECT r.* FROM recurring_invoices r JOIN businesses b "
-            "ON b.id=r.business_id WHERE r.status='active' "
-            "AND r.next_run_on<=? ORDER BY r.next_run_on, r.id LIMIT ?",
-            (today.isoformat(), max(1, min(int(limit), 500))),
-        ).fetchall()
+        rows = conn.execute("SELECT r.* FROM recurring_invoices r JOIN businesses b ON b.id=r.business_id WHERE r.status='active' AND r.next_run_on<=? ORDER BY r.next_run_on,r.id LIMIT ?", (today.isoformat(), max(1,min(int(limit),500)))).fetchall()
     generated = []
-    for raw in rows:
-        schedule = dict(raw)
-        business = get_business(schedule["business_id"])
-        if not business or not subscription_allows_access(business):
-            continue
-        scheduled_for = schedule["next_run_on"]
-        now = _now()
-        stale_before = (datetime.now() - timedelta(minutes=10)).isoformat(
-            timespec="seconds"
-        )
-        with get_conn() as conn:
-            conn.execute("BEGIN IMMEDIATE")
-            run = conn.execute(
-                "INSERT INTO recurring_invoice_runs "
-                "(business_id, recurring_id, scheduled_for, status, created_at) "
-                "VALUES (?, ?, ?, 'processing', ?) "
-                "ON CONFLICT (business_id, recurring_id, scheduled_for) DO NOTHING "
-                "RETURNING id",
-                (
-                    schedule["business_id"], schedule["id"], scheduled_for, now,
-                ),
-            ).fetchone()
-            if not run:
-                run = conn.execute(
-                    "UPDATE recurring_invoice_runs SET created_at=?, error=NULL, "
-                    "status='processing' WHERE business_id=? AND recurring_id=? "
-                    "AND scheduled_for=? AND invoice_id IS NULL AND "
-                    "(status='error' OR created_at<=?) RETURNING id",
-                    (
-                        now, schedule["business_id"], schedule["id"],
-                        scheduled_for, stale_before,
-                    ),
-                ).fetchone()
-            if not run:
-                continue
+    for schedule in rows:
         try:
-            lines = json.loads(schedule["lines_json"])
-            invoice = add_invoice(
-                schedule["client_id"],
-                lines[0]["description"],
-                None,
-                business_id=schedule["business_id"],
-                lines=lines,
-                irpf_rate=schedule["irpf_rate"],
-                invoice_type=schedule["invoice_type"],
-                series_id=schedule.get("series_id"),
-                operation_date=scheduled_for,
-                notes=schedule.get("notes"),
-                payment_method=schedule.get("payment_method"),
-            )
-            if schedule.get("auto_issue"):
-                invoice = issue_invoice(invoice["id"], schedule["business_id"])
-            next_day = _advance_recurring_day(
-                date.fromisoformat(scheduled_for),
-                schedule["cadence"],
-                int(schedule["interval_count"]),
-            )
-            end = date.fromisoformat(schedule["ends_on"]) if schedule.get("ends_on") else None
-            next_status = "ended" if end and next_day > end else "active"
-            completed_at = _now()
             with get_conn() as conn:
                 conn.execute("BEGIN IMMEDIATE")
-                conn.execute(
-                    "UPDATE recurring_invoice_runs SET invoice_id=?, status='completed', "
-                    "completed_at=? WHERE id=? AND business_id=?",
-                    (
-                        invoice["id"], completed_at, run["id"],
-                        schedule["business_id"],
-                    ),
-                )
-                conn.execute(
-                    "UPDATE recurring_invoices SET next_run_on=?, status=?, "
-                    "last_generated_at=?, updated_at=? WHERE id=? AND business_id=?",
-                    (
-                        next_day.isoformat(), next_status, completed_at,
-                        completed_at, schedule["id"], schedule["business_id"],
-                    ),
-                )
-            generated.append(invoice)
-        except Exception as exc:  # noqa: BLE001 - deja el fallo trazable y reintentable.
+                result = recurring.generate_cycle(conn, schedule["id"], schedule["business_id"], schedule["next_run_on"], today=today, legacy=True)
+            observe(result)
+            if result.legacy is not None:
+                generated.append(result.legacy_value())
+        except Exception as exc:  # noqa: BLE001 - fallo trazable y reintentable tras rollback completo.
             with get_conn() as conn:
-                conn.execute(
-                    "UPDATE recurring_invoice_runs SET status='error', error=? "
-                    "WHERE id=? AND business_id=?",
-                    (str(exc)[:1500], run["id"], schedule["business_id"]),
-                )
+                conn.execute("INSERT INTO recurring_invoice_runs (business_id,recurring_id,scheduled_for,status,created_at,error) VALUES (?,?,?,'error',?,?) ON CONFLICT (business_id,recurring_id,scheduled_for) DO UPDATE SET status='error',error=excluded.error WHERE recurring_invoice_runs.invoice_id IS NULL", (schedule["business_id"],schedule["id"],schedule["next_run_on"],_now(),str(exc)[:1500]))
             log.exception("No se pudo generar la factura recurrente %s", schedule["id"])
     return generated
 
@@ -6880,6 +6597,8 @@ def _create_invoice_record(conn, business_id: int, invoice_id: int) -> dict:
         raise ValueError("El tipo de factura no es válido para Veri*Factu.")
     issue_date = verifactu.aeat_date(invoice["issued_at"])
     generated_at = verifactu.generated_at_with_timezone()
+    from .core.locks import lock_fiscal_chain
+    lock_fiscal_chain(conn, business_id, issuer_nif)
     existing_chain = _fiscal_record_rows(conn, business_id, issuer_nif)
     integrity = _verify_invoice_record_rows(existing_chain)
     if not integrity["valid"]:
@@ -7026,202 +6745,19 @@ def _create_invoice_record(conn, business_id: int, invoice_id: int) -> dict:
     ).fetchone())
 
 
-def issue_invoice(
-    invoice_id: int,
-    business_id: int,
-    payment_term_days: int | None = None,
-    *,
-    _issued_at_override: str | None = None,
-) -> dict:
+def issue_invoice(invoice_id: int, business_id: int, payment_term_days: int | None=None, *, _issued_at_override: str | None=None) -> dict:
     """Emite una factura una sola vez, numera y congela sus datos fiscales.
 
     ``_issued_at_override`` existe únicamente para construir cuentas demo con
     historia coherente. No se expone en las rutas de producto.
     """
-    pendientes = invoice_pending_fields(get_invoice(invoice_id, business_id))
-    if pendientes:
-        # Un borrador a medias existe para no perder lo dicho, nunca para emitirse
-        # con huecos. Se dice qué falta en vez de un error genérico.
-        raise ValueError(
-            "Esta factura está a medias y no se puede emitir todavía. Falta: "
-            + ", ".join(pendientes) + ".")
+    from .financial_writers import invoices as writers
+    from .financial_writers.boundary import observe
     with get_conn() as conn:
-        conn.execute("BEGIN IMMEDIATE")
-        lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
-        inv = conn.execute(
-            "SELECT * FROM invoices WHERE id=? AND business_id=?" + lock,
-            (invoice_id, business_id),
-        ).fetchone()
-        if not inv:
-            raise ValueError("No existe esa factura.")
-        if inv.get("source") == "importada":
-            raise ValueError(
-                "Una factura importada es histórica: no se puede emitir ni "
-                "entrar en la cadena Veri*Factu."
-            )
-        if inv["status"] != "borrador" or inv["number"]:
-            existing = get_invoice(invoice_id, business_id)
-            if existing and existing["status"] in {
-                "enviada", "parcial", "cobrada"
-            }:
-                return existing
-            raise ValueError("La factura no se puede emitir desde su estado actual.")
-
-        biz = conn.execute(
-            "SELECT * FROM businesses WHERE id=?", (business_id,)
-        ).fetchone()
-        client = conn.execute(
-            "SELECT * FROM clients WHERE id=? AND business_id=?",
-            (inv["client_id"], business_id),
-        ).fetchone()
-        if not biz or not client:
-            raise ValueError("Faltan el negocio o el cliente de la factura.")
-        invoice_type = (inv.get("invoice_type") or "F1").upper()
-        missing = []
-        required = [
-            (biz["name"], "nombre fiscal del negocio"),
-            (biz["nif"], "NIF del negocio"),
-            (biz["address"], "domicilio del negocio"),
-            (client["name"], "nombre del cliente"),
-        ]
-        if invoice_type != "F2":
-            required.extend((
-                (client["nif"], "NIF del cliente"),
-                (client["address"], "domicilio del cliente"),
-            ))
-        for value, label in required:
-            if not (value or "").strip():
-                missing.append(label)
-        if missing:
-            aviso = "Antes de emitir completa: " + ", ".join(missing) + "."
-            # Si lo único que falta son los datos del destinatario y el importe
-            # cabe en una simplificada, el autónomo tiene salida legal sin
-            # perseguir al cliente: se la ofrecemos en vez de dejarle parado.
-            solo_falta_el_cliente = missing and all(
-                label in {"NIF del cliente", "domicilio del cliente"}
-                for label in missing
-            )
-            if solo_falta_el_cliente and _fits_simplified_invoice(inv["total"]):
-                aviso += (
-                    " Si es un particular, puedes emitirla como factura"
-                    " simplificada: hasta 400 € no necesita NIF ni domicilio"
-                    " del cliente."
-                )
-            elif solo_falta_el_cliente:
-                aviso += (
-                    " Es una factura completa: también requiere esos datos si el cliente "
-                    "es un particular. El límite general del ticket sin identificación "
-                    "del destinatario es 400 € IVA incluido; las excepciones sectoriales "
-                    "no se aplican automáticamente."
-                )
-            raise ValueError(aviso)
-        lines = [dict(row) for row in conn.execute(
-            "SELECT * FROM invoice_lines WHERE business_id=? AND invoice_id=? "
-            "ORDER BY position, id",
-            (business_id, invoice_id),
-        ).fetchall()]
-        if not lines:
-            raise ValueError("La factura no contiene ninguna línea.")
-        from .conversation_plan import expected_invoice, invoice_fingerprint
-        expectation = expected_invoice.get()
-        if expectation and expectation[:2] == (business_id, invoice_id) and expectation[2]:
-            if invoice_fingerprint(inv, lines) != expectation[2]:
-                raise ValueError("La factura cambió desde la confirmación. Revísala antes de emitir.")
-        totals = _invoice_totals(lines, inv.get("irpf_rate") or 0)
-        for key in ("base", "vat_amount", "irpf_amount", "total"):
-            if Decimal(str(totals[key])).quantize(Decimal("0.01")) != Decimal(
-                str(inv[key])
-            ).quantize(Decimal("0.01")):
-                raise ValueError(
-                    "Los totales del borrador no coinciden con sus líneas; "
-                    "revísalo antes de emitir."
-                )
-        if invoice_type == "F2" and not _fits_simplified_invoice(inv["total"]):
-            raise ValueError(
-                "La factura simplificada supera el límite general de 400 €. "
-                "Emítela como factura completa con los datos fiscales del cliente."
-            )
-        expected_document_type = _series_document_type(invoice_type)
-        series = conn.execute(
-            "SELECT * FROM invoice_series WHERE id=? AND business_id=? AND active=TRUE",
-            (inv.get("series_id"), business_id),
-        ).fetchone()
-        if not series:
-            series = _ensure_default_invoice_series(
-                conn, business_id, expected_document_type
-            )
-            conn.execute(
-                "UPDATE invoices SET series_id=? WHERE id=? AND business_id=?",
-                (series["id"], invoice_id, business_id),
-            )
-        if series["document_type"] != expected_document_type:
-            raise ValueError("La serie no corresponde al tipo de factura.")
-        number = _next_invoice_series_number(conn, business_id, series["id"])
-        if _issued_at_override:
-            try:
-                issued_day = date.fromisoformat(str(_issued_at_override)[:10])
-            except ValueError as exc:
-                raise ValueError("La fecha de emisión demo no es válida.") from exc
-            if issued_day > date.today():
-                raise ValueError("La fecha de emisión demo no puede ser futura.")
-            issued_at = f"{issued_day.isoformat()}T12:00:00"
-        else:
-            issued_at = _now()
-            issued_day = date.today()
-        if inv.get("operation_date"):
-            try:
-                operation_day = date.fromisoformat(inv["operation_date"])
-            except ValueError as exc:
-                raise ValueError("La fecha de operación del borrador no es válida.") from exc
-            if operation_day > date.today():
-                raise ValueError("La fecha de operación no puede estar en el futuro.")
-        if payment_term_days is None:
-            configured_term = biz.get("default_payment_term_days")
-            payment_term_days = int(
-                15 if configured_term is None else configured_term
-            )
-        due_date = (
-            issued_day + timedelta(days=max(0, min(payment_term_days, 365)))
-        ).isoformat()
-        document_profile = _ensure_current_document_profile(conn, dict(biz))
-        conn.execute(
-            "UPDATE invoices SET status='enviada', number=?, issued_at=?, due_date=?, "
-            "issuer_name=?, issuer_nif=?, issuer_address=?, recipient_name=?, "
-            "recipient_nif=?, recipient_address=?, document_profile_id=? "
-            "WHERE id=? AND business_id=? AND status='borrador'",
-            (
-                number, issued_at, due_date, biz["name"], biz["nif"], biz["address"],
-                client["name"], client.get("nif"), client.get("address"),
-                document_profile["id"], invoice_id, business_id,
-            ),
-        )
-        if biz.get("verifactu_enabled"):
-            errors = verifactu_configuration_errors()
-            if errors:
-                raise ValueError(
-                    "No se puede emitir en modo Veri*Factu; configura: "
-                    + ", ".join(errors) + "."
-                )
-            _create_invoice_record(conn, business_id, invoice_id)
-        else:
-            _record_invoice_event(
-                conn, business_id, "emision", invoice_id=invoice_id,
-                details=f"numero={number}", created_at=issued_at,
-            )
-    saved = get_invoice(invoice_id, business_id)
-    from . import value_ledger
-    value_ledger.observe_useful_action(
-        business_id,
-        "invoice_issued",
-        entity_type="invoice",
-        entity_id=invoice_id,
-        completed_at=issued_at,
-        metadata={"invoice_type": invoice_type},
-    )
-    value_ledger.observe_job_invoiced_from_invoice(
-        business_id, invoice_id=invoice_id, occurred_at=issued_at
-    )
-    return saved
+        conn.execute('BEGIN IMMEDIATE')
+        result = writers.issue_invoice(conn, invoice_id, business_id, payment_term_days, _issued_at_override=_issued_at_override, legacy=True)
+    observe(result)
+    return result.legacy_value()
 
 
 def _payment_text(value, label: str, max_length: int) -> str | None:
@@ -7252,12 +6788,13 @@ def _locked_invoice_with_paid(conn, invoice_id: int, business_id: int):
     ).fetchone()
     if not invoice:
         return None, Decimal("0.00")
-    paid = conn.execute(
-        "SELECT COALESCE(SUM(amount),0) AS total FROM invoice_payments "
+    payments = conn.execute_exact(
+        "SELECT amount FROM invoice_payments "
         "WHERE invoice_id=? AND business_id=?",
         (invoice_id, business_id),
-    ).fetchone()["total"]
-    return invoice, Decimal(str(paid or 0)).quantize(Decimal("0.01"))
+    ).fetchall()
+    paid = sum((Decimal(str(p["amount"])) for p in payments), Decimal("0"))
+    return invoice, paid.quantize(Decimal("0.01"))
 
 
 def _insert_invoice_payment(
@@ -7273,7 +6810,7 @@ def _insert_invoice_payment(
         "(business_id, invoice_id, amount, method, paid_at, note, created_at) "
         "VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id",
         (
-            invoice["business_id"], invoice["id"], float(amount), method,
+            invoice["business_id"], invoice["id"], amount, method,
             paid_at, note, _now(),
         ),
     ).fetchone()
@@ -7301,67 +6838,15 @@ def _set_invoice_payment_state(
         )
 
 
-def add_invoice_payment(
-    invoice_id,
-    amount,
-    *,
-    business_id: int,
-    method=None,
-    paid_at=None,
-    note=None,
-) -> dict:
+def add_invoice_payment(invoice_id, amount, *, business_id: int, method=None, paid_at=None, note=None) -> dict:
     """Registra un cobro sin alterar el registro fiscal inmutable de la factura."""
-    amount_decimal = Decimal(str(_positive_money(amount, "El importe"))).quantize(
-        Decimal("0.01")
-    )
-    method = _payment_text(method, "El método", 50)
-    note = _payment_text(note, "La nota", 500)
-    paid_at = _payment_paid_at(paid_at)
+    from .financial_writers import payments as writers
+    from .financial_writers.boundary import observe
     with get_conn() as conn:
-        conn.execute("BEGIN IMMEDIATE")
-        invoice, already_paid = _locked_invoice_with_paid(
-            conn, invoice_id, business_id
-        )
-        if not invoice:
-            raise ValueError("Factura no encontrada.")
-        if invoice["status"] == "borrador" or not invoice.get("number"):
-            raise ValueError("Solo se pueden cobrar facturas emitidas.")
-        total = Decimal(str(invoice["total"])).quantize(Decimal("0.01"))
-        if total <= 0:
-            raise ValueError("Esta factura no admite cobros.")
-        new_paid = already_paid + amount_decimal
-        if new_paid > total:
-            remaining = max(total - already_paid, Decimal("0.00"))
-            raise ValueError(
-                f"El cobro supera el importe pendiente ({float(remaining):.2f} €)."
-            )
-        payment_id = _insert_invoice_payment(
-            conn, invoice, amount_decimal, method, paid_at, note
-        )
-        _set_invoice_payment_state(conn, invoice, new_paid, paid_at)
-        _record_invoice_event(
-            conn, business_id, "cobro", invoice_id=invoice_id,
-            details=(
-                f"importe={float(amount_decimal):.2f};"
-                f"metodo={method or 'no indicado'}"
-            ),
-            created_at=paid_at,
-        )
-        payment = conn.execute(
-            "SELECT * FROM invoice_payments "
-            "WHERE id=? AND business_id=? AND invoice_id=?",
-            (payment_id, business_id, invoice_id),
-        ).fetchone()
-    saved = dict(payment)
-    from . import value_ledger
-    value_ledger.observe_payment_received(
-        business_id,
-        invoice_id=invoice_id,
-        payment_id=payment_id,
-        amount=amount_decimal,
-        occurred_at=paid_at,
-    )
-    return saved
+        conn.execute('BEGIN IMMEDIATE')
+        result = writers.add_invoice_payment(conn, invoice_id, amount, business_id=business_id, method=method, paid_at=paid_at, note=note, legacy=True)
+    observe(result)
+    return result.legacy_value()
 
 
 def list_invoice_payments(invoice_id, business_id) -> list[dict]:
@@ -7396,41 +6881,13 @@ def invoice_paid_amount(invoice_id, business_id) -> float | None:
 
 def mark_invoice_paid(invoice_id, business_id) -> dict | None:
     """Registra el importe restante; repetir la operación no duplica el cobro."""
-    payment_time = _now()
-    payment_id = None
+    from .financial_writers import payments as writers
+    from .financial_writers.boundary import observe
     with get_conn() as conn:
-        conn.execute("BEGIN IMMEDIATE")
-        invoice, already_paid = _locked_invoice_with_paid(
-            conn, invoice_id, business_id
-        )
-        if not invoice or invoice["status"] == "borrador" or not invoice.get("number"):
-            return None
-        total = Decimal(str(invoice["total"])).quantize(Decimal("0.01"))
-        remaining = total - already_paid
-        if total <= 0:
-            return None
-        if remaining > 0:
-            payment_id = _insert_invoice_payment(
-                conn, invoice, remaining, None, payment_time,
-                "Cobro completo registrado",
-            )
-            _set_invoice_payment_state(conn, invoice, total, payment_time)
-            _record_invoice_event(
-                conn, business_id, "cobro", invoice_id=invoice_id,
-                details=f"importe={float(remaining):.2f};metodo=no indicado",
-                created_at=payment_time,
-            )
-    saved = get_invoice(invoice_id, business_id)
-    if payment_id is not None:
-        from . import value_ledger
-        value_ledger.observe_payment_received(
-            business_id,
-            invoice_id=invoice_id,
-            payment_id=payment_id,
-            amount=remaining,
-            occurred_at=payment_time,
-        )
-    return saved
+        conn.execute('BEGIN IMMEDIATE')
+        result = writers.mark_invoice_paid(conn, invoice_id, business_id, legacy=True)
+    observe(result)
+    return result.legacy_value()
 
 
 def delete_invoice(invoice_id, business_id) -> bool:
@@ -7476,126 +6933,15 @@ def get_verifactu_cancellation_outbox(
         return dict(row) if row else None
 
 
-def create_invoice_cancellation_record(
-    invoice_id: int, business_id: int, *, reason: str
-) -> dict:
+def create_invoice_cancellation_record(invoice_id: int, business_id: int, *, reason: str) -> dict:
     """Anula ante la AEAT un alta aceptada sin borrar ni alterar la factura."""
-    reason = (reason or "").strip()
-    if not 5 <= len(reason) <= 1000:
-        raise ValueError("Explica el motivo de la anulación (5 a 1.000 caracteres).")
+    from .financial_writers import invoices as writers
+    from .financial_writers.boundary import observe
     with get_conn() as conn:
-        conn.execute("BEGIN IMMEDIATE")
-        existing = conn.execute(
-            "SELECT * FROM invoice_cancellation_records "
-            "WHERE invoice_id=? AND business_id=?",
-            (invoice_id, business_id),
-        ).fetchone()
-        if existing:
-            return dict(existing)
-        invoice = conn.execute(
-            "SELECT * FROM invoices WHERE id=? AND business_id=?",
-            (invoice_id, business_id),
-        ).fetchone()
-        original = conn.execute(
-            "SELECT * FROM invoice_records WHERE invoice_id=? AND business_id=?",
-            (invoice_id, business_id),
-        ).fetchone()
-        outbox = conn.execute(
-            "SELECT * FROM verifactu_outbox WHERE invoice_id=? AND business_id=?",
-            (invoice_id, business_id),
-        ).fetchone()
-        if not invoice or not original:
-            raise ValueError(
-                "Solo se puede anular un registro Veri*Factu ya generado."
-            )
-        if not outbox or outbox["status"] not in {
-            "aceptado", "aceptado_con_errores"
-        }:
-            raise ValueError(
-                "La anulación requiere que el alta haya sido aceptada por la AEAT."
-            )
-        issuer_nif = original["issuer_nif"]
-        chain = _fiscal_record_rows(conn, business_id, issuer_nif)
-        integrity = _verify_invoice_record_rows(chain)
-        if not integrity["valid"]:
-            raise ValueError(
-                "La cadena Veri*Factu presenta una anomalía; no se ha anulado."
-            )
-        previous = chain[-1] if chain else None
-        generated_at = verifactu.generated_at_with_timezone()
-        if previous:
-            previous_time = datetime.fromisoformat(previous["generated_at"])
-            current_time = datetime.fromisoformat(generated_at)
-            if current_time < previous_time - timedelta(minutes=1):
-                raise ValueError(
-                    "El reloj del sistema retrocede respecto al último registro."
-                )
-            if current_time <= previous_time:
-                generated_at = (
-                    previous_time + timedelta(milliseconds=1)
-                ).isoformat(timespec="milliseconds")
-        previous_hash = previous["record_hash"] if previous else None
-        record_hash = verifactu.cancellation_record_hash(
-            issuer_nif=issuer_nif,
-            invoice_number=original["invoice_number"],
-            issue_date=original["issue_date"],
-            previous_hash=previous_hash,
-            generated_at=generated_at,
-        )
-        row = conn.execute(
-            "INSERT INTO invoice_cancellation_records ("
-            "business_id, invoice_id, original_record_id, record_type, "
-            "record_version, issuer_nif, issuer_name, invoice_number, issue_date, "
-            "reason, generated_at, previous_record_type, previous_record_id, "
-            "previous_issuer_nif, previous_invoice_number, previous_issue_date, "
-            "previous_hash, hash_algorithm, hash_type, hash_spec_version, "
-            "record_hash, producer_name, producer_nif, system_name, system_id, "
-            "system_version, installation_id, created_at) VALUES ("
-            "?, ?, ?, 'anulacion', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
-            "?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
-            (
-                business_id, invoice_id, original["id"],
-                config.VERIFACTU_RECORD_VERSION, issuer_nif,
-                original["issuer_name"], original["invoice_number"],
-                original["issue_date"], reason, generated_at,
-                previous.get("record_type") if previous else None,
-                previous["id"] if previous else None,
-                previous["issuer_nif"] if previous else None,
-                previous["invoice_number"] if previous else None,
-                previous["issue_date"] if previous else None,
-                previous_hash, config.VERIFACTU_HASH_ALGORITHM,
-                config.VERIFACTU_HASH_TYPE, config.VERIFACTU_HASH_SPEC_VERSION,
-                record_hash, config.VERIFACTU_PRODUCER_NAME.strip(),
-                config.VERIFACTU_PRODUCER_NIF.strip().upper(),
-                config.VERIFACTU_SYSTEM_NAME, config.VERIFACTU_SYSTEM_ID,
-                config.VERIFACTU_SYSTEM_VERSION,
-                f"{config.VERIFACTU_INSTALLATION_PREFIX}-{business_id}",
-                generated_at,
-            ),
-        ).fetchone()
-        record_id = row["id"]
-        queued_at = _now()
-        conn.execute(
-            "INSERT INTO verifactu_cancellation_outbox ("
-            "business_id, invoice_id, record_id, status, attempts, max_attempts, "
-            "next_attempt_at, created_at, updated_at) "
-            "VALUES (?, ?, ?, 'pendiente', 0, ?, ?, ?, ?)",
-            (
-                business_id, invoice_id, record_id,
-                config.VERIFACTU_MAX_ATTEMPTS, queued_at, queued_at, queued_at,
-            ),
-        )
-        _record_invoice_event(
-            conn, business_id, "anulacion", invoice_id=invoice_id,
-            details=f"motivo={reason};huella={record_hash}",
-            created_at=generated_at,
-        )
-        created = conn.execute(
-            "SELECT * FROM invoice_cancellation_records "
-            "WHERE id=? AND business_id=?",
-            (record_id, business_id),
-        ).fetchone()
-        return dict(created)
+        conn.execute('BEGIN IMMEDIATE')
+        result = writers.create_invoice_cancellation_record(conn, invoice_id, business_id, reason=reason, legacy=True)
+    observe(result)
+    return result.legacy_value()
 
 
 def list_invoice_records(
@@ -8213,52 +7559,15 @@ def pending_payments(business_id) -> list[dict]:
 
 
 # ----------------------------------------------------- Conciliación bancaria ---
-def add_bank_transaction(
-    business_id: int,
-    *,
-    import_hash: str,
-    booked_on: str,
-    amount: float,
-    description: str = "",
-    counterparty: str = "",
-    reference: str = "",
-    currency: str = "EUR",
-) -> dict | None:
+def add_bank_transaction(business_id: int, *, import_hash: str, booked_on: str, amount: float, description: str='', counterparty: str='', reference: str='', currency: str='EUR') -> dict | None:
     """Guarda un movimiento una sola vez; nunca lo convierte en cobro solo."""
-    if not get_business(business_id):
-        raise ValueError("Negocio no encontrado.")
-    try:
-        date.fromisoformat(booked_on)
-    except ValueError as exc:
-        raise ValueError("La fecha del movimiento no es válida.") from exc
-    number = Decimal(str(amount)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-    if not number.is_finite() or number == 0:
-        raise ValueError("El movimiento necesita un importe distinto de cero.")
-    clean_hash = str(import_hash or "").strip().lower()
-    if not re.fullmatch(r"[0-9a-f]{64}", clean_hash):
-        raise ValueError("La huella del movimiento no es válida.")
-    fields = {
-        "description": _payment_text(description, "La descripción", 500),
-        "counterparty": _payment_text(counterparty, "La contraparte", 200),
-        "reference": _payment_text(reference, "La referencia", 200),
-    }
+    from .financial_writers import bank as writers
+    from .financial_writers.boundary import observe
     with get_conn() as conn:
-        row = conn.execute(
-            "INSERT INTO bank_transactions "
-            "(business_id, import_hash, booked_on, amount, currency, description, "
-            "counterparty, reference, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) "
-            "ON CONFLICT (business_id, import_hash) DO NOTHING RETURNING id",
-            (
-                business_id, clean_hash, booked_on, float(number),
-                (currency or "EUR").strip().upper()[:3],
-                fields["description"], fields["counterparty"],
-                fields["reference"], _now(),
-            ),
-        ).fetchone()
-        if not row:
-            return None
-        transaction_id = row["id"]
-    return get_bank_transaction(transaction_id, business_id)
+        conn.execute('BEGIN IMMEDIATE')
+        result = writers.add_bank_transaction(conn, business_id, import_hash=import_hash, booked_on=booked_on, amount=amount, description=description, counterparty=counterparty, reference=reference, currency=currency, legacy=True)
+    observe(result)
+    return result.legacy_value()
 
 
 def get_bank_transaction(transaction_id: int, business_id: int) -> dict | None:
@@ -8297,97 +7606,35 @@ def list_bank_transactions(
     return [dict(row) for row in rows]
 
 
-def suggest_bank_transaction(
-    transaction_id: int,
-    business_id: int,
-    invoice_id: int | None,
-    *,
-    score: int | None = None,
-    reason: str = "",
-) -> dict | None:
-    if invoice_id is not None:
-        invoice = get_invoice(invoice_id, business_id)
-        if not invoice or invoice.get("status") == "borrador":
-            raise ValueError("La factura sugerida no es válida.")
+def suggest_bank_transaction(transaction_id: int, business_id: int, invoice_id: int | None, *, score: int | None=None, reason: str='') -> dict | None:
+    from .financial_writers import bank as writers
+    from .financial_writers.boundary import observe
     with get_conn() as conn:
-        cur = conn.execute(
-            "UPDATE bank_transactions SET status=?, suggested_invoice_id=?, "
-            "match_score=?, match_reason=? WHERE id=? AND business_id=? "
-            "AND status IN ('imported','suggested')",
-            (
-                "suggested" if invoice_id is not None else "imported",
-                invoice_id, score, _payment_text(reason, "El motivo", 300),
-                transaction_id, business_id,
-            ),
-        )
-    return get_bank_transaction(transaction_id, business_id) if cur.rowcount else None
+        conn.execute('BEGIN IMMEDIATE')
+        result = writers.suggest_bank_transaction(conn, transaction_id, business_id, invoice_id, score=score, reason=reason, legacy=True)
+    observe(result)
+    return result.legacy_value()
 
 
 def confirm_bank_transaction(transaction_id: int, business_id: int) -> dict:
     """Confirma una sugerencia y registra el cobro en la misma transacción."""
+    from .financial_writers import bank as writers
+    from .financial_writers.boundary import observe
     with get_conn() as conn:
-        conn.execute("BEGIN IMMEDIATE")
-        lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
-        movement = conn.execute(
-            "SELECT * FROM bank_transactions WHERE id=? AND business_id=?" + lock,
-            (transaction_id, business_id),
-        ).fetchone()
-        if not movement:
-            raise ValueError("Movimiento no encontrado.")
-        if movement["status"] == "confirmed":
-            return dict(movement)
-        invoice_id = movement.get("suggested_invoice_id")
-        if movement["status"] != "suggested" or not invoice_id:
-            raise ValueError("Este movimiento no tiene una factura sugerida.")
-        amount = Decimal(str(movement["amount"])).quantize(Decimal("0.01"))
-        if amount <= 0:
-            raise ValueError("Solo una entrada de dinero puede confirmar un cobro.")
-        invoice, already_paid = _locked_invoice_with_paid(
-            conn, invoice_id, business_id
-        )
-        if not invoice or invoice["status"] == "borrador" or not invoice.get("number"):
-            raise ValueError("La factura ya no admite este cobro.")
-        total = Decimal(str(invoice["total"])).quantize(Decimal("0.01"))
-        if already_paid + amount > total:
-            raise ValueError("El movimiento supera lo que queda por cobrar.")
-        note = " · ".join(
-            value for value in (
-                "Conciliado desde extracto",
-                movement.get("reference"),
-                movement.get("description"),
-            ) if value
-        )[:500]
-        _insert_invoice_payment(
-            conn, invoice, amount, "extracto_bancario",
-            f"{movement['booked_on']}T12:00:00", note,
-        )
-        _set_invoice_payment_state(
-            conn, invoice, already_paid + amount,
-            f"{movement['booked_on']}T12:00:00",
-        )
-        _record_invoice_event(
-            conn, business_id, "cobro", invoice_id=invoice_id,
-            details=f"importe={float(amount):.2f};metodo=extracto_bancario",
-            created_at=f"{movement['booked_on']}T12:00:00",
-        )
-        now = _now()
-        conn.execute(
-            "UPDATE bank_transactions SET status='confirmed', confirmed_at=? "
-            "WHERE id=? AND business_id=?",
-            (now, transaction_id, business_id),
-        )
-    return get_bank_transaction(transaction_id, business_id) or {}
+        conn.execute('BEGIN IMMEDIATE')
+        result = writers.confirm_bank_transaction(conn, transaction_id, business_id, legacy=True)
+    observe(result)
+    return result.legacy_value()
 
 
 def ignore_bank_transaction(transaction_id: int, business_id: int) -> dict | None:
+    from .financial_writers import bank as writers
+    from .financial_writers.boundary import observe
     with get_conn() as conn:
-        cur = conn.execute(
-            "UPDATE bank_transactions SET status='ignored', "
-            "suggested_invoice_id=NULL, match_score=NULL, match_reason=NULL "
-            "WHERE id=? AND business_id=? AND status<>'confirmed'",
-            (transaction_id, business_id),
-        )
-    return get_bank_transaction(transaction_id, business_id) if cur.rowcount else None
+        conn.execute('BEGIN IMMEDIATE')
+        result = writers.ignore_bank_transaction(conn, transaction_id, business_id, legacy=True)
+    observe(result)
+    return result.legacy_value()
 
 
 def bank_reconciliation_summary(business_id: int) -> dict:
@@ -9162,104 +8409,24 @@ def project_tasks_for_worker(
 
 
 # ----------------------------------------------------------------- Gastos ---
-def add_expense(
-    concept,
-    amount,
-    vat_rate=None,
-    category=None,
-    spent_on=None,
-    document_id=None,
-    project_id=None,
-    *,
-    business_id: int,
-) -> dict:
-    concept = (concept or "").strip()
-    if not concept or len(concept) > 500:
-        raise ValueError("El concepto es obligatorio y no puede superar 500 caracteres.")
-    amount = _positive_money(amount, "El importe")
-    if vat_rate not in (None, ""):
-        vat_rate = _tax_rate(vat_rate, "El IVA", {0, 4, 10, 21})
-    else:
-        vat_rate = None
-    if spent_on not in (None, ""):
-        try:
-            spent_on = date.fromisoformat(str(spent_on).strip()).isoformat()
-        except ValueError as exc:
-            raise ValueError("La fecha del gasto no es válida.") from exc
-    else:
-        spent_on = None
-    if document_id not in (None, ""):
-        try:
-            document_id = int(document_id)
-        except (TypeError, ValueError) as exc:
-            raise ValueError("El documento no es válido.") from exc
-        if document_id <= 0:
-            raise ValueError("El documento no es válido.")
-    else:
-        document_id = None
-    if project_id not in (None, ""):
-        try:
-            project_id = int(project_id)
-        except (TypeError, ValueError) as exc:
-            raise ValueError("El proyecto no es válido.") from exc
-        if not get_project(project_id, business_id):
-            raise ValueError("El proyecto no pertenece a este negocio.")
-    else:
-        project_id = None
+def add_expense(concept, amount, vat_rate=None, category=None, spent_on=None, document_id=None, project_id=None, *, business_id: int) -> dict:
+    from .financial_writers import purchasing as writers
+    from .financial_writers.boundary import observe
     with get_conn() as conn:
-        if document_id is not None:
-            conn.execute("BEGIN IMMEDIATE")
-            lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
-            document = conn.execute(
-                "SELECT id, expense_id, received_invoice_id, invoice_id FROM documents "
-                "WHERE id=? AND business_id=?" + lock,
-                (document_id, business_id),
-            ).fetchone()
-            if not document:
-                raise ValueError("Documento no encontrado.")
-            if document["expense_id"] is not None:
-                raise ValueError("Este documento ya está vinculado a un gasto.")
-            if document["received_invoice_id"] is not None or document["invoice_id"] is not None:
-                raise ValueError("Este documento ya está vinculado a una factura.")
-            if conn.execute(
-                "SELECT id FROM document_classifications WHERE document_id=? "
-                "AND business_id=? AND method='pdf_batch' LIMIT 1",
-                (document_id, business_id),
-            ).fetchone():
-                raise ValueError("Este PDF es un lote. Registra sus facturas individuales, no el original.")
-        row = conn.execute(
-            "INSERT INTO expenses (business_id, concept, amount, vat_rate, category, "
-            "spent_on, project_id, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
-            (business_id, concept, amount, vat_rate, category,
-             spent_on, project_id, _now()),
-        ).fetchone()
-        new_id = row["id"]
-        if document_id is not None:
-            linked = conn.execute(
-                "UPDATE documents SET expense_id=? "
-                "WHERE id=? AND business_id=? AND expense_id IS NULL",
-                (new_id, document_id, business_id),
-            )
-            if linked.rowcount != 1:
-                raise ValueError("No se pudo vincular el documento al gasto.")
-        expense = dict(conn.execute(
-            "SELECT * FROM expenses WHERE id=? AND business_id=?",
-            (new_id, business_id),
-        ).fetchone())
-    expense["document_id"] = document_id
-    return expense
+        conn.execute('BEGIN IMMEDIATE')
+        result = writers.add_expense(conn, concept, amount, vat_rate, category, spent_on, document_id, project_id, business_id=business_id, legacy=True)
+    observe(result)
+    return result.legacy_value()
 
 
 def delete_expense(expense_id, business_id) -> None:
+    from .financial_writers import purchasing as writers
+    from .financial_writers.boundary import observe
     with get_conn() as conn:
-        conn.execute(
-            "UPDATE documents SET expense_id=NULL "
-            "WHERE expense_id=? AND business_id=?",
-            (expense_id, business_id),
-        )
-        conn.execute("DELETE FROM expenses WHERE id=? AND business_id=?",
-                     (expense_id, business_id))
+        conn.execute('BEGIN IMMEDIATE')
+        result = writers.delete_expense(conn, expense_id, business_id, legacy=True)
+    observe(result)
+    return result.legacy_value()
 
 
 def expenses_between(start: str, end: str, business_id) -> list[dict]:
@@ -9299,32 +8466,11 @@ def _clean_nif(value) -> str | None:
     return nif or None
 
 
-def add_supplier(name, nif=None, email=None, phone=None, note=None, *,
-                 business_id: int) -> dict:
-    name = (name or "").strip()
-    if not name:
-        raise ValueError("El nombre del proveedor es obligatorio.")
-    _valid_party_name(name, "proveedor")
-    if len(name) > 200:
-        raise ValueError("El nombre del proveedor es demasiado largo (máx. 200).")
-    nif = _clean_nif(nif)
+def add_supplier(name, nif=None, email=None, phone=None, note=None, *, business_id: int) -> dict:
+    from .financial_writers import readers
     with get_conn() as conn:
-        # El duplicado se mira plegando mayúsculas y acentos, como en clientes:
-        # «materiales sol» y «Materiales Sol» son el mismo proveedor, y tenerlo
-        # dos veces parte en dos el gasto de la gestoría.
-        existing = _find_supplier_row_by_name(conn, business_id, name)
-        if existing:
-            raise ValueError("Ya existe un proveedor con ese nombre.")
-        row = conn.execute(
-            "INSERT INTO suppliers (business_id, name, nif, email, phone, note, "
-            "created_at) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id",
-            (business_id, name, nif, (email or "").strip() or None,
-             (phone or "").strip() or None, (note or "").strip() or None,
-             _now()),
-        ).fetchone()
-        return dict(conn.execute(
-            "SELECT * FROM suppliers WHERE id=? AND business_id=?",
-            (row["id"], business_id)).fetchone())
+        conn.execute('BEGIN IMMEDIATE')
+        return readers.add_supplier(conn, name, nif, email, phone, note, business_id=business_id)
 
 
 def get_supplier(supplier_id, business_id) -> dict | None:
@@ -9389,91 +8535,18 @@ def _optional_date(value, label: str) -> str | None:
         raise ValueError(f"{label} no es una fecha válida.") from exc
 
 
-def add_received_invoice(total, supplier_id=None, number=None, concept=None,
-                         issued_on=None, due_on=None, base=None, vat_rate=None,
-                         vat_amount=None, irpf_amount=None, category=None,
-                         note=None, document_id=None, *,
-                         business_id: int) -> dict:
+def add_received_invoice(total, supplier_id=None, number=None, concept=None, issued_on=None, due_on=None, base=None, vat_rate=None, vat_amount=None, irpf_amount=None, category=None, note=None, document_id=None, *, business_id: int) -> dict:
     """Registra una factura recibida y, si se indica, la vincula a su documento.
 
     Nunca la crea la IA directamente: este es el paso de confirmación humana.
     """
-    total = _positive_money(total, "El total")
-    if vat_rate not in (None, ""):
-        vat_rate = _tax_rate(vat_rate, "El IVA", {0, 4, 10, 21})
-    else:
-        vat_rate = None
-    for field_label, value in (("La base", base), ("La cuota de IVA", vat_amount),
-                               ("El IRPF", irpf_amount)):
-        if value not in (None, "") and float(value) < 0:
-            raise ValueError(f"{field_label} no puede ser negativa.")
-    base = round(float(base), 2) if base not in (None, "") else None
-    vat_amount = round(float(vat_amount), 2) if vat_amount not in (None, "") else None
-    irpf_amount = round(float(irpf_amount), 2) if irpf_amount not in (None, "") else None
-    issued_on = _optional_date(issued_on, "La fecha de emisión")
-    due_on = _optional_date(due_on, "El vencimiento")
-    number = (number or "").strip()[:50] or None
-    concept = (concept or "").strip()[:500] or None
+    from .financial_writers import purchasing as writers
+    from .financial_writers.boundary import observe
     with get_conn() as conn:
-        if supplier_id not in (None, ""):
-            supplier = conn.execute(
-                "SELECT id FROM suppliers WHERE id=? AND business_id=?",
-                (supplier_id, business_id)).fetchone()
-            if not supplier:
-                raise ValueError("Proveedor no encontrado.")
-        else:
-            supplier_id = None
-        if document_id not in (None, ""):
-            conn.execute("BEGIN IMMEDIATE")
-            lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
-            document = conn.execute(
-                "SELECT id, received_invoice_id, expense_id, invoice_id FROM documents "
-                "WHERE id=? AND business_id=?" + lock,
-                (document_id, business_id),
-            ).fetchone()
-            if not document:
-                raise ValueError("Documento no encontrado.")
-            if document["received_invoice_id"] is not None:
-                raise ValueError(
-                    "Este documento ya está vinculado a una factura recibida.")
-            if document["invoice_id"] is not None:
-                raise ValueError("Este documento ya está vinculado a una factura emitida.")
-            if conn.execute(
-                "SELECT id FROM document_classifications WHERE document_id=? "
-                "AND business_id=? AND method='pdf_batch' LIMIT 1",
-                (document_id, business_id),
-            ).fetchone():
-                raise ValueError("Este PDF es un lote. Registra sus facturas individuales, no el original.")
-            if document["expense_id"] is not None:
-                raise ValueError("Este documento ya está vinculado a un gasto.")
-        else:
-            document_id = None
-        row = conn.execute(
-            "INSERT INTO received_invoices (business_id, supplier_id, number, "
-            "concept, issued_on, due_on, base, vat_rate, vat_amount, "
-            "irpf_amount, total, status, category, note, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', ?, ?, ?) "
-            "RETURNING id",
-            (business_id, supplier_id, number, concept, issued_on, due_on,
-             base, vat_rate, vat_amount, irpf_amount, total, category,
-             (note or "").strip() or None, _now()),
-        ).fetchone()
-        new_id = row["id"]
-        if document_id is not None:
-            linked = conn.execute(
-                "UPDATE documents SET received_invoice_id=?, "
-                "doc_status='revisado', reviewed_at=? "
-                "WHERE id=? AND business_id=? AND received_invoice_id IS NULL",
-                (new_id, _now(), document_id, business_id),
-            )
-            if linked.rowcount != 1:
-                raise ValueError(
-                    "No se pudo vincular el documento a la factura recibida.")
-        received = dict(conn.execute(
-            "SELECT * FROM received_invoices WHERE id=? AND business_id=?",
-            (new_id, business_id)).fetchone())
-    received["document_id"] = document_id
-    return received
+        conn.execute('BEGIN IMMEDIATE')
+        result = writers.add_received_invoice(conn, total, supplier_id, number, concept, issued_on, due_on, base, vat_rate, vat_amount, irpf_amount, category, note, document_id, business_id=business_id, legacy=True)
+    observe(result)
+    return result.legacy_value()
 
 
 def get_received_invoice(received_id, business_id) -> dict | None:
@@ -9504,90 +8577,36 @@ def list_received_invoices(business_id, status=None) -> list[dict]:
 
 
 def set_received_invoice_status(received_id, status, *, business_id) -> dict:
-    if status not in RECEIVED_STATUSES:
-        raise ValueError("Estado de factura recibida desconocido.")
+    from .financial_writers import purchasing as writers
+    from .financial_writers.boundary import observe
     with get_conn() as conn:
-        updated = conn.execute(
-            "UPDATE received_invoices SET status=? WHERE id=? AND business_id=?",
-            (status, received_id, business_id))
-        if updated.rowcount != 1:
-            raise ValueError("Factura recibida no encontrada.")
-    return get_received_invoice(received_id, business_id)
+        conn.execute('BEGIN IMMEDIATE')
+        result = writers.set_received_invoice_status(conn, received_id, status, business_id=business_id, legacy=True)
+    observe(result)
+    return result.legacy_value()
 
 
 def update_received_invoice(received_id, *, business_id: int, **changes) -> dict:
     """Corrige una factura recibida sin tocar su documento ni cruzar negocios."""
-    current = get_received_invoice(received_id, business_id)
-    if not current:
-        raise ValueError("Factura recibida no encontrada.")
-    allowed = {
-        "supplier_id", "number", "concept", "issued_on", "due_on", "base",
-        "vat_rate", "vat_amount", "irpf_amount", "total", "category", "note",
-    }
-    unknown = set(changes) - allowed
-    if unknown:
+    from .financial_writers import purchasing as writers
+    from .financial_writers.boundary import observe
+    if {"legacy", "expected_revision"} & set(changes):
         raise ValueError("Hay campos que no se pueden modificar.")
-    values = {key: changes.get(key, current.get(key)) for key in allowed}
-    values["total"] = _positive_money(values["total"], "El total")
-    values["vat_rate"] = (
-        _tax_rate(values["vat_rate"], "El IVA", {0, 4, 10, 21})
-        if values["vat_rate"] not in (None, "") else None
-    )
-    for key, label in (
-        ("base", "La base"), ("vat_amount", "La cuota de IVA"),
-        ("irpf_amount", "El IRPF"),
-    ):
-        raw = values[key]
-        if raw in (None, ""):
-            values[key] = None
-        else:
-            try:
-                values[key] = round(float(raw), 2)
-            except (TypeError, ValueError) as exc:
-                raise ValueError(f"{label} no es un importe válido.") from exc
-            if values[key] < 0:
-                raise ValueError(f"{label} no puede ser negativa.")
-    values["issued_on"] = _optional_date(values["issued_on"], "La fecha de emisión")
-    values["due_on"] = _optional_date(values["due_on"], "El vencimiento")
-    values["number"] = (str(values["number"] or "").strip()[:50] or None)
-    values["concept"] = (str(values["concept"] or "").strip()[:500] or None)
-    values["category"] = (str(values["category"] or "").strip()[:100] or None)
-    values["note"] = (str(values["note"] or "").strip()[:2000] or None)
-    supplier_id = values["supplier_id"]
     with get_conn() as conn:
-        if supplier_id not in (None, ""):
-            supplier = conn.execute(
-                "SELECT id FROM suppliers WHERE id=? AND business_id=?",
-                (supplier_id, business_id),
-            ).fetchone()
-            if not supplier:
-                raise ValueError("Proveedor no encontrado.")
-        else:
-            supplier_id = None
-        updated = conn.execute(
-            "UPDATE received_invoices SET supplier_id=?, number=?, concept=?, "
-            "issued_on=?, due_on=?, base=?, vat_rate=?, vat_amount=?, "
-            "irpf_amount=?, total=?, category=?, note=? "
-            "WHERE id=? AND business_id=?",
-            (supplier_id, values["number"], values["concept"], values["issued_on"],
-             values["due_on"], values["base"], values["vat_rate"],
-             values["vat_amount"], values["irpf_amount"], values["total"],
-             values["category"], values["note"], received_id, business_id),
-        )
-        if updated.rowcount != 1:
-            raise ValueError("Factura recibida no encontrada.")
-    return get_received_invoice(received_id, business_id)
+        conn.execute('BEGIN IMMEDIATE')
+        result = writers.update_received_invoice(conn, received_id, business_id=business_id, **changes, legacy=True)
+    observe(result)
+    return result.legacy_value()
 
 
 def delete_received_invoice(received_id, business_id) -> None:
+    from .financial_writers import purchasing as writers
+    from .financial_writers.boundary import observe
     with get_conn() as conn:
-        conn.execute(
-            "UPDATE documents SET received_invoice_id=NULL "
-            "WHERE received_invoice_id=? AND business_id=?",
-            (received_id, business_id))
-        conn.execute(
-            "DELETE FROM received_invoices WHERE id=? AND business_id=?",
-            (received_id, business_id))
+        conn.execute('BEGIN IMMEDIATE')
+        result = writers.delete_received_invoice(conn, received_id, business_id, legacy=True)
+    observe(result)
+    return result.legacy_value()
 
 
 # ---------------------------------------------------- Productos y servicios ---

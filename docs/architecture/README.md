@@ -1,16 +1,18 @@
 # Financial Core: punto de entrada y continuidad
 
 Decisión del titular, 2-oct-2026: Fase 0 aceptada y cerrada; planificación de
-Fase 1 aprobada como referencia; 1.1 y 1.2 aceptadas. **Solo 1.3 autorizada**:
-persistencia inmutable de Economic Events y relaciones, repositorio y validación,
-cerrada sin productores. **1.4 no autorizada**. No convertir Economic Events
-en un registro genérico de acontecimientos de Noesis.
+Fase 1 aprobada como referencia; 1.1–1.3 aceptadas. **Solo 1.4 autorizada**:
+escritores prestados, snapshots, revisiones y precisión en la frontera legacy.
+Sin productores de Economic Events. **1.5 no autorizada**. Los acontecimientos
+operativos conservan su dominio y no se incorporan automáticamente.
 
 Continuidad: [plan incremental](FASE-1-plan.md),
 [contrato y catálogo v1](ECONOMIC-EVENTS-v1.md) y
 [cierre de 1.1](FASE-1.1-cierre.md),
 [operaciones v1](FINANCIAL-OPERATIONS-v1.md) y [cierre de 1.2](FASE-1.2-cierre.md),
-[persistencia v1](ECONOMIC-PERSISTENCE-v1.md) y [cierre de 1.3](FASE-1.3-cierre.md).
+[persistencia v1](ECONOMIC-PERSISTENCE-v1.md) y [cierre de 1.3](FASE-1.3-cierre.md),
+[writers v1](BORROWED-WRITERS-v1.md), [mapa auditado](FASE-1.4-writers-audit.md)
+y [cierre de 1.4](FASE-1.4-cierre.md).
 
 ## Orden de lectura y autoridad
 
@@ -38,6 +40,7 @@ especializada; ninguna especificación interna certifica cumplimiento.
 | [005](ADR-005-accounting-periods.md) | Fechas, períodos y cierres futuros |
 | [006](ADR-006-financial-operations.md) | Operación, aprobación, resultado e idempotencia durables |
 | [007](ADR-007-economic-persistence.md) | Eventos/links inmutables, FKs tipadas, contador y migración protegida |
+| [008](ADR-008-borrowed-writers.md) | Un núcleo por dominio, commit exterior, precisión/procedencia, revisiones y locks |
 
 ## Secuencia y límites de fase
 
@@ -80,20 +83,20 @@ cada operación; no se posponen a Fase 15. Reporting por dimensión espera a Fas
   desplegado. No rellenar carencias con stubs ni marcar fases futuras completadas.
 - Detenerse tras el cierre; el próximo modelo comienza aquí, no en el chat.
 
-## Pendientes de ejecución de Fase 1 después de 1.3
+## Pendientes de ejecución de Fase 1 después de 1.4
 
 - Conservar el catálogo cerrado v1: `quote.accepted` y `job.completed` son
   operativos y no se insertarán en Economic Events. No crear un bus genérico.
 - Integrar la identidad/idempotencia durable de 1.2 en los canales y puentes
   futuros; no conectar productores sin otra orden. Persistencia de 1.3 solo
-  invocada por tests sintéticos; revisiones reales/puente exacto esperan 1.4.
+  invocada por tests sintéticos; writers/revisiones reales preparados en 1.4, todavía sin invocación desde canales del Core.
 - Capturar cobros parciales, completos y conciliados por su escritor común.
 - No inferir un pago real a proveedor desde el estado legacy `pagada`.
 - Cubrir correcciones/bajas de gastos y recibidas; no crear snapshots obsoletos.
 - Conservar evidencia de aprobación estable: las propuestas pendientes se consumen.
 - Planificar históricos, corte/activación y rollback sin huecos ni reenvíos fiscales.
-- Resolver el lock común de cadena y documentar el resto de gaps VERI*FACTU antes
-  de ampliar su uso; Fase 0 no toca ni resuelve esos gaps.
+- Lock común de cadena resuelto mínimamente en 1.4; el resto de gaps VERI*FACTU
+  sigue fuera de alcance. No deducir cumplimiento AEAT de las pruebas locales.
 
 ## Estado y rollback
 
@@ -108,3 +111,7 @@ exactos en el informe de cierre.
 con eventos/links durables la bajada y la baja destructiva se bloquean. No revertir
 código de migración antes de comprobar datos. Las clausuras anteriores describen
 su entrega histórica; el estado superior, JSON y QA reflejan la orden vigente.
+
+1.4 añade tres revisiones mutables (64), sin migrar dinero legacy. Revertir código
+es compatible con estas columnas; no retirar revisión con evidencia mutable.
+Las restricciones y procedencia se documentan en ADR-008 y el cierre.

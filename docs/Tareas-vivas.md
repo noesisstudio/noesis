@@ -1,5 +1,18 @@
 # Tareas vivas
 
+## Financial Core — exclusivamente 1.4
+
+- [x] Auditoría previa y extracción de un núcleo prestado por dominio.
+- [x] Snapshots/Decimal/procedencia, revisiones mutables y locks comunes.
+- [x] Compatibilidad fiscal con main anterior y rollback de veinte caminos.
+- [x] Suite general 1484/1484, PG 83/83, gates y autoauditoría en informe 1.4.
+- [ ] 1.5 no autorizada; sin productores, integración de canales ni activación.
+- [ ] 1.6: enlace durable del pago bancario; replay anterior no lo conserva.
+- [ ] 1.7: conservar origen antes de eventos de retirada; baja sigue física.
+- [ ] Históricos, huérfanos antiguos y aceptación AEAT fuera de esta unidad.
+
+Las secciones anteriores son históricas; el alcance vigente está aquí.
+
 ## Financial Core — exclusivamente 1.3
 
 - [x] Orden explícita posterior a aceptación de 1.2; main real 62 verificado.

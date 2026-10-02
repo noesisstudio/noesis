@@ -1,5 +1,14 @@
 # Estado actual del producto
 
+## 2-oct — Financial Core, frontera 1.4 cerrada
+
+**1.4 cerrada: 17 PASS / 0 FAIL; suite general 1484/1484 OK.**
+Solo 1.4 autorizada: writers prestados, snapshots, revisiones (64) y locks.
+Sin productores ni flags activados; 1.5 no autorizada. Ver
+[ADR-008](architecture/ADR-008-borrowed-writers.md),
+[API](architecture/BORROWED-WRITERS-v1.md) y [cierre](architecture/FASE-1.4-cierre.md).
+Las secciones inferiores reflejan entregas anteriores; manda esta orden.
+
 ## 2-oct — Financial Core, persistencia 1.3
 
 **1.3 cerrada: 41 PASS / 0 FAIL; suite general 1472/1472 OK.**

@@ -2,13 +2,15 @@
 
 > Para Financial Core, leer [gobernanza y ADR](docs/architecture/README.md) y
 > [guía 08](docs/areas/08-financial-core.md). Fase 0 cerrada; Fase 1
-> planificada y aprobada como referencia. 1.1 y 1.2 aceptadas; solo 1.3 autorizada:
-> persistencia inmutable de Economic Events, cerrada sin productores. 1.4 no autorizada.
-> Leer [plan](docs/architecture/FASE-1-plan.md) y
+> planificada y aprobada como referencia. 1.1–1.3 aceptadas; solo 1.4 autorizada:
+> escritores prestados, snapshots, precisión/revisiones y locks. Sin productores.
+> Leer [plan](docs/architecture/FASE-1-plan.md),
 > [contrato v1](docs/architecture/ECONOMIC-EVENTS-v1.md),
 > [operaciones](docs/architecture/FINANCIAL-OPERATIONS-v1.md),
-> [persistencia](docs/architecture/ECONOMIC-PERSISTENCE-v1.md) y ADR-006/007.
-> No avanzar a 1.4.
+> [persistencia](docs/architecture/ECONOMIC-PERSISTENCE-v1.md),
+> [writers](docs/architecture/BORROWED-WRITERS-v1.md) y ADR-006/007/008.
+> No avanzar a 1.5. La fachada legacy posee la transacción; un writer prestado
+> nunca abre otra conexión, hace commit/rollback ni I/O externo.
 > Las referencias no autorizan ejecutar otras unidades.
 
 ## Contrato del Financial Core

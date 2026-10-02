@@ -1,5 +1,33 @@
 ﻿# Registro de QA
 
+## 2026-10-02 — Cierre de exclusivamente Fase 1.4
+
+- Suite general final 1484/1484 OK (1029,546 s). Primera 1481: tres fallos
+  corregidos (dos versiones 63 y formato literal SQLSTATE); sin fallos finales.
+- Nuevos SQLite 12/12 (10,205 s); backend/VERI*FACTU 99/99, recibidas/fundamentos
+  40/40. Revalidación tras guard de importe que redondea a cero: SQLite 36/36
+  (33,504 s) y PostgreSQL writers 18/18 (8,245 s).
+- PostgreSQL 16.15 real: 83/83 (18,715 s): writers 18, eventos 27, operaciones
+  32, fundamentos 6. Esquemas descartables localhost/noesis_ci. Procesos y
+  conexiones concurrentes: emisión única, no sobrecobro, multiserie/cadena única,
+  inversión contador/origen segura y liberación de locks en rollback.
+- Matriz de veinte caminos: éxito + fallo exterior revierte efecto/marker;
+  commit exterior conserva ambos; segunda conexión prohibida durante writer.
+- Paridad contra main 6b4c144/schema63: respuestas F1/F2/R1–R5, registros,
+  huellas, QR y XML iguales. Multilínea IVA21/10/4/0, IRPF, rollback después de
+  registro fiscal; snapshot exacto con procedencia binaria, revisiones stale.
+- SQLite 0→64→0→64; 63→64→63→64 en ambos motores conserva importes.
+  PG histórico 32→64, 36 rutas, privacidad/exportación/conversación y rollback OK.
+- Ruff, Bandit, pip-audit, uv lock --check, secretos incluidos nuevos archivos,
+  Node 3/3, verdad documental, enlaces/diff OK. NIF/SHA públicos de la fixture
+  fiscal anotados; baseline de secretos intacta. Sin dependencias nuevas.
+- /health, /ready, / y /login locales HTTP200; humo PG HTTP autenticado correcto.
+- Autoauditoría de la orden y Master Plan §44: [cierre](architecture/FASE-1.4-cierre.md),
+  **17 PASS / 0 FAIL**. Sin productores/flags/backlinks/enlace bancario durable.
+- Límites: no AEAT/Meta/banco externo, históricos reales, CI remota ni despliegue
+  verificados. 1.5 no autorizada. Proyección de huella, dinero binario y bajas
+  físicas documentados como límites; sin promesas de precisión histórica.
+
 ## 2026-10-02 — Financial Core, exclusivamente 1.3
 
 - SQLite nuevos: 26/26 (18,695 s); catálogo once tipos, precisión/fechas/hashes,

@@ -15,24 +15,50 @@ def _now() -> str:
 
 def _conn():
     from .. import db
+
     return db.get_conn()
 
 
-KINDS = {"documento", "ticket", "contrato", "proveedor", "albaran",
-         "factura_emitida", "factura_recibida", "presupuesto"}
+KINDS = {
+    "documento",
+    "ticket",
+    "contrato",
+    "proveedor",
+    "albaran",
+    "factura_emitida",
+    "factura_recibida",
+    "presupuesto",
+}
 # Ciclo de revisión: pendiente_revisar -> revisado -> enviado_gestoria ->
 # validado; además rechazado y duplicado. Los históricos nacen 'revisado'.
-DOC_STATUSES = {"pendiente_revisar", "revisado", "enviado_gestoria",
-                "validado", "rechazado", "duplicado"}
+DOC_STATUSES = {
+    "pendiente_revisar",
+    "revisado",
+    "enviado_gestoria",
+    "validado",
+    "rechazado",
+    "duplicado",
+}
 
 
-def add(business_id: int, *, filename: str, stored_name: str, mime: str, size: int,
-        kind: str = "documento", client_id: int | None = None,
-        invoice_id: int | None = None, project_id: int | None = None,
-        ocr_text: str | None = None,
-        ocr_amount: float | None = None, note: str | None = None,
-        doc_status: str = "revisado", confidence: float | None = None,
-        content_sha256: str | None = None) -> dict:
+def add(
+    business_id: int,
+    *,
+    filename: str,
+    stored_name: str,
+    mime: str,
+    size: int,
+    kind: str = "documento",
+    client_id: int | None = None,
+    invoice_id: int | None = None,
+    project_id: int | None = None,
+    ocr_text: str | None = None,
+    ocr_amount: float | None = None,
+    note: str | None = None,
+    doc_status: str = "revisado",
+    confidence: float | None = None,
+    content_sha256: str | None = None,
+) -> dict:
     kind = kind if kind in KINDS else "documento"
     doc_status = doc_status if doc_status in DOC_STATUSES else "revisado"
     with _conn() as conn:
@@ -41,9 +67,24 @@ def add(business_id: int, *, filename: str, stored_name: str, mime: str, size: i
             "filename, stored_name, mime, size, ocr_text, ocr_amount, note, "
             "doc_status, confidence, content_sha256, created_at) "
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
-            (business_id, client_id, invoice_id, project_id, kind, filename, stored_name, mime,
-             int(size), ocr_text, ocr_amount, note, doc_status, confidence,
-             content_sha256, _now()),
+            (
+                business_id,
+                client_id,
+                invoice_id,
+                project_id,
+                kind,
+                filename,
+                stored_name,
+                mime,
+                int(size),
+                ocr_text,
+                ocr_amount,
+                note,
+                doc_status,
+                confidence,
+                content_sha256,
+                _now(),
+            ),
         ).fetchone()
         new_id = row["id"]
     return get(new_id, business_id)
@@ -52,8 +93,7 @@ def add(business_id: int, *, filename: str, stored_name: str, mime: str, size: i
 def find_by_content_hash(business_id: int, content_sha256: str) -> dict | None:
     with _conn() as conn:
         row = conn.execute(
-            "SELECT * FROM documents WHERE business_id=? AND content_sha256=? "
-            "ORDER BY id LIMIT 1",
+            "SELECT * FROM documents WHERE business_id=? AND content_sha256=? ORDER BY id LIMIT 1",
             (business_id, content_sha256),
         ).fetchone()
     return dict(row) if row else None
@@ -80,40 +120,30 @@ def set_content_hash(doc_id: int, business_id: int, content_sha256: str) -> dict
     return get(doc_id, business_id)
 
 
-def set_review(doc_id: int, business_id: int, *, kind: str | None = None,
-               doc_status: str | None = None, confidence: float | None = None,
-               review_note: str | None = None) -> dict | None:
-    """Actualiza la revisión de un documento (tipo, estado, nota). Trazable:
-    siempre sella reviewed_at. Devuelve el documento actualizado o None."""
-    updates: list[str] = ["reviewed_at=?"]
-    params: list = [_now()]
-    if kind is not None:
-        if kind not in KINDS:
-            raise ValueError("Tipo de documento desconocido.")
-        updates.append("kind=?")
-        params.append(kind)
-    if doc_status is not None:
-        if doc_status not in DOC_STATUSES:
-            raise ValueError("Estado de documento desconocido.")
-        updates.append("doc_status=?")
-        params.append(doc_status)
-    if confidence is not None:
-        updates.append("confidence=?")
-        params.append(float(confidence))
-    if review_note is not None:
-        updates.append("review_note=?")
-        params.append(review_note.strip()[:500] or None)
-    params.extend([doc_id, business_id])
+def set_review(
+    doc_id: int,
+    business_id: int,
+    *,
+    kind: str | None = None,
+    doc_status: str | None = None,
+    confidence: float | None = None,
+    review_note: str | None = None,
+) -> dict | None:
     with _conn() as conn:
-        conn.execute(
-            f"UPDATE documents SET {', '.join(updates)} "
-            "WHERE id=? AND business_id=?", params)
-    return get(doc_id, business_id)
+        return _set_review_with_conn(
+            conn,
+            doc_id,
+            business_id,
+            kind=kind,
+            doc_status=doc_status,
+            confidence=confidence,
+            review_note=review_note,
+        )
 
 
-def set_context(doc_id: int, business_id: int, *,
-                client_id: int | None = None,
-                project_id: int | None = None) -> dict | None:
+def set_context(
+    doc_id: int, business_id: int, *, client_id: int | None = None, project_id: int | None = None
+) -> dict | None:
     """Asocia cliente/proyecto sin permitir referencias de otro negocio."""
     from .. import db
 
@@ -141,8 +171,7 @@ def set_context(doc_id: int, business_id: int, *,
         client_id = None
     with _conn() as conn:
         conn.execute(
-            "UPDATE documents SET client_id=?, project_id=? "
-            "WHERE id=? AND business_id=?",
+            "UPDATE documents SET client_id=?, project_id=? WHERE id=? AND business_id=?",
             (client_id, project_id, doc_id, business_id),
         )
     return get(doc_id, business_id)
@@ -165,8 +194,15 @@ def record_classification(
             "INSERT INTO document_classifications "
             "(business_id, document_id, detected_kind, confidence, method, "
             "reason, created_at) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id",
-            (business_id, doc_id, detected_kind, confidence,
-             (method or "heuristica")[:30], (reason or "")[:500] or None, _now()),
+            (
+                business_id,
+                doc_id,
+                detected_kind,
+                confidence,
+                (method or "heuristica")[:30],
+                (reason or "")[:500] or None,
+                _now(),
+            ),
         ).fetchone()
         saved = conn.execute(
             "SELECT * FROM document_classifications WHERE id=? AND business_id=?",
@@ -175,37 +211,19 @@ def record_classification(
     return dict(saved)
 
 
-def confirm_classification(
-    doc_id: int, business_id: int, confirmed_kind: str
-) -> dict | None:
-    """Confirma la última propuesta y conserva la corrección como aprendizaje."""
-    if confirmed_kind not in KINDS:
-        raise ValueError("Tipo de documento desconocido.")
+def confirm_classification(doc_id: int, business_id: int, confirmed_kind: str) -> dict | None:
     with _conn() as conn:
-        row = conn.execute(
-            "SELECT id FROM document_classifications WHERE business_id=? "
-            "AND document_id=? ORDER BY id DESC LIMIT 1",
-            (business_id, doc_id),
-        ).fetchone()
-        if not row:
-            return None
-        conn.execute(
-            "UPDATE document_classifications SET confirmed_kind=?, confirmed_at=? "
-            "WHERE id=? AND business_id=?",
-            (confirmed_kind, _now(), row["id"], business_id),
-        )
-        saved = conn.execute(
-            "SELECT * FROM document_classifications WHERE id=? AND business_id=?",
-            (row["id"], business_id),
-        ).fetchone()
-    result = dict(saved)
+        result = _confirm_classification_with_conn(conn, doc_id, business_id, confirmed_kind)
+    if not result:
+        return None
     from .. import value_ledger
+
     value_ledger.observe_useful_action(
         business_id,
         "document_classification_confirmed",
         entity_type="document",
         entity_id=doc_id,
-        idempotency_key=f"document_classification:{row['id']}",
+        idempotency_key=f"document_classification:{result['id']}",
         metadata={
             "detected_kind": result.get("detected_kind"),
             "confirmed_kind": confirmed_kind,
@@ -226,13 +244,8 @@ def latest_classification(doc_id: int, business_id: int) -> dict | None:
 
 
 def is_batch_source(doc_id: int, business_id: int) -> bool:
-    """Un lote original no puede contabilizarse además de sus facturas."""
     with _conn() as conn:
-        return conn.execute(
-            "SELECT id FROM document_classifications WHERE document_id=? "
-            "AND business_id=? AND method='pdf_batch' LIMIT 1",
-            (doc_id, business_id),
-        ).fetchone() is not None
+        return _is_batch_source_with_conn(conn, doc_id, business_id)
 
 
 def register_pdf_batch(doc_id: int, business_id: int, plan: str) -> None:
@@ -253,7 +266,9 @@ def register_pdf_batch(doc_id: int, business_id: int, plan: str) -> None:
         ).fetchone()
         if previous:
             if previous["reason"] != plan:
-                raise ValueError("Este lote ya tiene otros rangos confirmados. Reutiliza los rangos originales para evitar duplicados.")
+                raise ValueError(
+                    "Este lote ya tiene otros rangos confirmados. Reutiliza los rangos originales para evitar duplicados."
+                )
             return
         conn.execute(
             "INSERT INTO document_classifications (business_id, document_id, "
@@ -265,18 +280,19 @@ def register_pdf_batch(doc_id: int, business_id: int, plan: str) -> None:
 
 def list_pending_review(business_id: int) -> list[dict]:
     with _conn() as conn:
-        return [dict(r) for r in conn.execute(
-            "SELECT * FROM documents WHERE business_id=? "
-            "AND doc_status='pendiente_revisar' ORDER BY created_at DESC",
-            (business_id,)).fetchall()]
+        return [
+            dict(r)
+            for r in conn.execute(
+                "SELECT * FROM documents WHERE business_id=? "
+                "AND doc_status='pendiente_revisar' ORDER BY created_at DESC",
+                (business_id,),
+            ).fetchall()
+        ]
 
 
 def get(doc_id: int, business_id: int) -> dict | None:
     with _conn() as conn:
-        row = conn.execute(
-            "SELECT * FROM documents WHERE id=? AND business_id=?",
-            (doc_id, business_id)).fetchone()
-        return dict(row) if row else None
+        return _get_with_conn(conn, doc_id, business_id)
 
 
 def list_for_business(
@@ -285,19 +301,21 @@ def list_for_business(
     *,
     search: str | None = None,
 ) -> list[dict]:
-    q = ("SELECT d.*, c.name AS client_name, p.name AS project_name, "
-         "dc.proposed_name AS proposed_client_name, "
-         "dc.proposed_nif AS proposed_client_nif, "
-         "dc.status AS proposed_client_status, "
-         "EXISTS (SELECT 1 FROM document_classifications bc WHERE bc.document_id=d.id "
-         "AND bc.business_id=d.business_id AND bc.method='pdf_batch') AS is_batch_source "
-         "FROM documents d "
-         "LEFT JOIN clients c ON c.id = d.client_id "
-         "AND c.business_id=d.business_id "
-         "LEFT JOIN projects p ON p.id=d.project_id "
-         "AND p.business_id=d.business_id "
-         "LEFT JOIN document_client_candidates dc ON dc.document_id=d.id "
-         "AND dc.business_id=d.business_id WHERE d.business_id=?")
+    q = (
+        "SELECT d.*, c.name AS client_name, p.name AS project_name, "
+        "dc.proposed_name AS proposed_client_name, "
+        "dc.proposed_nif AS proposed_client_nif, "
+        "dc.status AS proposed_client_status, "
+        "EXISTS (SELECT 1 FROM document_classifications bc WHERE bc.document_id=d.id "
+        "AND bc.business_id=d.business_id AND bc.method='pdf_batch') AS is_batch_source "
+        "FROM documents d "
+        "LEFT JOIN clients c ON c.id = d.client_id "
+        "AND c.business_id=d.business_id "
+        "LEFT JOIN projects p ON p.id=d.project_id "
+        "AND p.business_id=d.business_id "
+        "LEFT JOIN document_client_candidates dc ON dc.document_id=d.id "
+        "AND dc.business_id=d.business_id WHERE d.business_id=?"
+    )
     params: list = [business_id]
     if client_id is not None:
         q += " AND d.client_id=?"
@@ -326,8 +344,7 @@ def delete(doc_id: int, business_id: int) -> dict | None:
     if not doc:
         return None
     with _conn() as conn:
-        conn.execute("DELETE FROM documents WHERE id=? AND business_id=?",
-                     (doc_id, business_id))
+        conn.execute("DELETE FROM documents WHERE id=? AND business_id=?", (doc_id, business_id))
     return doc
 
 
@@ -341,18 +358,97 @@ def stored_names_for_client(business_id: int, client_id: int) -> list[str]:
     with _conn() as conn:
         rows = conn.execute(
             "SELECT stored_name FROM documents WHERE business_id=? AND client_id=?",
-            (business_id, client_id)).fetchall()
+            (business_id, client_id),
+        ).fetchall()
     return [r["stored_name"] for r in rows]
 
 
 def purge_for_client(business_id: int, client_id: int) -> None:
     """Borra los metadatos de los documentos de un cliente (derecho al olvido)."""
     with _conn() as conn:
-        conn.execute("DELETE FROM documents WHERE business_id=? AND client_id=?",
-                     (business_id, client_id))
+        conn.execute(
+            "DELETE FROM documents WHERE business_id=? AND client_id=?", (business_id, client_id)
+        )
 
 
 def purge_for_business(business_id: int) -> None:
     """Borra los metadatos de TODOS los documentos de un negocio (baja de cuenta)."""
     with _conn() as conn:
         conn.execute("DELETE FROM documents WHERE business_id=?", (business_id,))
+
+
+def _get_with_conn(conn, doc_id: int, business_id: int) -> dict | None:
+    row = conn.execute(
+        "SELECT * FROM documents WHERE id=? AND business_id=?", (doc_id, business_id)
+    ).fetchone()
+    return dict(row) if row else None
+
+
+def _set_review_with_conn(
+    conn,
+    doc_id: int,
+    business_id: int,
+    *,
+    kind: str | None = None,
+    doc_status: str | None = None,
+    confidence: float | None = None,
+    review_note: str | None = None,
+) -> dict | None:
+    """Actualiza la revisión de un documento (tipo, estado, nota). Trazable:
+    siempre sella reviewed_at. Devuelve el documento actualizado o None."""
+    updates: list[str] = ["reviewed_at=?"]
+    params: list = [_now()]
+    if kind is not None:
+        if kind not in KINDS:
+            raise ValueError("Tipo de documento desconocido.")
+        updates.append("kind=?")
+        params.append(kind)
+    if doc_status is not None:
+        if doc_status not in DOC_STATUSES:
+            raise ValueError("Estado de documento desconocido.")
+        updates.append("doc_status=?")
+        params.append(doc_status)
+    if confidence is not None:
+        updates.append("confidence=?")
+        params.append(float(confidence))
+    if review_note is not None:
+        updates.append("review_note=?")
+        params.append(review_note.strip()[:500] or None)
+    params.extend([doc_id, business_id])
+    conn.execute(f"UPDATE documents SET {', '.join(updates)} WHERE id=? AND business_id=?", params)
+    return _get_with_conn(conn, doc_id, business_id)
+
+
+def _is_batch_source_with_conn(conn, doc_id: int, business_id: int) -> bool:
+    """Un lote original no puede contabilizarse además de sus facturas."""
+    return (
+        conn.execute(
+            "SELECT id FROM document_classifications WHERE document_id=? AND business_id=? AND method='pdf_batch' LIMIT 1",
+            (doc_id, business_id),
+        ).fetchone()
+        is not None
+    )
+
+
+def _confirm_classification_with_conn(
+    conn, doc_id: int, business_id: int, confirmed_kind: str
+) -> dict | None:
+    """Confirma la última propuesta y conserva la corrección como aprendizaje."""
+    if confirmed_kind not in KINDS:
+        raise ValueError("Tipo de documento desconocido.")
+    row = conn.execute(
+        "SELECT id FROM document_classifications WHERE business_id=? AND document_id=? ORDER BY id DESC LIMIT 1",
+        (business_id, doc_id),
+    ).fetchone()
+    if not row:
+        return None
+    conn.execute(
+        "UPDATE document_classifications SET confirmed_kind=?, confirmed_at=? WHERE id=? AND business_id=?",
+        (confirmed_kind, _now(), row["id"], business_id),
+    )
+    saved = conn.execute(
+        "SELECT * FROM document_classifications WHERE id=? AND business_id=?",
+        (row["id"], business_id),
+    ).fetchone()
+    result = dict(saved)
+    return result

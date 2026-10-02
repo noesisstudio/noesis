@@ -188,6 +188,8 @@ class EconomicEvents:
             date_provenance=date_provenance,
             idempotency_key=key,
         )
+        from noesis.core.locks import lock_business
+        lock_business(self.session, self.business_id)
         self.repo.lock_business()
         existing = self.repo.find(event, operation_uuid, event_slot, key)
         if existing:

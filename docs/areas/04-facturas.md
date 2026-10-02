@@ -1,5 +1,13 @@
 # 04 · Facturas: del borrador al cobro
 
+## Escritores prestados de 1.4
+
+Emisión F1/F2/R1–R5, creación de borrador, cobro y anulación delegan en
+`financial_writers/` con la conexión exterior. Numeración, freeze, SHA, XML, QR y
+outboxes conservados. Solo advisory transaccional por negocio y cadena común
+business/NIF; cero AEAT en writer. Banco reutiliza inserción común de pagos.
+No productores. [Contrato](../architecture/BORROWED-WRITERS-v1.md).
+
 > Financial Core: leer [guía 08](08-financial-core.md) y [ADR](../architecture/README.md).
 > Nuevos dominios en repositorios especializados con transacción compartida;
 > Decimal/NUMERIC y aprobación validada en servidor. La IA carece de autoridad

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import csv
 from datetime import datetime
-from decimal import Decimal, InvalidOperation
+from decimal import Context, Decimal, InvalidOperation, ROUND_HALF_EVEN, localcontext
 import hashlib
 import io
 import re
@@ -53,7 +53,7 @@ def _date(value: str) -> str:
     raise ValueError(f"No entiendo la fecha «{raw[:30]}» del extracto.")
 
 
-def _amount(value: str) -> float:
+def _amount_decimal(value: str) -> Decimal:
     raw = str(value or "").strip().replace("\u00a0", "").replace(" ", "")
     negative = raw.startswith("(") and raw.endswith(")")
     raw = raw.strip("()").replace("€", "").replace("EUR", "").replace("eur", "")
@@ -73,7 +73,12 @@ def _amount(value: str) -> float:
         number = -number
     if not number.is_finite() or number == 0:
         raise ValueError("El extracto contiene un importe vacío o igual a cero.")
-    return float(number.quantize(Decimal("0.01")))
+    with localcontext(Context(prec=50,rounding=ROUND_HALF_EVEN)):
+        return number.quantize(Decimal("0.01"))
+
+
+def _amount(value: str) -> float:
+    return float(_amount_decimal(value))
 
 
 def _decode(content: bytes) -> str:
@@ -123,7 +128,7 @@ def import_csv(business_id: int, content: bytes) -> dict:
     occurrences: dict[tuple[str, float, str, str, str], int] = {}
     for row in _rows(content):
         booked_on = _date(_first(row, _DATE_FIELDS))
-        amount = _amount(_first(row, _AMOUNT_FIELDS))
+        amount = _amount_decimal(_first(row, _AMOUNT_FIELDS))
         description = _first(row, _DESCRIPTION_FIELDS)
         counterparty = _first(row, _COUNTERPARTY_FIELDS)
         reference = _first(row, _REFERENCE_FIELDS)

@@ -443,76 +443,34 @@ def resolve_supplier(business_id: int, *, name: str | None = None,
     return None
 
 
-def record_received_invoice(business_id: int, *, total,
-                            supplier_name: str | None = None,
-                            supplier_nif: str | None = None,
-                            note: str | None = None, **fields) -> dict:
-    """Factura recibida confirmada que no tiene archivo propio (fila de un extracto
-    o varias facturas en una misma página). El original sigue en Documentos."""
+def record_received_invoice(business_id: int, *, total, supplier_name: str | None=None, supplier_nif: str | None=None, note: str | None=None, **fields) -> dict:
     from .. import db
+    from ..financial_writers import documents as writers
+    from ..financial_writers.boundary import observe
+    with db.get_conn() as conn:
+        conn.execute('BEGIN IMMEDIATE')
+        result = writers.record_received_invoice(conn, business_id, total=total, supplier_name=supplier_name, supplier_nif=supplier_nif, note=note, **fields, legacy=True)
+    observe(result)
+    return result.legacy_value()
 
-    supplier_id = resolve_supplier(business_id, name=supplier_name, nif=supplier_nif)
-    return db.add_received_invoice(
-        total, supplier_id=supplier_id, note=note, business_id=business_id, **fields
-    )
 
-
-def confirm_received_invoice(business_id: int, doc_id: int, *, total,
-                             supplier_name: str | None = None,
-                             supplier_nif: str | None = None,
-                             supplier_id: int | None = None,
-                             **fields) -> dict:
-    """Confirmación humana del borrador: crea la recibida y vincula el documento.
-
-    Crea el proveedor si no existe (por NIF o nombre exacto). Lanza ValueError
-    con mensaje apto para el usuario si algo no cuadra.
-    """
+def confirm_received_invoice(business_id: int, doc_id: int, *, total, supplier_name: str | None=None, supplier_nif: str | None=None, supplier_id: int | None=None, **fields) -> dict:
     from .. import db
-
-    doc = repo.get(doc_id, business_id)
-    if not doc:
-        raise UploadError("Documento no encontrado.")
-    if repo.is_batch_source(doc_id, business_id):
-        raise ValueError("Este PDF es un lote. Revisa y registra las facturas individuales.")
-    if supplier_id is None:
-        supplier_id = resolve_supplier(business_id, name=supplier_name, nif=supplier_nif)
-    received = db.add_received_invoice(
-        total, supplier_id=supplier_id, document_id=doc_id,
-        business_id=business_id, **fields)
-    repo.set_review(doc_id, business_id, kind="factura_recibida",
-                    doc_status="revisado")
-    repo.confirm_classification(doc_id, business_id, "factura_recibida")
-    return received
+    from ..financial_writers import documents as writers
+    from ..financial_writers.boundary import observe
+    with db.get_conn() as conn:
+        conn.execute('BEGIN IMMEDIATE')
+        result = writers.confirm_received_invoice(conn, business_id, doc_id, total=total, supplier_name=supplier_name, supplier_nif=supplier_nif, supplier_id=supplier_id, **fields, legacy=True)
+    observe(result)
+    return result.legacy_value()
 
 
-def convert_ticket_to_expense(business_id: int, doc_id: int,
-                              concept: str | None = None,
-                              amount: float | None = None,
-                              vat_rate: float | None = None,
-                              spent_on: str | None = None) -> dict | None:
-    """Convierte un ticket/factura escaneada en un gasto registrado.
-
-    Usa el importe leído por OCR si no se pasa uno. Devuelve el gasto creado, o None
-    si no hay importe disponible. Vincula el documento al gasto confirmado.
-    """
+def convert_ticket_to_expense(business_id: int, doc_id: int, concept: str | None=None, amount: float | None=None, vat_rate: float | None=None, spent_on: str | None=None) -> dict | None:
     from .. import db
-    doc = repo.get(doc_id, business_id)
-    if not doc:
-        return None
-    amount = amount if amount is not None else doc.get("ocr_amount")
-    if not amount or float(amount) <= 0:
-        return None
-    concept = (concept or doc.get("filename") or "Gasto de ticket").strip()
-    expense = db.add_expense(
-        concept,
-        float(amount),
-        vat_rate=vat_rate,
-        category="Ticket",
-        spent_on=spent_on,
-        document_id=doc_id,
-        project_id=doc.get("project_id"),
-        business_id=business_id,
-    )
-    repo.set_review(doc_id, business_id, kind="ticket", doc_status="revisado")
-    repo.confirm_classification(doc_id, business_id, "ticket")
-    return expense
+    from ..financial_writers import documents as writers
+    from ..financial_writers.boundary import observe
+    with db.get_conn() as conn:
+        conn.execute('BEGIN IMMEDIATE')
+        result = writers.convert_ticket_to_expense(conn, business_id, doc_id, concept, amount, vat_rate, spent_on, legacy=True)
+    observe(result)
+    return result.legacy_value()

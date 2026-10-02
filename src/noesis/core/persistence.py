@@ -58,6 +58,11 @@ class FinancialSession:
     def dialect(self) -> str:
         return self._connection.dialect
 
+    @property
+    def borrowed_connection(self) -> Connection:
+        """Frontera explícita con escritores legacy; no normalizar dinero nuevo."""
+        return self._connection
+
     def execute(self, sql: str, params=()) -> _ExactCursor:
         params = tuple(params)
         _check_exact(params)

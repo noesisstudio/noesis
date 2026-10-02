@@ -1,5 +1,15 @@
 # Decisiones
 
+## 2026-10-02 — Exclusivamente 1.4: un núcleo prestado por dominio
+
+[ADR-008](architecture/ADR-008-borrowed-writers.md): commit exterior, captura de
+entrada/parámetros exactos antes del adaptador binario legacy y snapshot real con
+procedencia; tres revisiones mutables de BD y huellas de fuentes congeladas.
+Gate transaccional por negocio evita inversión contador/origen; lock común de
+cadena por negocio/NIF. Recurrentes y confirmaciones documentales componibles.
+No productores, flags, backlinks ni enlace bancario durable. 1.5 no autorizada.
+Las decisiones inferiores describen las fases aceptadas anteriormente.
+
 ## 2026-10-02 — Persistencia de Economic Events, solo 1.3
 
 [ADR-007](architecture/ADR-007-economic-persistence.md): tres tablas, FKs reales

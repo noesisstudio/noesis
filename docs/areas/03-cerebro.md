@@ -1,5 +1,13 @@
 # 03 · Cerebro: el chat y WhatsApp
 
+## Confirmación documental componible (1.4)
+
+`documents.service` conserva APIs/canales; sus confirmaciones delegan en writers
+prestados. Proveedor, recibida/gasto, vínculo y revisión/clasificación comparten
+transacción; observaciones de producto después del commit. OCR/IA/archivo quedan
+fuera del writer. `repo._*_with_conn` comparte consultas/mutación existentes.
+No conectar FinancialOperations ni Economic Events al chat/WhatsApp aquí.
+
 ## Puerta financiera futura tras 1.2
 
 `action_review.respond()` conserva su funcionamiento: elimina pending antes de

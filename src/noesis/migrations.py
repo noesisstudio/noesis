@@ -4314,6 +4314,16 @@ def _downgrade_oauth_credentials(conn) -> None:
     conn.execute("DROP TABLE IF EXISTS oauth_credentials")
 
 
+def _upgrade_financial_source_revisions(conn):
+    from .financial_writers.schema import upgrade
+    upgrade(conn)
+
+
+def _downgrade_financial_source_revisions(conn):
+    from .financial_writers.schema import downgrade
+    downgrade(conn)
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
     (2, "integridad_multiempresa", _upgrade_tenant_integrity, _downgrade_tenant_integrity),
@@ -4416,6 +4426,8 @@ MIGRATIONS: tuple[Migration, ...] = (
     (62, "operaciones_financieras_durables",
      _upgrade_financial_operations, _downgrade_financial_operations),
     (63, "economic_events_durables", _upgrade_economic_events, _downgrade_economic_events),
+    (64, "revisiones_origen_financiero", _upgrade_financial_source_revisions,
+     _downgrade_financial_source_revisions),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

@@ -20,6 +20,11 @@ Servicio propietario de la transacción
 
 - `core/money.py`: importe canónico y precisión; [ADR-004](../architecture/ADR-004-money-decimal.md).
 - `core/persistence.py`: conexión prestada, sin commit/rollback/cierre propio.
+- `financial_writers/`: un núcleo SQL por dominio, sin commit/rollback/conexión/IA/red.
+  Fachadas públicas compatibles y propietario exterior; [API](../architecture/BORROWED-WRITERS-v1.md).
+  [ADR-008](../architecture/ADR-008-borrowed-writers.md): orden de locks, revisiones
+  monotónicas de BD y huellas inmutables, snapshot real y procedencia binaria legacy.
+- `core/locks.py`: advisory transaccional por negocio y cadena fiscal, sin nueva tabla.
 - `db.py`: fachada legacy e infraestructura común; no nuevos motores financieros.
   Baja: solo tablas financieras vacías; con evidencia rechazar antes de borrar.
 - `accounting/__init__.py`: reserva, sin ledger ni posting.
@@ -64,8 +69,9 @@ genérico. Los registros fiscales/seguridad/producto conservan responsabilidades
 
 ## Estado y pruebas
 
-Fase 0, 1.1 y 1.2 aceptadas; solo 1.3 autorizada: persistencia de eventos/links,
-sin productores/efectos reales ni cambios funcionales VERI*FACTU. 1.4 no autorizada.
+Fase 0 y 1.1–1.3 aceptadas; solo 1.4 autorizada. Writers prestados, snapshots
+y revisiones reales preparados, sin productores. 1.5 no autorizada. VERI*FACTU
+solo añade lock común de cadena, sin cambiar huellas, XML ni QR.
 No convertir lecturas antiguas a Decimal de forma
 global. SQLite nuevo: dinero TEXT y cálculo Decimal; no aritmética SQL sobre TEXT.
 
@@ -95,3 +101,7 @@ global. SQLite nuevo: dinero TEXT y cálculo Decimal; no aritmética SQL sobre T
 - [ ] Tests PostgreSQL reales; no confundir mocks con aceptación AEAT.
 - [ ] Estado, QA, bitácora, mapa y ADR actualizados; PASS/FAIL con límites.
 - [ ] Detenerse: el siguiente número de fase no se autoriza automáticamente.
+
+- Writers: `test_borrowed_writers`, contrato compartido y
+  `postgres_borrowed_writers.BorrowedWritersPostgres`; commit/rollback de veinte
+  caminos, dinero, revisiones, composición con 1.2, concurrencia y fixture fiscal.

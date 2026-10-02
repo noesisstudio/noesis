@@ -2,9 +2,11 @@
 
 La planificación de Economic Event Layer fue aprobada por el titular el
 2-oct-2026. Esa aprobación fija arquitectura de referencia, **no ejecución de
-todas sus unidades**. 1.1 y 1.2 aceptadas. La orden vigente autoriza solo
-**1.3: persistencia inmutable de Economic Events**, sin productores.
-Fase 0 está cerrada. 1.4 y siguientes esperan otra orden explícita.
+todas sus unidades**. Fase 0 y 1.1–1.3 aceptadas. La orden vigente autoriza solo
+**1.4: fronteras transaccionales, escritores prestados y precisión monetaria**,
+sin productores. 1.5 y siguientes esperan otra orden explícita.
+Detalle y evidencia de 1.4 en [ADR-008](ADR-008-borrowed-writers.md),
+[API de writers](BORROWED-WRITERS-v1.md) y [cierre](FASE-1.4-cierre.md).
 Precisión respecto al plan inicial: la persistencia mínima de operaciones y
 autorizaciones se adelanta a 1.2 por petición expresa; 1.3 añade eventos/links y
 contador mínimo. [Contrato durable](ECONOMIC-PERSISTENCE-v1.md),
