@@ -9,6 +9,7 @@ qué mirar antes de dar un cambio por bueno.
 
 | Si tocas o revisas… | Lee |
 |---|---|
+| Financial Core, dinero exacto y repositorios financieros | [08 · Financial Core](08-financial-core.md) |
 | Algo que cruza varias zonas, o no sabes por dónde empezar | [01 · Visión general](01-vision-general.md) |
 | Una pantalla, un portal, `/admin` o la web pública | [02 · Ramas de la empresa](02-ramas-de-la-empresa.md) |
 | `web/chat.py`, `nlu.py`, `agent.py`, `tools.py`, `action_review.py`, WhatsApp de entrada, voz | [03 · Cerebro](03-cerebro.md) |

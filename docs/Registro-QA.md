@@ -1,5 +1,26 @@
 ﻿# Registro de QA
 
+## 2026-10-02 — Financial Core, solo Fase 0
+
+- Nuevas: 16 Money/flags/SQLite y 6 contra PostgreSQL 16.15 real, correctas.
+- Suite general Python 3.13: 1.396 ejecutadas en 1003,041 s, 1.395 correctas y un
+  error de entorno (detect-secrets ausente). Repetida la prueba afectada en el
+  entorno sincronizado: 1/1 correcta. No ocultar este resultado como un run verde.
+- Regresión de dependencias: 619/619 correctas en 478,270 s (entorno sincronizado, Python 3.12).
+- SQLite 0→61→0→61 correcto. PostgreSQL: histórico desde 32, 36 rutas sin 5xx,
+  baseline esquema 53 contra 61, rollback vigente→55→54→53→54→55→vigente,
+  privacidad, aislamiento, reserva, deduplicación y recuperación correctos.
+- Arranque/parada del servidor con TestClient y /health, /ready, /, /login: 200.
+- Node 3/3; Ruff, Bandit, secretos (también archivos añadidos), uv lock --check y
+  pip-audit correctos. La primera auditoría detectó once avisos: solo se actualizó
+  pypdf a 6.19.0 y urllib3 a 2.8.0 en uv.lock; nueva auditoría limpia.
+- Avisos heredados: cierre de hilos del pool en scripts PostgreSQL y deprecaciones
+  Starlette/pypdf. Scripts con exit 0; el nuevo test cierra explícitamente el pool.
+- Sin nuevas tablas ni migración; esquema 61. Sin asientos/eventos/reporting ni
+  cambios funcionales VERI*FACTU. Los cinco flags quedan false y sin consumidores.
+- [Informe, autoauditoría y criterios](architecture/FASE-0-cierre.md).
+  CI remota y despliegue se registrarán al verificarse, sin inferirlos de QA local.
+
 ## 2026-10-01 (22)
 
 - Simulación local en catalán y con frases de Whisper. Suite completa **1380

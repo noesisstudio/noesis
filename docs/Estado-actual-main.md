@@ -1,5 +1,17 @@
 # Estado actual del producto
 
+## 2-oct — Financial Core, Fase 0 local
+
+Implementados Money/Decimal, vista exacta sobre la conexión/transacción existente,
+cinco flags apagados y paquete accounting vacío. ADR-001 a 005 y gobernanza en
+[architecture](architecture/README.md). No hay eventos económicos, GL, migraciones
+ni cambios funcionales de VERI*FACTU. Eventos operativos separados de económicos.
+
+Implementación validada localmente; pendiente de CI remota y verificación de despliegue. [Cierre y PASS/FAIL](architecture/FASE-0-cierre.md).
+La condición estricta de CI remota verde queda pendiente de publicación y ejecución;
+no declarar la fase completamente aceptada ni empezar Fase 1. Los avisos de seguridad
+en el lockfile se corrigieron con pypdf 6.19.0 y urllib3 2.8.0.
+
 ## 24-sep — Diagnóstico operativo local
 
 **Cierre 25-sep:** publicado 0fd05e8 en main y Railway, despliegue

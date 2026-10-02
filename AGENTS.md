@@ -1,5 +1,24 @@
 # AGENTS.md - Manual del proyecto Bynoesis
 
+> Para Financial Core, leer [gobernanza y ADR](docs/architecture/README.md) y
+> [guía 08](docs/areas/08-financial-core.md). Solo está autorizada la Fase 0;
+> las referencias no autorizan fases posteriores. El cierre queda en esa carpeta.
+
+## Contrato del Financial Core
+
+- Monolito modular: servicios y repositorios especializados por dominio; conexión,
+  pool y transacciones compartidos mediante `db.get_conn()` y `FinancialSession`.
+- Prohibida nueva lógica financiera grande dentro de `db.py`: únicamente cambios
+  acotados de infraestructura o mantenimiento legacy. Nada de nuevos pools/ORM.
+- `Decimal/NUMERIC` es el contrato del núcleo; SQLite usa TEXT decimal canónico
+  para preservar exactitud. No pasar por normalización legacy a float ni usar
+  REAL, SUM/CAST binarios o JSON numérico para importes nuevos.
+- La IA propone; no autoriza, contabiliza, liquida ni cambia reglas financieras.
+  El servicio valida permisos, aprobación, invariantes e idempotencia.
+- Economic Events son hechos financieros, no un log genérico. `quote.accepted`
+  y `job.completed` son operativos; solo una regla explícita posterior puede
+  producir una obligación o reconocimiento diferente y trazable.
+
 Este archivo es la fuente de verdad compartida para cualquier agente de IA que
 trabaje en el repositorio. Léelo entero antes de tocar nada. La visión y el contexto
 están en `docs/`, empezando por [`docs/Inicio.md`](docs/Inicio.md).
@@ -57,8 +76,9 @@ WhatsApp / Web / App
 
 Archivos clave:
 
-- `src/noesis/db.py`: acceso único SQLite/Postgres; toda operación filtra por
-  `business_id`.
+- `src/noesis/db.py`: infraestructura compartida SQLite/Postgres y acceso legacy;
+  los repositorios especializados reciben la misma conexión/transacción. Toda
+  operación de negocio filtra por `business_id`.
 - `src/noesis/migrations.py`: esquema versionado; la versión vigente se consulta en
   `docs/project-state.json` y se valida automáticamente contra el código.
 - `src/noesis/web/server.py` y `src/noesis/web/routers/`: FastAPI por dominios.
@@ -78,6 +98,7 @@ o cambiar algo de esa zona; si el cambio la contradice, actualízala en el mismo
 
 | Si el cambio toca… | Guía |
 |---|---|
+| Financial Core, `core/`, `accounting/`, exactitud y repositorios financieros | [08 · Financial Core](docs/areas/08-financial-core.md) |
 | Varias zonas, `web/server.py`, `web/deps.py`, `db.py` en general, `migrations.py`, `config.py` | [01 · Visión general](docs/areas/01-vision-general.md) |
 | `web/routers/pages.py`, `portal.py`, `gestoria*.py`, `admin.py`, `account.py` (alta y sesión), `web/templates/`, `web/static/`, `sales.py`, `economics*.py` | [02 · Ramas de la empresa](docs/areas/02-ramas-de-la-empresa.md) |
 | `web/chat.py`, `nlu.py`, `agent.py`, `tools.py`, `action_review.py`, `internal_brain.py`, `learning.py`, `local_invoice.py`, `intent_safety.py`, `web/whatsapp*.py`, `adapters/ai.py`, `adapters/transcription.py`, `adapters/extraction.py`, `documents/` (salvo `inbound_email.py`) | [03 · Cerebro](docs/areas/03-cerebro.md) |

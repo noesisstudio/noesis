@@ -1,4 +1,4 @@
-"""Acceso único a SQLite/Postgres con aislamiento multiempresa.
+"""Infraestructura SQLite/Postgres compartida y acceso legacy multiempresa.
 
 Cada autónomo que se da de alta es un "business". Todos sus datos (clientes,
 agenda, facturas, gastos) van marcados con su business_id, de modo que los datos
@@ -81,18 +81,24 @@ def _normalise_row(row) -> Record | None:
 
 
 class Cursor:
-    def __init__(self, cursor):
+    def __init__(self, cursor, *, normalise: bool = True):
         self._cursor = cursor
+        self._normalise = normalise
+
+    def _row(self, row):
+        if self._normalise:
+            return _normalise_row(row)
+        return Record(row) if row is not None else None
 
     @property
     def rowcount(self) -> int:
         return self._cursor.rowcount
 
     def fetchone(self) -> Record | None:
-        return _normalise_row(self._cursor.fetchone())
+        return self._row(self._cursor.fetchone())
 
     def fetchall(self) -> list[Record]:
-        return [_normalise_row(row) for row in self._cursor.fetchall()]
+        return [self._row(row) for row in self._cursor.fetchall()]
 
 
 class Connection:
@@ -114,6 +120,20 @@ class Connection:
         for statement in script.split(";"):
             if statement.strip():
                 self.execute(statement)
+
+    def execute_exact(self, sql: str, params=()) -> Cursor:
+        """Consulta tipada en esta misma transacción, sin normalización legacy.
+
+        Uso del núcleo: core.persistence.FinancialSession. No abre conexión,
+        confirma ni registra adaptadores globales de SQLite.
+        """
+        if self.dialect == "postgres":
+            if sql.strip().upper() == "BEGIN IMMEDIATE":
+                sql = "SELECT 1"
+            sql = sql.replace("?", "%s")
+        else:
+            params = tuple(format(v, "f") if isinstance(v, Decimal) else v for v in params)
+        return Cursor(self.raw.execute(sql, params), normalise=False)
 
     def commit(self) -> None:
         self.raw.commit()

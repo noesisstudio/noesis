@@ -1,5 +1,15 @@
 # Decisiones
 
+## 2026-10-02 — Financial Core: solo fundamentos
+
+Aceptados [ADR-001 a 005](architecture/README.md): monolito modular, repositorios
+por dominio con infraestructura/transacción compartida, Decimal/NUMERIC y frontera
+exacta independiente del float legacy. Los flags quedan reservados y apagados.
+La IA propone, sin autoridad financiera directa. Acontecimientos operativos y
+hechos económicos no se mezclan: presupuesto aceptado/trabajo terminado no generan
+reconocimiento sin regla explícita. Los ADR de eventos, ledger y períodos fijan
+contratos futuros; no autorizan su implementación. Fase 1 requiere nueva orden.
+
 Registro de decisiones importantes y su porqué (las más recientes arriba).
 
 ## Presupuestos y citas se deciden por WhatsApp con tarjeta (2026-10-01)

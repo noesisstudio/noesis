@@ -1,5 +1,10 @@
 # 06 · RGPD y seguridad
 
+> Financial Core: leer [guía 08](08-financial-core.md) y [ADR](../architecture/README.md).
+> Nuevos dominios en repositorios especializados con transacción compartida;
+> Decimal/NUMERIC y aprobación validada en servidor. La IA carece de autoridad
+> financiera directa. Solo fundamentos: no cambia la operativa de esta guía.
+
 > Léela antes de tocar datos personales, bajas, exportaciones, consentimientos,
 > cookies, analítica, permisos, sesiones, proveedores nuevos o registros de
 > seguridad. Figura 6 del [mapa visual](../02-tecnico/Mapa-Bynoesis.html).

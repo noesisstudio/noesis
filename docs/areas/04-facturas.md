@@ -1,5 +1,10 @@
 # 04 · Facturas: del borrador al cobro
 
+> Financial Core: leer [guía 08](08-financial-core.md) y [ADR](../architecture/README.md).
+> Nuevos dominios en repositorios especializados con transacción compartida;
+> Decimal/NUMERIC y aprobación validada en servidor. La IA carece de autoridad
+> financiera directa. Solo fundamentos: no cambia la operativa de esta guía.
+
 > Léela antes de tocar facturas, presupuestos, cobros, series, recurrentes,
 > rectificativas, PDF, impuestos o Veri*Factu. Es la zona más sensible del producto:
 > un error aquí es un problema fiscal del cliente. Figura 4 del

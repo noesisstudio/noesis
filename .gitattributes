@@ -6,3 +6,5 @@
 *.woff2 binary
 *.woff binary
 *.ttf binary
+# Referencias originales: conservar saltos Markdown y líneas finales sin cambios.
+docs/architecture/references/*.md whitespace=-blank-at-eol,-blank-at-eof

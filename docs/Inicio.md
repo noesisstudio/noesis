@@ -1,5 +1,7 @@
 # 🧭 Bynoesis — Inicio
 
+[Financial Core: gobernanza, ADR y cierre de Fase 0](architecture/README.md). Leer antes de continuar cualquier fase financiera.
+
 Mapa de contenido (MOC) del proyecto. Abre esta carpeta como *vault* en Obsidian y
 usa la vista de grafo para navegar.
 

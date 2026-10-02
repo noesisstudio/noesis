@@ -1,5 +1,26 @@
 # Arquitectura
 
+## Financial Core: fundamentos incorporados
+
+[Gobernanza y ADR](architecture/README.md), [guía 08](areas/08-financial-core.md).
+Bynoesis es un monolito modular. Los servicios financieros futuros orquestarán
+repositorios especializados sobre la misma conexión y transacción existentes:
+`db.get_conn() -> FinancialSession -> repositorio(business_id)`.
+El servicio posee commit/rollback; los repositorios no abren conexiones paralelas.
+`Connection.execute_exact` conserva valores nativos y el camino legacy conserva
+su normalización. No se traslada ni amplía lógica financiera grande en `db.py`.
+
+`core/money.py` establece Decimal, EUR y cierre explícito HALF_UP. PostgreSQL
+NUMERIC y SQLite TEXT canónico preservan importes; rechazar floats, incluidos JSON.
+La IA solo propone y los servicios validados tienen autoridad de ejecución.
+Domain/Operational Events y Economic Events son conceptos diferentes: aceptar
+un presupuesto o completar un trabajo no produce automáticamente un hecho
+financiero. Una regla de negocio posterior deberá justificarlo con evidencia.
+
+Fase 0 incorpora contratos y cinco flags reservados apagados. `accounting/` solo
+reserva el paquete. No hay General Ledger, eventos económicos, migraciones,
+asientos, nuevas rutas, reporting ni cambios funcionales VERI*FACTU.
+
 Objetivo: máximo posible **interno/cerrado**, mínimo de APIs externas (coste y
 privacidad). Ver [[Investigación]] y [[Decisiones]].
 
@@ -32,7 +53,7 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
   modelo nunca decide por sí solo los permisos ni el aislamiento.
 - `adapters/ai.py` — contrato HTTP OpenAI-compatible para Ollama, llama.cpp, vLLM
   u otro servicio privado, sin SDK ni dependencia nueva. Ver [[IA-local]].
-- `db.py` — frontera única de datos: Postgres con `DATABASE_URL`, pool de conexiones
+- `db.py` — infraestructura compartida de conexiones/transacciones y acceso legacy: Postgres con `DATABASE_URL`, pool de conexiones
   acotado por proceso y SQLite local como fallback.
 - `banking.py` — importa extractos CSV en local, deduplica y propone coincidencias;
   el titular confirma antes de crear un cobro en el ledger.
@@ -88,7 +109,7 @@ WhatsApp / Web / App  ─►  Cerebro  ─►  Herramientas  ─►  Base de dat
   fiscalidad, NLU y revocación de sesiones.
 
 ## Garantías del backend
-- El aislamiento se valida en la ruta y de nuevo en `db.py`; una mutación nunca
+- El aislamiento se valida en la ruta y de nuevo en el repositorio de dominio o `db.py` legacy; una mutación nunca
   devuelve una entidad de otro `business_id`.
 - Proyectos, miembros y costes usan FKs compuestas por negocio. El margen se deriva
   de presupuesto menos entradas reales; las horas son entradas con cantidad y coste.

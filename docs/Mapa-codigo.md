@@ -1,5 +1,16 @@
 # Mapa de código
 
+## Financial Core — Fase 0
+
+- `src/noesis/core/money.py`: Currency EUR, parse_money, quantize_currency y Money.
+- `src/noesis/core/persistence.py`: FinancialSession prestada; rechazo de floats.
+- `src/noesis/db.py`: execute_exact y Cursor opcional nativo; legacy intacto.
+- `src/noesis/accounting/__init__.py`: reserva documental, sin implementación.
+- `src/noesis/config.py` y `.env.example`: cinco flags reservados false.
+- `tests/test_financial_core.py`, `financial_core_contract.py` y
+  `postgres_financial_core.py`: exactitud, incompatibilidades y transacción común.
+- [Gobernanza, ADR y cierre](architecture/README.md); [guía 08](areas/08-financial-core.md).
+
 ## WhatsApp: presupuestos, citas, voz y trimestre — 1-oct
 
 - `tools.py`: herramientas solo locales (`aceptar_presupuesto`, `rechazar_presupuesto`,

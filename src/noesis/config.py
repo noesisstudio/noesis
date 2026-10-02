@@ -52,6 +52,13 @@ ASSISTANT_REVIEW_ENABLED = env_bool("NOESIS_ASSISTANT_REVIEW_ENABLED", False)
 ASSISTANT_LEARNING_ENABLED = env_bool("NOESIS_ASSISTANT_LEARNING_ENABLED", False)
 CONVERSATION_ISOLATION_ENABLED = env_bool("NOESIS_CONVERSATION_ISOLATION_ENABLED", False)
 WHATSAPP_INBOX_ENABLED = env_bool("NOESIS_WHATSAPP_INBOX_ENABLED", False)
+# Fundamentos del Financial Core: reservados, sin consumidores en Fase 0.
+# No activan eventos, asientos, impuestos, informes ni cambios fiscales.
+FINANCIAL_CORE_ENABLED = env_bool("NOESIS_FINANCIAL_CORE_ENABLED", False)
+LEDGER_REPORTING_ENABLED = env_bool("NOESIS_LEDGER_REPORTING_ENABLED", False)
+OPEN_ITEMS_ENABLED = env_bool("NOESIS_OPEN_ITEMS_ENABLED", False)
+NEW_TAX_ENGINE_ENABLED = env_bool("NOESIS_NEW_TAX_ENGINE_ENABLED", False)
+NEW_BANK_RECONCILIATION_ENABLED = env_bool("NOESIS_NEW_BANK_RECONCILIATION_ENABLED", False)
 # Piloto local: exige además revisión; no activa proveedores ni aprendizaje.
 LOCAL_PLANNER_ENABLED = env_bool("NOESIS_LOCAL_PLANNER_ENABLED", False)
 # Decisión del founder (2026-09-22): Sonnet en todo y fuera Haiku. Sonnet 5 es

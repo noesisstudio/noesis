@@ -1,5 +1,26 @@
 ﻿# Registro de cambios
 
+## 2026-10-02 — Financial Core: fundamentos de Fase 0
+
+- Objetivo: Money/Decimal, persistencia exacta prestada y gobernanza heredable del
+  monolito modular. Acontecimientos operativos separados de hechos económicos.
+- Áreas/archivos: core/money.py, core/persistence.py, accounting/__init__.py,
+  puente de infraestructura db.py, config y .env.example, tests de contrato en
+  SQLite/PostgreSQL y paso de CI; AGENTS, arquitectura, ADR, referencias, guías,
+  mapa, decisiones, estado y QA. .gitattributes conserva los saltos Markdown
+  originales de referencias. Sin migraciones ni nuevas tablas/operaciones.
+- Gate de seguridad: uv.lock actualiza solo pypdf 6.19.0 y urllib3 2.8.0 tras
+  once avisos de pip-audit; sin dependencias nuevas. Auditoría posterior limpia.
+- Pruebas y resultados completos: [Registro-QA](Registro-QA.md) y
+  [cierre de Fase 0](architecture/FASE-0-cierre.md), incluida incidencia de entorno
+  en la suite general y su repetición correcta. No se declara CI remota sin evidencia.
+- Límites externos: sin validación AEAT/Meta ni certificación legal. No Phase 1,
+  GL, Open Items, Tax Ledger, reporting, asientos ni cambios de VERI*FACTU.
+- Riesgo: confundir infraestructura exacta con migración de legacy o interpretar
+  flags reservados como funcionalidad lista. Diagnóstico: tipo/escala de columnas,
+  normalización, misma conexión y ADR-004. Rollback: revertir fundamentos sin tocar
+  datos ni huellas; conservar las versiones seguras del lockfile.
+
 ## 2026-10-02 — Contrato de suscripción del socio incorporado
 
 - Objetivo: añadir al repositorio los tres archivos locales del borrador de

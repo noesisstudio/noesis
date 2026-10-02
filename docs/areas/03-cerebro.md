@@ -1,5 +1,10 @@
 # 03 · Cerebro: el chat y WhatsApp
 
+> Financial Core: leer [guía 08](08-financial-core.md) y [ADR](../architecture/README.md).
+> Nuevos dominios en repositorios especializados con transacción compartida;
+> Decimal/NUMERIC y aprobación validada en servidor. La IA carece de autoridad
+> financiera directa. Solo fundamentos: no cambia la operativa de esta guía.
+
 > Léela antes de tocar `web/chat.py`, `nlu.py`, `agent.py`, `tools.py`,
 > `action_review.py`, `internal_brain.py`, `learning.py`, `local_invoice.py`,
 > `web/whatsapp*.py` o la voz. Figura 3 del [mapa visual](../02-tecnico/Mapa-Bynoesis.html).

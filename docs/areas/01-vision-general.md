@@ -1,5 +1,14 @@
 # 01 · Visión general
 
+## Fundamentos financieros (2-oct-2026)
+
+Monolito modular: [guía 08](08-financial-core.md) y [ADRs](../architecture/README.md).
+Los servicios poseen la transacción de `db.get_conn()`; los repositorios por dominio
+reciben `FinancialSession` y `business_id`. No añadir grandes bloques financieros a
+`db.py`, conexiones independientes ni autoridad financiera a la IA. El núcleo nuevo
+usa Decimal/NUMERIC (TEXT canónico en SQLite); legacy mantiene sus contratos.
+Solo Fase 0: sin tablas económicas, asientos ni consumidores nuevos.
+
 > Léela antes de un cambio que cruce varias zonas o cuando no sepas dónde vive algo.
 > Figura 1 del [mapa visual](../02-tecnico/Mapa-Bynoesis.html).
 
@@ -37,7 +46,7 @@ Founder ──── /admin ─────────────────�
 | `src/noesis/web/deps.py` | Guardias de sesión y de `business_id` para `/b/` y `/api/` |
 | `src/noesis/web/auth.py` | Contraseñas PBKDF2, sesiones firmadas, límites de intentos |
 | `src/noesis/web/routers/` | Una ruta por dominio (ver [02](02-ramas-de-la-empresa.md)) |
-| `src/noesis/db.py` | **Única** puerta a los datos; filtra por `business_id` en cada función |
+| `src/noesis/db.py` | Infraestructura compartida y acceso legacy; los repositorios nuevos reciben su conexión/transacción |
 | `src/noesis/migrations.py` | Esquema versionado con subida y bajada; Railway lo aplica antes de desplegar |
 | `src/noesis/config.py` | Todas las variables de entorno, con valores por defecto seguros |
 | `src/noesis/adapters/` | Un archivo por proveedor externo (IA, correo, Gmail, pagos, voz, extracción, facturación) |
@@ -47,7 +56,7 @@ Founder ──── /admin ─────────────────�
 ## Reglas que no se rompen
 
 1. **Toda lectura o escritura filtra por `business_id`**, en la ruta y otra vez en
-   `db.py`. Las relaciones entre tablas usan claves compuestas `(business_id, id)`
+   el repositorio especializado o las funciones legacy de `db.py`. Las relaciones entre tablas usan claves compuestas `(business_id, id)`
    para que no se pueda enlazar nada de otra empresa.
 2. **Las rutas no escriben SQL.** Validan y llaman a `db.py` o a un servicio.
 3. **Los proveedores se llaman solo desde `adapters/`.** Nunca desde una plantilla,
