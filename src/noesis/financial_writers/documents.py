@@ -106,6 +106,10 @@ def _mutate_convert_ticket_to_expense(
     amount: float | None = None,
     vat_rate: float | None = None,
     spent_on: str | None = None,
+    *,
+    vat_amount=None,
+    category="Ticket",
+    project_id=None,
 ) -> dict | None:
     """Convierte un ticket/factura escaneada en un gasto registrado.
 
@@ -124,11 +128,12 @@ def _mutate_convert_ticket_to_expense(
         concept,
         Decimal(str(amount)),
         vat_rate=vat_rate,
-        category="Ticket",
+        category=category,
         spent_on=spent_on,
         document_id=doc_id,
-        project_id=doc.get("project_id"),
+        project_id=project_id if project_id is not None else doc.get("project_id"),
         business_id=business_id,
+        vat_amount=vat_amount,
     )
     repo._set_review_with_conn(conn, doc_id, business_id, kind="ticket", doc_status="revisado")
     _confirm_classification(conn, doc_id, business_id, "ticket")

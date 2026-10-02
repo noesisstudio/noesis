@@ -28,7 +28,9 @@ class OperationsContract:
         self.service = FinancialOperations(self.business["id"])
         self.other_service = FinancialOperations(self.other_business["id"])
         self.identity = EntryIdentity.web_api(uuid4())
-        self.request = FinancialRequest(CommandType.EXPENSE_CONFIRM, None, Decimal("10.00"),
+        # Comando todavía sin productor: estos efectos son exclusivamente tablas sintéticas.
+        # ExpenseCapture exige ahora cobertura real al commit de expense.confirm.
+        self.request = FinancialRequest(CommandType.INVOICE_FISCAL_CANCEL, None, Decimal("10.00"),
             date(2026, 10, 2), None, "Prueba explícita", {"category": "material", "vat_amount": Decimal("0.00")})
         with db.get_conn() as conn:
             conn.execute("CREATE TABLE IF NOT EXISTS phase12_test_effects "

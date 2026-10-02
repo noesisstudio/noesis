@@ -361,7 +361,7 @@ class InvoiceCaptureContract:
         from noesis.financial_operations.contracts import FinancialRequest
         from noesis.financial_operations.service import FinancialOperations
         service = FinancialOperations(self.bid)
-        request = FinancialRequest("expense.confirm", None, "10.00", date.today(), None, None, {})
+        request = FinancialRequest("invoice.fiscal_cancel", None, "10.00", date.today(), None, None, {})
         op = service.prepare(self.principal, EntryIdentity.web_api(uuid4()), request)
         service.authorize(self.principal, op.operation_uuid, channel="web_api", approved_hash=request.request_hash, approved_revision=None)
         service.execute(self.principal, op.operation_uuid, lambda *_: {"fixture": True})

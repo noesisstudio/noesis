@@ -1,5 +1,10 @@
 # API canónica de emisión capturada — 1.5
 
+Nota vigente1.7: cinco productores de recibidas/gastos v1 con cobertura por
+revisión, continuidad, void lógico y guards. Catálogo/canonicalización intactos.
+[ADR-011](ADR-011-purchasing-capture.md), [API](PURCHASING-CAPTURE-v1.md).
+Flags OFF, no1.8. Las notas inferiores reflejan entregas anteriores.
+
 Nota vigente 1.6: se añaden PaymentCapture/BankCapture sobre el writer existente,
 con autorización durable, cobertura específica y resultado en un commit.
 customer_payment.received v1 = cobro real; bank_transaction.imported v1 = evidencia;

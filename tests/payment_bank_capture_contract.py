@@ -468,7 +468,7 @@ class PaymentBankCaptureContract:
             before = self.state()
             with self.assertRaises(ValueError):
                 migrations.downgrade(65)
-            self.assertEqual(migrations.current_version(),66)
+            self.assertEqual(migrations.current_version(),migrations.LATEST_VERSION)
             self.assertEqual(self.state(),before)
 
     def test_legacy_confirmation_preserves_response_and_real_link(self):

@@ -1,5 +1,18 @@
 # Fase 1: referencia aprobada y autorización incremental
 
+## Orden vigente — exclusivamente Fase1.7
+
+1.1–1.6 aceptadas. SupplierInvoiceCapture/ExpenseCapture conectan solo
+supplier_invoice.confirmed/corrected/voided y expense.confirmed/voided v1.
+Writers compartidos, autorización durable, cobertura inmutable por revisión,
+continuidad antes/después, logical void y guards SQL. Documento/clasificación/
+source/EE/resultado comparten commit. Flags OFF; no1.8, históricos ni activación.
+Pagada es etiqueta operativa, no supplier payment/AP settlement. No GL/Tax/
+OpenItems/reporting nuevo. Legacy no capturado conserva comportamiento.
+[Orden](FASE-1.7-orden.md), [ADR-011](ADR-011-purchasing-capture.md),
+[API](PURCHASING-CAPTURE-v1.md), [cierre](FASE-1.7-cierre.md).
+Las secciones inferiores describen entregas históricas; no son la orden vigente.
+
 ## Orden vigente — exclusivamente 1.6
 
 Fases1.1–1.5 aceptadas. PaymentCapture/BankCapture sobre los writers reales:

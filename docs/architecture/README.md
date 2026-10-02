@@ -1,5 +1,18 @@
 # Financial Core: punto de entrada y continuidad
 
+## Orden vigente — exclusivamente Fase1.7
+
+1.1–1.6 aceptadas. SupplierInvoiceCapture/ExpenseCapture conectan solo
+supplier_invoice.confirmed/corrected/voided y expense.confirmed/voided v1.
+Writers compartidos, autorización durable, cobertura inmutable por revisión,
+continuidad antes/después, logical void y guards SQL. Documento/clasificación/
+source/EE/resultado comparten commit. Flags OFF; no1.8, históricos ni activación.
+Pagada es etiqueta operativa, no supplier payment/AP settlement. No GL/Tax/
+OpenItems/reporting nuevo. Legacy no capturado conserva comportamiento.
+[Orden](FASE-1.7-orden.md), [ADR-011](ADR-011-purchasing-capture.md),
+[API](PURCHASING-CAPTURE-v1.md), [cierre](FASE-1.7-cierre.md).
+Las secciones inferiores describen entregas históricas; no son la orden vigente.
+
 ## Orden vigente — exclusivamente 1.6
 
 Fases 1.1–1.5 aceptadas. Solo PaymentCapture y BankCapture: cobro real v1,
@@ -65,6 +78,7 @@ especializada; ninguna especificación interna certifica cumplimiento.
 | [008](ADR-008-borrowed-writers.md) | Un núcleo por dominio, commit exterior, precisión/procedencia, revisiones y locks |
 | [009](ADR-009-invoice-capture.md) | Productor único de emisión, autorización exacta, cobertura diferida y replay |
 | [010](ADR-010-payment-bank-capture.md) | Cobro real, identidad bancaria, vínculo durable y match como evidencia |
+| [011](ADR-011-purchasing-capture.md) | Recibidas/gastos, continuidad por revisión y conservación lógica |
 
 ## Secuencia y límites de fase
 

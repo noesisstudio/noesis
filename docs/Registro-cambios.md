@@ -1,5 +1,20 @@
 ﻿# Registro de cambios
 
+## 2026-10-02 — Fase 1.7, recibidas y gastos con historia económica
+
+Objetivo: recibidas/gastos capturados con operación/aprobación, writer, cobertura
+por revisión, evento/relación y resultado atómicos. Nuevo purchasing_capture,
+schema67/guards/void/cuota explícita, writers/documents, filtros db, tests/CI y
+gobernanza compartida. Pruebas: SQLite157, PG193 y general1576 OK; gates locales PASS.
+31 PASS / 0 FAIL. Riesgo: origen REAL/DOUBLE declarado, serialización por negocio,
+delegación por creador y exportación/retención financiera pendientes1.10.
+Límites externos: flags OFF, sin1.8 ni aceptación de proveedores/CI/despliegue verificados.
+Diagnóstico: operation UUID, slot purchasing, source revision, cobertura before/after,
+antecedente y procedencia; discontinuidad falla cerrado, sin reconstrucción silenciosa.
+Rollback: código compatible manteniendo67/evidencia; downgrade/baja con evidencia
+bloqueados. Nunca purgar ni reiniciar revisiones para revertir.
+[Cierre](architecture/FASE-1.7-cierre.md), [API](architecture/PURCHASING-CAPTURE-v1.md).
+
 ## 2026-10-02 — Fase 1.6, cobros e identidad bancaria capturados
 
 Objetivo: PaymentCapture/BankCapture + writers existentes + cobertura + EE + resultado

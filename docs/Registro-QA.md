@@ -1,5 +1,25 @@
 ﻿# Registro de QA
 
+## 2026-10-02 — Cierre exclusivo de Fase 1.7
+
+- Nuevas: SQLite **38/38**; dirigidas finales **157/157 OK** (165.803 s).
+- PostgreSQL real: **44/44** captura, seis carreras de procesos; combinado
+  **193/193 OK** (90.473 s), incluyendo regresiones 1.2–1.6 y fundamentos.
+- Suite general final **1576/1576 OK** (1274.860 s), tras el último cambio runtime.
+- Cobertura por revisión, continuidad, SQL/API bypass, DELETE, multiempresa,
+  documentos, dinero inválido/float/subcéntimos y ocho fallos correction/void PASS.
+- SQLite0→67→0→67 y 67→66→67 sin evidencia; PG32→67 y ciclo aislado
+  67→55→54→53→54→55→67. 36 rutas, backup/restore, privacidad/conversación PASS.
+- Código anterior53 sobreBD67: cliente/factura/emisión/cobro/export PASS.
+  Servidor local health/ready/portada/login HTTP200. Ruff, Bandit high/high,
+  pip-audit sin vulnerabilidades conocidas, uv lock, secretos, Node3/3,
+  verdad documental, enlaces y diff PASS.
+- Primeros pases fallidos corregidos: fixtures antiguas, fecha PG, RETURN OLD
+  para DELETE y tasa21/21.0; revalidación final sin fallos pendientes.
+- **31 PASS / 0 FAIL**, autoauditorías específica14 y Master Plan12.
+  Flags OFF, sin1.8/AP/GL/Tax ni activación. CI remota/despliegue no verificados.
+  [Cierre completo](architecture/FASE-1.7-cierre.md).
+
 ## 2026-10-02 — Cierre exclusivo de Fase 1.6
 
 - SQLite: **30/30** nuevas de 1.6; regresiones dirigidas **125/125 OK** (134.378 s).

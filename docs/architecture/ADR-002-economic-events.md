@@ -1,5 +1,10 @@
 # ADR-002 · Hechos económicos separados de acontecimientos operativos
 
+Nota vigente1.7: cinco productores de recibidas/gastos v1 con cobertura por
+revisión, continuidad, void lógico y guards. Catálogo/canonicalización intactos.
+[ADR-011](ADR-011-purchasing-capture.md), [API](PURCHASING-CAPTURE-v1.md).
+Flags OFF, no1.8. Las notas inferiores reflejan entregas anteriores.
+
 Nota de continuidad 1.5: primer productor real de emisión/rectificativa autorizado.
 v1 conserva bytes/hash. Solo estos dos hechos incorporan payloadv2 y cobertura65.
 Leer [ADR-009](ADR-009-invoice-capture.md) y [API](INVOICE-CAPTURE-v1.md).

@@ -1,5 +1,10 @@
 # Contrato interno — PaymentCapture / BankCapture v1
 
+Nota vigente1.7: cinco productores de recibidas/gastos v1 con cobertura por
+revisión, continuidad, void lógico y guards. Catálogo/canonicalización intactos.
+[ADR-011](ADR-011-purchasing-capture.md), [API](PURCHASING-CAPTURE-v1.md).
+Flags OFF, no1.8. Las notas inferiores reflejan entregas anteriores.
+
 Alcance: exclusivamente 1.6. [Orden humana](FASE-1.6-orden.md),
 [ADR-010](ADR-010-payment-bank-capture.md), [cierre](FASE-1.6-cierre.md).
 Payloads aprobados v1 intactos; no ampliación del catálogo ni consumidores.

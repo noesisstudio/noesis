@@ -443,8 +443,12 @@ def resolve_supplier(business_id: int, *, name: str | None = None,
     return None
 
 
-def record_received_invoice(business_id: int, *, total, supplier_name: str | None=None, supplier_nif: str | None=None, note: str | None=None, **fields) -> dict:
+def record_received_invoice(business_id: int, *, total, supplier_name: str | None=None, supplier_nif: str | None=None, note: str | None=None, capture_requested=False, **fields) -> dict:
     from .. import db
+    from .. import config
+    if capture_requested or config.FINANCIAL_CORE_ENABLED:
+        from ..financial_operations.contracts import StateError
+        raise StateError("Captura documental requiere identidad y aprobación durable.")
     from ..financial_writers import documents as writers
     from ..financial_writers.boundary import observe
     with db.get_conn() as conn:
@@ -454,8 +458,12 @@ def record_received_invoice(business_id: int, *, total, supplier_name: str | Non
     return result.legacy_value()
 
 
-def confirm_received_invoice(business_id: int, doc_id: int, *, total, supplier_name: str | None=None, supplier_nif: str | None=None, supplier_id: int | None=None, **fields) -> dict:
+def confirm_received_invoice(business_id: int, doc_id: int, *, total, supplier_name: str | None=None, supplier_nif: str | None=None, supplier_id: int | None=None, capture_requested=False, **fields) -> dict:
     from .. import db
+    from .. import config
+    if capture_requested or config.FINANCIAL_CORE_ENABLED:
+        from ..financial_operations.contracts import StateError
+        raise StateError("Captura documental requiere identidad y aprobación durable.")
     from ..financial_writers import documents as writers
     from ..financial_writers.boundary import observe
     with db.get_conn() as conn:
@@ -465,8 +473,12 @@ def confirm_received_invoice(business_id: int, doc_id: int, *, total, supplier_n
     return result.legacy_value()
 
 
-def convert_ticket_to_expense(business_id: int, doc_id: int, concept: str | None=None, amount: float | None=None, vat_rate: float | None=None, spent_on: str | None=None) -> dict | None:
+def convert_ticket_to_expense(business_id: int, doc_id: int, concept: str | None=None, amount: float | None=None, vat_rate: float | None=None, spent_on: str | None=None, *, capture_requested=False) -> dict | None:
     from .. import db
+    from .. import config
+    if capture_requested or config.FINANCIAL_CORE_ENABLED:
+        from ..financial_operations.contracts import StateError
+        raise StateError("Captura documental requiere identidad y aprobación durable.")
     from ..financial_writers import documents as writers
     from ..financial_writers.boundary import observe
     with db.get_conn() as conn:

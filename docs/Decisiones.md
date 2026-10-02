@@ -1,5 +1,27 @@
 # Decisiones
 
+## 2026-10-02 — ADR-011, cobertura económica de compras por revisión
+
+Dos coberturas específicas con reserva previa a correct/void y adjunción única.
+Continuidad con último after, revisión y antecedente obligatorios.
+Conservación lógica del origen y documento; guards bloquean bypass/DELETE.
+Status/nota son operativos; pagada no crea pago. Cuota explícita opcional exacta
+sin inferencia ni migración del dinero binario. Payloads v1 intactos.
+[ADR](architecture/ADR-011-purchasing-capture.md). No1.8 ni activación.
+
+## Orden vigente — exclusivamente Fase1.7
+
+1.1–1.6 aceptadas. SupplierInvoiceCapture/ExpenseCapture conectan solo
+supplier_invoice.confirmed/corrected/voided y expense.confirmed/voided v1.
+Writers compartidos, autorización durable, cobertura inmutable por revisión,
+continuidad antes/después, logical void y guards SQL. Documento/clasificación/
+source/EE/resultado comparten commit. Flags OFF; no1.8, históricos ni activación.
+Pagada es etiqueta operativa, no supplier payment/AP settlement. No GL/Tax/
+OpenItems/reporting nuevo. Legacy no capturado conserva comportamiento.
+[Orden](architecture/FASE-1.7-orden.md), [ADR-011](architecture/ADR-011-purchasing-capture.md),
+[API](architecture/PURCHASING-CAPTURE-v1.md), [cierre](architecture/FASE-1.7-cierre.md).
+Las secciones inferiores describen entregas históricas; no son la orden vigente.
+
 ## Orden vigente — exclusivamente 1.6
 
 [ADR-010](architecture/ADR-010-payment-bank-capture.md): PaymentCapture y BankCapture

@@ -78,7 +78,7 @@ def _normalise_row(row) -> Record | None:
     else:
         values = ((str(index), value) for index, value in enumerate(row))
     return Record((key, _normalise_value(value)) for key, value in values
-                  if key != "_financial_revision")
+                  if key not in {"_financial_revision", "_captured_vat_amount", "voided_at", "void_reason"})
 
 
 class Cursor:
@@ -7925,7 +7925,7 @@ def cash_forecast(business_id, days: int = 30) -> dict:
     with get_conn() as conn:
         spent = conn.execute(
             "SELECT COALESCE(SUM(amount),0) AS total FROM expenses "
-            "WHERE business_id=? "
+            "WHERE voided_at IS NULL AND business_id=? "
             "AND substr(COALESCE(CAST(spent_on AS TEXT), CAST(created_at AS TEXT)),1,10) >= ?",
             (business_id, since),
         ).fetchone()["total"]
@@ -8008,7 +8008,7 @@ def _project_select() -> str:
         "WHERE e.business_id=p.business_id AND e.project_id=p.id "
         "AND e.kind='horas'),0) AS entry_hours, "
         "COALESCE((SELECT SUM(x.amount) FROM expenses x "
-        "WHERE x.business_id=p.business_id AND x.project_id=p.id),0) AS expense_cost, "
+        "WHERE x.voided_at IS NULL AND x.business_id=p.business_id AND x.project_id=p.id),0) AS expense_cost, "
         "COALESCE((SELECT SUM(jm.total) FROM job_materials jm "
         "JOIN jobs j ON j.id=jm.job_id AND j.business_id=jm.business_id "
         "WHERE j.business_id=p.business_id AND j.project_id=p.id),0) "
@@ -8160,7 +8160,7 @@ def get_project(project_id: int, business_id: int) -> dict | None:
             (project_id, business_id),
         ).fetchall()
         expenses = conn.execute(
-            "SELECT * FROM expenses WHERE project_id=? AND business_id=? "
+            "SELECT * FROM expenses WHERE voided_at IS NULL AND project_id=? AND business_id=? "
             "ORDER BY COALESCE(CAST(spent_on AS TEXT), CAST(created_at AS TEXT)) DESC, id DESC",
             (project_id, business_id),
         ).fetchall()
@@ -8424,7 +8424,10 @@ def project_tasks_for_worker(
 
 
 # ----------------------------------------------------------------- Gastos ---
-def add_expense(concept, amount, vat_rate=None, category=None, spent_on=None, document_id=None, project_id=None, *, business_id: int) -> dict:
+def add_expense(concept, amount, vat_rate=None, category=None, spent_on=None, document_id=None, project_id=None, *, business_id: int, capture_requested=False) -> dict:
+    if capture_requested or config.FINANCIAL_CORE_ENABLED:
+        from .financial_operations.contracts import StateError
+        raise StateError("Captura requiere servicio canónico, identidad y aprobación durable.")
     from .financial_writers import purchasing as writers
     from .financial_writers.boundary import observe
     with get_conn() as conn:
@@ -8434,7 +8437,10 @@ def add_expense(concept, amount, vat_rate=None, category=None, spent_on=None, do
     return result.legacy_value()
 
 
-def delete_expense(expense_id, business_id) -> None:
+def delete_expense(expense_id, business_id, *, capture_requested=False) -> None:
+    if capture_requested or config.FINANCIAL_CORE_ENABLED:
+        from .financial_operations.contracts import StateError
+        raise StateError("Captura requiere servicio canónico, identidad y aprobación durable.")
     from .financial_writers import purchasing as writers
     from .financial_writers.boundary import observe
     with get_conn() as conn:
@@ -8448,7 +8454,7 @@ def expenses_between(start: str, end: str, business_id) -> list[dict]:
     """Gastos con fecha (o alta) entre dos días ISO, ambos incluidos."""
     with get_conn() as conn:
         return [dict(r) for r in conn.execute(
-            "SELECT * FROM expenses WHERE business_id=? "
+            "SELECT * FROM expenses WHERE voided_at IS NULL AND business_id=? "
             "AND SUBSTR(COALESCE(CAST(spent_on AS TEXT), CAST(created_at AS TEXT)), 1, 10) "
             "BETWEEN ? AND ? ORDER BY COALESCE(CAST(spent_on AS TEXT), "
             "CAST(created_at AS TEXT)) DESC",
@@ -8471,7 +8477,7 @@ def list_expenses(business_id) -> list[dict]:
             "SELECT x.*, p.name AS project_name FROM expenses x "
             "LEFT JOIN projects p ON p.id=x.project_id "
             "AND p.business_id=x.business_id "
-            "WHERE x.business_id=? ORDER BY x.created_at DESC",
+            "WHERE x.voided_at IS NULL AND x.business_id=? ORDER BY x.created_at DESC",
             (business_id,)).fetchall()]
 
 
@@ -8550,11 +8556,14 @@ def _optional_date(value, label: str) -> str | None:
         raise ValueError(f"{label} no es una fecha válida.") from exc
 
 
-def add_received_invoice(total, supplier_id=None, number=None, concept=None, issued_on=None, due_on=None, base=None, vat_rate=None, vat_amount=None, irpf_amount=None, category=None, note=None, document_id=None, *, business_id: int) -> dict:
+def add_received_invoice(total, supplier_id=None, number=None, concept=None, issued_on=None, due_on=None, base=None, vat_rate=None, vat_amount=None, irpf_amount=None, category=None, note=None, document_id=None, *, business_id: int, capture_requested=False) -> dict:
     """Registra una factura recibida y, si se indica, la vincula a su documento.
 
     Nunca la crea la IA directamente: este es el paso de confirmación humana.
     """
+    if capture_requested or config.FINANCIAL_CORE_ENABLED:
+        from .financial_operations.contracts import StateError
+        raise StateError("Captura requiere servicio canónico, identidad y aprobación durable.")
     from .financial_writers import purchasing as writers
     from .financial_writers.boundary import observe
     with get_conn() as conn:
@@ -8570,7 +8579,7 @@ def get_received_invoice(received_id, business_id) -> dict | None:
             "SELECT r.*, s.name AS supplier_name FROM received_invoices r "
             "LEFT JOIN suppliers s ON s.id=r.supplier_id "
             "AND s.business_id=r.business_id "
-            "WHERE r.id=? AND r.business_id=?",
+            "WHERE r.voided_at IS NULL AND r.id=? AND r.business_id=?",
             (received_id, business_id)).fetchone()
         return dict(row) if row else None
 
@@ -8579,7 +8588,7 @@ def list_received_invoices(business_id, status=None) -> list[dict]:
     q = ("SELECT r.*, s.name AS supplier_name, s.nif AS supplier_nif "
          "FROM received_invoices r "
          "LEFT JOIN suppliers s ON s.id=r.supplier_id "
-         "AND s.business_id=r.business_id WHERE r.business_id=?")
+         "AND s.business_id=r.business_id WHERE r.voided_at IS NULL AND r.business_id=?")
     params: list = [business_id]
     if status:
         if status not in RECEIVED_STATUSES:
@@ -8601,8 +8610,11 @@ def set_received_invoice_status(received_id, status, *, business_id) -> dict:
     return result.legacy_value()
 
 
-def update_received_invoice(received_id, *, business_id: int, **changes) -> dict:
+def update_received_invoice(received_id, *, business_id: int, capture_requested=False, **changes) -> dict:
     """Corrige una factura recibida sin tocar su documento ni cruzar negocios."""
+    if capture_requested or config.FINANCIAL_CORE_ENABLED:
+        from .financial_operations.contracts import StateError
+        raise StateError("Captura requiere servicio canónico, identidad y aprobación durable.")
     from .financial_writers import purchasing as writers
     from .financial_writers.boundary import observe
     if {"legacy", "expected_revision"} & set(changes):
@@ -8614,7 +8626,10 @@ def update_received_invoice(received_id, *, business_id: int, **changes) -> dict
     return result.legacy_value()
 
 
-def delete_received_invoice(received_id, business_id) -> None:
+def delete_received_invoice(received_id, business_id, *, capture_requested=False) -> None:
+    if capture_requested or config.FINANCIAL_CORE_ENABLED:
+        from .financial_operations.contracts import StateError
+        raise StateError("Captura requiere servicio canónico, identidad y aprobación durable.")
     from .financial_writers import purchasing as writers
     from .financial_writers.boundary import observe
     with get_conn() as conn:
@@ -8969,11 +8984,11 @@ def profit_and_loss(business_id, year: int | None = None) -> dict:
     ]
     with get_conn() as conn:
         expense_rows = [dict(r) for r in conn.execute(
-            "SELECT * FROM expenses WHERE business_id=? "
+            "SELECT * FROM expenses WHERE voided_at IS NULL AND business_id=? "
             "AND COALESCE(CAST(spent_on AS TEXT), CAST(created_at AS TEXT)) LIKE ?",
             (business_id, f"{prefix}%")).fetchall()]
         received_rows = [dict(r) for r in conn.execute(
-            "SELECT * FROM received_invoices WHERE business_id=? "
+            "SELECT * FROM received_invoices WHERE voided_at IS NULL AND business_id=? "
             "AND COALESCE(CAST(issued_on AS TEXT), CAST(created_at AS TEXT)) LIKE ?",
             (business_id, f"{prefix}%")).fetchall()]
 
@@ -9063,7 +9078,7 @@ def month_billing(month: str | None = None, *, business_id: int) -> dict:
         ).fetchone()["total"]
         expense_rows = [
             dict(row) for row in conn.execute(
-                "SELECT * FROM expenses WHERE business_id=? "
+                "SELECT * FROM expenses WHERE voided_at IS NULL AND business_id=? "
                 "AND COALESCE(CAST(spent_on AS TEXT), CAST(created_at AS TEXT)) LIKE ?",
                 (business_id, f"{month}%"),
             ).fetchall()
@@ -9073,7 +9088,7 @@ def month_billing(month: str | None = None, *, business_id: int) -> dict:
         # y por eso Costes podía decir 0 € con facturas recibidas registradas.
         received_rows = [
             dict(row) for row in conn.execute(
-                "SELECT * FROM received_invoices WHERE business_id=? "
+                "SELECT * FROM received_invoices WHERE voided_at IS NULL AND business_id=? "
                 "AND COALESCE(CAST(issued_on AS TEXT), CAST(created_at AS TEXT)) LIKE ?",
                 (business_id, f"{month}%"),
             ).fetchall()
@@ -9133,13 +9148,13 @@ def expenses_by_category(business_id) -> list[dict]:
         rows = conn.execute(
             "SELECT COALESCE(NULLIF(category,''),'Sin categoría') AS category, "
             "SUM(amount) AS total, COUNT(*) AS n FROM expenses "
-            "WHERE business_id=? GROUP BY category ORDER BY total DESC",
+            "WHERE voided_at IS NULL AND business_id=? GROUP BY category ORDER BY total DESC",
             (business_id,),
         ).fetchall()
         recibidas = conn.execute(
             "SELECT COALESCE(NULLIF(category,''),'Facturas de proveedor') "
             "AS category, SUM(total) AS total, COUNT(*) AS n "
-            "FROM received_invoices WHERE business_id=? GROUP BY category",
+            "FROM received_invoices WHERE voided_at IS NULL AND business_id=? GROUP BY category",
             (business_id,),
         ).fetchall()
     total_por_categoria: dict[str, dict] = {}
@@ -14027,7 +14042,8 @@ def delete_business_cascade(business_id) -> bool:
         for financial_table in ("financial_operations", "financial_authorizations",
                                 "economic_events", "economic_event_links",
                                 "invoice_economic_coverage", "payment_economic_coverage",
-                                "bank_import_coverage", "bank_match_coverage", "bank_payment_links"):
+                                "bank_import_coverage", "bank_match_coverage", "bank_payment_links",
+                                "supplier_invoice_economic_coverage", "expense_economic_coverage"):
             if conn.execute(
                 f"SELECT 1 FROM {financial_table} WHERE business_id=? LIMIT 1",
                 (business_id,),
@@ -14048,6 +14064,7 @@ def delete_business_cascade(business_id) -> bool:
         # Primero confirma todas las eliminaciones referenciales en la base de datos.
         for table in (
             # Vacías tras la comprobación anterior; no borrar evidencia para la baja.
+            "supplier_invoice_economic_coverage", "expense_economic_coverage",
             "bank_match_coverage", "bank_import_coverage", "payment_economic_coverage", "bank_payment_links",
             "invoice_economic_coverage", "economic_event_links", "economic_events", "economic_event_sequences",
             "financial_authorizations", "financial_operations",

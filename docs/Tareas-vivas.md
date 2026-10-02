@@ -1,5 +1,26 @@
 # Tareas vivas
 
+## Financial Core — cierre 1.7 y pendientes vigentes
+
+- [x] Cinco productores v1, cobertura histórica por revisión, guards y void lógico.
+- [x] SQLite/PG/general, gates y autoauditorías locales PASS; ver cierre1.7.
+- [ ] Canales1.8: requieren nueva orden; no están iniciados.
+- [ ] Histórico/backfill1.9 y exportación completa/retención/cierre/activación1.10.
+- [ ] CI remota/despliegue e integraciones reales no verificados aquí.
+
+## Orden vigente — exclusivamente Fase1.7
+
+1.1–1.6 aceptadas. SupplierInvoiceCapture/ExpenseCapture conectan solo
+supplier_invoice.confirmed/corrected/voided y expense.confirmed/voided v1.
+Writers compartidos, autorización durable, cobertura inmutable por revisión,
+continuidad antes/después, logical void y guards SQL. Documento/clasificación/
+source/EE/resultado comparten commit. Flags OFF; no1.8, históricos ni activación.
+Pagada es etiqueta operativa, no supplier payment/AP settlement. No GL/Tax/
+OpenItems/reporting nuevo. Legacy no capturado conserva comportamiento.
+[Orden](architecture/FASE-1.7-orden.md), [ADR-011](architecture/ADR-011-purchasing-capture.md),
+[API](architecture/PURCHASING-CAPTURE-v1.md), [cierre](architecture/FASE-1.7-cierre.md).
+Las secciones inferiores describen entregas históricas; no son la orden vigente.
+
 ## Financial Core — orden vigente exclusivamente 1.6
 
 - [x] Contratos v1, servicios internos, cobertura/identidad y vínculo durable.

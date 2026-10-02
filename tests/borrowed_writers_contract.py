@@ -433,7 +433,9 @@ class BorrowedWritersContract:
             rid = db.add_received_invoice("2.68", business_id=self.bid)["id"]
             # Retirar primero migraciones dependientes; no saltar guards nuevos.
             migrations.downgrade(63)
-            self.assertEqual(db.get_received_invoice(rid,self.bid)['total'],2.68)
+            with db.get_conn() as conn:
+                self.assertEqual(conn.execute('SELECT total FROM received_invoices WHERE business_id=? AND id=?',
+                                             (self.bid, rid)).fetchone()['total'],2.68)
             migrations.upgrade()
             with db.get_conn() as conn:
                 self.assertEqual(snapshot(conn,self.bid,'received_invoice',rid).revision,1)
@@ -517,7 +519,8 @@ class BorrowedWritersContract:
         principal = Principal(user["id"], 0)
         service = FinancialOperations(self.bid)
         request = FinancialRequest(
-            CommandType.EXPENSE_CONFIRM,
+            # Operación sintética de infraestructura; expense.confirm exige productor1.7.
+            CommandType.INVOICE_FISCAL_CANCEL,
             None,
             Decimal("10"),
             date.today(),

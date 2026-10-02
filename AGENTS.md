@@ -1,9 +1,24 @@
 # AGENTS.md - Manual del proyecto Bynoesis
 
+## Orden vigente — exclusivamente Fase1.7
+
+1.1–1.6 aceptadas. SupplierInvoiceCapture/ExpenseCapture conectan solo
+supplier_invoice.confirmed/corrected/voided y expense.confirmed/voided v1.
+Writers compartidos, autorización durable, cobertura inmutable por revisión,
+continuidad antes/después, logical void y guards SQL. Documento/clasificación/
+source/EE/resultado comparten commit. Flags OFF; no1.8, históricos ni activación.
+Pagada es etiqueta operativa, no supplier payment/AP settlement. No GL/Tax/
+OpenItems/reporting nuevo. Legacy no capturado conserva comportamiento.
+[Orden](docs/architecture/FASE-1.7-orden.md), [ADR-011](docs/architecture/ADR-011-purchasing-capture.md),
+[API](docs/architecture/PURCHASING-CAPTURE-v1.md), [cierre](docs/architecture/FASE-1.7-cierre.md).
+Las referencias inferiores a fases previas son históricas. Las reglas de trabajo
+del manual siguen vigentes.
+
 > Para Financial Core, leer [gobernanza y ADR](docs/architecture/README.md) y
 > [guía 08](docs/areas/08-financial-core.md). Fase 0 cerrada; Fase 1
-> planificada y aprobada como referencia. 1.1–1.5 aceptadas; solo 1.6 autorizada:
-> cobros, importación bancaria y evidencia de match; flags apagados y sin activación.
+> planificada y aprobada como referencia. 1.1–1.6 aceptadas; solo 1.7 autorizada:
+> recibidas y gastos, con cobertura por revisión y conservación del origen;
+> flags apagados y sin activación.
 > Leer [plan](docs/architecture/FASE-1-plan.md),
 > [contrato v1](docs/architecture/ECONOMIC-EVENTS-v1.md),
 > [operaciones](docs/architecture/FINANCIAL-OPERATIONS-v1.md),
@@ -16,7 +31,10 @@
 > [API de cobros/banco](docs/architecture/PAYMENT-BANK-CAPTURE-v1.md),
 > [orden autorizada](docs/architecture/FASE-1.6-orden.md) y
 > [cierre de 1.6](docs/architecture/FASE-1.6-cierre.md).
-> No avanzar a 1.7. La fachada legacy posee la transacción; un writer prestado
+> Leer [ADR-011](docs/architecture/ADR-011-purchasing-capture.md),
+> [API de recibidas/gastos](docs/architecture/PURCHASING-CAPTURE-v1.md) y
+> [cierre de 1.7](docs/architecture/FASE-1.7-cierre.md).
+> No avanzar a 1.8. La fachada legacy posee la transacción; un writer prestado
 > nunca abre otra conexión, hace commit/rollback ni I/O externo.
 > Las referencias no autorizan ejecutar otras unidades.
 

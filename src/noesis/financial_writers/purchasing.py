@@ -284,11 +284,15 @@ def _mutate_add_expense(
     project_id=None,
     *,
     business_id: int,
+    vat_amount=None,
 ) -> dict:
     concept = (concept or "").strip()
     if not concept or len(concept) > 500:
         raise ValueError("El concepto es obligatorio y no puede superar 500 caracteres.")
     amount = positive_money(amount, "El importe", legacy=conn.legacy)
+    vat_amount = optional_money(conn, vat_amount)
+    if vat_amount is not None and vat_amount > amount:
+        raise ValueError("La cuota de IVA no puede superar el importe.")
     if vat_rate not in (None, ""):
         vat_rate = db._tax_rate(vat_rate, "El IVA", {0, 4, 10, 21})
     else:
@@ -338,9 +342,13 @@ def _mutate_add_expense(
             raise ValueError(
                 "Este PDF es un lote. Registra sus facturas individuales, no el original."
             )
+    columns = "business_id, concept, amount, vat_rate, category, spent_on, project_id, created_at"
+    values = (business_id, concept, amount, vat_rate, category, spent_on, project_id, db._now())
+    if vat_amount is not None:
+        columns += ", _captured_vat_amount"
+        values += (format(vat_amount, '.2f'),)
     row = conn.execute(
-        "INSERT INTO expenses (business_id, concept, amount, vat_rate, category, spent_on, project_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
-        (business_id, concept, amount, vat_rate, category, spent_on, project_id, db._now()),
+        f"INSERT INTO expenses ({columns}) VALUES ({','.join('?' for _ in values)}) RETURNING id", values
     ).fetchone()
     new_id = row["id"]
     if document_id is not None:
@@ -391,3 +399,36 @@ def delete_expense(borrowed, *args, legacy=False, expected_revision=None, **kwar
         legacy=legacy,
         expected_revision=expected_revision,
     )
+
+
+def _mutate_void_received_invoice(conn, received_id, voided_at, reason, *, business_id):
+    return _void(conn, "received_invoices", received_id, voided_at, reason, business_id)
+
+
+def _mutate_void_expense(conn, expense_id, voided_at, reason, *, business_id):
+    return _void(conn, "expenses", expense_id, voided_at, reason, business_id)
+
+
+def _void(conn, table, source_id, voided_at, reason, business_id):
+    # Conserva vínculos documentales y origen; no pago ni reversión contable.
+    if not isinstance(reason, str) or not reason.strip():
+        raise ValueError("El motivo de retirada es obligatorio.")
+    updated = conn.execute(
+        f"UPDATE {table} SET voided_at=?,void_reason=?,_financial_revision=_financial_revision+1 "
+        "WHERE business_id=? AND id=? AND voided_at IS NULL",
+        (voided_at, reason, business_id, source_id),
+    )
+    if updated.rowcount != 1:
+        raise ValueError("Origen ausente o retirado.")
+    return dict(conn.execute(f"SELECT * FROM {table} WHERE business_id=? AND id=?",
+                             (business_id, source_id)).fetchone())
+
+
+def void_received_invoice(borrowed, *args, expected_revision, **kwargs):
+    return run(_mutate_void_received_invoice, borrowed, args, kwargs,
+               kind="received_invoice", identity="received_id", expected_revision=expected_revision)
+
+
+def void_expense(borrowed, *args, expected_revision, **kwargs):
+    return run(_mutate_void_expense, borrowed, args, kwargs,
+               kind="expense", identity="expense_id", expected_revision=expected_revision)

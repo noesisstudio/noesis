@@ -1,5 +1,24 @@
 # Estado actual del producto
 
+## 2-oct — Financial Core 1.7 cerrada
+
+Esquema67; **31 PASS / 0 FAIL**. SQLite157, PostgreSQL193 y general1576 OK.
+Gates locales y autoauditorías correctos. Flags OFF. CI remota/despliegue
+no verificados. [Informe](architecture/FASE-1.7-cierre.md). No iniciar1.8.
+
+## Orden vigente — exclusivamente Fase1.7
+
+1.1–1.6 aceptadas. SupplierInvoiceCapture/ExpenseCapture conectan solo
+supplier_invoice.confirmed/corrected/voided y expense.confirmed/voided v1.
+Writers compartidos, autorización durable, cobertura inmutable por revisión,
+continuidad antes/después, logical void y guards SQL. Documento/clasificación/
+source/EE/resultado comparten commit. Flags OFF; no1.8, históricos ni activación.
+Pagada es etiqueta operativa, no supplier payment/AP settlement. No GL/Tax/
+OpenItems/reporting nuevo. Legacy no capturado conserva comportamiento.
+[Orden](architecture/FASE-1.7-orden.md), [ADR-011](architecture/ADR-011-purchasing-capture.md),
+[API](architecture/PURCHASING-CAPTURE-v1.md), [cierre](architecture/FASE-1.7-cierre.md).
+Las secciones inferiores describen entregas históricas; no son la orden vigente.
+
 ## 2-oct — Financial Core 1.6 cerrada
 
 Solo cobros/importación/match capturados, esquema 66. PaymentCapture y BankCapture

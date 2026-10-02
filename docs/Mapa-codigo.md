@@ -1,5 +1,31 @@
 # Mapa de código
 
+## Financial Core — archivos nuevos de 1.7
+
+- `purchasing_capture/service.py`: SupplierInvoiceCapture/ExpenseCapture, revisión,
+  aprobación, continuidad, snapshots v1 y workflow atómico.
+- `purchasing_capture/schema.py`: coberturas, guards SQL, void y cuota exacta67.
+- `financial_writers/purchasing.py` y `documents.py`: mutación prestada,
+  void interno y ticket con campos explícitos aprobados.
+- `db.py`/`documents/service.py`: captura solicitada falla cerrada;
+  lectores operativos filtran retirados y diagnóstico conserva evidencia.
+- `tests/purchasing_capture_contract.py`, `test_purchasing_capture.py`,
+  `postgres_purchasing_capture.py` y `purchasing_capture_worker.py`: contratos
+  compartidos, ocho fallos y seis carreras PG. Gate en CI PostgreSQL.
+
+## Orden vigente — exclusivamente Fase1.7
+
+1.1–1.6 aceptadas. SupplierInvoiceCapture/ExpenseCapture conectan solo
+supplier_invoice.confirmed/corrected/voided y expense.confirmed/voided v1.
+Writers compartidos, autorización durable, cobertura inmutable por revisión,
+continuidad antes/después, logical void y guards SQL. Documento/clasificación/
+source/EE/resultado comparten commit. Flags OFF; no1.8, históricos ni activación.
+Pagada es etiqueta operativa, no supplier payment/AP settlement. No GL/Tax/
+OpenItems/reporting nuevo. Legacy no capturado conserva comportamiento.
+[Orden](architecture/FASE-1.7-orden.md), [ADR-011](architecture/ADR-011-purchasing-capture.md),
+[API](architecture/PURCHASING-CAPTURE-v1.md), [cierre](architecture/FASE-1.7-cierre.md).
+Las secciones inferiores describen entregas históricas; no son la orden vigente.
+
 ## Financial Core — 1.6
 
 - `payment_capture/service.py`: review parcial/full, validación de factura/saldo,
