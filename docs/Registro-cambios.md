@@ -2,6 +2,11 @@
 
 ## 2026-10-03 — Inventario histórico persistente y dry-run1.9B
 
+CI de implementación [37137042961](https://github.com/noesisstudio/noesis/actions/runs/37137042961) SUCCESS sobre f474d42:
+ambos jobs, general1709 (582.266s), PostgreSQL288, gates/migraciones/código anterior/
+privacidad/rollback PASS. Adenda final solo documental: runtime/tests/dependencias/
+workflow idénticos al commit validado. Despliegue no verificado; producción no consultada.
+
 Objetivo: preservar evidencia legacy y producir diagnóstico reproducible sin dinero
 ni fiscalidad nuevos. financial_history sources/raw/readers/planning/classifier/
 review/repository/service/schema; migración70 solo cuatro history_*; tests SQLite/

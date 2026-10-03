@@ -1,7 +1,10 @@
 # Fase 1.9B — informe de cierre
 
-Estado: implementación y QA local completadas. Exclusivamente diagnóstico; cierre documental completo.
-CI remoto pendiente de acreditar separadamente.
+Estado: Fase1.9B completada. 47 PASS, 0 FAIL. Exclusivamente diagnóstico.
+CI de implementación [37137042961](https://github.com/noesisstudio/noesis/actions/runs/37137042961) SUCCESS sobre f474d42:
+ambos jobs, general1709 (582.266s), PostgreSQL288, gates/migraciones/código anterior/
+privacidad/rollback PASS. Adenda final solo documental: runtime/tests/dependencias/
+workflow idénticos al commit validado. Despliegue no verificado; producción no consultada.
 No se ha iniciado1.9C. [Orden](FASE-1.9B-orden.md), [ADR015](ADR-015-financial-history-diagnostic-inventory.md),
 [contrato](FINANCIAL-HISTORY-INVENTORY-v1.md), [mapa previo](FASE-1.9B-fuentes.md).
 
@@ -264,7 +267,8 @@ cerrar documentación. HTTP local /health,/ready,/,/login200. Publicación/CI re
 se acreditan aparte; producción no consultada/despliegue no verificado.
 La suite general local se ejecutó tras todos los cambios funcionales. El cambio
 final de espacios en SQLSTATE no altera DDL; test estructural3 PASS y PostgreSQL
-comprobado de nuevo. CI sobre el commit final pendiente de acreditar.
+comprobado de nuevo. CI de implementación [f474d42](https://github.com/noesisstudio/noesis/actions/runs/37137042961) SUCCESS: general1709
+(582.266s), PG288 y todos los gates. La adenda final cambia solo documentación.
 
 ## 23. Decisiones, diferencias y riesgos
 
@@ -341,8 +345,8 @@ Uno a uno con los47 apartados de la orden.
 | 46 | No1.9C | PASS | sin epoch/T0/fence/validating/live boundary |
 | 47 | No1.9D+ | PASS | sin durablev2/importer/historical coverage/activation |
 
-47 criterios PASS, 0 FAIL. Autoauditoría18 respuestas. Implementación local
-completada; evidencia CI remoto y publicación se añaden separadamente.
+47 criterios PASS, 0 FAIL. Autoauditoría18 respuestas. Implementación publicada en main y CI remoto SUCCESS; código y tests del commit
+validado permanecen idénticos en la adenda documental.
 
 ## 25. Autoauditoría requerida
 

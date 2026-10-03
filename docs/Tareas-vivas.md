@@ -2,7 +2,8 @@
 
 ## 2026-10-03 — Continuidad de Fase1.9B
 
-Inventario/dry-run diagnóstico completado; cierre y autoauditoría documentados. No1.9C autorizada/iniciada.
+Inventario/dry-run diagnóstico completado; cierre/autoauditoría y CI remoto SUCCESS
+acreditados. No queda trabajo de1.9B pendiente. No1.9C autorizada/iniciada.
 Pendientes posteriores: corte/epoch/fence, soporte durable v2 histórico, importer,
 copia restaurada1.9F, reconciliación y activación/retención/acceso1.10; requieren
 otra orden. Invoice v2 permanece bloqueado; contextos individuales>256 evidencias

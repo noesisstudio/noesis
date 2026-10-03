@@ -2,6 +2,11 @@
 
 ## 2026-10-03 — Fase1.9B, diagnóstico persistente
 
+CI de implementación [37137042961](https://github.com/noesisstudio/noesis/actions/runs/37137042961) SUCCESS sobre f474d42:
+ambos jobs, general1709 (582.266s), PostgreSQL288, gates/migraciones/código anterior/
+privacidad/rollback PASS. Adenda final solo documental: runtime/tests/dependencias/
+workflow idénticos al commit validado. Despliegue no verificado; producción no consultada.
+
 Implementación/QA local completas: general1709, SQLite77, PG288 y gates PASS. Inventario/raw/manifest/items/incidences/
 review append-only y dry-run diagnóstico; schema70 solo cuatro tablas propias.
 Monolito modular/TX compartidas, Decimal, scope tenant, cinco flags OFF. Manifests

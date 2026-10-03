@@ -834,7 +834,7 @@
         "full_suite": 1709,
         "full_suite_seconds": 1355.188,
         "full_suite_after_last_functional_change": true,
-        "full_suite_timing_note": "Full local suite on final code; SQLite77/PG288 after malformed-projection guard. Remote commit CI pending.",
+        "full_suite_timing_note": "Full local suite on final code and remote complete suite on implementation commit; doc-only adenda follows.",
         "sqlite_directed": 77,
         "sqlite_new": 38,
         "sqlite_seconds": 108.323,
@@ -870,8 +870,17 @@
         "autoaudit": true,
         "criteria_pass": 47,
         "criteria_fail": 0,
-        "remote_ci": false,
-        "deployment_verified": false
+        "remote_ci": true,
+        "deployment_verified": false,
+        "remote_ci_run": 37137042961,
+        "remote_ci_url": "https://github.com/noesisstudio/noesis/actions/runs/37137042961",
+        "remote_ci_code": "f474d42fc0d8f2b33b84e3b9bb192e0cc6a2e336",
+        "remote_ci_conclusion": "success",
+        "remote_full_suite": 1709,
+        "remote_full_suite_seconds": 582.266,
+        "remote_postgres": 288,
+        "remote_jobs": 2,
+        "remote_ci_code_tests_workflows_dependencies_unchanged_by_doc_adenda": true
       }
     }
   }

@@ -2,11 +2,16 @@
 
 ## 2026-10-03 — Inventario histórico diagnóstico1.9B
 
+CI de implementación [37137042961](https://github.com/noesisstudio/noesis/actions/runs/37137042961) SUCCESS sobre f474d42:
+ambos jobs, general1709 (582.266s), PostgreSQL288, gates/migraciones/código anterior/
+privacidad/rollback PASS. Adenda final solo documental: runtime/tests/dependencias/
+workflow idénticos al commit validado. Despliegue no verificado; producción no consultada.
+
 Fixtures SQLite TEMP/PG16. General1709 PASS (1355.188s) sobre árbol final;
 dirigidasSQLite77 PASS (108.323s), matrizPG288 PASS (131.586s), Node9/gates PASS.
 Guard de payload/snapshot inválido revalidado en ambos motores; baja con historia
 rechazada con control y regresiones de baja sin historia PASS. SQLSTATE conserva
-código23514, test estructural3 PASS. CI remoto pendiente. Resultados/límites en [cierre](architecture/FASE-1.9B-cierre.md). Raw físico, dinero inválido/
+código23514, test estructural3 PASS. CI remoto SUCCESS. Resultados/límites en [cierre](architecture/FASE-1.9B-cierre.md). Raw físico, dinero inválido/
 subcent/binary, tenant, migration70 y downgrade protegido, freeze/hash/retry/drift,
 cobertura coherente/conflict, review append-only y snapshots de cero efectos.
 No producción/copia real/AEAT/Meta ni1.9C. Cinco flags OFF. PG downgrade previo29
