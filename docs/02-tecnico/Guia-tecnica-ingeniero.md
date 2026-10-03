@@ -1,5 +1,14 @@
 # Guía técnica para ingeniería — Bynoesis
 
+## Financial Core — continuación1.9B
+
+Monolito modular y conexión/TX compartidas: financial_history/ lee evidencia
+legacy mediante reader prestado y persiste solamente diagnóstico por dominio.
+Clasificador puro, Decimal/NUMERIC y raw binario separado, freeze inmutable/review
+append-only. IA sin autoridad; Economic Events no es event log operativo.
+[API](../architecture/FINANCIAL-HISTORY-INVENTORY-v1.md), [ADR015](../architecture/ADR-015-financial-history-diagnostic-inventory.md).
+Flags OFF; no1.9C/importer/certificación/producción. Foto vigente en project-state.
+
 > **Propósito.** Documento de entrada para una persona de ingeniería que necesite entender Bynoesis de extremo a extremo: web, datos, cerebro, automatizaciones, WhatsApp, seguridad y dependencias externas.
 >
 > **Foto del código:** 20-07-2026 · esquema 33 · el candidato de repositorio es la referencia de producto. Para números, publicación y validaciones externas vigentes consulta también [`project-state.json`](../project-state.json). Este documento explica el diseño; no sustituye esa fuente de estado.

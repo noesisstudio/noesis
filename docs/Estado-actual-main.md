@@ -1,5 +1,14 @@
 # Estado actual del producto
 
+## 2026-10-03 — Fase1.9B, diagnóstico persistente
+
+Implementación/QA local completas: general1709, SQLite77, PG288 y gates PASS. Inventario/raw/manifest/items/incidences/
+review append-only y dry-run diagnóstico; schema70 solo cuatro tablas propias.
+Monolito modular/TX compartidas, Decimal, scope tenant, cinco flags OFF. Manifests
+no certificables, nunca elegibles para importar. No producción, 1.9C ni efectos
+financieros. [Cierre y pruebas](architecture/FASE-1.9B-cierre.md), [ADR015](architecture/ADR-015-financial-history-diagnostic-inventory.md).
+Encabezados inferiores son históricos; publicación/deployment se acreditan aparte.
+
 ## 2026-10-03 — Fase 1.9A, contratos históricos
 
 CI de implementación [37126056082](https://github.com/noesisstudio/noesis/actions/runs/37126056082)

@@ -1,5 +1,20 @@
 ﻿# Registro de cambios
 
+## 2026-10-03 — Inventario histórico persistente y dry-run1.9B
+
+Objetivo: preservar evidencia legacy y producir diagnóstico reproducible sin dinero
+ni fiscalidad nuevos. financial_history sources/raw/readers/planning/classifier/
+review/repository/service/schema; migración70 solo cuatro history_*; tests SQLite/
+PG compartidos/AST y CI. ADR015/API/orden/fuentes/cierre y gobernanza actualizados.
+db.py añade solo cuatro nombres al guard existente de conservación de baja; guía06
+actualizada. Sin cambios financieros legacy ni política de purga nueva.
+QA: general1709, SQLite77, PG288, Node9 y gates PASS; [pruebas y límites](architecture/FASE-1.9B-cierre.md).
+Riesgo: lectura débil sin fence no certifica T0, contextos enormes se bloquean y
+raw legacy puede carecer de decimal original. Todo manifest no certificable por SQL.
+Diagnóstico: UUID/tenant, raw hash, código de incidencia/regla y plan/source hashes.
+Rollback: revertir servicio interno conservando evidencia; downgrade70 solo vacío;
+no borrar manifests ni fuentes, no activar flags ni avanzar1.9C. Sin producción.
+
 ## 2026-10-03 — Contratos y gobernanza históricos1.9A
 
 CI de implementación [37126056082](https://github.com/noesisstudio/noesis/actions/runs/37126056082)

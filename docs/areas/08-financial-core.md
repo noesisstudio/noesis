@@ -1,5 +1,21 @@
 # 08 · Financial Core
 
+## Orden vigente — exclusivamente Fase1.9B
+
+[ADR015](../architecture/ADR-015-financial-history-diagnostic-inventory.md) y [API](../architecture/FINANCIAL-HISTORY-INVENTORY-v1.md)
+definen lector raw prestado, clasificador puro y repositorio/service de diagnóstico
+sobre conexiones/TX existentes. Schema70 solo cuatro history_* con diagnostic/
+eligible_for_import=false/certifiable=false por SQL. Decimal/NUMERIC/candidate JSON
+string; bits/raw no Money. Freeze/plan inmutables, review append-only, operador
+actual/session/tenant y historical.record sin receipts ni IA. Auxiliares no productores.
+Comprobar SQLite/PG, precisión/procedencia, memberships/hash/retry/drift, coverage,
+deps, tenant, permisos/inmutabilidad, memoria/páginas/lookups agrupados, snapshots
+zero effects y AST. [Orden](../architecture/FASE-1.9B-orden.md), [fuentes](../architecture/FASE-1.9B-fuentes.md),
+[cierre](../architecture/FASE-1.9B-cierre.md). Solo fixtures sintéticos; flags OFF.
+No1.9C, T0/epoch/fence/write blocking/validating/live boundary, históricos EE/Operations,
+importer/backfill/coverage/reconciliación/GL/Tax/AR/AP/reporting/activación.
+Los encabezados y prohibiciones de unidades inferiores son históricos.
+
 ## Orden vigente — exclusivamente Fase 1.9A
 
 financial_history/ contiene contracts/payloads/money_evidence/canonical puros,

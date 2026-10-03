@@ -1,5 +1,13 @@
 # Financial History v1 — contrato puro de Fase 1.9A
 
+## Continuación autorizada1.9B
+
+Este contrato puro1.9A mantiene bytes/hashes/semántica. El inventario persistente
+se añade en [API independiente](FINANCIAL-HISTORY-INVENTORY-v1.md) y [ADR015](ADR-015-financial-history-diagnostic-inventory.md).
+Reader/raw separados, diagnostic candidate importable=false; no EE durable nuevo,
+no promociones de historical_unknown, epoch/fence/importer ni1.9C. Flags OFF.
+Las restricciones de ausencia de scanner/manifest inferiores describen1.9A histórica.
+
 [ADR-014](ADR-014-financial-history-contracts.md), [orden](FASE-1.9A-orden.md),
 [referencia 1.9](FASE-1.9-plan.md), [cierre](FASE-1.9A-cierre.md).
 Módulo `src/noesis/financial_history/`; ninguna estructura produce efectos.

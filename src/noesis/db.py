@@ -14043,6 +14043,8 @@ def delete_business_cascade(business_id) -> bool:
             )
         # La baja no destruye evidencia durable del núcleo financiero.
         for financial_table in ("financial_channel_proposals", "financial_channel_receipts", "financial_operations", "financial_authorizations",
+                                "financial_history_manifests", "financial_history_items",
+                                "financial_history_incidences", "financial_history_decisions",
                                 "economic_events", "economic_event_links",
                                 "invoice_economic_coverage", "payment_economic_coverage",
                                 "bank_import_coverage", "bank_match_coverage", "bank_payment_links",

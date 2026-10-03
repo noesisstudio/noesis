@@ -1,5 +1,15 @@
 # Decisiones
 
+## 2026-10-03 — ADR015, diagnóstico histórico1.9B
+
+Manifest mode diagnostic/eligible_for_import=false/certifiable=false por SQL;
+READY_FOR_REVIEW distinto de importación. Raw primero, evidencia binaria no Money;
+clasificador puro/versionado, fuentes reales cerradas, datos migrados sin falsa
+procedencia, cobertura existente no duplicada, decisiones sin reescribir plan.
+Hashes semánticos nuevos independientes de observed_at sin alterar v1 de1.9A;
+keyset/hashes indexados y TX acotadas, sin T0/fence/locks de sources. No1.9C.
+[Decisión completa](architecture/ADR-015-financial-history-diagnostic-inventory.md).
+
 ## 2026-10-03 — ADR-014, contratos históricos1.9A
 
 A/B/C/D separados de disposition/severity; raw binary no es Money; NULL distinto

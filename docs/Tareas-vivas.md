@@ -1,5 +1,17 @@
 # Tareas vivas
 
+## 2026-10-03 — Continuidad de Fase1.9B
+
+Inventario/dry-run diagnóstico completado; cierre y autoauditoría documentados. No1.9C autorizada/iniciada.
+Pendientes posteriores: corte/epoch/fence, soporte durable v2 histórico, importer,
+copia restaurada1.9F, reconciliación y activación/retención/acceso1.10; requieren
+otra orden. Invoice v2 permanece bloqueado; contextos individuales>256 evidencias
+se bloquean en diagnóstico y requieren revisión/límite versionado. No drift
+observado jamás certifica T0. [API/límites](architecture/FINANCIAL-HISTORY-INVENTORY-v1.md).
+Fallo previo descubierto: downgrade PostgreSQL anterior a29 usa DROP TRIGGER sin
+ON; no modificado por esta unidad. Ciclo70→69→70 validado por pruebas propias.
+Deudas y cierres inferiores son históricos; cinco flags OFF y ninguna producción.
+
 ## 2026-10-03 — Continuidad después de contratos1.9A
 
 1.9B no autorizada. Pendientes: reader que acredite referencias/revisiones,

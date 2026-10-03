@@ -1,5 +1,13 @@
 # Fase 1.9 — referencia de diseño aprobada
 
+## Continuidad vigente — 1.9B
+
+Referencia aprobada concretada por [orden humana1.9B](FASE-1.9B-orden.md).
+Solo inventario persistente y dry-run diagnóstico, no1.9C. [ADR015](ADR-015-financial-history-diagnostic-inventory.md)
+separa lifecycle/result y garantiza no certificación/importación. Cinco flags OFF,
+sin producción ni efectos financieros. Los textos inferiores conservan la síntesis
+histórica de diseño previa a1.9A y no son autorización para otras unidades.
+
 La aprobación humana del diseño antecede a [orden 1.9A](FASE-1.9A-orden.md).
 Este documento fija su síntesis operativa heredable, contrastada con schema69.
 No es una autorización de ejecución de toda 1.9. Solo 1.9A se implementa ahora.

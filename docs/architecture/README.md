@@ -1,5 +1,15 @@
 # Financial Core: punto de entrada y continuidad
 
+## Orden vigente — exclusivamente Fase1.9B
+
+0–1.8H y1.9A aceptadas. Solo inventario histórico/dry-run diagnóstico persistente,
+no certificable y sin efectos financieros. Schema70 cuatro tablas propias; flags OFF.
+Leer [orden](FASE-1.9B-orden.md), [fuentes](FASE-1.9B-fuentes.md),
+[ADR015](ADR-015-financial-history-diagnostic-inventory.md), [API](FINANCIAL-HISTORY-INVENTORY-v1.md)
+y [cierre](FASE-1.9B-cierre.md). Contratos1.9A permanecen vigentes. Sin producción,
+1.9C/epoch/T0/fence/validating/live boundary, importer/backfill/reconciliación/activación.
+Los alcances inferiores son históricos y no amplían autorización actual.
+
 ## Orden vigente — exclusivamente Fase 1.9A
 
 Contratos puros de históricos y guards mínimos de autoridad; cero migraciones.

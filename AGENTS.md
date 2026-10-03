@@ -1,5 +1,22 @@
 # AGENTS.md - Manual del proyecto Bynoesis
 
+## Orden vigente — exclusivamente Fase 1.9B
+
+0–1.8H y1.9A aceptadas. Solo inventario persistente/dry-run diagnóstico, no1.9C.
+Leer [orden](docs/architecture/FASE-1.9B-orden.md), [mapa previo](docs/architecture/FASE-1.9B-fuentes.md),
+[ADR015](docs/architecture/ADR-015-financial-history-diagnostic-inventory.md),
+[API](docs/architecture/FINANCIAL-HISTORY-INVENTORY-v1.md) y [cierre](docs/architecture/FASE-1.9B-cierre.md).
+Monolito modular, repositorio por dominio, conexión/TX compartidas. Reader prestado
+solo SELECT tenant; inspección raw execute_exact sin normalización legacy. Decimal/
+NUMERIC y JSON decimal string para candidato; binary/céntimos diagnósticos no Money.
+Raw/classification/plan congelados; revisión append-only y historical.record
+con operador actual autenticado, sin autoridad original/IA/financial.authorize.
+Diagnostic/eligible_for_import=false/certifiable=false por SQL. READY_FOR_REVIEW
+no importa. Todos los flags OFF. Solo fixtures SQLite/PG descartables; no producción.
+Ningún writer/Capture/append/Operation histórico, epoch/T0/fence/write blocking,
+validating/live boundary, importer/backfill/coverage histórica/reconciliación/activación.
+Los encabezados inferiores son históricos; ninguna referencia autoriza otras unidades.
+
 ## Orden vigente — exclusivamente Fase 1.9A
 
 0–1.8H validadas. Solo contratos puros y gobernanza de históricos, más guards

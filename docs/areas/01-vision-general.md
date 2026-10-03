@@ -1,5 +1,13 @@
 # 01 · Visión general
 
+## Continuidad vigente1.9B — diagnóstico persistente
+
+Financial history incorpora readers prestados/raw, reglas puras y repositorio de
+cuatro history_* sobre infraestructura compartida. Diagnostic por SQL, flags OFF,
+no1.9C ni efectos financieros; nueva lógica en financial_history, no db.py.
+[Guía08](08-financial-core.md), [ADR015](../architecture/ADR-015-financial-history-diagnostic-inventory.md).
+Las restricciones de ausencia de manifest/reader inferiores son históricas.
+
 ## Continuidad 1.9A — contratos históricos
 
 [ADR-014](../architecture/ADR-014-financial-history-contracts.md) añade módulo

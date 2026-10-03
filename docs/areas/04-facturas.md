@@ -1,5 +1,13 @@
 # 04 · Facturas: del borrador al cobro
 
+## Continuidad1.9B — lectura histórica sin efectos fiscales
+
+Inventario lee invoices/lines/profile/records/payments/cancellation y outboxes
+como evidencia; nunca emite/cobra/anula/regenera/reenfila. Money raw previo a
+cualquier diagnóstico, profile/líneas migrados sin marcador quedan desconocidos;
+invoice histórica v2 bloqueada. Coverage coherente no crea candidato. Flags OFF.
+[Guía08](08-financial-core.md), [fuentes](../architecture/FASE-1.9B-fuentes.md), [API](../architecture/FINANCIAL-HISTORY-INVENTORY-v1.md).
+
 ## Financial Core — canales capturados
 
 Con el Core activo, los canales financieros pasan por `financial_channels/` y

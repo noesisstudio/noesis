@@ -1,5 +1,11 @@
 # 🧭 Bynoesis — Inicio
 
+## 2026-10-03 — Financial Core1.9B
+
+Inventario/dry-run diagnóstico completado localmente, cinco flags OFF. [Entrada](architecture/README.md),
+[contrato](architecture/FINANCIAL-HISTORY-INVENTORY-v1.md), [cierre](architecture/FASE-1.9B-cierre.md).
+No producción, importación, certificación ni1.9C. Alcances inferiores históricos.
+
 ## 2026-10-03 — Financial Core1.9A
 
 Solo contratos/gobernanza históricos; cero importaciones y cinco flags OFF.

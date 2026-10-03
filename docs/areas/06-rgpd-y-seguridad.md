@@ -1,5 +1,14 @@
 # 06 · RGPD y seguridad
 
+## Inventario diagnóstico1.9B: conservación, sin purga nueva
+
+Las cuatro financial_history_* son evidencia append-only. La baja usa el guard
+existente de conservación: con filas diagnósticas devuelve ValueError controlado
+antes de borrar el negocio/fuentes/usuarios. Sin filas mantiene la baja anterior.
+No se introduce retención legal nueva ni se resuelve exportación/purga1.10; sigue
+siendo un gate antes de habilitar uso real. Solo fixtures sintéticos y flags OFF.
+[Contrato](../architecture/FINANCIAL-HISTORY-INVENTORY-v1.md), [cierre](../architecture/FASE-1.9B-cierre.md).
+
 ## Financial Core — canales capturados
 
 Con el Core activo, los canales financieros pasan por `financial_channels/` y

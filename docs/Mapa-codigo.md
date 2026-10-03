@@ -1,5 +1,18 @@
 # Mapa de código
 
+## 2026-10-03 — Mapa del inventario diagnóstico1.9B
+
+financial_history/: sources catálogo físico cerrado; raw MoneyObservation/extractor;
+readers SELECT prestado/keyset; classifier reglas puras y dependencias; planning
+InventoryEvidence/DiagnosticCandidate semánticos; review ReviewRecord tipado;
+repository HistoryRepository tenant; service HistoryDiagnostics.run/review;
+schema DDL70/guards propios. Contratos puros previos intactos; migrations solo
+registra subida/bajada70. Tests inventory_contract, test_financial_history_inventory,
+postgres_financial_history_inventory; workflow PG. [ADR015](architecture/ADR-015-financial-history-diagnostic-inventory.md).
+No writers/canales/importer nuevos; Economic Events no es log de operaciones.
+db.delete_business_cascade registra las cuatro history_* en el guard ya existente
+de conservación, sin borrar evidencia ni introducir lógica económica.
+
 ## 2026-10-03 — Mapa de contratos históricos1.9A
 
 src/noesis/financial_history/: canonical.py (JSON/hash propios), money_evidence.py

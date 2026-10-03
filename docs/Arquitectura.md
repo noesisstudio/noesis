@@ -1,5 +1,16 @@
 # Arquitectura
 
+## 2026-10-03 — Inventario financiero diagnóstico1.9B
+
+Monolito modular, repositorios por dominio sobre conexiones/TX existentes. Historia
+se divide en extractor/reader raw y clasificador puro; service persiste solo cuatro
+history_* vía FinancialSession. No nuevo pool/ORM ni lógica grande en db.py.
+Decimal/NUMERIC para el Core; float solo inspección de almacenamiento legacy.
+Diagnóstico estructuralmente no certificable/importable, freeze inmutable y revisión
+append-only con operador actual. IA sin autoridad ni acceso a este servicio.
+[ADR015](architecture/ADR-015-financial-history-diagnostic-inventory.md), [API](architecture/FINANCIAL-HISTORY-INVENTORY-v1.md).
+Flags OFF; no1.9C/epoch/fence/importer/GL/Tax/AR/AP/reporting/activación.
+
 ## 2026-10-03 — Contratos históricos1.9A
 
 Monolito modular con infraestructura compartida. financial_history/ es un módulo

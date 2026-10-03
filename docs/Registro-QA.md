@@ -1,5 +1,17 @@
 ﻿# Registro de QA
 
+## 2026-10-03 — Inventario histórico diagnóstico1.9B
+
+Fixtures SQLite TEMP/PG16. General1709 PASS (1355.188s) sobre árbol final;
+dirigidasSQLite77 PASS (108.323s), matrizPG288 PASS (131.586s), Node9/gates PASS.
+Guard de payload/snapshot inválido revalidado en ambos motores; baja con historia
+rechazada con control y regresiones de baja sin historia PASS. SQLSTATE conserva
+código23514, test estructural3 PASS. CI remoto pendiente. Resultados/límites en [cierre](architecture/FASE-1.9B-cierre.md). Raw físico, dinero inválido/
+subcent/binary, tenant, migration70 y downgrade protegido, freeze/hash/retry/drift,
+cobertura coherente/conflict, review append-only y snapshots de cero efectos.
+No producción/copia real/AEAT/Meta ni1.9C. Cinco flags OFF. PG downgrade previo29
+fuera de alcance detectado; no confundir con ciclo70→69→70. Sin dependencias nuevas.
+
 ## 2026-10-03 — QA de contratos históricos1.9A
 
 CI de implementación [37126056082](https://github.com/noesisstudio/noesis/actions/runs/37126056082)

@@ -91,7 +91,7 @@ class PaymentBankCaptureContract:
                 if conn.dialect == 'postgres':
                     # Reproduce exactamente la función instalada por el antiguo 66.
                     conn.execute("CREATE OR REPLACE FUNCTION cash_payment_delete() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF EXISTS(SELECT 1 FROM payment_economic_coverage c WHERE c.business_id=OLD.business_id AND c.payment_id=OLD.id) THEN RAISE EXCEPTION 'Cobertura de cobro/banco incoherente' USING ERRCODE='23514'; END IF; RETURN NEW; END $$")
-            self.assertEqual(migrations.upgrade(), 69)
+            self.assertEqual(migrations.upgrade(69), 69)
             self.assertEqual(self.state(), before)
             legacy = db.issue_invoice(self.draft()['id'], self.bid)
             payment = db.add_invoice_payment(legacy['id'], '1.00', business_id=self.bid)

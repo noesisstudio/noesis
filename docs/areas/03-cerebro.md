@@ -1,5 +1,12 @@
 # 03 · Cerebro: el chat y WhatsApp
 
+## Continuidad1.9B — IA sin autoridad sobre diagnóstico
+
+financial_history es un servicio interno de inventario/revisión autenticada,
+sin tool/router/canal/scheduler del cerebro. No IA clasificadora, OCR productor
+ni autorización económica. Documentos/recurrencia/transporte solo evidencia mínima.
+[Guía08](08-financial-core.md), [ADR015](../architecture/ADR-015-financial-history-diagnostic-inventory.md).
+
 ## Orden vigente — exclusivamente Fase 1.8H
 
 Fases 0–1.8 implementadas; hardening 1.8H cerrado con B1–B5 PASS.
