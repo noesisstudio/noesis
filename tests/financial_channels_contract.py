@@ -803,6 +803,175 @@ class ChannelsContract:
             self.confirm(self.ctx(), p)
         self.assertEqual(self.count("economic_events"), 0)
 
+    def http_client(self, principal=None):
+        import base64
+        import time
+        from itsdangerous import TimestampSigner
+        from starlette.testclient import TestClient
+        from noesis.web import server
+        principal = principal or self.principal
+        http = TestClient(server.app, base_url="https://testserver")
+        self.addCleanup(http.close)
+        raw = base64.b64encode(json.dumps({"uid": principal.user_id, "sv": principal.session_version,
+                                          "seen": int(time.time())}).encode())
+        name = "__Host-noesis_session" if config.IS_PRODUCTION else "noesis_session"
+        http.cookies.set(name, TimestampSigner(config.SECRET_KEY).sign(raw).decode())
+        return http
+
+    def test_committed_recovery_current_session_only_and_immutable_authority(self):
+        _, p = self.propose()
+        yes = self.ctx()
+        done = self.confirm(yes, p)
+        _, prepared = self.propose()
+        _, approved = self.propose()
+        def stop(stage):
+            if stage == "authorization_committed":
+                raise RuntimeError("antes del efecto")
+        with patch("noesis.financial_channels.service.checkpoint", side_effect=stop), self.assertRaises(RuntimeError):
+            self.confirm(self.ctx(), approved)
+        with db.get_conn() as conn:
+            history = {t: [dict(r) for r in conn.execute("SELECT * FROM " + t + " WHERE business_id=?",
+                                                       (self.bid,)).fetchall()]
+                       for t in ("financial_authorizations", "financial_channel_proposals")}
+            conn.execute("UPDATE users SET session_version=1 WHERE id=?", (self.user["id"],))
+        renewed = ChannelContext.web(self.bid, Principal(self.user["id"], 1), str(uuid4()))
+        bridge = FinancialChannels(renewed)
+        with patch("noesis.purchasing_capture.service.purchasing.add_expense", side_effect=AssertionError("writer")):
+            self.assertEqual(bridge.response(bridge.operations.recover(renewed.principal, p["operation_uuid"])), done)
+            http = self.http_client(renewed.principal)
+            path = f"/api/{self.bid}/financial-actions/"
+            self.assertEqual(http.get(path + p["operation_uuid"]).json(), done)
+            for pending in (prepared, approved):
+                with self.assertRaises(AccessDenied):
+                    bridge.response(bridge.operations.recover(renewed.principal, pending["operation_uuid"]))
+                self.assertEqual(http.get(path + pending["operation_uuid"]).status_code, 403)
+            with self.assertRaises(AccessDenied):
+                FinancialChannels(yes).operations.recover(yes.principal, p["operation_uuid"])
+            self.assertEqual(self.http_client().get(path + p["operation_uuid"]).status_code, 401)
+            colleague = db.create_user(uuid4().hex + "@example.test", "hash fixture", self.bid)
+            other = FinancialChannels(ChannelContext.web(self.bid, Principal(colleague["id"], 0), str(uuid4())))
+            with self.assertRaises(AccessDenied):
+                other.response(bridge.operations.recover(renewed.principal, p["operation_uuid"]))
+            with self.assertRaises(AccessDenied):
+                FinancialChannels(replace(renewed, business_id=self.bid + 1000000)).response(
+                    bridge.operations.recover(renewed.principal, p["operation_uuid"]))
+        with db.get_conn() as conn:
+            after = {t: [dict(r) for r in conn.execute("SELECT * FROM " + t + " WHERE business_id=?",
+                                                     (self.bid,)).fetchall()] for t in history}
+        self.assertEqual(history, after)
+        self.assertEqual(self.count("expenses"), 1)
+
+    def propose_invoice_channel(self, channel, invoice_id):
+        from noesis.financial_channels.tools import propose_tool
+        intent = {"command": "invoice.issue", "target_id": invoice_id, "fields": {}}
+        if channel == "web":
+            response = self.http_client().post(f"/api/{self.bid}/financial-actions/prepare",
+                json={"action_uuid": str(uuid4()), "intent": intent})
+            if response.status_code != 200:
+                raise StateError(response.text)
+            return response.json(), None
+        ctx = (self.ctx(wa=True, message="emite factura") if channel == "whatsapp" else
+               ChannelContext.web(self.bid, self.principal, str(uuid4()), chat=True, message="emite factura"))
+        phone = f"6{self.bid:08d}"
+        if channel == "whatsapp":
+            ctx = replace(ctx, actor="wa:34" + phone)
+        proposals = []
+        def interpret(*args, **kwargs):
+            proposal = propose_tool(self.bid, "enviar_factura", {"factura_id": invoice_id})
+            proposals.append(proposal)
+            return proposal
+        with patch.object(chat, "_handle", side_effect=interpret):
+            if channel == "whatsapp":
+                db.set_whatsapp_status(self.bid, "conectado", phone=phone)
+                with patch.object(whatsapp, "_PHONE_ID", "recipient"), patch.object(whatsapp, "send", return_value=True):
+                    whatsapp.handle_inbound({"from": "34" + phone, "recipient_phone_id": "recipient",
+                        "id": "wamid." + uuid4().hex, "text": ctx.message})
+            else:
+                chat.handle(self.bid, ctx.message, actor_id=f"{self.user['id']}:0", financial_context=ctx)
+        return proposals[0], ctx
+
+    def test_recurring_resolution_all_channels_converge_and_transport_receipts(self):
+        self.schedule()
+        iid = db.process_due_recurring_invoices()[0]["id"]
+        proposals = []
+        for channel in ("web", "chat", "whatsapp"):
+            p, ctx = self.propose_invoice_channel(channel, iid)
+            proposals.append(p)
+            if ctx:
+                self.assertIsNotNone(db.get_pending_action(self.bid, ctx.actor))
+        self.assertEqual(len({p["operation_uuid"] for p in proposals}), 1)
+        self.assertEqual(self.count("financial_operations"), 1)
+        with db.get_conn() as conn:
+            op = conn.execute("SELECT * FROM financial_operations WHERE business_id=?", (self.bid,)).fetchone()
+            receipts = conn.execute("SELECT channel FROM financial_channel_receipts WHERE business_id=?",
+                                    (self.bid,)).fetchall()
+        self.assertEqual(op["entry_namespace"], "recurring")
+        self.assertTrue({"web_api", "chat", "whatsapp"} <= {r["channel"] for r in receipts})
+        self.assertEqual(self.count("financial_authorizations"), 0)
+        self.assertEqual(self.count("economic_events"), 0)
+        # Revisión en WhatsApp no cambia la autoridad; su SÍ exacto sí ejecuta una vez.
+        self.confirm(self.ctx(wa=True, message="sí"), proposals[-1])
+        self.assertEqual(self.count("economic_events"), 1)
+
+    def test_recurring_invalid_origin_fails_closed_in_every_channel(self):
+        for problem in ("paused", "changed", "legacy"):
+            schedule = self.schedule()
+            iid = db.process_due_recurring_invoices()[0]["id"]
+            with db.get_conn() as conn:
+                if problem == "legacy":
+                    conn.execute("UPDATE recurring_invoice_runs SET financial_template_hash=NULL "
+                                 "WHERE business_id=? AND invoice_id=?", (self.bid, iid))
+                else:
+                    field = "status" if problem == "paused" else "name"
+                    conn.execute("UPDATE recurring_invoices SET " + field + "=? WHERE business_id=? AND id=?",
+                                 (problem, self.bid, schedule["id"]))
+            for channel in ("web", "chat", "whatsapp"):
+                with self.subTest(problem=problem, channel=channel), self.assertRaises(StateError):
+                    self.propose_invoice_channel(channel, iid)
+            # Evita que el siguiente vencimiento recoja esta propuesta aún borrador.
+            with db.get_conn() as conn:
+                conn.execute("UPDATE recurring_invoices SET status='paused' WHERE business_id=? AND id=?",
+                             (self.bid, schedule["id"]))
+        self.assertEqual(self.count("financial_operations"), 3)
+        self.assertEqual(self.count("financial_authorizations"), 0)
+        self.assertEqual(self.count("economic_events"), 0)
+
+    def test_nonrecurring_invoice_keeps_channel_identity(self):
+        for channel in ("web", "chat", "whatsapp"):
+            with self.subTest(channel=channel):
+                p, _ = self.propose_invoice_channel(channel, self.draft()["id"])
+                with db.get_conn() as conn:
+                    row = conn.execute("SELECT channel,recurring_context FROM financial_channel_proposals "
+                                       "WHERE business_id=? AND operation_uuid=?", (self.bid, p["operation_uuid"])).fetchone()
+                self.assertEqual(row["channel"], "web_api" if channel == "web" else channel)
+                self.assertIsNone(row["recurring_context"])
+
+    def test_old_ordinary_recurring_proposal_cannot_authorize(self):
+        from noesis.financial_writers import recurring
+        schedule = self.schedule()
+        with db.get_conn() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            invoice = recurring.generate_cycle(conn, schedule["id"], self.bid, date.today().isoformat(),
+                legacy=True, draft_only=True).legacy_value()
+        # Simula el bridge anterior: run real, pero propuesta ordinaria sin contexto.
+        with patch("noesis.financial_channels.recurring.occurrence_for_invoice", return_value=None):
+            _, p = self.propose(intent={"command": "invoice.issue", "target_id": invoice["id"], "fields": {}})
+        with self.assertRaises(StateError):
+            self.confirm(self.ctx(), p)
+        self.assertEqual(self.count("financial_authorizations"), 0)
+        self.assertEqual(self.count("economic_events"), 0)
+
+    def test_expired_recurring_proposal_rejected_by_all_channels(self):
+        self.schedule()
+        iid = db.process_due_recurring_invoices()[0]["id"]
+        with patch("noesis.financial_channels.service._now", return_value="2099-01-01T00:00:00+00:00"):
+            for channel in ("web", "chat", "whatsapp"):
+                with self.subTest(channel=channel), self.assertRaises(StateError):
+                    self.propose_invoice_channel(channel, iid)
+        self.assertEqual(self.count("financial_operations"), 1)
+        self.assertEqual(self.count("financial_authorizations"), 0)
+        self.assertEqual(self.count("economic_events"), 0)
+
     def worker(self, mode, ctx=None, p=None, crash=None):
         from noesis.invoice_capture.service import PRODUCER_CONFIG
 

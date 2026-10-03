@@ -66,6 +66,45 @@ class PaymentBankCaptureContract:
         op = self.approved(self.bank, self.bank.review_match(self.principal, tid))
         return iid, tid, imported, op
 
+    def test_delete_legacy_payment_and_captured_guards_after_fresh_install(self):
+        self.assertEqual(migrations.current_version(), migrations.LATEST_VERSION)
+        legacy = db.issue_invoice(self.draft()['id'], self.bid)
+        payment = db.add_invoice_payment(legacy['id'], '1.00', business_id=self.bid)
+        with db.get_conn() as conn:
+            removed = conn.execute('DELETE FROM invoice_payments WHERE business_id=? AND id=? RETURNING id',
+                                   (self.bid, payment['id'])).fetchone()
+            self.assertEqual(removed['id'], payment['id'])
+        done = self.payment(self.invoice())
+        before = self.state()
+        for sql in ('DELETE FROM invoice_payments WHERE business_id=? AND id=?',
+                    "UPDATE invoice_payments SET amount=11 WHERE business_id=? AND id=?"):
+            with self.assertRaises(Exception), db.get_conn() as conn:
+                conn.execute(sql, (self.bid, done.result['payment_id']))
+        self.assertEqual(self.state(), before)
+
+    def test_migration_69_repairs_existing_68_without_changing_evidence(self):
+        with self.migration_scope():
+            done = self.payment(self.invoice())
+            before = self.state()
+            migrations.downgrade(68)
+            with db.get_conn() as conn:
+                if conn.dialect == 'postgres':
+                    # Reproduce exactamente la función instalada por el antiguo 66.
+                    conn.execute("CREATE OR REPLACE FUNCTION cash_payment_delete() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF EXISTS(SELECT 1 FROM payment_economic_coverage c WHERE c.business_id=OLD.business_id AND c.payment_id=OLD.id) THEN RAISE EXCEPTION 'Cobertura de cobro/banco incoherente' USING ERRCODE='23514'; END IF; RETURN NEW; END $$")
+            self.assertEqual(migrations.upgrade(), 69)
+            self.assertEqual(self.state(), before)
+            legacy = db.issue_invoice(self.draft()['id'], self.bid)
+            payment = db.add_invoice_payment(legacy['id'], '1.00', business_id=self.bid)
+            with db.get_conn() as conn:
+                deleted = conn.execute('DELETE FROM invoice_payments WHERE business_id=? AND id=? RETURNING id',
+                                       (self.bid, payment['id'])).fetchone()
+                self.assertEqual(deleted['id'], payment['id'])
+            for sql in ('DELETE FROM invoice_payments WHERE business_id=? AND id=?',
+                        "UPDATE invoice_payments SET amount=11 WHERE business_id=? AND id=?"):
+                with self.assertRaises(Exception), db.get_conn() as conn:
+                    conn.execute(sql, (self.bid, done.result['payment_id']))
+            self.assertEqual(self.state()['payment_economic_coverage'], before['payment_economic_coverage'])
+
     def state(self):
         with db.get_conn() as conn:
             return {t: [dict(r) for r in conn.execute(f'SELECT * FROM {t} WHERE business_id=? ORDER BY 1,2',

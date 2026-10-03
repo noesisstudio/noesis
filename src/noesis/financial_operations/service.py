@@ -8,6 +8,7 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 
 from noesis import db
+from noesis.core.locks import lock_business
 from noesis.core.persistence import FinancialSession
 from .contracts import (
     AccessDenied, AuthorizationKind, EntryIdentity, EntryNamespace, FinancialRequest,
@@ -74,6 +75,8 @@ class FinancialOperations:
             if session.dialect == "sqlite":
                 session.execute("BEGIN IMMEDIATE")
             self._permission(session, principal, write=write)
+            # También lecturas con FOR UPDATE: nunca tomar operación antes del gate.
+            lock_business(session, self.business_id)
             yield session, OperationsRepository(session, self.business_id)
 
     def prepare(self, principal, identity, request):

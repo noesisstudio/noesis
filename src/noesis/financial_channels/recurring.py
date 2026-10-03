@@ -35,28 +35,34 @@ def validate_occurrence(session, bid, context):
         raise StateError("La recurrencia ha cambiado o no está activa; se necesita otra revisión.")
 
 
-def occurrence_for_invoice(bid, invoice_id):
-    with db.get_conn() as conn:
-        run = conn.execute_exact(
-            "SELECT * FROM recurring_invoice_runs WHERE business_id=? AND invoice_id=?",
-            (bid, invoice_id),
-        ).fetchone()
-        if not run:
-            return None
-        if not run["financial_template_hash"]:
-            raise StateError(
-                "Vencimiento legacy sin contexto durable; no inferir autoridad ni reconstruir historia."
-            )
-        context = {
-            "schedule_id": run["recurring_id"],
-            "scheduled_for": str(run["scheduled_for"])[:10],
-            "invoice_id": invoice_id,
-            "template_hash": run["financial_template_hash"],
-        }
-        validate_occurrence(FinancialSession(conn), bid, context)
-        return EntryIdentity.recurring(
-            run["recurring_id"], date.fromisoformat(context["scheduled_for"])
-        ), context
+def occurrence_for_invoice(bid, invoice_id, *, session=None, validate=True):
+    if session is None:
+        with db.get_conn() as conn:
+            from noesis.core.locks import lock_business
+            borrowed = FinancialSession(conn)
+            lock_business(borrowed, bid)
+            return occurrence_for_invoice(bid, invoice_id, session=borrowed, validate=validate)
+    run = session.execute(
+        "SELECT * FROM recurring_invoice_runs WHERE business_id=? AND invoice_id=?",
+        (bid, invoice_id),
+    ).fetchone()
+    if not run:
+        return None
+    if not run["financial_template_hash"]:
+        raise StateError(
+            "Vencimiento legacy sin contexto durable; no inferir autoridad ni reconstruir historia."
+        )
+    context = {
+        "schedule_id": run["recurring_id"],
+        "scheduled_for": str(run["scheduled_for"])[:10],
+        "invoice_id": invoice_id,
+        "template_hash": run["financial_template_hash"],
+    }
+    if validate:
+        validate_occurrence(session, bid, context)
+    return EntryIdentity.recurring(
+        run["recurring_id"], date.fromisoformat(context["scheduled_for"])
+    ), context
 
 
 def process_due(*, today=None, limit=100):

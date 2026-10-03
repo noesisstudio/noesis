@@ -4344,6 +4344,16 @@ def _downgrade_payment_bank_capture(conn):
     downgrade(conn)
 
 
+def _repair_payment_delete(conn):
+    from .payment_capture.schema import repair_delete_functions
+    repair_delete_functions(conn)
+
+
+def _retain_payment_delete_repair(conn):
+    from .payment_capture.schema import retain_delete_repair
+    retain_delete_repair(conn)
+
+
 def _upgrade_financial_channels(conn):
     from .financial_channels.schema import upgrade
     upgrade(conn)
@@ -4472,6 +4482,7 @@ MIGRATIONS: tuple[Migration, ...] = (
     (66, "cobertura_cobros_banco_capturados", _upgrade_payment_bank_capture, _downgrade_payment_bank_capture),
     (67, "cobertura_recibidas_gastos_capturados", _upgrade_purchasing_capture, _downgrade_purchasing_capture),
     (68, "enlaces_canales_financieros", _upgrade_financial_channels, _downgrade_financial_channels),
+    (69, "reparacion_delete_cobros_postgres", _repair_payment_delete, _retain_payment_delete_repair),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

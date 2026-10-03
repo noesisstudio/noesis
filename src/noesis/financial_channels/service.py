@@ -1,7 +1,7 @@
 """Propuestas exactas y recibos de canal, sin autoridad ni dispatch para la IA."""
 
 from contextvars import ContextVar
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
 import re
 
@@ -238,13 +238,27 @@ class FinancialChannels:
         self.business_id = context.business_id
         self.operations = FinancialOperations(self.business_id)
 
-    def _link(self, session, operation_uuid):
+    def _link(self, session, operation_uuid, *, read_committed=False):
         row = session.execute(
             "SELECT * FROM financial_channel_proposals WHERE business_id=? AND operation_uuid=?",
             (self.business_id, uuid_text(operation_uuid)),
         ).fetchone()
         if not row:
             raise AccessDenied("Propuesta financiera no disponible en este canal.")
+        owned = session.execute(
+            "SELECT state,created_by FROM financial_operations WHERE business_id=? AND operation_uuid=?",
+            (self.business_id, uuid_text(operation_uuid)),
+        ).fetchone()
+        if not owned or owned["created_by"] != self.context.principal.user_id:
+            raise AccessDenied("Operación de otro creador.")
+        if read_committed and owned["state"] == OperationState.COMMITTED.value:
+            return row
+        # Una ocurrencia pertenece al mismo creador y sesión en todos los transportes.
+        # El request, TTL, contexto y recibo de SÍ siguen siendo obligatorios.
+        if row["channel"] == "recurring":
+            if row["actor_session_version"] != self.context.principal.session_version:
+                raise AccessDenied("Propuesta recurrente de otra sesión.")
+            return row
         allowed = {self.context.identity.namespace.value}
         if self.context.identity.namespace in {EntryNamespace.CHAT, EntryNamespace.WHATSAPP}:
             allowed.add("document_review")
@@ -284,6 +298,14 @@ class FinancialChannels:
                 or row["expires_at"] <= _now()
             ):
                 raise StateError("La propuesta ha caducado; revisa otra vez.")
+            if operation.request.command_type in {CommandType.INVOICE_ISSUE, CommandType.INVOICE_RECTIFY}:
+                from .recurring import occurrence_for_invoice
+                actual = occurrence_for_invoice(
+                    self.business_id, operation.request.target_id, session=session, validate=False
+                )
+                frozen = strict_json(row["recurring_context"]) if row["recurring_context"] is not None else None
+                if (actual[1] if actual else None) != frozen or (actual and row["channel"] != "recurring"):
+                    raise StateError("La propuesta no conserva la procedencia recurrente real.")
             if row["recurring_context"] is not None:
                 from .recurring import validate_occurrence
 
@@ -386,6 +408,18 @@ class FinancialChannels:
         command = CommandType(intent["command"])
         capture = capture_for(self.business_id, command)
         with self.operations._transaction(self.context.principal) as (session, repo):
+            if command in {CommandType.INVOICE_ISSUE, CommandType.INVOICE_RECTIFY}:
+                from .recurring import occurrence_for_invoice
+                occurrence = occurrence_for_invoice(
+                    self.business_id, intent["target_id"], session=session, validate=False
+                )
+                resolved = occurrence[1] if occurrence else None
+                if recurring_context is not None and recurring_context != resolved:
+                    raise StateError("Contexto recurrente distinto de la procedencia real.")
+                recurring_context = resolved
+                if occurrence:
+                    identity = occurrence[0]
+                    self.context = replace(self.context, identity=identity, transport_identity=origin)
             receipt = self._receipt(session, origin)
             if receipt:
                 row = repo.load(receipt["operation_uuid"], self.context.principal.user_id)
@@ -399,7 +433,7 @@ class FinancialChannels:
                 ):
                     raise ConflictError("Mismo UUID de acción con identidad o contenido diferente.")
                 self._review_ack(session, operation)
-                return self._response(operation, link)
+                return self._existing_review(session, operation, link, pending_actor, expected_pending_id)
             row = session.execute(
                 "SELECT operation_uuid FROM financial_operations WHERE business_id=? AND entry_namespace=? "
                 "AND entry_key=?",
@@ -413,7 +447,10 @@ class FinancialChannels:
                 if link["intent_canonical"] != canonical:
                     raise ConflictError("Mismo recibo de acción con contenido diferente.")
                 self._review_ack(session, operation)
-                return self._response(operation, link)
+                return self._existing_review(session, operation, link, pending_actor, expected_pending_id)
+            if recurring_context is not None:
+                from .recurring import validate_occurrence
+                validate_occurrence(session, self.business_id, recurring_context)
         request = review_intent(capture, self.context.principal, intent)
         if command == CommandType.BANK_TRANSACTION_IMPORT:
             if identity != EntryIdentity.imported(
@@ -428,6 +465,11 @@ class FinancialChannels:
         )
 
         def record(session, operation):
+            if recurring_context is not None:
+                from .recurring import occurrence_for_invoice
+                actual = occurrence_for_invoice(self.business_id, intent["target_id"], session=session)
+                if actual != (identity, recurring_context):
+                    raise StateError("La procedencia recurrente ha cambiado durante la revisión.")
             session.execute(
                 "INSERT INTO financial_channel_proposals "
                 "(business_id,operation_uuid,request_hash,actor_session_version,channel,actor_key,intent_canonical,intent_hash,"
@@ -475,11 +517,23 @@ class FinancialChannels:
         except ConflictError:
             # Dos reviews simultáneos pueden resolver una fecha default distinta.
             # Solo recuperar si los inputs originales coinciden con la intención durable.
-            return self.propose_existing(canonical)
+            return self.propose_existing(canonical, pending_actor=pending_actor, expected_pending_id=expected_pending_id)
         checkpoint("proposal_committed")
         return self.response(operation)
 
-    def propose_existing(self, canonical):
+    def _existing_review(self, session, operation, link, pending_actor, expected_pending_id):
+        if operation.state in {OperationState.PREPARED, OperationState.APPROVED}:
+            self._guard(session, operation, "review")
+        if pending_actor is not None and operation.state == OperationState.PREPARED:
+            existing = session.execute(
+                "SELECT payload FROM whatsapp_pending_actions WHERE business_id=? AND phone=?",
+                (self.business_id, pending_actor),
+            ).fetchone()
+            if not existing or strict_json(existing["payload"]).get("operation_uuid_ref") != operation.operation_uuid:
+                self._pending(session, operation, pending_actor, expected_pending_id)
+        return self._response(operation, link)
+
+    def propose_existing(self, canonical, *, pending_actor=None, expected_pending_id=None):
         with self.operations._transaction(self.context.principal) as (session, repo):
             row = session.execute(
                 "SELECT operation_uuid FROM financial_operations WHERE business_id=? AND entry_namespace=? "
@@ -499,7 +553,7 @@ class FinancialChannels:
             if link["intent_canonical"] != canonical:
                 raise ConflictError("Intención diferente bajo el mismo recibo.")
             self._review_ack(session, operation)
-            return self._response(operation, link)
+            return self._existing_review(session, operation, link, pending_actor, expected_pending_id)
 
     def _pending(self, session, operation, actor, expected_id):
         if actor != self.context.actor:
@@ -683,8 +737,9 @@ class FinancialChannels:
         return self.response(done)
 
     def response(self, operation):
-        with self.operations._transaction(self.context.principal, write=False) as (session, _):
-            link = self._link(session, operation.operation_uuid)
+        with self.operations._transaction(self.context.principal, write=False) as (session, repo):
+            operation = Operation.from_row(repo.load(operation.operation_uuid, self.context.principal.user_id))
+            link = self._link(session, operation.operation_uuid, read_committed=True)
         return self._response(operation, link)
 
     def _response(self, operation, link):

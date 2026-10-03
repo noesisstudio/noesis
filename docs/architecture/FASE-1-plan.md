@@ -1,5 +1,17 @@
 # Fase 1: referencia aprobada y autorización incremental
 
+## Orden vigente — exclusivamente Fase 1.8H
+
+Fases 0–1.8 implementadas, auditadas con blockers B1–B5. Solo endurecimiento:
+DELETE PostgreSQL (migración de reparación), gate de negocio antes de operación/
+fuente, recurrencia común en servidor, consulta COMMITTED con sesión renovada y
+CI completa verde. Cinco flags OFF. No 1.9, backfill, activación ni nuevos eventos.
+Leer [orden](FASE-1.8H-orden.md), [ADR-013](ADR-013-financial-hardening.md)
+y [cierre/evidencia](FASE-1.8H-cierre.md).
+Los alcances y encabezados inferiores describen entregas históricas aunque digan
+«vigente»; no amplían la orden actual. No reescribir los cierres anteriores.
+
+
 ## Orden vigente — exclusivamente Fase 1.8
 
 Fases 1.1–1.7 aceptadas. Solo bridges autenticados de web, chat/tools,

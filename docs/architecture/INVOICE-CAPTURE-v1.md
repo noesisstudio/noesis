@@ -1,5 +1,14 @@
 # API canónica de emisión capturada — 1.5
 
+## Adenda vigente 1.8H
+
+[ADR-013](ADR-013-financial-hardening.md) corrige el orden común de locks:
+permisos → business gate → operación/autorización → fuentes, incluido prepare.
+El bridge resuelve la recurrencia real sin depender del canal. Consulta COMMITTED
+valida creador/negocio/sesión vigente sin exigir sv histórico; aprobar/ejecutar
+conservan autoridad original. Flags OFF, no 1.9 ni nueva fiscalidad.
+[Evidencia](FASE-1.8H-cierre.md). Lo inferior conserva contexto histórico.
+
 ## Conexión vigente de Fase 1.8
 
 Los contratos de esta entrega permanecen vigentes. Los cinco Capture se invocan

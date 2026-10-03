@@ -6,10 +6,26 @@ INDICES = ('idx_cash_invoice_event', 'idx_cash_payment_event', 'idx_cash_bank_ev
 
 def _trigger(conn, name, table, event, condition):
     if conn.dialect == 'postgres':
-        conn.execute(f"CREATE FUNCTION {name}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF {condition} THEN RAISE EXCEPTION 'Cobertura de cobro/banco incoherente' USING ERRCODE = '23514'; END IF; RETURN NEW; END $$")
+        _function(conn, name, condition)
         conn.execute(f'CREATE TRIGGER {name} {event} ON {table} FOR EACH ROW EXECUTE FUNCTION {name}()')
     else:
         conn.execute(f"CREATE TRIGGER {name} {event} ON {table} WHEN {condition} BEGIN SELECT RAISE(ABORT,'Cobertura de cobro/banco incoherente'); END")
+
+
+def _function(conn, name, condition):
+    conn.execute(f"CREATE OR REPLACE FUNCTION {name}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF {condition} THEN RAISE EXCEPTION 'Cobertura de cobro/banco incoherente' USING ERRCODE = '23514'; END IF; IF TG_OP = 'DELETE' THEN RETURN OLD; END IF; RETURN NEW; END $$")
+
+
+def repair_delete_functions(conn):
+    """Repara instalaciones existentes sin cambiar triggers, guards ni datos."""
+    if conn.dialect == 'postgres':
+        for name, _, event, condition in _definitions(conn):
+            if event == 'BEFORE DELETE':
+                _function(conn, name, condition)
+
+
+def retain_delete_repair(conn):
+    """Bajada aditiva: conservar la reparación, sin reinstalar el defecto."""
 
 
 def _definitions(conn):

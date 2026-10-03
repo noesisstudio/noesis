@@ -1,5 +1,18 @@
 # Economic Events: persistencia v1, exclusivamente Fase 1.3
 
+## Adenda vigente 1.8H
+
+[ADR-013](ADR-013-financial-hardening.md) corrige los defects auditados sin
+ampliar funcionalidades: business gate precede operation/source incluso en
+prepare/reprepare y lecturas FOR UPDATE; DELETE permitido devuelve OLD en PG,
+con reparación de instalaciones existentes; el bridge resuelve procedencia
+recurrente con sesión prestada para todos los canales y una identidad económica.
+Consulta COMMITTED exige creador/negocio/sesión actual, no sv histórico;
+PREPARED/APPROVED y aprobación/ejecución conservan la autoridad original.
+Sin reescritura de evidencia. Flags OFF; no 1.9. Las descripciones inferiores
+con orden anterior de locks se conservan como contexto histórico, supersedido
+por esta adenda y su [validación](FASE-1.8H-cierre.md).
+
 ## Conexión vigente de Fase 1.8
 
 Los contratos de esta entrega permanecen vigentes. Los cinco Capture se invocan

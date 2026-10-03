@@ -48,17 +48,7 @@ async def prepare(business_id: int, request: Request):
         } <= set(body):
             raise ValueError("Acción UUID e intención cerrada requeridas.")
         ctx = context(request, business_id, body["action_uuid"])
-        recurring_context = None
         intent = body["intent"]
-        if intent["command"] in {"invoice.issue", "invoice.rectify"}:
-            from noesis.financial_channels.recurring import occurrence_for_invoice
-
-            occurrence = await run_in_threadpool(
-                occurrence_for_invoice, business_id, intent["target_id"]
-            )
-            if occurrence:
-                identity, recurring_context = occurrence
-                ctx = replace(ctx, identity=identity, transport_identity=ctx.identity)
         if "document_review" in body:
             review = body["document_review"]
             if set(review) != {"review_uuid", "document_id", "item", "revision"}:
@@ -76,7 +66,7 @@ async def prepare(business_id: int, request: Request):
                 transport_identity=ctx.identity,
             )
         return await run_in_threadpool(
-            lambda: FinancialChannels(ctx).propose(intent, recurring_context=recurring_context)
+            lambda: FinancialChannels(ctx).propose(intent)
         )
     except (ValueError, TypeError, KeyError, PermissionError) as exc:
         return error(exc)

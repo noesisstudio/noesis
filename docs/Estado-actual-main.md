@@ -1,5 +1,26 @@
 # Estado actual del producto
 
+## 2026-10-03 — Hardening 1.8H B1–B5, local PASS; CI pendiente
+
+La auditoría integral sobre main posterior a 1.8 confirma los cinco blockers;
+los cierres anteriores son históricos y no acreditan su resolución. Migración69
+repara funciones DELETE ya instaladas sin tocar datos; FinancialOperations gate
+antes del repositorio y EE antes de operación/contador; FinancialChannels resuelve
+recurrencia común y conserva transportes separados; response COMMITTED consulta
+por creador/sesión vigente sin autoridad histórica nueva. Excepción exacta del
+SHA público en .secrets.baseline. Código, tests compartidos y carreras PostgreSQL
+en los dominios correspondientes; contrato en [ADR-013](architecture/ADR-013-financial-hardening.md).
+SQLite247 (243.420 s), PG245 (130.752 s), general1626 (1367.374 s) completos PASS
+después del último código/tests/baseline; Node9, migraciones/rollback/legacy y gates PASS.
+B1–B4 PASS; B5 abierto hasta CI completa remota.  Cinco flags OFF; 1.9 no
+iniciada. Riesgo: serialización de consultas con FOR UPDATE; runs sin huella,
+ended/drift/TTL y delegación bloqueados. Pending huérfano por adjuntos WhatsApp
+queda como deuda menor. Diagnóstico/rollback y evidencia exacta en
+[informe](architecture/FASE-1.8H-cierre.md); conservar reparación y evidencia,
+no reconstruir autorización ni reejecutar writers. Meta/AEAT y activación fuera.
+Lo inferior conserva historia y no es la foto vigente.
+
+
 ## 2026-10-02 — Fase 1.8, canales financieros
 
 Solo integración de canales con los Capture existentes, sin 1.9 ni activación.

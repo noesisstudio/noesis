@@ -106,6 +106,8 @@ class EconomicEvents:
         if self.session.dialect == "sqlite" and not self.session._connection.raw.in_transaction:
             raise StateError("El llamador debe abrir la transacción SQLite antes de incorporar.")
         self.permissions._permission(self.session, principal, write=True)
+        from noesis.core.locks import lock_business
+        lock_business(self.session, self.business_id)
         self.session.execute("SAVEPOINT economic_append")
         try:
             result = self._append(principal, event, **kwargs)
@@ -188,8 +190,6 @@ class EconomicEvents:
             date_provenance=date_provenance,
             idempotency_key=key,
         )
-        from noesis.core.locks import lock_business
-        lock_business(self.session, self.business_id)
         self.repo.lock_business()
         existing = self.repo.find(event, operation_uuid, event_slot, key)
         if existing:

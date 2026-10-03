@@ -1,5 +1,14 @@
 # Captura interna de recibidas y gastos v1 — exclusivamente Fase1.7
 
+## Adenda vigente 1.8H
+
+[ADR-013](ADR-013-financial-hardening.md) supersede el orden original de locks:
+permisos → business gate → operación/autorización → source/documento, incluido
+prepare/reprepare. Conserva contratos, continuidad y cobertura de compras/gastos.
+Consulta de canal COMMITTED permite sesión nueva válida del mismo creador;
+PREPARED/APPROVED y aprobación/ejecución mantienen la autoridad original.
+Flags OFF, no 1.9. [Evidencia](FASE-1.8H-cierre.md). Lo inferior es histórico.
+
 ## Conexión vigente de Fase 1.8
 
 Los contratos de esta entrega permanecen vigentes. Los cinco Capture se invocan

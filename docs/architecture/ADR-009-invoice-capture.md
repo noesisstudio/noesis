@@ -1,5 +1,14 @@
 # ADR-009 — Productor único de emisión capturada
 
+## Adenda vigente 1.8H
+
+El orden descrito en la entrega original queda corregido por
+[ADR-013](ADR-013-financial-hardening.md): permisos → business gate → operación/
+autorización → factura/fuentes. La frontera común aplica también a review,
+prepare/reprepare, authorize y execute, sin nuevos efectos ni reglas fiscales.
+Los canales resuelven la procedencia recurrente en el bridge común. Flags OFF;
+no 1.9. [Evidencia y cierre](FASE-1.8H-cierre.md). Lo inferior conserva historia.
+
 Estado: autorizado exclusivamente en 1.5, 2-oct-2026. No autoriza 1.6.
 Base: main tras 1.4, schema64. [Auditoría previa](FASE-1.5-entrada-audit.md).
 

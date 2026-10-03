@@ -1,13 +1,13 @@
 {
-  "state_date": "2026-10-02",
+  "state_date": "2026-10-03",
   "recovery_candidate_2026_09_25": "Rama codex/conversation-recovery-validation, codigo 9357a39. Recuperacion explicita de routing_changed con administrador, auditoria previa y orden conservado. processing_failed/interrupted siguen bloqueados. CI PostgreSQL 36131891167 verde: 36 rutas, migraciones, codigo anterior, rollback, concurrencia y recuperacion. Suite general aun ejecutandose al registrar; main/Meta/produccion intactos.",
   "ingress_diagnostics_candidate_2026_09_24": "CLI por negocio, solo lectura sin payload/telefonos. Saturacion cuenta eventos nuevos, no duplicados. 25 pruebas dirigidas correctas (14.243 s), Ruff correcto. Sin publicar. Resolucion segura, retencion, PostgreSQL y Meta pendientes antes de activar.",
   "conversation_corrections_candidate_2026_09_24": "Local, no publicado: campos compuestos sobre propuestas existentes, consultas fiscales sin coincidencias parciales, concepto e IVA por linea. 70 regresiones dirigidas y suite completa local de 1197 tests correctas (1012.404 s); ultimo ajuste de interrogacion revalidado con 6 casos. Ruff, secretos y verdad documental correctos. Sin migracion, dependencias, proveedores ni cambios de flags. Meta real y memoria por actor pendientes.",
   "reliability_hotfix_2026_09_24": "df113b1: fechas compatibles PostgreSQL, correcciones multilínea sin pérdida de detalle y rollback 58 aditivo bloqueado ante borradores incompletos. CI 36012914685 verde: 1189 tests en 352.518 s, 36 rutas PostgreSQL, rollback y seguridad. Sin cambios de flags ni proveedores.",
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
-  "schema_version": 68,
+  "schema_version": 69,
   "conversation_transport_candidate_2026_09_24": "Local no publicado: esquemas 59/60, memoria por actor y transporte previo a vinculacion. NOESIS_CONVERSATION_ISOLATION_ENABLED y NOESIS_WHATSAPP_INBOX_ENABLED false por defecto. FIFO, acuse tras commit, incidencias sin replay automatico. 96 pruebas dirigidas correctas (71.801 s) y 460 backend/webhook correctas (397.517 s); Ruff, secretos y verdad documental correctos. Suite completa 1197 corresponde al bloque previo. Requiere CI PostgreSQL, procedimiento de revision/retencion y Meta real antes de activar.",
-  "verified_test_count": 1617,
+  "verified_test_count": 1626,
   "whatsapp_rounds_2026_10_01": "Producción hasta c52d3e2: presupuestos, citas (cancelar/mover), facturas de varias líneas, gasto a obra, abrir obra, ranking de clientes, pendientes, resumen semanal y abreviaturas de móvil por WhatsApp, todo con tarjeta de SÍ. Probado en real por WhatsApp Web (descartado con NO) y en simulador local. cryptography 50. Voz real sin probar.",
   "release_gate_2026_09_25": "CI 36131891167 completamente verde sobre 9357a39: 1223 tests en 555.019 s, seguridad, migraciones SQLite, 36 rutas PostgreSQL y rollback/compatibilidad/recuperacion. Cambios posteriores solo documentales. Founder autoriza publicar; mantener flags nuevos apagados y Meta intacto. Verificar ready tras despliegue.",
   "validation_2026_09_21": "CI 35578171354 verde sobre 1dc65aa1a79a6bcacfd1057b1b2afd317d7734e5: 974 pruebas (402.446 s), seguridad, Node, migraciones SQLite y humos PostgreSQL con compatibilidad anterior/rollback. Railway b88619b7-6da0-4b68-83ab-fec3194a9897 SUCCESS; health/ready verifican release 1dc65aa1a79a y esquema 56. Cierre documental sin cambios de runtime.",
@@ -192,11 +192,11 @@
   ],
   "admin_workspace_release": "seven_departments_scoped_monthly_api_usage_owner_phone_search_mobile_disclosure_explicit_metric_sources_refresh_no_schema_changes_deployment_verification_after_push",
   "financial_core": {
-    "authorized_phase": "1.8",
-    "status": "phase1_8_closed",
+    "authorized_phase": "1.8H",
+    "status": "hardening_local_pass_remote_ci_pending",
     "next_phase_authorized": false,
     "governance": "docs/architecture/README.md",
-    "closure": "docs/architecture/FASE-1.8-cierre.md",
+    "closure": "docs/architecture/FASE-1.8H-cierre.md",
     "schema_changed": true,
     "operational_events_are_economic_events": false,
     "money_contract": "Decimal; EUR HALF_UP; PostgreSQL NUMERIC; SQLite canonical TEXT; legacy unchanged",
@@ -498,15 +498,16 @@
     "invoice_capture_contract": "docs/architecture/INVOICE-CAPTURE-v1.md",
     "producer_channels_connected": [
       "internal_authenticated_service",
-      "internal_adapter_with_durable_operation"
-    ],
-    "external_channels_pending": [
+      "internal_adapter_with_durable_operation",
       "web",
       "tools",
       "chat",
       "whatsapp",
-      "recurring"
+      "document_review",
+      "recurring",
+      "bank_csv_per_row"
     ],
+    "external_channels_pending": [],
     "phase1_5_validation": {
       "sqlite_producers": 24,
       "sqlite_operations": 29,
@@ -692,6 +693,45 @@
       "no_phase1_9": true,
       "remote_ci": false,
       "deployed": false
-    }
+    },
+    "phase1_8H": {
+      "complete": false,
+      "blockers": {
+        "B1": "PASS",
+        "B2": "PASS",
+        "B3": "PASS",
+        "B4": "PASS",
+        "B5": "FAIL_REMOTE_CI_PENDING"
+      },
+      "migration": 69,
+      "adr": "docs/architecture/ADR-013-financial-hardening.md",
+      "flags_off": true,
+      "phase1_9_started": false,
+      "audit_baseline": "main posterior a 1.8; CI completa anterior 37069839865 FAIL en secretos",
+      "remote_ci": null,
+      "minor_debt": "Pending financiero huérfano por adjuntos WhatsApp; fuera de B1–B5",
+      "validation": {
+        "sqlite": 247,
+        "sqlite_seconds": 243.42,
+        "postgres": 245,
+        "postgres_seconds": 130.752,
+        "full_suite": 1626,
+        "full_suite_seconds": 1367.374,
+        "full_suite_after_last_code_or_baseline": true,
+        "node": 9,
+        "new_lock_races": 3,
+        "migrations_and_legacy": true,
+        "gates": "PASS",
+        "autoaudit": true
+      }
+    },
+    "phase1_8_implemented": true,
+    "channel_limits": [
+      "flags_off",
+      "audio_without_durable_identity",
+      "delegation_not_implemented",
+      "no_automatic_recurring_mandate",
+      "csv_batch_ui_not_implemented"
+    ]
   }
 }
