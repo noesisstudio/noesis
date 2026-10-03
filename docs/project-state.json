@@ -776,7 +776,7 @@
         "postgres_seconds": 14.064,
         "full_suite": 1671,
         "gates": "PASS",
-        "remote_ci": false,
+        "remote_ci": true,
         "deployed": false,
         "full_suite_seconds": 1321.144,
         "full_suite_after_last_functional_change": true,
@@ -801,7 +801,15 @@
         ],
         "autoaudit": true,
         "criteria_pass": 24,
-        "criteria_fail": 0
+        "criteria_fail": 0,
+        "remote_ci_run": 37126056082,
+        "remote_ci_url": "https://github.com/noesisstudio/noesis/actions/runs/37126056082",
+        "remote_ci_code": "1662391",
+        "remote_ci_conclusion": "success",
+        "remote_full_suite": 1671,
+        "remote_full_suite_seconds": 839.866,
+        "remote_postgres": 251,
+        "deployment_verified": false
       }
     }
   }

@@ -2,6 +2,11 @@
 
 ## 2026-10-03 — QA de contratos históricos1.9A
 
+CI de implementación [37126056082](https://github.com/noesisstudio/noesis/actions/runs/37126056082)
+SUCCESS sobre1662391: ambos jobs, general1671 (839.866 s), PG251, gates y
+migraciones/legacy/rollback PASS. Adenda de cierre solo documental; código,
+tests, baseline, dependencias y workflows sin cambios. Despliegue no verificado.
+
 Validación final: general1671 PASS (1321.144 s), dirigidas121 PASS (55.350 s),
 matrizPG251 PASS (101.202 s), Node9 y gates PASS; schema69, flags OFF.
 CicloSQLite0→69→0→69, migraciónPG32→69/36rutas y HTTPlocal200 PASS.

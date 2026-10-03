@@ -173,7 +173,13 @@ SQLite0→69→0→69 PASS; PG migración histórica sintética32→69 y 36 ruta
 HTTP local health/ready/portada/login200 en base sintética nueva.
 Suite general final: **1671 PASS (1321.144 s)**, posterior al último cambio
 funcional; incluye39 contratos nuevos y6 regresiones compartidas nuevas.
-No CI remoto ni despliegue acreditado en esta validación local.
+CI remota de implementación **PASS** sobre `1662391`:
+[37126056082](https://github.com/noesisstudio/noesis/actions/runs/37126056082).
+Ambos jobs SUCCESS: suite1671 (839.866 s), gates completos, cicloSQLite,
+PG251, migraciones/humos36, código anterior y privacidad/rollback.
+La adenda documental de este resultado no modifica código, tests, baseline,
+dependencias ni workflows ya verificados. Despliegue no verificado; ninguna
+consulta productiva realizada.
 No usar ejecuciones generales interrumpidas como evidencia de cierre.
 Logs locales descartables: TEMP/noesis-19A-*-final.log; nunca datos productivos.
 
