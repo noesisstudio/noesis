@@ -2,7 +2,8 @@
 
 ## Orden vigente — exclusivamente Fase 1.8H
 
-Fases 0–1.8 implementadas, auditadas con blockers B1–B5. Solo endurecimiento:
+Fases 0–1.8 implementadas; hardening 1.8H cerrado con B1–B5 PASS.
+Único alcance de esta unidad cerrada:
 DELETE PostgreSQL (migración de reparación), gate de negocio antes de operación/
 fuente, recurrencia común en servidor, consulta COMMITTED con sesión renovada y
 CI completa verde. Cinco flags OFF. No 1.9, backfill, activación ni nuevos eventos.

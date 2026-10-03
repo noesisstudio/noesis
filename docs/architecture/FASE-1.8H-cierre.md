@@ -1,6 +1,6 @@
 # Fase 1.8H — Informe de cierre de B1–B5
 
-**CI REMOTA PENDIENTE — HARDENING NO CERRADO.**
+**1.8H CERRADA — B1–B5 PASS.**
 
 Fases 0–1.8 implementadas; solo hardening autorizado. Cinco flags OFF;
 **Fase 1.9 no iniciada ni autorizada**. Arquitectura y contratos en
@@ -164,7 +164,7 @@ y gobernanza. Node: **9 PASS**. Sin dependencias nuevas. Cierres1.1–1.8 intact
 
 ## 14. GitHub Actions
 
-**PENDIENTE**: aún sin push/CI del candidato; no cerrar B5 ni hardening.
+**PASS**: [CI completa 37113108834](https://github.com/noesisstudio/noesis/actions/runs/37113108834) sobre código `be18db5`. Ambos jobs completos SUCCESS; suite, gates y migraciones incluidos. El cierre documental posterior conserva exactamente ese código y baseline; su CI se verifica también antes de entregar el informe final.
 
 ## 15. Riesgos restantes y rollback
 
@@ -189,7 +189,7 @@ fabricar identidades/autorizaciones nuevas.
 | B2 | PASS | Gate común y tres carreras PG deterministas |
 | B3 | PASS | Tres canales reales, origen inválido/TTL, identidad única |
 | B4 | PASS | Lectura vigente, histórico intacto, cero writer, Web/bridge |
-| B5 | FAIL — CI pendiente | Suite/gates locales PASS; falta CI completa remota |
+| B5 | PASS | Suite/gates locales PASS; CI completa SUCCESS |
 
 ## 17. Autoauditoría explícita
 
@@ -207,7 +207,7 @@ fabricar identidades/autorizaciones nuevas.
 | 10 | Autorización histórica reescrita | NO; igualdad de filas originales comprobada |
 | 11 | detect-secrets rebajado | NO, excepción exacta y plugins/filtros intactos |
 | 12 | Suite general después del último cambio | SÍ, 1626 completos tras código/tests/baseline final |
-| 13 | CI remota completa verde | PENDIENTE: no hay aún CI completa del candidato; B5 abierto. |
+| 13 | CI remota completa verde | SÍ: CI completa 37113108834 SUCCESS, ambos jobs. |
 | 14 | Fase1.9 iniciada accidentalmente | NO; flags OFF y alcance restringido |
 
 Master Plan §44: 1) ningún EE/tipo/productor nuevo; 2) ningún asiento;

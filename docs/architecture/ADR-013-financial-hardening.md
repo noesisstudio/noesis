@@ -1,6 +1,7 @@
 # ADR-013 — Endurecimiento 1.8H de fronteras financieras
 
-Estado: autorizado el 3-oct-2026 exclusivamente para B1–B5. No autoriza 1.9.
+Estado: validado y cerrado en 1.8H; B1–B5 PASS según el informe de cierre.
+Autorizado el 3-oct-2026 exclusivamente para estos blockers. No autoriza 1.9.
 Complementa ADR-008/010/012; los cierres anteriores conservan su historia.
 
 ## Diagnóstico confirmado

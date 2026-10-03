@@ -1,6 +1,6 @@
 # Arquitectura
 
-## 2026-10-03 — Hardening 1.8H B1–B5, local PASS; CI pendiente
+## 2026-10-03 — Hardening 1.8H B1–B5, cerrado
 
 La auditoría integral sobre main posterior a 1.8 confirma los cinco blockers;
 los cierres anteriores son históricos y no acreditan su resolución. Migración69
@@ -12,7 +12,7 @@ SHA público en .secrets.baseline. Código, tests compartidos y carreras Postgre
 en los dominios correspondientes; contrato en [ADR-013](architecture/ADR-013-financial-hardening.md).
 SQLite247 (243.420 s), PG245 (130.752 s), general1626 (1367.374 s) completos PASS
 después del último código/tests/baseline; Node9, migraciones/rollback/legacy y gates PASS.
-B1–B4 PASS; B5 abierto hasta CI completa remota.  Cinco flags OFF; 1.9 no
+CI completa 37113108834 SUCCESS sobre `be18db5`; B1–B5 PASS.  Cinco flags OFF; 1.9 no
 iniciada. Riesgo: serialización de consultas con FOR UPDATE; runs sin huella,
 ended/drift/TTL y delegación bloqueados. Pending huérfano por adjuntos WhatsApp
 queda como deuda menor. Diagnóstico/rollback y evidencia exacta en
