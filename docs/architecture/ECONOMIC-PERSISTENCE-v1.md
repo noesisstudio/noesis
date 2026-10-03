@@ -1,5 +1,13 @@
 # Economic Events: persistencia v1, exclusivamente Fase 1.3
 
+## Adenda 1.9A — persistencia histórica aún pendiente
+
+Sin tablas/DDL nuevo ni incorporación de datos. Wrapper v2 especial es puro y no
+pasa EconomicEvent durable/schema69. EE impide autoridad live desde operación
+historical o receipt historical_unknown previo. SQL directo aún puede introducir
+metadatos inconsistentes; los guards de aplicación los rechazan, sin prometer un
+constraint nuevo. [ADR-014](ADR-014-financial-history-contracts.md), [contrato](FINANCIAL-HISTORY-v1.md).
+
 ## Adenda vigente 1.8H
 
 [ADR-013](ADR-013-financial-hardening.md) corrige los defects auditados sin

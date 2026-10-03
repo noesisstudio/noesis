@@ -1,5 +1,22 @@
 # 08 · Financial Core
 
+## Orden vigente — exclusivamente Fase 1.9A
+
+financial_history/ contiene contracts/payloads/money_evidence/canonical puros,
+sin DB. Frozen, catálogos/versiones cerrados, raw binary separado de exacto,
+NULL distinto de cero; B distinto de verified_fact. Dependencias C/D/missing
+bloquean; B padre también por prudencia. Importable no es autorización.
+Historical namespace o receipt previo bloquean promoción/execute en Operations
+y autoridad live en EE. Sin nuevos estados/migraciones; SQL directo no adquiere
+efecto por ese metadato. Acceso ordinario no cambia.
+[Orden](../architecture/FASE-1.9A-orden.md), [ADR-014](../architecture/ADR-014-financial-history-contracts.md),
+[API/límites](../architecture/FINANCIAL-HISTORY-v1.md), [cierre](../architecture/FASE-1.9A-cierre.md).
+Comprobar tests puros, regresiones compartidas SQLite/PG, bytes v1, emisión v2,
+precisión/fechas/autoridad y gates completos. No reader real, manifest/importer,
+fence/dry-run/reconciliación/activación ni1.9B; cinco flags OFF. V2 especiales
+solo wrapper; candidatos emisiónv2 requieren raw por línea/fiscal, aún bloqueados.
+Alcances inferiores históricos.
+
 ## Orden vigente — exclusivamente Fase 1.8H
 
 Fases 0–1.8 implementadas; hardening 1.8H cerrado con B1–B5 PASS.

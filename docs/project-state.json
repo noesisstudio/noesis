@@ -7,7 +7,7 @@
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
   "schema_version": 69,
   "conversation_transport_candidate_2026_09_24": "Local no publicado: esquemas 59/60, memoria por actor y transporte previo a vinculacion. NOESIS_CONVERSATION_ISOLATION_ENABLED y NOESIS_WHATSAPP_INBOX_ENABLED false por defecto. FIFO, acuse tras commit, incidencias sin replay automatico. 96 pruebas dirigidas correctas (71.801 s) y 460 backend/webhook correctas (397.517 s); Ruff, secretos y verdad documental correctos. Suite completa 1197 corresponde al bloque previo. Requiere CI PostgreSQL, procedimiento de revision/retencion y Meta real antes de activar.",
-  "verified_test_count": 1626,
+  "verified_test_count": 1671,
   "whatsapp_rounds_2026_10_01": "Producción hasta c52d3e2: presupuestos, citas (cancelar/mover), facturas de varias líneas, gasto a obra, abrir obra, ranking de clientes, pendientes, resumen semanal y abreviaturas de móvil por WhatsApp, todo con tarjeta de SÍ. Probado en real por WhatsApp Web (descartado con NO) y en simulador local. cryptography 50. Voz real sin probar.",
   "release_gate_2026_09_25": "CI 36131891167 completamente verde sobre 9357a39: 1223 tests en 555.019 s, seguridad, migraciones SQLite, 36 rutas PostgreSQL y rollback/compatibilidad/recuperacion. Cambios posteriores solo documentales. Founder autoriza publicar; mantener flags nuevos apagados y Meta intacto. Verificar ready tras despliegue.",
   "validation_2026_09_21": "CI 35578171354 verde sobre 1dc65aa1a79a6bcacfd1057b1b2afd317d7734e5: 974 pruebas (402.446 s), seguridad, Node, migraciones SQLite y humos PostgreSQL con compatibilidad anterior/rollback. Railway b88619b7-6da0-4b68-83ab-fec3194a9897 SUCCESS; health/ready verifican release 1dc65aa1a79a y esquema 56. Cierre documental sin cambios de runtime.",
@@ -192,12 +192,12 @@
   ],
   "admin_workspace_release": "seven_departments_scoped_monthly_api_usage_owner_phone_search_mobile_disclosure_explicit_metric_sources_refresh_no_schema_changes_deployment_verification_after_push",
   "financial_core": {
-    "authorized_phase": "1.8H",
-    "status": "phase1_8H_closed",
+    "authorized_phase": "1.9A",
+    "status": "phase1_9A_closed",
     "next_phase_authorized": false,
     "governance": "docs/architecture/README.md",
-    "closure": "docs/architecture/FASE-1.8H-cierre.md",
-    "schema_changed": true,
+    "closure": "docs/architecture/FASE-1.9A-cierre.md",
+    "schema_changed": false,
     "operational_events_are_economic_events": false,
     "money_contract": "Decimal; EUR HALF_UP; PostgreSQL NUMERIC; SQLite canonical TEXT; legacy unchanged",
     "persistence": "InvoiceCapture, PaymentCapture, BankCapture, SupplierInvoiceCapture and ExpenseCapture: borrowed writers, mandatory immutable domain coverage, events and durable result in shared transaction",
@@ -219,7 +219,15 @@
       "posting",
       "invoice.fiscal_cancellation_registered_producer",
       "financial_activation",
-      "historical_backfill"
+      "historical_backfill",
+      "history_inventory_scanner",
+      "historical_manifest_persistence",
+      "historical_dry_run",
+      "historical_epoch_fence",
+      "historical_importer",
+      "historical_reconciliation",
+      "historical_audit_repository",
+      "invoice_v2_historical_line_raw"
     ],
     "phase0_validation": {
       "new_sqlite_money_flags": 16,
@@ -738,6 +746,63 @@
       "delegation_not_implemented",
       "no_automatic_recurring_mandate",
       "csv_batch_ui_not_implemented"
-    ]
+    ],
+    "history_plan": "docs/architecture/FASE-1.9-plan.md",
+    "history_contract": "docs/architecture/FINANCIAL-HISTORY-v1.md",
+    "phase1_9A": {
+      "complete": true,
+      "adr": "docs/architecture/ADR-014-financial-history-contracts.md",
+      "contract_version": 1,
+      "canonical_version": 1,
+      "identity_derivation_version": 1,
+      "migration": null,
+      "schema_version": 69,
+      "flags_off": true,
+      "production_data_read": false,
+      "persistent_history": false,
+      "historical_v2_memory_only": [
+        "supplier_invoice.confirmed",
+        "expense.confirmed",
+        "bank_transaction.imported"
+      ],
+      "invoice_v2_candidate_blocked_without_line_raw": true,
+      "historical_operation_executable": false,
+      "phase1_9B_started": false,
+      "validation": {
+        "pure_tests": 39,
+        "sqlite_directed": 121,
+        "sqlite_seconds": 55.35,
+        "postgres_operations_events": 65,
+        "postgres_seconds": 14.064,
+        "full_suite": 1671,
+        "gates": "PASS",
+        "remote_ci": false,
+        "deployed": false,
+        "full_suite_seconds": 1321.144,
+        "full_suite_after_last_functional_change": true,
+        "full_suite_conclusion": "OK",
+        "postgres_matrix": 251,
+        "postgres_matrix_seconds": 101.202,
+        "ruff": true,
+        "bandit_high": true,
+        "dependency_audit": true,
+        "lock_check": true,
+        "secrets": true,
+        "project_truth": true,
+        "node": 9,
+        "sqlite_migration_cycle": "0->69->0->69",
+        "postgres_historical_migration": "32->69 synthetic fixture",
+        "postgres_hot_routes": 36,
+        "local_http_200": [
+          "/health",
+          "/ready",
+          "/",
+          "/login"
+        ],
+        "autoaudit": true,
+        "criteria_pass": 24,
+        "criteria_fail": 0
+      }
+    }
   }
 }

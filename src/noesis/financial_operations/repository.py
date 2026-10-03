@@ -3,6 +3,7 @@
 from uuid import uuid4
 
 from .contracts import AccessDenied, ConflictError, Operation, StateError, uuid_text
+from .historical import ensure_historical_authorization, ensure_not_historical_execution
 
 
 class OperationsRepository:
@@ -56,6 +57,10 @@ class OperationsRepository:
 
     def add_authorization(self, *, operation_uuid, kind, actor, recorded_by, session_version,
                           request, channel, permission, now, mandate_uuid=None, expires_at=None):
+        if operation_uuid is not None:
+            row = self.load(operation_uuid, recorded_by)
+            ensure_historical_authorization(row["entry_namespace"], kind, channel,
+                                            has_history=self.has_historical_receipt(operation_uuid))
         authorization_uuid = str(uuid4())
         self.session.execute(
             "INSERT INTO financial_authorizations (business_id, authorization_uuid, operation_uuid, kind, "
@@ -69,6 +74,9 @@ class OperationsRepository:
         return authorization_uuid
 
     def transition(self, row, state, now, *, authorization_uuid=None, result=None, result_hash=None):
+        if state.value in ("approved", "committed"):
+            ensure_not_historical_execution(row["entry_namespace"],
+                                           has_history=self.has_historical_receipt(row["operation_uuid"]))
         authorization_uuid = authorization_uuid or row["authorization_uuid"]
         count = self.session.execute(
             "UPDATE financial_operations SET state=?, authorization_uuid=?, updated_at=?, "
@@ -79,6 +87,12 @@ class OperationsRepository:
         ).rowcount
         if count != 1:
             raise StateError("Transición concurrente o inválida.")
+
+    def has_historical_receipt(self, operation_uuid):
+        return self.session.execute(
+            "SELECT 1 FROM financial_authorizations WHERE business_id=? AND operation_uuid=? "
+            "AND kind='historical_unknown' LIMIT 1", (self.business_id, uuid_text(operation_uuid)),
+        ).fetchone() is not None
 
     def revoke_mandate(self, row, now):
         self.session.execute("UPDATE financial_authorizations SET revoked_at=? "

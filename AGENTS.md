@@ -1,5 +1,21 @@
 # AGENTS.md - Manual del proyecto Bynoesis
 
+## Orden vigente — exclusivamente Fase 1.9A
+
+0–1.8H validadas. Solo contratos puros y gobernanza de históricos, más guards
+mínimos de no promoción/no ejecución de historical_unknown. Ningún dato legacy
+real se lee/importa. Cinco flags OFF. No scanner, manifest durable, dry-run,
+epoch/fence, importer, backfill, reconciliación ni activación; no1.9B.
+Leer [orden](docs/architecture/FASE-1.9A-orden.md), [referencia](docs/architecture/FASE-1.9-plan.md),
+[ADR-014](docs/architecture/ADR-014-financial-history-contracts.md),
+[contrato](docs/architecture/FINANCIAL-HISTORY-v1.md) y [cierre](docs/architecture/FASE-1.9A-cierre.md).
+Los encabezados inferiores son históricos y no amplían la orden actual.
+Importable solo expresa coherencia local; no acredita fuentes ni concede autoridad.
+No convertir bits legacy ni candidato a céntimos en Money sin evidencia.
+Los tres v2 especiales son wrappers en memoria; no persistirlos con EconomicEvent.
+Candidato de factura v2 bloqueado hasta contrato raw de líneas/fiscal.
+Historical namespace/receipt jamás se aprueba/ejecuta como live.
+
 ## Orden vigente — exclusivamente Fase 1.8H
 
 Fases 0–1.8 implementadas; hardening 1.8H cerrado con B1–B5 PASS.
@@ -167,7 +183,7 @@ o cambiar algo de esa zona; si el cambio la contradice, actualízala en el mismo
 
 | Si el cambio toca… | Guía |
 |---|---|
-| Financial Core, `core/`, `economic_events/`, `financial_operations/`, `accounting/`, exactitud y repositorios financieros | [08 · Financial Core](docs/areas/08-financial-core.md) |
+| Financial Core, `core/`, `economic_events/`, `financial_operations/`, `financial_history/`, `accounting/`, exactitud y repositorios financieros | [08 · Financial Core](docs/areas/08-financial-core.md) |
 | Varias zonas, `web/server.py`, `web/deps.py`, `db.py` en general, `migrations.py`, `config.py` | [01 · Visión general](docs/areas/01-vision-general.md) |
 | `web/routers/pages.py`, `portal.py`, `gestoria*.py`, `admin.py`, `account.py` (alta y sesión), `web/templates/`, `web/static/`, `sales.py`, `economics*.py` | [02 · Ramas de la empresa](docs/areas/02-ramas-de-la-empresa.md) |
 | `web/chat.py`, `nlu.py`, `agent.py`, `tools.py`, `action_review.py`, `internal_brain.py`, `learning.py`, `local_invoice.py`, `intent_safety.py`, `web/whatsapp*.py`, `adapters/ai.py`, `adapters/transcription.py`, `adapters/extraction.py`, `documents/` (salvo `inbound_email.py`) | [03 · Cerebro](docs/areas/03-cerebro.md) |

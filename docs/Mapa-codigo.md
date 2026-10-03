@@ -1,5 +1,17 @@
 # Mapa de código
 
+## 2026-10-03 — Mapa de contratos históricos1.9A
+
+src/noesis/financial_history/: canonical.py (JSON/hash propios), money_evidence.py
+(raw exact/binario/unknown), payloads.py (wrapper version/origin/basis), contracts.py
+(clasificación, identidad, evidencia, fechas, candidatos, dependencias, incidencias,
+decisiones, contexto de auditoría). __init__.py no importa DB.
+financial_operations/historical.py: contrato/guards de no promoción/no ejecución;
+contracts/repository/service y economic_events/service aplican frontera común.
+Tests: test_financial_history.py y contratos compartidos Operations/Persistence
+para SQLite/PG. [ADR-014](architecture/ADR-014-financial-history-contracts.md).
+No reader/repository/importer histórico ni migración/canal/writer nuevo.
+
 ## 2026-10-03 — Hardening 1.8H B1–B5, cerrado
 
 La auditoría integral sobre main posterior a 1.8 confirma los cinco blockers;

@@ -1,5 +1,11 @@
 # ADR-006 · Identidad de operación, autorización y resultado durables
 
+## Continuidad 1.9A
+
+[ADR-014](ADR-014-financial-history-contracts.md) elimina promoción posterior de
+históricos: namespace/receipt bloquean autoridad live y ejecución. PREPARED no
+significa incorporación/efecto. Historical_unknown nunca recibe HUMAN/MANDATE.
+
 - Estado: aceptado por orden de ejecución de 1.2, 2-oct-2026.
 - Alcance: infraestructura interna; sin productores ni persistencia de Economic Events.
 - Especificación: [Financial Operations v1](FINANCIAL-OPERATIONS-v1.md).

@@ -1,5 +1,13 @@
 # Fase 1: referencia aprobada y autorización incremental
 
+## Continuidad autorizada 1.9A
+
+0–1.8H validadas; diseño1.9 aprobado como referencia; solo contratos/gobernanza A.
+[Referencia1.9](FASE-1.9-plan.md), [ordenA](FASE-1.9A-orden.md),
+[ADR-014](ADR-014-financial-history-contracts.md), [cierre](FASE-1.9A-cierre.md).
+No1.9B, datos reales, manifest/dry-run/fence/importer/reconciliación/activación.
+Cinco flags OFF. Alcances inferiores históricos o referencia futura.
+
 ## Orden vigente — exclusivamente Fase 1.8H
 
 Fases 0–1.8 implementadas; hardening 1.8H cerrado con B1–B5 PASS.

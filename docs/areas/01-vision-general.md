@@ -1,5 +1,14 @@
 # 01 · Visión general
 
+## Continuidad 1.9A — contratos históricos
+
+[ADR-014](../architecture/ADR-014-financial-history-contracts.md) añade módulo
+puro financial_history/ sin conexión/pool/repositorio y guards de autoridad
+en Operations/EE sobre infraestructura compartida. Schema intacto, flags OFF,
+ningún writer/canal nuevo. [Guía08](08-financial-core.md) y
+[contrato](../architecture/FINANCIAL-HISTORY-v1.md) rigen la zona. No1.9B.
+Encabezados inferiores describen entregas históricas.
+
 ## Orden vigente — exclusivamente Fase 1.8H
 
 Fases 0–1.8 implementadas; hardening 1.8H cerrado con B1–B5 PASS.

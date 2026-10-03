@@ -1,5 +1,20 @@
 ﻿# Registro de QA
 
+## 2026-10-03 — QA de contratos históricos1.9A
+
+Validación final: general1671 PASS (1321.144 s), dirigidas121 PASS (55.350 s),
+matrizPG251 PASS (101.202 s), Node9 y gates PASS; schema69, flags OFF.
+CicloSQLite0→69→0→69, migraciónPG32→69/36rutas y HTTPlocal200 PASS.
+24 criterios PASS, 0 FAIL; autoauditoría14 respuestas sin promoción/efecto.
+
+Fixtures sintéticos exclusivamente. Tests puros de categorías, identidad/raw,
+fechas, null/zero, v2 origin/version, privacidad/canonicalización y dependencias;
+regresiones compartidas Operations/EE SQLite/PG comprueban no promoción/noexecute,
+metadatos corruptos por SQL, receipts antiguos y callbacks sin invocar.
+V1 golden de once tipos y emisiónv2/legacy preservados. Suite/gates/migraciones y
+recuentos definitivos en [cierre](architecture/FASE-1.9A-cierre.md).
+No datos productivos ni pruebas Meta/AEAT/deployment/activación. Cinco flags OFF.
+
 ## 2026-10-03 — Hardening 1.8H B1–B5, cerrado
 
 La auditoría integral sobre main posterior a 1.8 confirma los cinco blockers;

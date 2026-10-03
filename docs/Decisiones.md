@@ -1,5 +1,15 @@
 # Decisiones
 
+## 2026-10-03 — ADR-014, contratos históricos1.9A
+
+A/B/C/D separados de disposition/severity; raw binary no es Money; NULL distinto
+zero; fechas sin zona/reloj inventados. Identidad propia por hecho/revisión/slot;
+factory anterior intacta. V2 históricos especiales solo wrapper puro; candidatos
+factura v2 bloqueados hasta raw por línea/fiscal. Padres B también bloquean hasta
+política explícita. Historical namespace/receipt nunca promocionan/ejecutan;
+PREPARED y actor original NULL. Cero migraciones; servicios rechazan metadatos SQL
+corruptos, sin afirmar nuevos guards SQL. [ADR](architecture/ADR-014-financial-history-contracts.md).
+
 ## 2026-10-03 — Hardening 1.8H B1–B5, cerrado
 
 La auditoría integral sobre main posterior a 1.8 confirma los cinco blockers;

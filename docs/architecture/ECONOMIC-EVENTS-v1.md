@@ -1,5 +1,13 @@
 # Economic Events: contrato v1
 
+## Adenda 1.9A — wrapper histórico en memoria
+
+Los tres v2 históricos especiales de recibida/gasto/import bancario se validan
+solo en financial_history.EventPayload con origin=historical, evidence_basis/hash
+y fecha original anulable. EconomicEvent durable todavía los rechaza; no ampliación
+schema69. V1 y emisión/rectificación v2 intactos. Candidato factura v2 bloqueado
+hasta raw de líneas/fiscal. [Contrato](FINANCIAL-HISTORY-v1.md), [ADR-014](ADR-014-financial-history-contracts.md).
+
 ## Conexión vigente de Fase 1.8
 
 Los contratos de esta entrega permanecen vigentes. Los cinco Capture se invocan

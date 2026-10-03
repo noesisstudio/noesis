@@ -1,5 +1,11 @@
 # 🧭 Bynoesis — Inicio
 
+## 2026-10-03 — Financial Core1.9A
+
+Solo contratos/gobernanza históricos; cero importaciones y cinco flags OFF.
+[Entrada](architecture/README.md), [contrato](architecture/FINANCIAL-HISTORY-v1.md),
+[cierre](architecture/FASE-1.9A-cierre.md). No1.9B ni activación.
+
 ## 2026-10-02 — Fase 1.8, canales financieros
 
 Solo integración de canales con los Capture existentes, sin 1.9 ni activación.

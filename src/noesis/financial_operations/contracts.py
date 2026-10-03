@@ -316,6 +316,8 @@ class Operation:
 
     @classmethod
     def from_row(cls, row):
+        if row.get("entry_namespace") == EntryNamespace.HISTORICAL.value and row["state"] in ("approved", "committed"):
+            raise StateError("Registro histórico no admite estado ejecutable.")
         request = FinancialRequest.from_canonical(row["request_canonical"])
         if request.request_hash != row["request_hash"]:
             raise ValueError("Huella del request persistido incoherente.")

@@ -16,6 +16,7 @@ from noesis.financial_operations.contracts import (
 )
 from noesis.financial_operations.repository import OperationsRepository
 from noesis.financial_operations.service import FinancialOperations
+from noesis.financial_operations.historical import ensure_not_historical_execution
 from .contracts import EconomicEvent, RelationType
 from .persistence import StoredEvent
 from .repository import EventsRepository
@@ -55,6 +56,8 @@ class EconomicEvents:
         if not auth:
             raise AccessDenied("Autorización durable requerida.")
         if origin == "live":
+            ensure_not_historical_execution(row["entry_namespace"],
+                                           has_history=repository.has_historical_receipt(uuid))
             if (
                 row["state"] not in (OperationState.APPROVED.value, OperationState.COMMITTED.value)
                 or auth["kind"] not in ("human_confirmation", "mandate")

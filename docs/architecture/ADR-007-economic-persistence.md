@@ -1,5 +1,10 @@
 # ADR-007 · Persistencia inmutable de Economic Events
 
+## Continuidad 1.9A
+
+[ADR-014](ADR-014-financial-history-contracts.md): contratos históricos puros,
+sin ampliación durable ni migración. EE rechaza autoridad live desde históricos.
+
 - Estado: aceptado para la orden expresa de 1.3, 2-oct-2026.
 - Base real: main posterior a 1.2, schema 62; siguiente migración disponible: 63.
 - Contratos: [eventos](ECONOMIC-EVENTS-v1.md), [operaciones](FINANCIAL-OPERATIONS-v1.md),

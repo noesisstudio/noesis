@@ -15,6 +15,7 @@ from .contracts import (
     Operation, OperationState, Principal, StateError, canonical_json, digest, positive_id, uuid_text,
 )
 from .repository import OperationsRepository
+from .historical import ensure_historical_authorization, ensure_not_historical_execution
 
 
 def _clock():
@@ -101,6 +102,8 @@ class FinancialOperations:
     def grant_mandate(self, principal, request, *, channel, expires_at, revision_reader=None):
         """Mandato humano previo, de alcance exacto por hash y con caducidad obligatoria."""
         channel = EntryNamespace(channel)
+        if channel == EntryNamespace.HISTORICAL:
+            raise StateError("Canal histórico no concede mandatos.")
         if not isinstance(request, FinancialRequest):
             raise TypeError("Request tipado requerido.")
         expires = _timestamp(expires_at)
@@ -135,6 +138,8 @@ class FinancialOperations:
             if guard is not None:
                 guard(session, None, "lock")
             row = repo.load(operation_uuid, principal.user_id)
+            ensure_historical_authorization(row["entry_namespace"], kind, channel,
+                                            has_history=repo.has_historical_receipt(operation_uuid))
             operation = Operation.from_row(row)
             request = operation.request
             guard = getattr(self, "_channel_guard", None)
@@ -196,6 +201,8 @@ class FinancialOperations:
             if guard is not None:
                 guard(session, None, "lock")
             row = repo.load(operation_uuid, principal.user_id)
+            ensure_not_historical_execution(row["entry_namespace"],
+                                           has_history=repo.has_historical_receipt(operation_uuid))
             operation = Operation.from_row(row)
             guard = getattr(self, "_channel_guard", None)
             if guard is not None:

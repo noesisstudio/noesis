@@ -1,5 +1,24 @@
 ﻿# Registro de cambios
 
+## 2026-10-03 — Contratos y gobernanza históricos1.9A
+
+Validación final: general1671 PASS (1321.144 s), dirigidas121 PASS (55.350 s),
+matrizPG251 PASS (101.202 s), Node9 y gates PASS; schema69, flags OFF.
+CicloSQLite0→69→0→69, migraciónPG32→69/36rutas y HTTPlocal200 PASS.
+24 criterios PASS, 0 FAIL; autoauditoría14 respuestas sin promoción/efecto.
+
+Objetivo: representar incertidumbre legacy sin certeza inventada. financial_history/
+y financial_operations/historical.py nuevos; Operations contracts/repository/service
+y EE service bloquean promoción/ejecución/autoridad live de históricos. Tests puros
+y compartidos SQLite/PG; ADR014, API, orden/referencia/cierre y foto/gobernanza.
+Cero migraciones/dependencias/writers/canales, schema69, flags OFF. No datos reales.
+Pruebas finales/gates en [cierre](architecture/FASE-1.9A-cierre.md).
+Límites: contratos no acreditan documentos externos; guard SQL nuevo pendiente;
+no candidato factura v2 sin raw por línea/fiscal. Diagnóstico por namespace/receipts,
+hash de evidencia y códigos cerrados. Rollback: revertir módulo puro si necesario,
+conservar guards de no autoridad histórica y evidencia existente; no bajar schema
+ni volver a promover histórico. Ningún backfill/activación ni1.9B.
+
 ## 2026-10-03 — Hardening 1.8H B1–B5, cerrado
 
 La auditoría integral sobre main posterior a 1.8 confirma los cinco blockers;

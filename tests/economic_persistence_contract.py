@@ -159,13 +159,15 @@ class EconomicPersistenceContract:
             )
         )
 
-    def operation(self, event, *, approved=True):
+    def operation(self, event, *, approved=True, historical=False):
         command = next(k for k, v in COMMANDS.items() if event.event_type.value in v)
         service = FinancialOperations(self.bid)
         request = FinancialRequest(
             command, event.source_id, event.amount, date(2026, 10, 2), None, "Fixture", {}
         )
-        op = service.prepare(self.principal, EntryIdentity.web_api(uuid4()), request)
+        identity = (EntryIdentity.historical(event.source_type.value, event.source_id, event.source_revision)
+                    if historical else EntryIdentity.web_api(uuid4()))
+        op = service.prepare(self.principal, identity, request)
         if approved:
             op = service.authorize(
                 self.principal,
@@ -780,7 +782,7 @@ class EconomicPersistenceContract:
 
     def test_historical_unknown_receipt_is_preserved_without_human_actor(self):
         event = self.make_event()
-        op = self.operation(event, approved=False)
+        op = self.operation(event, approved=False, historical=True)
         op = FinancialOperations(self.bid).authorize(
             self.principal,
             op.operation_uuid,
@@ -805,6 +807,24 @@ class EconomicPersistenceContract:
             ).fetchone()
         self.assertIsNone(auth["actor_user_id"])
         self.assertEqual(op.state.value, "prepared")
+
+    def test_historical_namespace_cannot_supply_live_event_authority(self):
+        event = self.make_event()
+        op = self.operation(event, approved=False, historical=True)
+        auth = str(uuid4())
+        with db.get_conn() as conn:
+            conn.execute("INSERT INTO financial_authorizations "
+                "(business_id,authorization_uuid,operation_uuid,kind,actor_user_id,recorded_by,actor_session_version,"
+                "validated_permission,approved_request_hash,channel,authorized_at) "
+                "VALUES (?,?,?,'human_confirmation',?,?,0,'financial.authorize',?,'web_api',?)",
+                (self.bid, auth, op.operation_uuid, self.principal.user_id, self.principal.user_id,
+                 op.request.request_hash, NOW.isoformat()))
+            conn.execute("UPDATE financial_operations SET state='approved',authorization_uuid=? "
+                         "WHERE business_id=? AND operation_uuid=?", (auth, self.bid, op.operation_uuid))
+        before = self.rows()
+        with self.assertRaises(StateError):
+            self.append(event, operation=op)
+        self.assertEqual(before, self.rows())
 
     def test_source_payload_parent_ids_are_checked(self):
         original = self.append(self.make_event(EventType.INVOICE_ISSUED))

@@ -1,5 +1,14 @@
 # Arquitectura
 
+## 2026-10-03 — Contratos históricos1.9A
+
+Monolito modular con infraestructura compartida. financial_history/ es un módulo
+puro, sin nuevo pool/repositorio/DB ni cambios de db.py. Evidencia no equivale a
+autoridad: raw→clasificación→candidato solo coherencia; persistencia/reconciliación
+posteriores deben acreditar fuentes. [ADR-014](architecture/ADR-014-financial-history-contracts.md)
+y [API](architecture/FINANCIAL-HISTORY-v1.md). Namespace/receipt históricos bloquean
+promoción/ejecución; PREPARED sin efecto. Cero DDL; cinco flags OFF. No1.9B.
+
 ## 2026-10-03 — Hardening 1.8H B1–B5, cerrado
 
 La auditoría integral sobre main posterior a 1.8 confirma los cinco blockers;

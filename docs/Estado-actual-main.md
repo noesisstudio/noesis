@@ -1,5 +1,21 @@
 # Estado actual del producto
 
+## 2026-10-03 — Fase 1.9A, contratos históricos
+
+Validación final: general1671 PASS (1321.144 s), dirigidas121 PASS (55.350 s),
+matrizPG251 PASS (101.202 s), Node9 y gates PASS; schema69, flags OFF.
+CicloSQLite0→69→0→69, migraciónPG32→69/36rutas y HTTPlocal200 PASS.
+24 criterios PASS, 0 FAIL; autoauditoría14 respuestas sin promoción/efecto.
+
+0–1.8H validadas; solo contratos/gobernanza A, no toda1.9. Módulo puro congelado,
+A/B/C/D, identidad estable, raw monetario, fechas y tres v2 históricos en memoria.
+Historical_unknown no se promueve ni ejecuta; cero migraciones, schema69,
+cinco flags OFF. No producción/scanner/manifest/dry-run/fence/importer/backfill/
+reconciliación/activación ni1.9B. Validación y límites en
+[cierre](architecture/FASE-1.9A-cierre.md), API en [contrato](architecture/FINANCIAL-HISTORY-v1.md).
+Encabezados inferiores son históricos. Publicación/deployment se acreditan por
+separado; no inferirlos de este cierre local.
+
 ## 2026-10-03 — Hardening 1.8H B1–B5, cerrado
 
 La auditoría integral sobre main posterior a 1.8 confirma los cinco blockers;

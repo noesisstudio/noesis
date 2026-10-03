@@ -1,5 +1,11 @@
 # ADR-002 · Hechos económicos separados de acontecimientos operativos
 
+## Continuidad 1.9A
+
+[ADR-014](ADR-014-financial-history-contracts.md) define evidencia/clasificación e
+identidad históricas puras; mantiene separación de eventos operativos/económicos.
+V2 históricos especiales solo wrapper, no catálogo durable ni productores nuevos.
+
 ## Conexión vigente de Fase 1.8
 
 Los contratos de esta entrega permanecen vigentes. Los cinco Capture se invocan

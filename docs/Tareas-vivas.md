@@ -1,5 +1,15 @@
 # Tareas vivas
 
+## 2026-10-03 — Continuidad después de contratos1.9A
+
+1.9B no autorizada. Pendientes: reader que acredite referencias/revisiones,
+raw por línea/fiscal antes de candidatos factura v2, manifest persistente,
+acceso histórico auditado, guards durables, corte/epoch/fence efectivo,
+dry-run, importer sin writers, reanudación/drift, copia restaurada1.9F y
+reconciliación. [Referencia](architecture/FASE-1.9-plan.md) no autoriza ejecutarlos.
+Importable local no acredita esas verificaciones. Flags OFF; retención/acceso
+finales y activación1.10 requieren otra orden. Deudas previas intactas.
+
 ## 2026-10-03 — Hardening 1.8H B1–B5, cerrado
 
 La auditoría integral sobre main posterior a 1.8 confirma los cinco blockers;

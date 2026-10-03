@@ -1,5 +1,15 @@
 # Financial Operations v1 — infraestructura de Fase 1.2
 
+## Adenda 1.9A — histórico no ejecutable
+
+[ADR-014](ADR-014-financial-history-contracts.md) supersede la promoción posterior
+indicada en el contrato inicial. Namespace historical o receipt histórico previo
+bloquean HUMAN/MANDATE, APPROVED/COMMITTED y execute, incluso ante metadatos SQL
+inconsistentes. Actor/session originales NULL, recorded_by autenticado separado,
+historical.record, PREPARED con salida REJECTED/CANCELLED. Sin migración/estado
+nuevo. Acceso ordinario conserva creador/sesión; contexto audit futuro solo contrato.
+Otra acción exige operación live independiente, nunca promoción del antecedente.
+
 ## Adenda vigente 1.8H
 
 [ADR-013](ADR-013-financial-hardening.md) corrige los defects auditados sin
@@ -186,7 +196,7 @@ antes de aprobar y antes del efecto. No convertir un flag legacy de automatizaci
 en mandato ni permitir variaciones de importe/fecha sin otra aprobación.
 Procedencia histórica desconocida: actor original/session null, recorded_by
 autenticado separado, permiso historical.record, canal historical; **no approved**.
-Una aprobación humana posterior crea otro recibo; preserva el histórico desconocido.
+Una acción humana posterior exige otra operación live independiente; nunca promueve la operación histórica (adenda1.9A).
 
 Cambio de sesión/usuario suspendido invalida accesos antiguos y aprobación previa;
 no hay renovación silenciosa. Nueva sesión permite leer según política vigente;

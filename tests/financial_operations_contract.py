@@ -185,14 +185,91 @@ class OperationsContract:
             self.service.execute(self.principal, op.operation_uuid, self.effect)
         self.service.finish_without_effect(self.principal, op.operation_uuid, OperationState.CANCELLED)
 
-    def test_unknown_history_can_receive_new_explicit_approval(self):
-        op = self.reserve()
+    def test_unknown_history_cannot_receive_new_explicit_approval(self):
+        op = self.reserve(identity=EntryIdentity.historical("expense", 1, 2))
         unknown = self.service.authorize(self.principal, op.operation_uuid, channel="historical",
             approved_hash=self.request.request_hash, approved_revision=None,
             kind=AuthorizationKind.HISTORICAL_UNKNOWN)
-        human = self.approved()
-        self.assertNotEqual(unknown.authorization_uuid, human.authorization_uuid)
-        self.service.execute(self.principal, op.operation_uuid, self.effect)
+        for kind in (AuthorizationKind.HUMAN, AuthorizationKind.MANDATE):
+            with self.subTest(kind=kind), self.assertRaises(StateError):
+                self.service.authorize(self.principal, op.operation_uuid, channel="web_api",
+                    approved_hash=self.request.request_hash, approved_revision=None, kind=kind)
+        self.assertEqual(self.service.recover(self.principal, op.operation_uuid).authorization_uuid,
+                         unknown.authorization_uuid)
+        self.assertEqual(self.count_effects(), 0)
+
+    def test_historical_namespace_is_non_executable_even_before_receipt(self):
+        op = self.reserve(identity=EntryIdentity.historical("expense", 1, 3))
+        validator = lambda *_: self.fail("No invocar callbacks de ejecución histórica")
+        with self.assertRaises(StateError):
+            self.service.execute(self.principal, op.operation_uuid, validator, request_validator=validator)
+        with self.assertRaises(StateError):
+            self.service.authorize(self.principal, op.operation_uuid, channel="historical",
+                approved_hash=self.request.request_hash, approved_revision=None)
+        with self.assertRaises(StateError):
+            self.service.grant_mandate(self.principal, self.request, channel="historical",
+                expires_at=datetime.now(timezone.utc)+timedelta(days=1))
+
+    def test_historical_receipt_requires_historical_namespace(self):
+        op = self.reserve()
+        with self.assertRaises(StateError):
+            self.service.authorize(self.principal, op.operation_uuid, channel="historical",
+                approved_hash=self.request.request_hash, approved_revision=None,
+                kind=AuthorizationKind.HISTORICAL_UNKNOWN)
+        self.assertIsNone(self.service.recover(self.principal, op.operation_uuid).authorization_uuid)
+
+    def test_repository_cannot_promote_historical_operation(self):
+        op = self.reserve(identity=EntryIdentity.historical("expense", 1, 4))
+        with self.service._transaction(self.principal) as (_, repo):
+            row = repo.load(op.operation_uuid, self.principal.user_id)
+            for state in (OperationState.APPROVED, OperationState.COMMITTED):
+                with self.subTest(state=state), self.assertRaises(StateError):
+                    repo.transition(row, state, datetime.now(timezone.utc).isoformat())
+            with self.assertRaises(StateError):
+                repo.add_authorization(operation_uuid=op.operation_uuid, kind=AuthorizationKind.HUMAN,
+                    actor=self.principal.user_id, recorded_by=self.principal.user_id,
+                    session_version=0, request=self.request, channel=EntryNamespace.WEB_API,
+                    permission="financial.authorize", now=datetime.now(timezone.utc).isoformat())
+
+    def test_old_historical_receipt_in_ordinary_namespace_never_promotes(self):
+        # Fixture compatible con lo que permitía 1.2; no reescribir datos antiguos.
+        op = self.reserve()
+        authorization = str(uuid4())
+        with db.get_conn() as conn:
+            conn.execute("INSERT INTO financial_authorizations "
+                "(business_id, authorization_uuid, operation_uuid, kind, recorded_by, "
+                "validated_permission, approved_request_hash, channel, authorized_at) "
+                "VALUES (?, ?, ?, 'historical_unknown', ?, 'historical.record', ?, 'historical', ?)",
+                (self.business['id'], authorization, op.operation_uuid, self.principal.user_id,
+                 op.request.request_hash, datetime.now(timezone.utc).isoformat()))
+            conn.execute("UPDATE financial_operations SET authorization_uuid=? WHERE business_id=? AND operation_uuid=?",
+                         (authorization, self.business['id'], op.operation_uuid))
+        with self.assertRaises(StateError):
+            self.approved()
+        with self.assertRaises(StateError):
+            self.service.execute(self.principal, op.operation_uuid, self.effect)
+        self.assertEqual(self.count_effects(), 0)
+
+    def test_immutable_historical_namespace_blocks_execution_after_direct_sql_promotion(self):
+        # SQL no autorizado puede almacenar una transición que schema69 no prohíbe.
+        # El namespace inmutable impide que esa fila llegue al ejecutor/callback.
+        op = self.reserve(identity=EntryIdentity.historical("expense", 1, 5))
+        authorization = str(uuid4())
+        with db.get_conn() as conn:
+            conn.execute("INSERT INTO financial_authorizations "
+                "(business_id, authorization_uuid, operation_uuid, kind, actor_user_id, recorded_by, "
+                "actor_session_version, validated_permission, approved_request_hash, channel, authorized_at) "
+                "VALUES (?, ?, ?, 'human_confirmation', ?, ?, 0, 'financial.authorize', ?, 'web_api', ?)",
+                (self.business['id'], authorization, op.operation_uuid, self.principal.user_id,
+                 self.principal.user_id, op.request.request_hash, datetime.now(timezone.utc).isoformat()))
+            conn.execute("UPDATE financial_operations SET state='approved',authorization_uuid=? "
+                         "WHERE business_id=? AND operation_uuid=?", (authorization, self.business['id'], op.operation_uuid))
+        with self.assertRaises(StateError):
+            self.service.recover(self.principal, op.operation_uuid)
+        with self.assertRaises(StateError):
+            self.service.execute(self.principal, op.operation_uuid, self.effect,
+                                 request_validator=lambda *_: self.fail("No llamar al validador"))
+        self.assertEqual(self.count_effects(), 0)
 
     def test_mandate_exact_scope_and_revocation(self):
         mandate = self.service.grant_mandate(self.principal, self.request, channel="web_api",

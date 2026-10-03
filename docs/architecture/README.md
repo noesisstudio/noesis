@@ -1,5 +1,14 @@
 # Financial Core: punto de entrada y continuidad
 
+## Orden vigente — exclusivamente Fase 1.9A
+
+Contratos puros de históricos y guards mínimos de autoridad; cero migraciones.
+Cinco flags OFF. No scanner/manifest/dry-run/epoch/fence/importer/backfill/
+reconciliación/activación ni1.9B. Solo fixtures sintéticos.
+Leer [orden](FASE-1.9A-orden.md), [referencia1.9](FASE-1.9-plan.md),
+[ADR-014](ADR-014-financial-history-contracts.md), [contrato](FINANCIAL-HISTORY-v1.md)
+y [cierre](FASE-1.9A-cierre.md). Alcance inferior histórico, no orden actual.
+
 ## Orden vigente — exclusivamente Fase 1.8H
 
 Fases 0–1.8 implementadas; hardening 1.8H cerrado con B1–B5 PASS.
@@ -105,6 +114,7 @@ especializada; ninguna especificación interna certifica cumplimiento.
 | [009](ADR-009-invoice-capture.md) | Productor único de emisión, autorización exacta, cobertura diferida y replay |
 | [010](ADR-010-payment-bank-capture.md) | Cobro real, identidad bancaria, vínculo durable y match como evidencia |
 | [011](ADR-011-purchasing-capture.md) | Recibidas/gastos, continuidad por revisión y conservación lógica |
+| [014](ADR-014-financial-history-contracts.md) | Históricos puros, incertidumbre explícita, identidad y no autoridad ejecutable |
 
 ## Secuencia y límites de fase
 
