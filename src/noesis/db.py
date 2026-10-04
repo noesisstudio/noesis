@@ -112,7 +112,14 @@ class Connection:
             if sql.strip().upper() == "BEGIN IMMEDIATE":
                 sql = "SELECT 1"
             sql = sql.replace("?", "%s")
-        return Cursor(self.raw.execute(sql, params))
+        try:
+            return Cursor(self.raw.execute(sql, params))
+        except Exception as exc:
+            from .financial_history.fence import translate
+            converted = translate(exc)
+            if converted is not None:
+                raise converted from exc
+            raise
 
     def executescript(self, script: str) -> None:
         if self.dialect == "sqlite":
@@ -134,7 +141,14 @@ class Connection:
             sql = sql.replace("?", "%s")
         else:
             params = tuple(format(v, "f") if isinstance(v, Decimal) else v for v in params)
-        return Cursor(self.raw.execute(sql, params), normalise=False)
+        try:
+            return Cursor(self.raw.execute(sql, params), normalise=False)
+        except Exception as exc:
+            from .financial_history.fence import translate
+            converted = translate(exc)
+            if converted is not None:
+                raise converted from exc
+            raise
 
     def commit(self) -> None:
         self.raw.commit()
@@ -3123,6 +3137,8 @@ def update_branding(business_id, *, template=None, brand_color=None,
         return get_business(business_id)
     with get_conn() as conn:
         conn.execute("BEGIN IMMEDIATE")
+        from .financial_history.fence import assert_writable
+        assert_writable(conn, business_id)
         lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
         existing = conn.execute(
             "SELECT * FROM businesses WHERE id=?" + lock, (business_id,)
@@ -5502,6 +5518,8 @@ def add_invoice_series(
     if not 2 <= padding <= 8:
         raise ValueError("La longitud de numeración debe estar entre 2 y 8.")
     with get_conn() as conn:
+        from .financial_history.fence import assert_writable
+        assert_writable(conn, business_id)
         row = conn.execute(
             "INSERT INTO invoice_series "
             "(business_id, code, name, document_type, prefix_template, padding, "
@@ -5678,6 +5696,8 @@ def update_rectifying_invoice_draft(
 
     with get_conn() as conn:
         conn.execute("BEGIN IMMEDIATE")
+        from .financial_history.fence import assert_writable
+        assert_writable(conn, business_id)
         lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
         current = conn.execute(
             "SELECT * FROM invoices WHERE id=? AND business_id=?" + lock,
@@ -5894,6 +5914,8 @@ def create_partial_invoice(business_id: int, *, client_id=None, client_name=None
     totals = _partial_totals(amount, vat_rate, irpf_rate)
     nombre = (client_name or "").strip()[:200] or None
     with get_conn() as conn:
+        from .financial_history.fence import assert_writable
+        assert_writable(conn, business_id)
         series = _ensure_default_invoice_series(
             conn, business_id, _series_document_type("F1"))
         row = conn.execute(
@@ -5948,6 +5970,8 @@ def complete_invoice_fields(invoice_id: int, business_id: int, *, client_id=None
             irpf_rate=invoice.get("irpf_rate") or 0,
         )
         with get_conn() as conn:
+            from .financial_history.fence import assert_writable
+            assert_writable(conn, business_id)
             conn.execute(
                 "UPDATE invoices SET pending_fields=NULL, recipient_name=NULL "
                 "WHERE id=? AND business_id=?", (invoice_id, business_id))
@@ -5956,6 +5980,8 @@ def complete_invoice_fields(invoice_id: int, business_id: int, *, client_id=None
                              invoice.get("irpf_rate"))
     nombre = (client_name or "").strip()[:200] or invoice.get("recipient_name")
     with get_conn() as conn:
+        from .financial_history.fence import assert_writable
+        assert_writable(conn, business_id)
         conn.execute(
             "UPDATE invoices SET client_id=?, concept=?, base=?, vat_amount=?, "
             "irpf_amount=?, total=?, recipient_name=?, pending_fields=?, "
@@ -6040,6 +6066,8 @@ def update_invoice_draft(
         concept = f"{concept} y {len(normalized) - 1} línea(s) más"
     with get_conn() as conn:
         conn.execute("BEGIN IMMEDIATE")
+        from .financial_history.fence import assert_writable
+        assert_writable(conn, business_id)
         lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
         current = conn.execute(
             "SELECT * FROM invoices WHERE id=? AND business_id=?" + lock,
@@ -6216,6 +6244,8 @@ def add_recurring_invoice(
     _invoice_totals(normalized, irpf_rate)
     now = _now()
     with get_conn() as conn:
+        from .financial_history.fence import assert_writable
+        assert_writable(conn, business_id)
         if series_id is not None:
             series = conn.execute(
                 "SELECT * FROM invoice_series WHERE id=? AND business_id=? "
@@ -6283,6 +6313,8 @@ def set_recurring_invoice_status(
     if status not in {"active", "paused", "ended"}:
         raise ValueError("El estado de la programación no es válido.")
     with get_conn() as conn:
+        from .financial_history.fence import assert_writable
+        assert_writable(conn, business_id)
         cursor = conn.execute(
             "UPDATE recurring_invoices SET status=?, updated_at=? "
             "WHERE id=? AND business_id=?",
@@ -6314,6 +6346,9 @@ def process_due_recurring_invoices(*, today: date | None = None, limit: int = 10
             if result.legacy is not None:
                 generated.append(result.legacy_value())
         except Exception as exc:  # noqa: BLE001 - fallo trazable y reintentable tras rollback completo.
+            from .financial_history.fence import HistoricalFenceActive
+            if isinstance(exc, HistoricalFenceActive):
+                continue
             with get_conn() as conn:
                 conn.execute("INSERT INTO recurring_invoice_runs (business_id,recurring_id,scheduled_for,status,created_at,error) VALUES (?,?,?,'error',?,?) ON CONFLICT (business_id,recurring_id,scheduled_for) DO UPDATE SET status='error',error=excluded.error WHERE recurring_invoice_runs.invoice_id IS NULL", (schedule["business_id"],schedule["id"],schedule["next_run_on"],_now(),str(exc)[:1500]))
             log.exception("No se pudo generar la factura recurrente %s", schedule["id"])
@@ -6404,6 +6439,8 @@ def set_series_next_number(
 
     with get_conn() as conn:
         conn.execute("BEGIN IMMEDIATE")
+        from .financial_history.fence import assert_writable
+        assert_writable(conn, business_id)
         series = conn.execute(
             "SELECT * FROM invoice_series WHERE id=? AND business_id=?",
             (series_id, business_id),
@@ -6904,6 +6941,8 @@ def mark_invoice_paid(invoice_id, business_id, *, capture_requested=False) -> di
 
 def delete_invoice(invoice_id, business_id) -> bool:
     with get_conn() as conn:
+        from .financial_history.fence import assert_writable
+        assert_writable(conn, business_id)
         cur = conn.execute(
             "DELETE FROM invoices WHERE id=? AND business_id=? AND status='borrador'",
             (invoice_id, business_id),
@@ -7047,6 +7086,7 @@ def list_verifactu_outbox(
 def enqueue_missing_verifactu_records(now: str | None = None) -> int:
     """Crea la cola pendiente para registros anteriores al despliegue de fase 2."""
     created_at = now or _now()
+    from .financial_history.fence import available_predicate
     with get_conn() as conn:
         cursor = conn.execute(
             "INSERT INTO verifactu_outbox "
@@ -7055,7 +7095,8 @@ def enqueue_missing_verifactu_records(now: str | None = None) -> int:
             "SELECT r.business_id, r.invoice_id, r.id, 'pendiente', 0, ?, ?, ?, ? "
             "FROM invoice_records r "
             "JOIN businesses b ON b.id=r.business_id "
-            "WHERE b.verifactu_enabled=TRUE AND NOT EXISTS ("
+            "WHERE b.verifactu_enabled=TRUE AND "
+            + available_predicate(conn, "r.business_id") + " AND NOT EXISTS ("
             "SELECT 1 FROM verifactu_outbox o "
             "WHERE o.business_id=r.business_id AND o.record_id=r.id)",
             (
@@ -7072,6 +7113,7 @@ def claim_next_verifactu_submission(
     *, now: str, stale_before: str
 ) -> dict | None:
     """Reserva un registro vencido; Postgres evita dobles envíos con SKIP LOCKED."""
+    from .financial_history.fence import available_predicate
     with get_conn() as conn:
         conn.execute("BEGIN IMMEDIATE")
         suffix = " FOR UPDATE SKIP LOCKED" if conn.dialect == "postgres" else ""
@@ -7079,7 +7121,7 @@ def claim_next_verifactu_submission(
             "SELECT * FROM verifactu_outbox WHERE attempts<max_attempts AND "
             "((status='pendiente' AND next_attempt_at<=?) OR "
             "(status='enviado' AND locked_at<=?)) "
-            "ORDER BY next_attempt_at, id LIMIT 1" + suffix,
+            "AND " + available_predicate(conn, "verifactu_outbox.business_id") + " ORDER BY next_attempt_at, id LIMIT 1" + suffix,
             (now, stale_before),
         ).fetchone()
         if not row:
@@ -7209,6 +7251,7 @@ def postpone_verifactu_submissions(until: str, updated_at: str) -> int:
 def claim_next_verifactu_cancellation_submission(
     *, now: str, stale_before: str
 ) -> dict | None:
+    from .financial_history.fence import available_predicate
     with get_conn() as conn:
         conn.execute("BEGIN IMMEDIATE")
         suffix = " FOR UPDATE SKIP LOCKED" if conn.dialect == "postgres" else ""
@@ -7217,7 +7260,7 @@ def claim_next_verifactu_cancellation_submission(
             "WHERE attempts<max_attempts AND "
             "((status='pendiente' AND next_attempt_at<=?) OR "
             "(status='enviado' AND locked_at<=?)) "
-            "ORDER BY next_attempt_at, id LIMIT 1" + suffix,
+            "AND " + available_predicate(conn, "verifactu_cancellation_outbox.business_id") + " ORDER BY next_attempt_at, id LIMIT 1" + suffix,
             (now, stale_before),
         ).fetchone()
         if not row:
@@ -9669,6 +9712,8 @@ def accept_quote(quote_id, business_id, *, decision_source="owner",
     negocio: si el presupuesto no es de ese negocio, no hace nada."""
     with get_conn() as conn:
         conn.execute("BEGIN IMMEDIATE")
+        from .financial_history.fence import assert_writable
+        assert_writable(conn, business_id)
         lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
         q = conn.execute(
             "SELECT * FROM quotes WHERE id=? AND business_id=?" + lock,
@@ -13479,6 +13524,8 @@ def admin_update_document_metadata(
 
     with get_conn() as conn:
         conn.execute("BEGIN IMMEDIATE")
+        from .financial_history.fence import assert_writable
+        assert_writable(conn, business_id)
         grant = _support_grant_with_scope(
             conn, business_id, "document_metadata", now
         )
@@ -13580,6 +13627,8 @@ def admin_update_document_metadata(
             },
         )
     with get_conn() as conn:
+        from .financial_history.fence import assert_writable
+        assert_writable(conn, business_id)
         saved = conn.execute(
             "SELECT * FROM documents WHERE id=? AND business_id=?",
             (document_id, business_id),
@@ -13943,19 +13992,13 @@ def delete_client_cascade(client_id, business_id) -> bool:
     client = get_client(client_id, business_id)
     if not client:
         return False
-    # Borra antes los ficheros físicos de los documentos del cliente (derecho al olvido).
     from .documents import repo as _docrepo, storage as _docstore
+    stored_names = _docrepo.stored_names_for_client(business_id, client_id)
     with get_conn() as conn:
-        conn.execute(
-            "UPDATE job_updates SET document_id=NULL WHERE business_id=? "
-            "AND document_id IN (SELECT id FROM documents WHERE business_id=? "
-            "AND client_id=?)",
-            (business_id, business_id, client_id),
-        )
-    for stored in _docrepo.stored_names_for_client(business_id, client_id):
-        _docstore.delete(business_id, stored)
-    _docrepo.purge_for_client(business_id, client_id)
-    with get_conn() as conn:
+        from .financial_history.fence import assert_writable
+        assert_writable(conn, business_id)
+        conn.execute("UPDATE job_updates SET document_id=NULL WHERE business_id=? AND document_id IN (SELECT id FROM documents WHERE business_id=? AND client_id=?)", (business_id,business_id,client_id))
+        conn.execute("DELETE FROM documents WHERE business_id=? AND client_id=?", (business_id,client_id))
         issued = conn.execute(
             "SELECT COUNT(*) AS total FROM invoices WHERE business_id=? AND client_id=? "
             "AND status IN ('enviada','parcial','cobrada')",
@@ -14025,12 +14068,16 @@ def delete_client_cascade(client_id, business_id) -> bool:
                 "DELETE FROM clients WHERE id=? AND business_id=?",
                 (client_id, business_id),
             )
+    for stored in stored_names:
+        _docstore.delete(business_id, stored)
     return True
 
 
 def delete_business_cascade(business_id) -> bool:
     """Borra una cuenta entera y todos sus datos (baja RGPD del autónomo)."""
     with get_conn() as conn:
+        from .financial_history.fence import assert_writable
+        assert_writable(conn, business_id)
         issued = conn.execute(
             "SELECT COUNT(*) AS total FROM invoices WHERE business_id=? "
             "AND status IN ('enviada','parcial','cobrada')",
@@ -14043,6 +14090,7 @@ def delete_business_cascade(business_id) -> bool:
             )
         # La baja no destruye evidencia durable del núcleo financiero.
         for financial_table in ("financial_channel_proposals", "financial_channel_receipts", "financial_operations", "financial_authorizations",
+                                "financial_history_epochs", "financial_history_control", "financial_history_cut_manifests", "financial_history_epoch_audit",
                                 "financial_history_manifests", "financial_history_items",
                                 "financial_history_incidences", "financial_history_decisions",
                                 "economic_events", "economic_event_links",

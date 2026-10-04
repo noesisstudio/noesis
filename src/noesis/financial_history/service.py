@@ -65,10 +65,7 @@ class HistoryDiagnostics:
         if environment_identity is not None and (not isinstance(environment_identity, str) or len(environment_identity) > 128):
             raise ValueError('Identidad de copia acotada requerida, sin credenciales/URLs.')
         with self._session(principal) as session:
-            if migrations.current_version_connection(session.borrowed_connection) != 70:
-                raise ValueError('Esquema70 requerido para diagnóstico1.9B.')
-            repo = HistoryRepository(session, self.business_id, manifest_uuid)
-            manifest = repo.create(principal, repository_version, environment_identity, stamp())
+            manifest = self._create(session, principal, manifest_uuid, repository_version, environment_identity)
         if manifest['status'] == 'frozen':
             return manifest
         observed_at = instant(datetime.fromisoformat(str(manifest['started_at'])))
@@ -78,7 +75,7 @@ class HistoryDiagnostics:
                 after = None
                 while True:
                     with self._session(principal) as session:
-                        sources = RawReader(session, self.business_id, page_size=self.page_size).page(kind, after)
+                        sources = self._reader(session).page(kind, after)
                         if not sources:
                             break
                         retry_drift |= HistoryRepository(session, self.business_id, manifest_uuid).insert_sources(sources)
@@ -108,12 +105,15 @@ class HistoryDiagnostics:
             after = None
             while True:
                 with self._session(principal) as session:
-                    sources = RawReader(session, self.business_id, page_size=self.page_size).page(kind, after)
+                    sources = self._reader(session).page(kind, after)
                 if not sources:
                     break
                 for source in sources:
                     hash_source(comparison, source)
                 after = sources[-1].key
+        return self._complete(principal, manifest_uuid, comparison.hexdigest(), retry_drift)
+
+    def _complete(self, principal, manifest_uuid, comparison_hash, retry_drift):
         with self._session(principal) as session:
             repo = HistoryRepository(session, self.business_id, manifest_uuid)
             if retry_drift:
@@ -121,7 +121,19 @@ class HistoryDiagnostics:
                 row = session.execute('SELECT item_uuid,raw_hash FROM financial_history_items WHERE business_id=? AND manifest_uuid=? ORDER BY item_uuid LIMIT 1', repo.scope).fetchone()
                 if row:
                     repo.incidence(str(row['item_uuid']), IncidenceCode.SOURCE_DRIFT, row['raw_hash'])
-            return repo.finish(comparison.hexdigest())
+            return self._finish(session, repo, comparison_hash, principal)
+
+    def _create(self, session, principal, manifest_uuid, repository_version, environment_identity):
+        if migrations.current_version_connection(session.borrowed_connection) not in (70, 71):
+            raise ValueError('Esquema70/71 requerido para diagnóstico1.9B.')
+        return HistoryRepository(session, self.business_id, manifest_uuid).create(
+            principal, repository_version, environment_identity, stamp())
+
+    def _reader(self, session):
+        return RawReader(session, self.business_id, page_size=self.page_size)
+
+    def _finish(self, session, repo, comparison_hash, principal):
+        return repo.finish(comparison_hash)
 
     def _plan(self, repo, rows, kind, slot, observed_at):
         context = repo.context(rows) if kind in PRIMARY else DiagnosticContext()

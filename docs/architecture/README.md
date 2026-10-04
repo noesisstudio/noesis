@@ -1,5 +1,17 @@
 # Financial Core: punto de entrada y continuidad
 
+## 2026-10-04 — Fase1.9C: epoch/T0/fence (validación final en curso)
+
+Únicamente corte consistente por negocio, control durable y nuevo sobre de
+inventory certificable, siempre eligible_for_import=false. Schema71, flags OFF.
+[ADR016](ADR-016-financial-history-cutoff.md), [contrato](FINANCIAL-HISTORY-CUTOFF-v1.md),
+[writers previos](FASE-1.9C-writers.md), [cierre](FASE-1.9C-cierre.md).
+SQL/application guard por tenant y TX prestada; no promoteB ni histórico EE/Operations/
+v2/importer/reconciliación/activación.1.9D NO autorizada. Pruebas SQLite/PG sintéticas,
+ninguna producción consultada. Invalidated conserva fence, release explícito pierde
+boundary; TTL/crash no liberan. Encabezados inferiores conservan historia.
+
+
 ## Orden vigente — exclusivamente Fase1.9B
 
 0–1.8H y1.9A aceptadas. Solo inventario histórico/dry-run diagnóstico persistente,

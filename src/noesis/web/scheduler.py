@@ -724,12 +724,19 @@ def process_verifactu_outbox(limit: int = 25) -> int:
             )
             log.error("%s negocio=%s", error, item["business_id"])
             break
-        db.record_verifactu_submission_attempt(
-            item["id"], now.isoformat(timespec="seconds")
-        )
         try:
-            result = verifactu_client.submit_records(business, [record])
-        except verifactu_client.VerifactuTransportError as exc:
+            db.record_verifactu_submission_attempt(
+                item["id"], now.isoformat(timespec="seconds")
+            )
+            from ..financial_history.fence import external_guard
+            with external_guard(item['business_id']):
+                result = verifactu_client.submit_records(business, [record])
+        except Exception as exc:
+            from ..financial_history.fence import HistoricalFenceActive
+            if isinstance(exc, HistoricalFenceActive):
+                continue
+            if not isinstance(exc, verifactu_client.VerifactuTransportError):
+                raise
             delay = min(
                 config.VERIFACTU_RETRY_MAX_SECONDS,
                 config.VERIFACTU_RETRY_BASE_SECONDS
@@ -807,12 +814,19 @@ def process_verifactu_outbox(limit: int = 25) -> int:
                 updated_at=now.isoformat(timespec="seconds"),
             )
             break
-        db.record_verifactu_cancellation_attempt(
-            item["id"], now.isoformat(timespec="seconds")
-        )
         try:
-            result = verifactu_client.submit_records(business, [record])
-        except verifactu_client.VerifactuTransportError as exc:
+            db.record_verifactu_cancellation_attempt(
+                item["id"], now.isoformat(timespec="seconds")
+            )
+            from ..financial_history.fence import external_guard
+            with external_guard(item['business_id']):
+                result = verifactu_client.submit_records(business, [record])
+        except Exception as exc:
+            from ..financial_history.fence import HistoricalFenceActive
+            if isinstance(exc, HistoricalFenceActive):
+                continue
+            if not isinstance(exc, verifactu_client.VerifactuTransportError):
+                raise
             delay = min(
                 config.VERIFACTU_RETRY_MAX_SECONDS,
                 config.VERIFACTU_RETRY_BASE_SECONDS

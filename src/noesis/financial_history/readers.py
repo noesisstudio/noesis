@@ -86,13 +86,14 @@ class RawSource(CanonicalContract):
 
 
 class RawReader:
-    def __init__(self, connection, business_id, *, page_size=64):
+    def __init__(self, connection, business_id, *, page_size=64, cut_scope=False):
         self.connection = connection.borrowed_connection if isinstance(connection, FinancialSession) else connection
         self.business_id = positive_id(business_id)
         if type(page_size) is not int or not 1 <= page_size <= 256:
             raise ValueError('Página de 1 a256 filas requerida.')
         self.page_size = page_size
         self.query_count = 0
+        self.cut_scope = cut_scope
 
     def page(self, source_kind, after=None):
         spec = SOURCES[source_kind]
@@ -111,6 +112,8 @@ class RawReader:
         tenant_column = 'id' if source_kind == 'scope_anchor' else 'business_id'
         sql = f'SELECT {",".join(columns)} FROM {spec.table} WHERE {tenant_column}=?'
         params = [self.business_id]
+        if self.cut_scope and source_kind == 'invoice_event':
+            sql += " AND event_type NOT IN ('remision','aceptacion','rechazo')"
         if after is not None:
             if len(after) != len(spec.keys):
                 raise ValueError('Cursor incompatible.')
@@ -125,6 +128,10 @@ class RawReader:
     def _source(self, source_kind, row):
         spec = SOURCES[source_kind]
         fields = {key: minimal(row[key]) for key in spec.fields}
+        if self.cut_scope:
+            from .cut_scope import TRANSPORT_FIELDS, TRANSPORT_KINDS
+            if source_kind in TRANSPORT_KINDS:
+                fields.update(dict.fromkeys(TRANSPORT_FIELDS))
         if source_kind == 'document_profile':
             # Contraste del snapshot de perfil existente sin persistir sus blobs.
             profile = {key:minimal(row[key]) for key in ('business_id',*spec.fields,*spec.hashed)}

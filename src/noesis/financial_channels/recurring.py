@@ -68,27 +68,32 @@ def occurrence_for_invoice(bid, invoice_id, *, session=None, validate=True):
 def process_due(*, today=None, limit=100):
     from noesis.financial_writers import recurring
 
+    from noesis.financial_history.fence import available_predicate, HistoricalFenceActive
     today = today or date.today()
     with db.get_conn() as conn:
         rows = conn.execute(
-            "SELECT * FROM recurring_invoices WHERE status='active' AND next_run_on<=? "
+            "SELECT r.* FROM recurring_invoices r WHERE status='active' AND next_run_on<=? AND "
+            + available_predicate(conn, "r.business_id") + " "
             "ORDER BY next_run_on,id LIMIT ?",
             (today.isoformat(), max(1, min(int(limit), 500))),
         ).fetchall()
     result = []
     for row in rows:
         checkpoint("recurring_before_prepare")
-        with db.get_conn() as conn:
-            conn.execute("BEGIN IMMEDIATE")
-            generated = recurring.generate_cycle(
-                conn,
-                row["id"],
-                row["business_id"],
-                str(row["next_run_on"])[:10],
-                today=today,
-                legacy=True,
-                draft_only=True,
-            )
+        try:
+            with db.get_conn() as conn:
+                conn.execute("BEGIN IMMEDIATE")
+                generated = recurring.generate_cycle(
+                    conn,
+                    row["id"],
+                    row["business_id"],
+                    str(row["next_run_on"])[:10],
+                    today=today,
+                    legacy=True,
+                    draft_only=True,
+                )
+        except HistoricalFenceActive:
+            continue
         if generated.legacy is not None:
             result.append(generated.legacy_value())
         checkpoint("recurring_draft_committed")
@@ -97,7 +102,8 @@ def process_due(*, today=None, limit=100):
         pending = conn.execute(
             "SELECT r.business_id,r.invoice_id,b.owner_email FROM recurring_invoice_runs r "
             "JOIN businesses b ON b.id=r.business_id JOIN invoices i ON i.id=r.invoice_id AND i.business_id=r.business_id "
-            "WHERE r.status='completed' AND r.financial_template_hash IS NOT NULL AND i.status='borrador' ORDER BY r.id LIMIT ?",
+            "WHERE r.status='completed' AND r.financial_template_hash IS NOT NULL AND i.status='borrador' AND "
+            + available_predicate(conn, "r.business_id") + " ORDER BY r.id LIMIT ?",
             (max(1, min(int(limit), 500)),),
         ).fetchall()
     for row in pending:

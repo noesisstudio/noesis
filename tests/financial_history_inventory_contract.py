@@ -125,12 +125,12 @@ class HistoryInventoryContract:
     def test_migration_clean_69_70_empty_downgrade_reupgrade(self):
         for initial in (0, 69):
             with self.subTest(initial=initial), self.empty_database(initial):
-                self.assertEqual(migrations.upgrade(), 70)
+                self.assertEqual(migrations.upgrade(70), 70)
                 self.assertEqual(migrations.downgrade(69), 69)
-                self.assertEqual(migrations.upgrade(), 70)
+                self.assertEqual(migrations.upgrade(70), 70)
                 if not config.DATABASE_URL:
                     self.assertEqual(migrations.downgrade(0), 0)
-                    self.assertEqual(migrations.upgrade(), 70)
+                    self.assertEqual(migrations.upgrade(70), 70)
 
     def test_downgrade_evidence_keeps_62_70(self):
         self.run_history()
@@ -140,9 +140,9 @@ class HistoryInventoryContract:
         self.assertEqual(before,self.unchanged())
         with self.assertRaisesRegex(ValueError, 'evidencia'):
             migrations.downgrade(69)
-        self.assertEqual(migrations.current_version(), 70)
+        self.assertEqual(migrations.current_version(), migrations.LATEST_VERSION)
         with db.get_conn() as connection:
-            self.assertEqual([r['version'] for r in connection.execute('SELECT version FROM schema_migrations WHERE version>=62 ORDER BY version').fetchall()], list(range(62,71)))
+            self.assertEqual([r['version'] for r in connection.execute('SELECT version FROM schema_migrations WHERE version>=62 ORDER BY version').fetchall()], list(range(62,migrations.LATEST_VERSION+1)))
 
     def test_empty_and_draft_are_review_only_not_importable(self):
         self.draft()
@@ -641,7 +641,7 @@ class HistoryInventoryContract:
                     names = [r['table_name'] for r in connection.execute('SELECT table_name FROM information_schema.tables WHERE table_schema=current_schema()').fetchall()]
                     before = {name:tuple((r['column_name'],r['data_type'],r['is_nullable']) for r in connection.execute('SELECT column_name,data_type,is_nullable '
                         'FROM information_schema.columns WHERE table_schema=current_schema() AND table_name=? ORDER BY ordinal_position',(name,)).fetchall()) for name in names}
-            migrations.upgrade()
+            migrations.upgrade(70)
             with db.get_conn() as connection:
                 if connection.dialect=='sqlite':
                     after_names = {r['name'] for r in connection.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()}

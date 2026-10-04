@@ -426,13 +426,21 @@ class CharlaWhatsappTestCase(unittest.TestCase):
         factura = db.add_invoice(client["id"], "Pintura", 100, business_id=business["id"])
         db.issue_invoice(factura["id"], business["id"])
         db.add_expense("Gasolina", 45, business_id=business["id"])
-        gastos, deuda, nadie, semana = self.charla(
+        gastos, deuda, nadie = self.charla(
             business, "que gastos he apuntado hoy?", f"cuanto me debe {client['name']}?",
-            "cuanto me debe Pepito", "que tengo esta semana")
+            "cuanto me debe Pepito")
         self.assertIn("Gasolina: 45,00 €", gastos)
         self.assertIn(f"{client['name']} te debe **121,00 €**", deuda)
         self.assertIn("No tengo ficha de cliente «Pepito»", nadie)
-        self.assertIn("No tienes trabajos agendados entre hoy", semana)
+        # En domingo el intervalo semanal tiene un solo día; no depender del reloj.
+        for hoy, esperado in (
+            (date(2026, 10, 1), "No tienes trabajos agendados entre hoy"),
+            (date(2026, 10, 4), "No tienes trabajos agendados para hoy."),
+        ):
+            with self.subTest(hoy=hoy), patch.object(nlu, "date", wraps=date) as reloj:
+                reloj.today.return_value = hoy
+                (semana,) = self.charla(business, "que tengo esta semana")
+                self.assertIn(esperado, semana)
 
     # --- Segunda ronda (30-sep, noche)
 

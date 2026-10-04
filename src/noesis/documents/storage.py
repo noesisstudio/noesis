@@ -80,11 +80,15 @@ def delete(business_id: int, stored_name: str) -> None:
         path = path_for(business_id, stored_name)
     except ValueError:
         return
-    path.unlink(missing_ok=True)
+    from ..financial_history.fence import external_guard
+    with external_guard(business_id):
+        path.unlink(missing_ok=True)
 
 
 def delete_business_dir(business_id: int) -> None:
     """Borra TODA la carpeta de archivos de un negocio (baja RGPD de la cuenta)."""
     d = Path(config.DOCS_PATH) / str(int(business_id))
     if d.exists():
-        shutil.rmtree(d, ignore_errors=True)
+        from ..financial_history.fence import external_guard
+        with external_guard(business_id):
+            shutil.rmtree(d, ignore_errors=True)

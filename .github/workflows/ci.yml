@@ -183,6 +183,9 @@ jobs:
       - name: Validar inventario histórico diagnóstico sin efectos financieros
         run: uv run python -m unittest tests.postgres_financial_history_inventory.HistoryInventoryPostgres
 
+      - name: Validar epoch, T0 y fence transaccional PostgreSQL
+        run: uv run python -m unittest tests.postgres_financial_history_cutoff.HistoryCutoffPostgres
+
       - name: Obtener código base para rollback seguro
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

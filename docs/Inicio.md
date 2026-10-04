@@ -1,5 +1,17 @@
 # 🧭 Bynoesis — Inicio
 
+## 2026-10-04 — Fase1.9C: epoch/T0/fence (validación final en curso)
+
+Únicamente corte consistente por negocio, control durable y nuevo sobre de
+inventory certificable, siempre eligible_for_import=false. Schema71, flags OFF.
+[ADR016](architecture/ADR-016-financial-history-cutoff.md), [contrato](architecture/FINANCIAL-HISTORY-CUTOFF-v1.md),
+[writers previos](architecture/FASE-1.9C-writers.md), [cierre](architecture/FASE-1.9C-cierre.md).
+SQL/application guard por tenant y TX prestada; no promoteB ni histórico EE/Operations/
+v2/importer/reconciliación/activación.1.9D NO autorizada. Pruebas SQLite/PG sintéticas,
+ninguna producción consultada. Invalidated conserva fence, release explícito pierde
+boundary; TTL/crash no liberan. Encabezados inferiores conservan historia.
+
+
 ## 2026-10-03 — Financial Core1.9B
 
 Inventario/dry-run diagnóstico completado localmente, cinco flags OFF. [Entrada](architecture/README.md),

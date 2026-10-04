@@ -4384,6 +4384,16 @@ def _downgrade_financial_history_inventory(conn):
     downgrade(conn)
 
 
+def _upgrade_financial_history_cutoff(conn):
+    from .financial_history.cut_schema import upgrade
+    upgrade(conn)
+
+
+def _downgrade_financial_history_cutoff(conn):
+    from .financial_history.cut_schema import downgrade
+    downgrade(conn)
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
     (2, "integridad_multiempresa", _upgrade_tenant_integrity, _downgrade_tenant_integrity),
@@ -4494,6 +4504,7 @@ MIGRATIONS: tuple[Migration, ...] = (
     (68, "enlaces_canales_financieros", _upgrade_financial_channels, _downgrade_financial_channels),
     (69, "reparacion_delete_cobros_postgres", _repair_payment_delete, _retain_payment_delete_repair),
     (70, "inventario_historico_diagnostico", _upgrade_financial_history_inventory, _downgrade_financial_history_inventory),
+    (71, "corte_historico_epoch_fence", _upgrade_financial_history_cutoff, _downgrade_financial_history_cutoff),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

@@ -200,7 +200,7 @@ class HistoryRepository:
                     after = row['source_sort_key']
         return digest.hexdigest()
 
-    def finish(self, comparison_hash):
+    def build_finish(self, comparison_hash):
         if self.session.execute('SELECT 1 FROM financial_history_items WHERE business_id=? AND manifest_uuid=? AND terminal_result IS NULL LIMIT 1', self.scope).fetchone():
             raise ValueError('No congelar plan incompleto.')
         source_hash = self.source_set_hash()
@@ -253,11 +253,22 @@ class HistoryRepository:
         blocking_incidence = self.session.execute("SELECT 1 FROM financial_history_incidences WHERE business_id=? AND manifest_uuid=? AND severity='blocking' LIMIT 1",self.scope).fetchone()
         blocked = (comparison_hash != source_hash or blocking_incidence or summary['terminal_result'].get('blocked',0)
                    or summary['terminal_result'].get('not_durably_supported',0) or summary['broken_dependencies'])
+        return ('BLOCKED' if blocked else 'READY_FOR_REVIEW', source_hash, comparison_hash, plan.hexdigest(), canonical(summary))
+
+    def freeze(self, values):
+        manifest = self.load()
+        if manifest['status'] == 'frozen':
+            if tuple(manifest[f] for f in ('result','source_set_hash','comparison_source_set_hash','plan_hash','summary_canonical')) != tuple(values):
+                raise ConflictError('Freeze reintentado con otro contenido.')
+            return manifest
         now = stamp()
         self.session.execute("UPDATE financial_history_manifests SET status='frozen',result=?,source_set_hash=?,comparison_source_set_hash=?,"
             "plan_hash=?,summary_canonical=?,completed_at=?,frozen_at=? WHERE business_id=? AND manifest_uuid=? AND status='planning'",
-            ('BLOCKED' if blocked else 'READY_FOR_REVIEW', source_hash, comparison_hash, plan.hexdigest(), canonical(summary), now, now, *self.scope))
+            (*values, now, now, *self.scope))
         return self.load()
+
+    def finish(self, comparison_hash):
+        return self.freeze(self.build_finish(comparison_hash))
 
 
 def hash_source(digest, source):

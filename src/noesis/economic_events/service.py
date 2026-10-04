@@ -111,6 +111,9 @@ class EconomicEvents:
         self.permissions._permission(self.session, principal, write=True)
         from noesis.core.locks import lock_business
         lock_business(self.session, self.business_id)
+        self.permissions._permission(self.session, principal, write=True, locking=True)
+        from noesis.financial_history.fence import assert_writable
+        assert_writable(self.session, self.business_id)
         self.session.execute("SAVEPOINT economic_append")
         try:
             result = self._append(principal, event, **kwargs)

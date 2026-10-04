@@ -42,10 +42,10 @@ class FinancialOperations:
     def __init__(self, business_id):
         self.business_id = positive_id(business_id)
 
-    def _permission(self, session, principal, *, write):
+    def _permission(self, session, principal, *, write, locking=False):
         if not isinstance(principal, Principal):
             raise AccessDenied("Contexto autenticado requerido.")
-        lock = " FOR SHARE" if session.dialect == "postgres" else ""
+        lock = " FOR SHARE" if locking and session.dialect == "postgres" else ""
         user = session.execute(
             "SELECT id, business_id, session_version, is_active FROM users WHERE id=? AND business_id=?"
             + lock, (principal.user_id, self.business_id),
@@ -78,6 +78,11 @@ class FinancialOperations:
             self._permission(session, principal, write=write)
             # También lecturas con FOR UPDATE: nunca tomar operación antes del gate.
             lock_business(session, self.business_id)
+            # Revalidar bajo lock después del gate: nunca usuario/negocio → gate.
+            self._permission(session, principal, write=write, locking=True)
+            if write:
+                from noesis.financial_history.fence import assert_writable
+                assert_writable(session, self.business_id)
             yield session, OperationsRepository(session, self.business_id)
 
     def prepare(self, principal, identity, request):

@@ -314,6 +314,8 @@ def _run(
     bound.apply_defaults()
     business_id = int(bound.arguments["business_id"])
     lock_business(conn, business_id)
+    from noesis.financial_history.fence import assert_writable
+    assert_writable(conn, business_id)
     # Capturar la entrada antes de cualquier normalizador legacy.
     inputs = {k: v for k, v in bound.arguments.items() if k != "conn"}
 
