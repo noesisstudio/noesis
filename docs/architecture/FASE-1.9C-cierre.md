@@ -1,6 +1,6 @@
 # Cierre de Fase 1.9C — Epoch, T0 y fence
 
-2026-10-04. **Validación final pendiente**. Solo 1.9C, no 1.9D. Cinco flags OFF.
+2026-10-04. **Implementada, validada y cerrada**. Solo 1.9C, no 1.9D. Cinco flags OFF.
 Ninguna producción, copia real, AEAT o proveedor real consultado.
 
 ## 1. Mapa completo de writers
@@ -228,16 +228,24 @@ cliente/factura/emisión/cobro/export PASS. No retirada con evidencia ni paso D.
 
 ## 24. Suite/gates
 
+CI de cierre [37201939291](https://github.com/noesisstudio/noesis/actions/runs/37201939291) SUCCESS sobre317eed8, runtime7c0055c:
+general1755 PASS (897.022s, dos skips PG), PostgreSQL338 PASS, ambos jobs/gates/
+migraciones/código anterior/privacidad/rollback PASS. **44 criterios PASS, 0 FAIL**.
+Adenda de cierre solo documental; código/tests/workflow/dependencias idénticos
+a la ejecución validada. Producción/despliegue no consultados. No1.9D.
+
 Suite general local: 1755 tests en1762.024s, un fallo preexistente de expectativa
 de agenda semanal y dos skips PG. El fallo se reproduce en main anterior b31e165
 con schema70: el domingo «esta semana» contiene solo hoy. Se corrige exclusivamente
 el test con fixtures explícitas de jueves/domingo; clase completa revalidada y
 85 tests PASS en99.807s. Ningún cambio a comportamiento financiero
-o calendario del producto. CI completa final sigue pendiente antes del cierre.
+o calendario del producto. CI completa final SUCCESS, enlazada al comienzo de §24.
 Resultados sobre runtime final:
 
 | Verificación | Resultado |
 |---|---|
+| CI general final | PASS: 1755 tests, 897.022s, dos skips PG |
+| CI PostgreSQL final | PASS: 338 tests, incluye C50 |
 | PostgreSQL, matriz de todas las fases Core | PASS: 338 tests, 188.644s |
 | PostgreSQL C, oracle incluye ambos contadores | PASS: 50 tests, 45.092s |
 | SQLite C, oracle incluye ambos contadores | PASS: 46 tests, 110.916s; dos tests de locks PG omitidos explícitamente |
@@ -256,12 +264,12 @@ Resultados sobre runtime final:
 | Release smoke PG aislado | PASS: privacidad, conversación, marketing y rollback vigente→55→54→53→54→55→vigente |
 | Servidor local SQLite | PASS: /health, /ready, / y /login 200; scheduler mock, sin proveedores |
 
-La suite general local inicial NO se presenta como PASS. La validación remota final
-debe superar toda la suite con el test corregido antes de dar la fase por cerrada.
+La suite general local inicial NO se presenta como PASS. La CI remota final
+ya supera toda la suite con el test corregido: PASS1755. No se oculta el fallo inicial.
 
 Medición 100 checks sin epoch: PG 41.346ms en matriz y45.281ms en dirigida;
 SQLite7.264ms. Son medidas sintéticas locales, no SLO de producción.
-CI del commit se enlazará; no inferir despliegue validado en producción.
+CI del commit enlazada arriba; no inferir despliegue validado en producción.
 
 ## 25. Riesgos
 
@@ -282,54 +290,54 @@ CI del commit se enlazará; no inferir despliegue validado en producción.
 
 ## 26. PASS/FAIL individual
 
-IDs de los 44 apartados de la [orden](FASE-1.9C-orden.md). Pendientes de §24 final.
+IDs de los 44 apartados de la [orden](FASE-1.9C-orden.md): **44 PASS, 0 FAIL**.
 
 | ID | Criterio | Estado | Evidencia |
 |---|---|---|---|
-| 1 | Mapa previo completo | PENDIENTE | §1/mapa |
-| 2 | T0 posterior a writers anteriores | PENDIENTE | §6/20 |
-| 3 | Migración exclusiva | PENDIENTE | §3/4 |
-| 4 | Un solo epoch activo tenant | PENDIENTE | unique/carreras |
-| 5 | Gate antes de locks de control/source | PENDIENTE | §6/test permisos |
-| 6 | Fence durable sin TOCTOU | PENDIENTE | §7/20 |
-| 7 | Error reconocible sin fallback | PENDIENTE | §7/8 |
-| 8 | Mutaciones relevantes bloqueadas | PENDIENTE | §9/21 |
-| 9 | Cinco Capture/flags OFF | PENDIENTE | §10/20 |
-| 10 | EE live directo protegido | PENDIENTE | §11 |
-| 11 | Transporte anterior/nuevo envío | PENDIENTE | §12 |
-| 12 | Evidencia documental estable | PENDIENTE | §13 |
-| 13 | Scope cerrado versionado | PENDIENTE | cut_scope/contrato |
-| 14 | Nuevo inventory certificable | PENDIENTE | §14 |
-| 15 | No promover B por UPDATE | PENDIENTE | CHECK70/tests SQL |
-| 16 | Reusar scanner/classifier/planning | PENDIENTE | §14/hooks |
-| 17 | Sin TX/gate gigante | PENDIENTE | §6/22/test freeze |
-| 18 | Invalidate conserva fence | PENDIENTE | §16 |
-| 19 | Release explícito pierde frontera | PENDIENTE | §16 |
-| 20 | Crash/retry conserva fence/T0 | PENDIENTE | §15 |
-| 21 | TTL solo atención | PENDIENTE | §15 |
-| 22 | SQL guards sources clave | PENDIENTE | §9/29 tablas |
-| 23 | Baja negocio conserva evidencia | PENDIENTE | retención/tests |
-| 24 | Carreras reales PG deterministas | PENDIENTE | §20 |
-| 25 | Invariantes SQLite | PENDIENTE | §18 |
-| 26 | Open solo metadata/control | PENDIENTE | §21 |
-| 27 | Writer sin efectos/contadores financieros | PENDIENTE | §21/oracle |
-| 28 | PREPARED/APPROVED conservados/bloqueados | PENDIENTE | §10 |
-| 29 | Recurrencia no cambia membership | PENDIENTE | §13 |
-| 30 | CSV/document review sin confirmación | PENDIENTE | §13 |
-| 31 | Flags OFF y negocios normales | PENDIENTE | regresiones/§21 |
-| 32 | Aislamiento multiempresa | PENDIENTE | §17/20/21 |
-| 33 | historical.record actual | PENDIENTE | §17 |
-| 34 | Sin importer/Operations históricas | PENDIENTE | scope/diff |
-| 35 | Sin v2 histórico durable | PENDIENTE | contratos intactos |
-| 36 | Ciclos/70 intacta/downgrade protegido | PENDIENTE | §23 |
-| 37 | Hash estable/aislamiento writers | PENDIENTE | §14/21 |
-| 38 | Release conserva historia | PENDIENTE | §16 |
-| 39 | Invalidate antes/después freeze | PENDIENTE | §16/tests |
-| 40 | Auditoría/log mínimos | PENDIENTE | §4/log test |
-| 41 | Check indexado/medición | PENDIENTE | §22/24 |
-| 42 | IDOR/tenant/SQL/revocación/races | PENDIENTE | §17/20 |
-| 43 | Documentación y gobernanza | PENDIENTE | §2 |
-| 44 | Autoauditoría completa | PENDIENTE | §27 |
+| 1 | Mapa previo completo | PASS | §1/mapa |
+| 2 | T0 posterior a writers anteriores | PASS | §6/20 |
+| 3 | Migración exclusiva | PASS | §3/4 |
+| 4 | Un solo epoch activo tenant | PASS | unique/carreras |
+| 5 | Gate antes de locks de control/source | PASS | §6/test permisos |
+| 6 | Fence durable sin TOCTOU | PASS | §7/20 |
+| 7 | Error reconocible sin fallback | PASS | §7/8 |
+| 8 | Mutaciones relevantes bloqueadas | PASS | §9/21 |
+| 9 | Cinco Capture/flags OFF | PASS | §10/20 |
+| 10 | EE live directo protegido | PASS | §11 |
+| 11 | Transporte anterior/nuevo envío | PASS | §12 |
+| 12 | Evidencia documental estable | PASS | §13 |
+| 13 | Scope cerrado versionado | PASS | cut_scope/contrato |
+| 14 | Nuevo inventory certificable | PASS | §14 |
+| 15 | No promover B por UPDATE | PASS | CHECK70/tests SQL |
+| 16 | Reusar scanner/classifier/planning | PASS | §14/hooks |
+| 17 | Sin TX/gate gigante | PASS | §6/22/test freeze |
+| 18 | Invalidate conserva fence | PASS | §16 |
+| 19 | Release explícito pierde frontera | PASS | §16 |
+| 20 | Crash/retry conserva fence/T0 | PASS | §15 |
+| 21 | TTL solo atención | PASS | §15 |
+| 22 | SQL guards sources clave | PASS | §9/29 tablas |
+| 23 | Baja negocio conserva evidencia | PASS | retención/tests |
+| 24 | Carreras reales PG deterministas | PASS | §20 |
+| 25 | Invariantes SQLite | PASS | §18 |
+| 26 | Open solo metadata/control | PASS | §21 |
+| 27 | Writer sin efectos/contadores financieros | PASS | §21/oracle |
+| 28 | PREPARED/APPROVED conservados/bloqueados | PASS | §10 |
+| 29 | Recurrencia no cambia membership | PASS | §13 |
+| 30 | CSV/document review sin confirmación | PASS | §13 |
+| 31 | Flags OFF y negocios normales | PASS | regresiones/§21 |
+| 32 | Aislamiento multiempresa | PASS | §17/20/21 |
+| 33 | historical.record actual | PASS | §17 |
+| 34 | Sin importer/Operations históricas | PASS | scope/diff |
+| 35 | Sin v2 histórico durable | PASS | contratos intactos |
+| 36 | Ciclos/70 intacta/downgrade protegido | PASS | §23 |
+| 37 | Hash estable/aislamiento writers | PASS | §14/21 |
+| 38 | Release conserva historia | PASS | §16 |
+| 39 | Invalidate antes/después freeze | PASS | §16/tests |
+| 40 | Auditoría/log mínimos | PASS | §4/log test |
+| 41 | Check indexado/medición | PASS | §22/24 |
+| 42 | IDOR/tenant/SQL/revocación/races | PASS | §17/20 |
+| 43 | Documentación y gobernanza | PASS | §2 |
+| 44 | Autoauditoría completa | PASS | §27 |
 
 ## 27. Autoauditoría
 
@@ -360,3 +368,6 @@ requiere orden humana; este cierre no concede autorización de activación.
 CI inicial1.9C bloqueada en secrets por SHA público completo heredado de adendaB;
 se usa identificador corto del mismo commit y conserva URL verificable. Sin cambiar
 baseline ni filtros de secrets. Runtime/tests/workflow/dependencias intactos.
+
+Medición CI de100 checks: SQLite3.329ms/PG51.205ms; datos sintéticos, sin SLO
+de producción. Todos los apartados del cierre y autoauditoría completados.

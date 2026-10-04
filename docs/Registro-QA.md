@@ -1,6 +1,6 @@
 ﻿# Registro de QA
 
-## 2026-10-04 — Fase1.9C: epoch/T0/fence (validación final en curso)
+## 2026-10-04 — Fase1.9C: epoch/T0/fence (implementada y validada)
 
 Únicamente corte consistente por negocio, control durable y nuevo sobre de
 inventory certificable, siempre eligible_for_import=false. Schema71, flags OFF.
@@ -11,10 +11,17 @@ v2/importer/reconciliación/activación.1.9D NO autorizada. Pruebas SQLite/PG si
 ninguna producción consultada. Invalidated conserva fence, release explícito pierde
 boundary; TTL/crash no liberan. Encabezados inferiores conservan historia.
 
+CI de cierre [37201939291](https://github.com/noesisstudio/noesis/actions/runs/37201939291) SUCCESS sobre317eed8, runtime7c0055c:
+general1755 PASS (897.022s, dos skips PG), PostgreSQL338 PASS, ambos jobs/gates/
+migraciones/código anterior/privacidad/rollback PASS. **44 criterios PASS, 0 FAIL**.
+Adenda de cierre solo documental; código/tests/workflow/dependencias idénticos
+a la ejecución validada. Producción/despliegue no consultados. No1.9D.
+
+
 QA dirigida final: matrizPG338 PASS, C PG50/SQLite46 PASS (dos skips PG), Node9
 y gates PASS. General local1755: un fallo preexistente dominical, reproducido
 sobre main previo/schema70; corregida únicamente fixture de test. Clase WhatsApp
-completa85 PASS (99.807s). CI general final pendiente; no declarar cierre todavía.
+completa85 PASS (99.807s). CI general final SUCCESS; ver evidencia de cierre anterior.
 CI inicial1.9C bloqueada en secrets por SHA público completo heredado de adendaB;
 se usa identificador corto del mismo commit y conserva URL verificable. Sin cambiar
 baseline ni filtros de secrets. Runtime/tests/workflow/dependencias intactos.

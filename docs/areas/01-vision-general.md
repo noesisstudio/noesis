@@ -1,6 +1,6 @@
 # 01 · Visión general
 
-## 2026-10-04 — Fase1.9C: epoch/T0/fence (validación final en curso)
+## 2026-10-04 — Fase1.9C: epoch/T0/fence (implementada y validada)
 
 Únicamente corte consistente por negocio, control durable y nuevo sobre de
 inventory certificable, siempre eligible_for_import=false. Schema71, flags OFF.
