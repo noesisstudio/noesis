@@ -356,3 +356,7 @@ IDs de los 44 apartados de la [orden](FASE-1.9C-orden.md). Pendientes de §24 fi
 
 Resultados circunscritos a código/QA sintética local y CI. La siguiente unidad
 requiere orden humana; este cierre no concede autorización de activación.
+
+CI inicial1.9C bloqueada en secrets por SHA público completo heredado de adendaB;
+se usa identificador corto del mismo commit y conserva URL verificable. Sin cambiar
+baseline ni filtros de secrets. Runtime/tests/workflow/dependencias intactos.

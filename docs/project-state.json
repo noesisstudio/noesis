@@ -872,7 +872,7 @@
         "deployment_verified": false,
         "remote_ci_run": 37137042961,
         "remote_ci_url": "https://github.com/noesisstudio/noesis/actions/runs/37137042961",
-        "remote_ci_code": "f474d42fc0d8f2b33b84e3b9bb192e0cc6a2e336",
+        "remote_ci_code": "f474d42",
         "remote_ci_conclusion": "success",
         "remote_full_suite": 1709,
         "remote_full_suite_seconds": 582.266,

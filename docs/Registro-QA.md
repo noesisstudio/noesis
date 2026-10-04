@@ -15,6 +15,10 @@ QA dirigida final: matrizPG338 PASS, C PG50/SQLite46 PASS (dos skips PG), Node9
 y gates PASS. General local1755: un fallo preexistente dominical, reproducido
 sobre main previo/schema70; corregida únicamente fixture de test. Clase WhatsApp
 completa85 PASS (99.807s). CI general final pendiente; no declarar cierre todavía.
+CI inicial1.9C bloqueada en secrets por SHA público completo heredado de adendaB;
+se usa identificador corto del mismo commit y conserva URL verificable. Sin cambiar
+baseline ni filtros de secrets. Runtime/tests/workflow/dependencias intactos.
+
 Riesgo/rollback: no retirar guards de dispatch/bytes con epoch activo; downgrade
 con evidencia bloqueado. Diagnóstico y mapas en el cierre enlazado.
 
