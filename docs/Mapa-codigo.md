@@ -1,5 +1,19 @@
 # Mapa de código
 
+## 2026-10-05 — Fase 1.10A: evaluación sin activación
+
+[Orden](architecture/FASE-1.10A-orden.md), [contrato](architecture/FINANCIAL-READINESS-v1.md), [ADR019](architecture/ADR-019-financial-readiness.md), [cierre](architecture/FASE-1.10A-cierre.md), [plan](architecture/FASE-1.10-plan.md).
+
+`financial_activation/contracts.py`: catálogo cerrado, perfiles/policy v1,
+closure, razones, canonical/hash y predicado puro de caducidad; sin autoridad.
+`evaluator.py`: API interna FinancialSession prestada, permiso actual, gate,
+scope/config/raw, verifier E solo SELECT, dependencias y resultado.
+`repository.py`: tres tablas propias, hashes/semántica, UUID retry/conflict.
+`schema.py`: upgrade/downgrade y SQL guards. migrations.py registra nueva unidad.
+`financial_history/schema_compatibility.py`: matriz explícita B/C/D/E ampliada.
+db.py solo retención de tablas. Tests SQLite/PG comparten ReadinessContract y
+agregan migración/concurrencia PG; CI añade el gate. Sin rutas ni providers nuevos.
+
 ## 2026-10-05 — Fase1.9F: PASS WITH LIMITATIONS, solo QA
 
 [Orden](architecture/FASE-1.9F-orden.md), [cierre](architecture/FASE-1.9F-cierre.md) y [runbook](architecture/FASE-1.9F-runbook.md).

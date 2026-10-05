@@ -1,5 +1,26 @@
 # AGENTS.md - Manual del proyecto Bynoesis
 
+## 2026-10-05 — Fase 1.10A: evaluación sin activación
+
+[Orden](docs/architecture/FASE-1.10A-orden.md), [contrato](docs/architecture/FINANCIAL-READINESS-v1.md), [ADR019](docs/architecture/ADR-019-financial-readiness.md), [cierre](docs/architecture/FASE-1.10A-cierre.md), [plan](docs/architecture/FASE-1.10-plan.md).
+
+Alcance vigente: únicamente contratos y evaluación durable de readiness en rama
+dedicada; no merge/push a main ni producción sin autorización posterior. Leer
+orden, contrato, ADR019 y cierre antes de continuar. 1.9 está cerrada técnicamente
+con limitaciones; 1.9F conserva PASS WITH LIMITATIONS. Encabezados inferiores
+son históricos. No iniciar 1.10B–H.
+
+`financial_activation/` contiene contratos, evaluator y repositorio tenant-scoped
+sobre FinancialSession prestada/gate/TX compartidos. Evaluación ≠ autorización
+humana ≠ activación ≠ ejecución. Perfil exacto versionado y cierre transitivo;
+PARTIAL solo permite proponer otro perfil y reevaluarlo. Solo off/validating,
+generation0 y ever_enabled=false por SQL; no ready/enabled, handoff ni release.
+Cinco flags OFF. Nueva lógica financiera grande fuera de db.py; allí solo se
+registran las tablas para conservación. Decimal/NUMERIC; IA sin autoridad.
+Vacío exige scope completo y relacionados. C/D o E BLOCKED bloquean todo perfil;
+E PASS vacío no habilita comandos. No provider I/O, EE/Operations ni routing.
+Antes de cerrar: SQLite/PG, migraciones, suite, seguridad y verdad documental.
+
 ## 2026-10-05 — Fase1.9F: PASS WITH LIMITATIONS, solo QA
 
 [Orden](docs/architecture/FASE-1.9F-orden.md), [cierre](docs/architecture/FASE-1.9F-cierre.md) y [runbook](docs/architecture/FASE-1.9F-runbook.md).

@@ -1,5 +1,22 @@
 # Registro de QA
 
+## 2026-10-05 — Fase 1.10A: evaluación sin activación
+
+[Orden](architecture/FASE-1.10A-orden.md), [contrato](architecture/FINANCIAL-READINESS-v1.md), [ADR019](architecture/ADR-019-financial-readiness.md), [cierre](architecture/FASE-1.10A-cierre.md), [plan](architecture/FASE-1.10-plan.md).
+
+Validación local de candidato, nunca despliegue. Fixtures sintéticos SQLite y
+PostgreSQL local descartable; copia real Noesis19FQA no utilizada. Resultados,
+comandos, límites y autoauditoría completos en cierre; CI externo no ejecutado.
+SQLite28 PASS (78.917s); PostgreSQL29 PASS (19.141s); suite1828 PASS
+(2093.223s, dos skips existentes, cero fallos/errores); JS9 PASS. Ruff, Bandit
+CI, pip-audit, secretos y verdad documental PASS;623 enlaces sin roturas.
+Snapshots antes/después excluyen solo tres tablas A: fuentes, fiscal, bancos,
+EE/Operations/Auth, manifests/batches/E, canales y flags idénticos. También rollback
+exterior, SQL final inmutable, tenant, anti-enabled, sesión/caducidad/hash/profile.
+Regresión PostgreSQL relacionada: 410 PASS. Fallo preexistente al bajar PG hasta
+cero en antigua bank_reconciliation: DROP TRIGGER sin ON; no se modificó esa
+migración. Ciclo A 74→73→74 se prueba por separado, SQLite también 74→0→74.
+
 ## 2026-10-05 — Fase1.9F: PASS WITH LIMITATIONS, solo QA
 
 [Orden](architecture/FASE-1.9F-orden.md), [cierre](architecture/FASE-1.9F-cierre.md) y [runbook](architecture/FASE-1.9F-runbook.md).

@@ -1,5 +1,19 @@
 # 06 · RGPD y seguridad
 
+## 2026-10-05 — Fase 1.10A: evaluación sin activación
+
+[Orden](../architecture/FASE-1.10A-orden.md), [contrato](../architecture/FINANCIAL-READINESS-v1.md), [ADR019](../architecture/ADR-019-financial-readiness.md), [cierre](../architecture/FASE-1.10A-cierre.md), [plan](../architecture/FASE-1.10-plan.md).
+
+Readiness revalida usuario activo/sesión/suscripción y permiso específico
+financial.readiness.evaluate; no concede autoridad financiera ni activación.
+Evidencia sin PII literal: huellas de configuración/fuentes, referencias y razones
+cerradas. Tenant en cada SELECT/write/FK; evaluación propia en read.
+Final y capabilities append-only por SQL; baja física bloqueada si existe evidencia,
+incluida en inventario de conservación. No ampliar export financiero por un stub:
+PRIVACY_NOT_READY/EXPORT_NOT_READY bloquean comandos hasta E futura.
+Datos reales QA no se consultan ni destruyen. Política formal QA/export/retención
+productiva permanece pendiente; hashes no son firmas ni cifrado. Sin provider I/O.
+
 ## 2026-10-05 — Fase1.9E: reconciliación histórica implementada y validada
 
 [Orden](../architecture/FASE-1.9E-orden.md), [ADR018](../architecture/ADR-018-financial-history-reconciliation.md),

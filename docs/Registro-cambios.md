@@ -1,5 +1,19 @@
 # Registro de cambios
 
+## 2026-10-05 — Fase 1.10A: evaluación sin activación
+
+[Orden](architecture/FASE-1.10A-orden.md), [contrato](architecture/FINANCIAL-READINESS-v1.md), [ADR019](architecture/ADR-019-financial-readiness.md), [cierre](architecture/FASE-1.10A-cierre.md), [plan](architecture/FASE-1.10-plan.md).
+
+Objetivo: implementar exclusivamente A en rama dedicada, sin publicación.
+Áreas: financial_activation, compatibilidad history, migration, retención db,
+tests SQLite/PG, CI y gobernanza. Sin dependencias nuevas ni edición de 63–73.
+Pruebas y estado final: informe enlazado. Límites: no producción/QA real/proveedores;
+1.9F mantiene PASS WITH LIMITATIONS. Riesgo: gate retenido durante escaneo; evidencia
+no autoriza activar y políticas privacy/export siguen pendientes.
+Diagnóstico: UUID, context/content/source hashes, reason/dependency proof.
+Rollback: revertir código manteniendo evidencia/esquema; downgrade solo si las
+tres tablas están vacías. Baja con evidencia conserva; no borrar para bajar.
+
 ## 2026-10-05 — Fase1.9F: PASS WITH LIMITATIONS, solo QA
 
 [Orden](architecture/FASE-1.9F-orden.md), [cierre](architecture/FASE-1.9F-cierre.md) y [runbook](architecture/FASE-1.9F-runbook.md).

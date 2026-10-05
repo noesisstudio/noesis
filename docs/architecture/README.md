@@ -1,5 +1,21 @@
 # Financial Core: punto de entrada y continuidad
 
+## 2026-10-05 — Fase 1.10A: evaluación sin activación
+
+[Orden](FASE-1.10A-orden.md), [contrato](FINANCIAL-READINESS-v1.md), [ADR019](ADR-019-financial-readiness.md), [cierre](FASE-1.10A-cierre.md), [plan](FASE-1.10-plan.md).
+
+Orden y plan son el punto de continuación heredable. Solo A implementada en
+`codex/phase-1-10a`, pendiente de aceptación/fusión. 1.9 cerrada técnicamente con
+limitaciones por instrucción humana; 1.9F sigue PASS WITH LIMITATIONS. No se
+reinterpreta su PASS vacío como importación positiva ni validación de escala.
+
+La evaluación durable responde sobre negocio + perfil exacto + dependencias;
+no autoriza ni ejecuta. PARTIAL exige otro perfil y otra evaluación. Tres tablas
+aditivas protegidas; off/validating exclusivamente. Sesión, tenant, corte, E y
+fuentes revalidados en conexión prestada. Privacidad/export/providers/continuidad
+ausentes siguen blocked. Ningún runtime consulta activation control todavía.
+Cinco flags OFF, fence intacto, no producción ni 1.10B–H.
+
 ## 2026-10-05 — Fase1.9F: PASS WITH LIMITATIONS, solo QA
 
 [Orden](FASE-1.9F-orden.md), [cierre](FASE-1.9F-cierre.md) y [runbook](FASE-1.9F-runbook.md).

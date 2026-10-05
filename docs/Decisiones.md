@@ -1,5 +1,19 @@
 # Decisiones
 
+## 2026-10-05 — Fase 1.10A: evaluación sin activación
+
+[Orden](architecture/FASE-1.10A-orden.md), [contrato](architecture/FINANCIAL-READINESS-v1.md), [ADR019](architecture/ADR-019-financial-readiness.md), [cierre](architecture/FASE-1.10A-cierre.md), [plan](architecture/FASE-1.10-plan.md).
+
+ADR019: separar evidencia/readiness de autorización/activación/ejecución.
+Perfil exacto y dependencies, no activación parcial automática. Modo fiscal
+actual condiciona closure de invoice.issue; cancelación requerida bloqueada
+bloquea emisión. Proveedor ausente no es not_applicable.
+E PASS revalidada es necesaria, no suficiente. Vacío puede dar FULL solo perfil
+mínimo canal web; no habilita comandos y mantiene fence. Privacy/export/continuidad/
+provider faltantes se expresan blocked. Tres tablas SQL y borrowed TX, evidencia
+final inmutable. Permiso de evaluación propio para usuario actual de cuenta
+escribible; sin nueva autoridad o grant de activación.
+
 ## 2026-10-05 — Fase1.9F: PASS WITH LIMITATIONS, solo QA
 
 [Orden](architecture/FASE-1.9F-orden.md), [cierre](architecture/FASE-1.9F-cierre.md) y [runbook](architecture/FASE-1.9F-runbook.md).

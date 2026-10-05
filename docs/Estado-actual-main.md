@@ -1,5 +1,17 @@
 # Estado actual del producto
 
+## 2026-10-05 — Fase 1.10A: evaluación sin activación
+
+[Orden](architecture/FASE-1.10A-orden.md), [contrato](architecture/FINANCIAL-READINESS-v1.md), [ADR019](architecture/ADR-019-financial-readiness.md), [cierre](architecture/FASE-1.10A-cierre.md), [plan](architecture/FASE-1.10-plan.md).
+
+Candidato en rama dedicada `codex/phase-1-10a`; main no fusionado ni publicado.
+Schema candidato y pruebas figuran en JSON/cierre, no describen un despliegue.
+Contratos/perfiles/readiness durable implementados; evaluación exclusivamente,
+sin ready/enabled, acciones financieras, providers ni cambios de cinco flags OFF.
+1.9 cerrada técnicamente con limitaciones por instrucción humana; 1.9F conserva
+PASS WITH LIMITATIONS. No se consultó producción ni copia QA real durante A.
+Los encabezados inferiores son cronología histórica. No iniciar 1.10B–H.
+
 ## 2026-10-05 — Fase1.9F: PASS WITH LIMITATIONS, solo QA
 
 [Orden](architecture/FASE-1.9F-orden.md), [cierre](architecture/FASE-1.9F-cierre.md) y [runbook](architecture/FASE-1.9F-runbook.md).

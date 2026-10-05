@@ -1,5 +1,21 @@
 # Arquitectura
 
+## 2026-10-05 — Fase 1.10A: evaluación sin activación
+
+[Orden](architecture/FASE-1.10A-orden.md), [contrato](architecture/FINANCIAL-READINESS-v1.md), [ADR019](architecture/ADR-019-financial-readiness.md), [cierre](architecture/FASE-1.10A-cierre.md), [plan](architecture/FASE-1.10-plan.md).
+
+Monolito modular: readiness es un dominio separado sobre infraestructura de
+conexiones, transacciones y gate compartidos. Consulta fuentes raw mediante
+execute_exact y evidencia histórica mediante verifier prestado, sin normalización
+monetaria a float ni operaciones financieras. Solo escribe su evidencia nueva.
+La autoridad humana y activación se implementarán separadamente tras aceptación.
+
+Perfil versionado exacto y closure explícito fiscal; C/D o E BLOCKED transversales.
+PARTIAL nunca activa subconjuntos. Control restringido a off/validating, generation0,
+ever_enabled=false; API no cambia state. SQL protege evidencia final y tenant.
+No routing, handoff, releases, providers ni flags. Compatibility B70–74/C71–74/
+D72–74/E73–74 explícita; readiness solo esquema propio vigente.
+
 ## 2026-10-05 — Fase1.9E: reconciliación histórica implementada y validada
 
 [Orden](architecture/FASE-1.9E-orden.md), [ADR018](architecture/ADR-018-financial-history-reconciliation.md),

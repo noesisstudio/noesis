@@ -1,5 +1,16 @@
 # 01 · Visión general
 
+## 2026-10-05 — Fase 1.10A: evaluación sin activación
+
+[Orden](../architecture/FASE-1.10A-orden.md), [contrato](../architecture/FINANCIAL-READINESS-v1.md), [ADR019](../architecture/ADR-019-financial-readiness.md), [cierre](../architecture/FASE-1.10A-cierre.md), [plan](../architecture/FASE-1.10-plan.md).
+
+Evaluación interna nueva sobre sesión prestada; ninguna ruta ni consumidor
+runtime se modifica. Tres tablas de readiness aditivas y matriz explícita de
+compatibilidad histórica. db.py solo añade sus nombres a inventario de protección
+y baja conservadora: no lógica financiera. Control no puede enabled/ever_enabled
+por SQL. Probar schema cycles, regresiones, tenant y snapshot global de fuentes.
+1.10B–H y despliegue pendientes de autorización. Cinco flags OFF.
+
 ## 2026-10-05 — Fase1.9E: reconciliación histórica implementada y validada
 
 [Orden](../architecture/FASE-1.9E-orden.md), [ADR018](../architecture/ADR-018-financial-history-reconciliation.md),

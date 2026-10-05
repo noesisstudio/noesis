@@ -1,5 +1,23 @@
 # 08 · Financial Core
 
+## 2026-10-05 — Fase 1.10A: evaluación sin activación
+
+[Orden](../architecture/FASE-1.10A-orden.md), [contrato](../architecture/FINANCIAL-READINESS-v1.md), [ADR019](../architecture/ADR-019-financial-readiness.md), [cierre](../architecture/FASE-1.10A-cierre.md), [plan](../architecture/FASE-1.10-plan.md).
+
+Zona nueva: `src/noesis/financial_activation/{contracts,evaluator,repository,schema}.py`.
+Solo contratos y evaluación; schema aditivo consultable en project-state.json.
+Mantener monolito modular, repositories por dominio, conexión/gate/TX compartidos,
+Decimal/NUMERIC e IA sin autoridad. Evaluator solo SELECT de fuentes y writes en
+sus tres tablas, nunca Capture/EE/Operations/E/release/provider ni routing.
+
+Probar perfil exacto/cierre, razón cerrada y not_applicable con prueba fiscal,
+caducidad, idempotencia/hash sin UUID/reloj propios, tenant/usuario actual,
+boundary/source drift/E vigente, C/D transversales, SQL inmutable/anti-enabled,
+cinco flags OFF, rollback y snapshots de todas las tablas previas. B/C/D/E usan
+matriz explícita compatible: no >=73. FULL mínimo web vacío no habilita dinero.
+PARTIAL nunca ready. Privacidad/export/providers/continuidad pendientes bloquean.
+1.9 técnicamente cerrada con límites; 1.9F conserva PASS WITH LIMITATIONS.
+
 ## 2026-10-05 — Fase1.9F: PASS WITH LIMITATIONS, solo QA
 
 [Orden](../architecture/FASE-1.9F-orden.md), [cierre](../architecture/FASE-1.9F-cierre.md) y [runbook](../architecture/FASE-1.9F-runbook.md).

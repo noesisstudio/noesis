@@ -14,6 +14,7 @@ from .readers import RawReader
 from .repository import HistoryRepository, canonical, hash_source, stamp
 from .review import ReviewRecord
 from .sources import PRIMARY, SOURCES
+from .schema_compatibility import DIAGNOSTIC_SCHEMAS
 
 
 FLAGS = ('FINANCIAL_CORE_ENABLED','LEDGER_REPORTING_ENABLED','OPEN_ITEMS_ENABLED',
@@ -124,7 +125,7 @@ class HistoryDiagnostics:
             return self._finish(session, repo, comparison_hash, principal)
 
     def _create(self, session, principal, manifest_uuid, repository_version, environment_identity):
-        if migrations.current_version_connection(session.borrowed_connection) not in (70, 71, 72, 73):
+        if migrations.current_version_connection(session.borrowed_connection) not in DIAGNOSTIC_SCHEMAS:
             raise ValueError('Esquema70/71 requerido para diagnóstico1.9B.')
         return HistoryRepository(session, self.business_id, manifest_uuid).create(
             principal, repository_version, environment_identity, stamp())

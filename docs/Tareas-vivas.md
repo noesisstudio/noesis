@@ -1,5 +1,17 @@
 # Tareas vivas
 
+## 2026-10-05 — Fase 1.10A: evaluación sin activación
+
+[Orden](architecture/FASE-1.10A-orden.md), [contrato](architecture/FINANCIAL-READINESS-v1.md), [ADR019](architecture/ADR-019-financial-readiness.md), [cierre](architecture/FASE-1.10A-cierre.md), [plan](architecture/FASE-1.10-plan.md).
+
+Pendiente: aceptación/revisión del candidato A y autorización posterior para
+fusión/publicación. No iniciar B. Privacy/export financieros, continuidad de
+antecedentes, cancelación fiscal, preflight/providers y handoff siguen pendientes
+en unidades B–F del plan; no se sustituyen por attestations ficticias.
+Invoice historical v2 bloqueada; registro_anterior no verifica cobro. Retención
+y destrucción de QA real requieren política/autorización propias; A no usa esa
+copia. 1.9 cerrada técnicamente; 1.9F sigue PASS WITH LIMITATIONS.
+
 ## 2026-10-05 — Fase1.9F: PASS WITH LIMITATIONS, solo QA
 
 [Orden](architecture/FASE-1.9F-orden.md), [cierre](architecture/FASE-1.9F-cierre.md) y [runbook](architecture/FASE-1.9F-runbook.md).
