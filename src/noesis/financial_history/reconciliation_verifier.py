@@ -223,6 +223,11 @@ class ReconciliationVerifier:
                         operation = Operation.from_row(op)
                         authorization = next((a for a in ars if str(a["authorization_uuid"]) == stored.authorization_uuid),None)
                         if (op["state"] != "committed" or not authorization or authorization["kind"] not in ("human_confirmation","mandate")
+                            or op["entry_namespace"] == "historical" or authorization["channel"] == "historical"
+                            or type(authorization["actor_user_id"]) is not int or authorization["actor_user_id"] <= 0
+                            or type(authorization["actor_session_version"]) is not int or authorization["actor_session_version"] < 0
+                            or authorization["recorded_by"] != authorization["actor_user_id"]
+                            or authorization["validated_permission"] != ("financial.authorize" if authorization["kind"] == "human_confirmation" else "financial.mandate")
                             or str(op["authorization_uuid"]) != stored.authorization_uuid
                             or authorization["approved_request_hash"] != operation.request.request_hash
                             or authorization["approved_revision"] != operation.request.expected_revision):

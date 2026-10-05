@@ -109,3 +109,18 @@ importación/reanudación, copia restaurada (1.9F) y reconciliación, en órdene
 separadas. Su reparto exacto y DDL deberán contrastarse antes de implementar.
 Esta referencia no crea ninguno de esos servicios ni sustituye sus gates.
 Retención/exportación/acceso finales y activación pertenecen a1.10.
+
+## Estado vigente por unidades (5-oct-2026)
+
+| Unidad | Estado | Referencia |
+|---|---|---|
+|1.9A|Aceptada, contratos|[Cierre A](FASE-1.9A-cierre.md)|
+|1.9B|Aceptada, inventario diagnóstico|[Cierre B](FASE-1.9B-cierre.md)|
+|1.9C|Aceptada, epoch/T0/fence|[Cierre C](FASE-1.9C-cierre.md)|
+|1.9D|Aceptada, incorporación durable|[Cierre D](FASE-1.9D-cierre.md)|
+|1.9E|Implementada, matrices locales PASS, CI final pendiente|[Cierre E](FASE-1.9E-cierre.md)|
+|1.9F|NO autorizada, NO iniciada; sin copia real ni producción|Orden humana futura separada|
+|1.10|NO autorizada; ninguna activación/readiness acreditada|Referencia únicamente|
+
+inventory certifiable ≠ import completed ≠ reconciliation PASS ≠ production rehearsal ≠ activation.
+PASS en E conserva fence y flags OFF. La preparación sintética de QA no es1.9F.

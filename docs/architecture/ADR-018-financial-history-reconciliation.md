@@ -45,3 +45,7 @@ siguen posibles. Compatibilidad de servicios B/C/D con73, sin modificar63–72.
 No endpoint/CLI/tool/scheduler/productor/IA; flags OFF y fixtures sintéticos.
 Ninguna escritura fuera de run/findings durante E. Sin permisos financieros,
 authorizations nuevas, repair, import, reclassify, fiscal I/O ni cambio de epoch.
+
+Autoauditoría: un padre live no se acredita solo por UUID/hash. Se verifica la
+estructura de autoridad original (actor/session/registrador/permiso/namespace),
+sin pedir aprobación nueva ni verificar su vigencia como si fuese ejecución actual.

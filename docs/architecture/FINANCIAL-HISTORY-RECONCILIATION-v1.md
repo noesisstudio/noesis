@@ -144,3 +144,8 @@ el gate durante un scan grande y SQLite serializa writers globales: medición
 sintética, no SLO productivo. Las garantías no equivalen a resistencia frente a
 un administrador que falsifique coordinadamente todas las fuentes y hashes.
 No producción, restauración real, Railway, backups descargados ni1.9F/activación.
+
+La autoridad durable del padre live exige namespace/canal no históricos, actor y
+session presentes, registrador y permiso coherentes con HUMAN/MANDATE, además del
+request/hash y operación COMMITTED. Se conserva la aprobación original: revocarla
+posteriormente no convierte un hecho ejecutado correctamente en histórico unknown.

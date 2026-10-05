@@ -361,22 +361,24 @@ class HistoryReconciliationContract:
         self.assertEqual(self.reconciler.read(self.principal,result["reconciliation_uuid"])["result"],result)
 
     def test_relations_missing_extra_wrong_parent_and_live_coverage_corruption(self):
-        for action in ("missing","extra","wrong","coverage"):
+        for action in ("missing","extra","wrong","coverage","live_authority"):
             with self.subTest(action=action):
                 self.setup_reconciliation()
                 self.payment_source()
                 self.frozen()
                 self.importer.run(self.principal,self.batch_uuid)
-                with self.corruption("economic_event_links","invoice_economic_coverage") as conn:
+                with self.corruption("economic_event_links","invoice_economic_coverage","financial_authorizations") as conn:
                     if action == "missing":
                         conn.execute("DELETE FROM economic_event_links WHERE business_id=?",(self.bid,))
                     elif action == "extra":
                         conn.execute("INSERT INTO economic_event_links (business_id,event_uuid,target_event_uuid,relation_type,recorded_at) SELECT business_id,event_uuid,target_event_uuid,'evidence_for',recorded_at FROM economic_event_links WHERE business_id=?",(self.bid,))
                     elif action == "wrong":
                         conn.execute("UPDATE economic_event_links SET target_event_uuid=event_uuid WHERE business_id=?",(self.bid,))
-                    else:
+                    elif action == "coverage":
                         conn.execute("UPDATE invoice_economic_coverage SET operation_state='prepared' WHERE business_id=?",(self.bid,))
-                self.assert_blocked_unchanged("LIVE_COVERAGE_CONTAMINATION" if action=="coverage" else "DEPENDENCY_CONFLICT")
+                    else:
+                        conn.execute("UPDATE financial_authorizations SET actor_user_id=NULL,actor_session_version=NULL WHERE business_id=? AND kind='human_confirmation'",(self.bid,))
+                self.assert_blocked_unchanged("LIVE_COVERAGE_CONTAMINATION" if action in ("coverage","live_authority") else "DEPENDENCY_CONFLICT")
 
     def test_fiscal_reference_change_detected_without_new_hash(self):
         db.update_verifactu_mode(self.bid,True)

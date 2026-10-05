@@ -196,7 +196,7 @@
     "status": "phase1_9E_implemented_local_PASS_CI_pending_flags_OFF",
     "next_phase_authorized": false,
     "governance": "docs/architecture/README.md",
-    "closure": "docs/architecture/FASE-1.9D-cierre.md",
+    "closure": "docs/architecture/FASE-1.9E-cierre.md",
     "schema_changed": true,
     "operational_events_are_economic_events": false,
     "money_contract": "Decimal; EUR HALF_UP; PostgreSQL NUMERIC; SQLite canonical TEXT; legacy unchanged",
@@ -1019,8 +1019,8 @@
         "financial_history_reconciliation_findings"
       ],
       "qa": {
-        "sqlite_directed": 24,
-        "postgres_directed": 29,
+        "sqlite_directed": 26,
+        "postgres_directed": 31,
         "additional_checks_both": 2,
         "regression_history": 142,
         "regression_skipped": 2,
@@ -1039,7 +1039,7 @@
           "/",
           "/login"
         ],
-        "full_suite": "pending_remote_CI",
+        "full_suite": "pending_remote_CI_after_final_live_authority_control",
         "flags_off": true,
         "production_read": false,
         "rehearsal_real_copy": false,
@@ -1047,7 +1047,40 @@
         "initial_ci_run": 37313115401,
         "initial_ci_failure": "legacy_history71_fixture_restored72_instead_of_original73",
         "runtime_changed_by_ci_fix": false,
-        "postgres_persistence_retest": 28
+        "postgres_persistence_retest": 28,
+        "remote_ci_run": 37313786252,
+        "remote_ci_code": "63ac54f",
+        "remote_ci_url": "https://github.com/noesisstudio/noesis/actions/runs/37313786252",
+        "sqlite_matrix": 26,
+        "sqlite_matrix_seconds": 160.369,
+        "postgres_matrix": 31,
+        "postgres_matrix_seconds": 105.65,
+        "extra_checks_sqlite_seconds": 9.782,
+        "extra_checks_postgres_seconds": 5.724,
+        "authority_regression": 61,
+        "authority_regression_seconds": 57.267,
+        "postgres_persistence_retest_seconds": 18.77,
+        "postgres_hot_routes": 36,
+        "legacy_code_schema": 53,
+        "legacy_code_on_schema": 73,
+        "postgres_privacy_rollback": true,
+        "documentation_links": 670,
+        "local_postgres_qa_stopped": false,
+        "performance": {
+          "sources": 131,
+          "page_size": 8,
+          "verifier_queries": 267,
+          "sqlite_total_queries": 393,
+          "postgres_total_queries": 394,
+          "sqlite_seconds": 7.578,
+          "postgres_seconds": 8.875,
+          "sqlite_peak_bytes": 909502,
+          "postgres_peak_bytes": 967166,
+          "slo_production": false
+        },
+        "live_authority_structural_audit": true,
+        "full_suite_after_last_functional_change": false,
+        "final_ci_pending": true
       }
     }
   }
