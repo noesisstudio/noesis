@@ -1,6 +1,6 @@
 # Cierre de Fase 1.9D — importer histórico durable
 
-2026-10-05. **Validación final en curso; no cerrada todavía.** Solo 1.9D;
+2026-10-05. **Implementación validada y cerrada: 57 PASS, 0 FAIL.** Solo 1.9D;
 cinco flags OFF. Sin producción, copia/backfill real, reconciliación o activación.
 **1.9E no autorizada ni iniciada.** [Orden íntegra](FASE-1.9D-orden.md),
 [ADR-017 y auditoría previa](ADR-017-financial-history-import.md),
@@ -204,7 +204,37 @@ al CHECK revierte esquema/datos. SQLite 72→0→72 solo sin evidencia; PG fixtu
 
 ## 25. Suite/gates
 
-Suite general y CI final todavía en curso. SQLite179 PASS en306.716 s,
+Comandos reproducibles sobre bases temporales sintéticas; PostgreSQL requiere
+localhost/noesis_ci y schema aislado, nunca una copia ni una URL productiva:
+
+```text
+uv run python -m unittest tests.test_financial_history_import
+uv run python -m unittest tests.postgres_financial_history_import.HistoryImportPostgres
+uv run python -m unittest discover -s tests -p "test_*.py"
+uv run ruff check src tests
+uv run bandit -r src/noesis -q -lll -iii
+uv run python scripts/check_project_truth.py
+uv run python scripts/check_secrets.py
+uv run pip-audit
+uv lock --check
+node --test tests/public_marketing.test.cjs tests/public_calendar.test.cjs tests/admin_economia.test.cjs tests/financial_channels.test.cjs
+```
+
+La [CI](../../.github/workflows/ci.yml) conserva los comandos de las once matrices
+PostgreSQL y humos. Total de matriz: Core6, Operations37, EE28, Borrowed18,
+Invoice27, Payment/Bank41, Purchasing44, Channels50, HistoryB37, HistoryC50,
+HistoryD25 = 363. HistoryA puro se ejecuta en la suite general y matriz SQLite.
+El número de tests ejecutados incluye los skips cuando se indican; no equivalen
+a un PASS individual del escenario omitido.
+
+CI final [37300038706](https://github.com/noesisstudio/noesis/actions/runs/37300038706)
+SUCCESS sobre942a113: suite general 1774 tests en1215.844 s, dos skips previstos;
+PostgreSQL363 PASS (151.231 s sumados, D25 con seis carreras de procesos). Ambos jobs, gates,
+migraciones y humos PASS. **57 criterios PASS, 0 FAIL**. Esta adenda solo modifica
+documentación; código, tests, workflow y dependencias coinciden con la CI validada. Sin
+producción consultada ni1.9E.
+
+SQLite179 PASS en306.716 s,
 dos skips previstos de carreras C; D19. PG363 PASS en239.055 s; D25 con seis procesos.
 PG32→72, 36 rutas, código anterior53 sobre72, privacidad/rollback PASS. SQLite72→0→72
 y health/ready/home/login HTTP200 local con scheduler mock. Ruff src/tests,
@@ -218,14 +248,19 @@ real de matrices, no una declaración. Ejecuciones interrumpidas no se cuentan P
 CI inicial620f5fe detectó fallo exclusivamente en fixture SOURCE_DRIFT: pg_trigger
 se buscaba por nombre global y podía restaurar el trigger de otro esquema. Corrección:
 tgrelid='expenses'::regclass limita al target actual. No cambio runtime. Revalidación
-D25 con esquema señuelo/trigger homónimo y nueva CI completa antes de cerrar.
+D25 con esquema señuelo/trigger homónimo PASS; CI final completa PASS.
 
 
 Suite local1774 (2159.129 s) detectó cuatro incidencias: catálogo de retención no
 incluía las dos tablas D; simulador DDL sin pg_get_functiondef y literal SQLSTATE.
 Corregidos: dos nombres en la guardia de baja db.py (sin nueva lógica financiera),
 simulador con definición real generada por65 y formato SQLSTATE uniforme.
-Siete tests platform/baja PASS; revalidar D SQLite/PG y CI completa antes de cierre.
+Siete tests platform/baja PASS; D SQLite/PG y CI completa final revalidados PASS.
+
+Última revalidación local tras cerrar el objeto durable: PostgreSQL80 PASS
+(83.365 s), SQLite86 PASS (84.708 s). Secrets de todos los archivos versionados
+PASS; 680 enlaces locales de documentos modificados comprobados. La instancia
+PG QA propia fue apagada; logs/fixtures conservados en TEMP.
 
 ## 26. Decisiones, diferencias y riesgos
 
@@ -244,7 +279,7 @@ esquema/evidencia; downgrade destructivo72 con datos bloqueado. Restauración re
 
 ## 27. PASS/FAIL individual
 
-Numeración corresponde a la orden íntegra. Estados finales se consolidan con QA.
+Numeración corresponde a la orden íntegra. 57 PASS, 0 FAIL, con QA final y autoauditoría.
 
 | Nº | Criterio | Estado | Evidencia |
 |---:|---|---|---|
@@ -303,7 +338,7 @@ Numeración corresponde a la orden íntegra. Estados finales se consolidan con Q
 | 53 | Tests zero effects | PASS | snapshots sources/flags |
 | 54 | Hash/fechas originales en retry | PASS | same/new operator/manifest |
 | 55 | Migraciones duales/datos previos | PASS | common/golden |
-| 56 | Todas regresiones y gates | PENDING | suite final pendiente |
+| 56 | Todas regresiones y gates | PASS | CI completa942a113; general1774/PG363/gates/migraciones |
 | 57 | Autoauditoría | PASS | 20 respuestas abajo |
 
 ## 28. Autoauditoría

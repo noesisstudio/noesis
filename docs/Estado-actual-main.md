@@ -1,6 +1,13 @@
 # Estado actual del producto
 
-## 2026-10-05 — Fase1.9D: importer histórico (validación en curso)
+CI final [37300038706](https://github.com/noesisstudio/noesis/actions/runs/37300038706)
+SUCCESS sobre942a113: suite general 1774 tests en1215.844 s, dos skips previstos;
+PostgreSQL363 PASS (151.231 s sumados, D25 con seis carreras de procesos). Ambos jobs, gates,
+migraciones y humos PASS. **57 criterios PASS, 0 FAIL**. Esta adenda solo modifica
+documentación; código, tests, workflow y dependencias coinciden con la CI validada. Sin
+producción consultada ni1.9E.
+
+## 2026-10-05 — Fase1.9D: importer histórico (implementada y validada)
 
 Solo incorporación de candidatos congelados de C vigente. Flags OFF; no1.9E,
 reconciliación, activación, continuidad live ni producción.

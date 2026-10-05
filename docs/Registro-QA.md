@@ -1,5 +1,12 @@
 ﻿# Registro de QA
 
+CI final [37300038706](https://github.com/noesisstudio/noesis/actions/runs/37300038706)
+SUCCESS sobre942a113: suite general 1774 tests en1215.844 s, dos skips previstos;
+PostgreSQL363 PASS (151.231 s sumados, D25 con seis carreras de procesos). Ambos jobs, gates,
+migraciones y humos PASS. **57 criterios PASS, 0 FAIL**. Esta adenda solo modifica
+documentación; código, tests, workflow y dependencias coinciden con la CI validada. Sin
+producción consultada ni1.9E.
+
 ## 2026-10-05 — D: matriz durable también cerrada en aplicación
 
 HistoricalEconomicEvent rechaza explícitamente v2 fuera de los tres tipos
@@ -7,10 +14,10 @@ históricos aprobados. SQL e importer ya lo impedían; la auditoría detectó qu
 el wrapper podía validar factura v2 en memoria. Golden con InvoiceCapture live
 v2 real preserva bytes/hashes y comprueba el rechazo histórico. PostgreSQL80 PASS
 (83.365 s); SQLite86 PASS (84.708 s), incluidos D, contratos EE, plataformas y
-retención. Ruff/truth y CI completa del código final antes de cerrar D.
+retención. Ruff/truth y CI completa final PASS.
 Flags OFF, sin producción ni1.9E.
 
-## 2026-10-05 — Fase1.9D: importer histórico (validación en curso)
+## 2026-10-05 — Fase1.9D: importer histórico (implementada y validada)
 
 Solo incorporación de candidatos congelados de C vigente. Flags OFF; no1.9E,
 reconciliación, activación, continuidad live ni producción.
@@ -29,12 +36,12 @@ Suite local1774 (2159.129 s) detectó cuatro incidencias: catálogo de retenció
 incluía las dos tablas D; simulador DDL sin pg_get_functiondef y literal SQLSTATE.
 Corregidos: dos nombres en la guardia de baja db.py (sin nueva lógica financiera),
 simulador con definición real generada por65 y formato SQLSTATE uniforme.
-Siete tests platform/baja PASS; revalidar D SQLite/PG y CI completa antes de cierre.
+Siete tests platform/baja PASS; D SQLite/PG y CI completa final revalidados PASS.
 
 CI inicial620f5fe detectó fallo exclusivamente en fixture SOURCE_DRIFT: pg_trigger
 se buscaba por nombre global y podía restaurar el trigger de otro esquema. Corrección:
 tgrelid='expenses'::regclass limita al target actual. No cambio runtime. Revalidación
-D25 con esquema señuelo/trigger homónimo y nueva CI completa antes de cerrar.
+D25 con esquema señuelo/trigger homónimo PASS; CI final completa PASS.
 
 QA D actual: SQLite179 en306.716 s (dos skips previstos de carreras C), D19 compartidas;
 PostgreSQL363 en239.055 s, D25=19 comunes+6 procesos. PG16 localhost/noesis_ci,
@@ -44,7 +51,7 @@ código anterior53 sobre72, privacidad/rollback PASS. SQLite72→0→72 y HTTP l
 health/ready/home/login200, scheduler mock. Ruff src/tests, Bandit high/high,
 secretos de nuevos archivos staged, truth, Node9, uv lock, pip-audit y125 enlaces PASS.
 No contar las ejecuciones interrumpidas por pérdida de instancia QA como PASS.
-Suite general/CI final pendientes. Comandos y criterio detallado en el cierre D.
+Suite general/CI final PASS; evidencia de cierre al inicio. Comandos y criterio detallado en el cierre D.
 
 
 

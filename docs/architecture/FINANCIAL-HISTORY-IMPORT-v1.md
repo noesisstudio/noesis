@@ -85,7 +85,7 @@ bloqueados en decoder/servicio. FinancialOperations.execute nunca se utiliza.
 EconomicEvent live mantiene su validador. HistoricalEconomicEvent separado valida
 EventPayload histórico, y StoredEvent selecciona el contrato por origin durable.
 canonical_version=1 y bytes/hashes anteriores no cambian. Nueva v2 factura
-histórica no se admite en SQL ni importer. Los tres v2 conservan todos los campos
+histórica no se admite en SQL, importer ni objeto durable. Los tres v2 conservan todos los campos
 de A: confirmed_on/imported_on obligatorios anulables, evidence_basis/hash.
 No float, subcéntimo, moneda ajena ni NULL sustituido por cero.
 

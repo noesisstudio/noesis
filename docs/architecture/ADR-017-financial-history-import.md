@@ -1,6 +1,6 @@
 # ADR-017 — Incorporación histórica sin ejecución financiera
 
-Estado: implementación autorizada, validación pendiente. Fecha: 5-oct-2026.
+Estado: implementada y validada; exclusivamente1.9D. Fecha: 5-oct-2026.
 [Orden completa](FASE-1.9D-orden.md). Exclusivamente1.9D; no1.9E.
 
 ## Auditoría previa del runtime main

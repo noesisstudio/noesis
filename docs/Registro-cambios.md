@@ -1,16 +1,23 @@
 ﻿# Registro de cambios
 
+CI final [37300038706](https://github.com/noesisstudio/noesis/actions/runs/37300038706)
+SUCCESS sobre942a113: suite general 1774 tests en1215.844 s, dos skips previstos;
+PostgreSQL363 PASS (151.231 s sumados, D25 con seis carreras de procesos). Ambos jobs, gates,
+migraciones y humos PASS. **57 criterios PASS, 0 FAIL**. Esta adenda solo modifica
+documentación; código, tests, workflow y dependencias coinciden con la CI validada. Sin
+producción consultada ni1.9E.
+
 ## 2026-10-05 — D: cerrar matriz v2 del objeto durable
 
 Objetivo: alinear HistoricalEconomicEvent con la matriz SQL y del importer;
 solo tres v2 históricos autorizados, factura histórica v2 rechazada también en
 memoria. Archivos: durable.py y golden común del importer; QA/estado/ADR y cierre.
 Pruebas: PostgreSQL80 PASS (83.365 s), SQLite86 PASS (84.708 s). Live v2 intacto.
-CI completa pendiente. Límites: fixtures sintéticos; ninguna producción ni1.9E.
+CI completa final PASS; ver evidencia de cierre al inicio. Límites: fixtures sintéticos; ninguna producción ni1.9E.
 Riesgo: rechazo temprano más estricto; diagnóstico ValueError explícito. Rollback:
 flags OFF y conservar esquema/evidencia, sin downgrade destructivo.
 
-## 2026-10-05 — Fase1.9D: importer histórico (validación en curso)
+## 2026-10-05 — Fase1.9D: importer histórico (implementada y validada)
 
 Solo incorporación de candidatos congelados de C vigente. Flags OFF; no1.9E,
 reconciliación, activación, continuidad live ni producción.
@@ -29,19 +36,19 @@ Suite local1774 (2159.129 s) detectó cuatro incidencias: catálogo de retenció
 incluía las dos tablas D; simulador DDL sin pg_get_functiondef y literal SQLSTATE.
 Corregidos: dos nombres en la guardia de baja db.py (sin nueva lógica financiera),
 simulador con definición real generada por65 y formato SQLSTATE uniforme.
-Siete tests platform/baja PASS; revalidar D SQLite/PG y CI completa antes de cierre.
+Siete tests platform/baja PASS; D SQLite/PG y CI completa final revalidados PASS.
 
 CI inicial620f5fe detectó fallo exclusivamente en fixture SOURCE_DRIFT: pg_trigger
 se buscaba por nombre global y podía restaurar el trigger de otro esquema. Corrección:
 tgrelid='expenses'::regclass limita al target actual. No cambio runtime. Revalidación
-D25 con esquema señuelo/trigger homónimo y nueva CI completa antes de cerrar.
+D25 con esquema señuelo/trigger homónimo PASS; CI final completa PASS.
 
 Objetivo/áreas: importer histórico por item, schema72 y contrato durable cerrado;
 financial_history, economic_events, migrations, tests y gobernanza/CI. Pruebas:
 SQLite179 (306.716 s, dos skips), PostgreSQL363 (239.055 s, D25 con seis procesos),
 36 rutas PG, código53 sobre schema72, privacidad/rollback y HTTP200 local.
 Ruff/Bandit/secretos/truth/Node9/lock/dependencias/enlaces PASS. Suite general/CI
-final en curso: no declarar cierre hasta su resultado. Límites: ninguna producción,
+final PASS; evidencia de cierre al inicio. Límites: ninguna producción,
 copia real, proveedor o backfill real. Riesgo: SQL dual/contención y source binario
 ambiguo bloqueado. Diagnóstico: read_batch/blocking_code y frozen hashes; rollback
 code-first con flags OFF conservando esquema/evidencia; downgrade72 con datos bloqueado.

@@ -1,6 +1,6 @@
 # Guía técnica para ingeniería — Bynoesis
 
-## 2026-10-05 — Fase1.9D: importer histórico (validación en curso)
+## 2026-10-05 — Fase1.9D: importer histórico (implementada y validada)
 
 Solo incorporación de candidatos congelados de C vigente. Flags OFF; no1.9E,
 reconciliación, activación, continuidad live ni producción.
