@@ -192,12 +192,12 @@
   ],
   "admin_workspace_release": "seven_departments_scoped_monthly_api_usage_owner_phone_search_mobile_disclosure_explicit_metric_sources_refresh_no_schema_changes_deployment_verification_after_push",
   "financial_core": {
-    "authorized_phase": "1.9E",
-    "status": "phase1_9E_complete_PASS_flags_OFF_no1_9F",
+    "authorized_phase": "1.9F",
+    "status": "phase1_9F_PASS_WITH_LIMITATIONS_flags_OFF_no1_9G_no1_10",
     "next_phase_authorized": false,
     "governance": "docs/architecture/README.md",
-    "closure": "docs/architecture/FASE-1.9E-cierre.md",
-    "schema_changed": true,
+    "closure": "docs/architecture/FASE-1.9F-cierre.md",
+    "schema_changed": false,
     "operational_events_are_economic_events": false,
     "money_contract": "Decimal; EUR HALF_UP; PostgreSQL NUMERIC; SQLite canonical TEXT; legacy unchanged",
     "persistence": "InvoiceCapture, PaymentCapture, BankCapture, SupplierInvoiceCapture and ExpenseCapture: borrowed writers, mandatory immutable domain coverage, events and durable result in shared transaction",
@@ -219,7 +219,6 @@
       "posting",
       "invoice.fiscal_cancellation_registered_producer",
       "financial_activation",
-      "historical_reconciliation",
       "invoice_v2_historical_line_raw",
       "historical_eligible_manifest"
     ],
@@ -1099,6 +1098,71 @@
         "autoaudit_questions": 20,
         "deploy_verified": false,
         "closure_addenda_only_documentation": true
+      }
+    },
+    "phase1_9F": {
+      "result": "PASS WITH LIMITATIONS",
+      "technical_rehearsal_completed": true,
+      "user_acceptance_pending": true,
+      "runtime_code": "acff183",
+      "order": "docs/architecture/FASE-1.9F-orden.md",
+      "closure": "docs/architecture/FASE-1.9F-cierre.md",
+      "runbook": "docs/architecture/FASE-1.9F-runbook.md",
+      "schema_initial": 73,
+      "schema_final": 73,
+      "migrations_applied": 0,
+      "engine": "PostgreSQL18.6 local WSL2 Noesis19FQA",
+      "production_connections_during_rehearsal": 0,
+      "outbound_application_connections": 0,
+      "application_code_changed": false,
+      "flags_off": true,
+      "cluster_stopped": true,
+      "fences_QA_preserved": true,
+      "clean_runs": 2,
+      "diagnostic_businesses_per_run": 5,
+      "cut_import_reconcile_businesses_per_run": 4,
+      "classification": {
+        "A": 0,
+        "B": 129,
+        "C": 29,
+        "D": 1
+      },
+      "candidates": 0,
+      "events_operations_created": 0,
+      "positive_import_path_validated": false,
+      "legacy_tables_hashes_unchanged": 95,
+      "item_retries": 105,
+      "duplicates": 0,
+      "reconciliation_results": {
+        "BLOCKED": 3,
+        "PASS_empty_control": 1
+      },
+      "largest_items": 64,
+      "maximum_E_gate_seconds": 1.295369,
+      "criteria_total": 41,
+      "criteria_fail": 0,
+      "criteria_NA": 3,
+      "criteria_with_limits": true,
+      "autoaudit_questions": 20,
+      "limits": [
+        "no positive candidates",
+        "no bank/fiscal/rectification data",
+        "small dataset",
+        "customer historical provenance unconfirmed",
+        "no scale SLO",
+        "invoice historical v2 remains blocked"
+      ],
+      "next_phase_authorized": false,
+      "deployment_changed": false,
+      "private_data_in_git": false,
+      "gates": {
+        "ruff": true,
+        "project_truth": true,
+        "secrets_tracked_and_new_docs": true,
+        "local_links_checked": 440,
+        "local_links_broken": 0,
+        "harness_syntax": true,
+        "runtime_unchanged": true
       }
     }
   }

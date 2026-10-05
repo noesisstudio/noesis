@@ -1,5 +1,11 @@
 # Registro de cambios
 
+## 2026-10-05 — Fase1.9F: PASS WITH LIMITATIONS, solo QA
+
+[Orden](architecture/FASE-1.9F-orden.md), [cierre](architecture/FASE-1.9F-cierre.md) y [runbook](architecture/FASE-1.9F-runbook.md).
+
+Objetivo: exclusivamente rehearsal1.9F en QA y gobernanza heredable. Archivos: orden/cierre/runbook F, AGENTS, arquitectura/guía08, estado/pendientes/mapa/QA/decisiones/JSON. Sin cambios src/tests/schema/deps/flags. Riesgo: datos personales en copia privada y cobertura limitada. Diagnóstico/rollback: hashes y snapshots privados; detener/restaurar copia limpia, nunca reparar sources ni downgrade de evidencia. Ningún push/deploy productivo.
+
 ## 2026-10-05 — Cierre técnico1.9E: CI final PASS
 
 Objetivo: cerrar exclusivamente reconciliación histórica durable. Archivos de esta

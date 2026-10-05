@@ -1,5 +1,11 @@
 # Decisiones
 
+## 2026-10-05 — Fase1.9F: PASS WITH LIMITATIONS, solo QA
+
+[Orden](architecture/FASE-1.9F-orden.md), [cierre](architecture/FASE-1.9F-cierre.md) y [runbook](architecture/FASE-1.9F-runbook.md).
+
+Clasificación intacta y honestidad histórica: cero candidates se conserva, no se fabrican fixtures ni excepciones. Separar PASS técnico con limitaciones de E BLOCKED por evidencia. Medición de gate válida solo para volumen observado; no activación ni validación de escala productiva.
+
 ## 2026-10-05 — Fase1.9E: reconciliación histórica implementada y validada
 
 [Orden](architecture/FASE-1.9E-orden.md), [ADR018](architecture/ADR-018-financial-history-reconciliation.md),

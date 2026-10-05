@@ -1,5 +1,11 @@
 # Financial Core: punto de entrada y continuidad
 
+## 2026-10-05 — Fase1.9F: PASS WITH LIMITATIONS, solo QA
+
+[Orden](FASE-1.9F-orden.md), [cierre](FASE-1.9F-cierre.md) y [runbook](FASE-1.9F-runbook.md).
+
+Entrega1.9F: PASS WITH LIMITATIONS, reproducible sobre restauración real aislada. Solo observación/orquestación; sin cambio de contratos/código, activación ni1.9G. Cierre y runbook son el punto de continuación; no reconstruir decisiones desde conversación. No exportar artefactos reales a Git.
+
 ## 2026-10-05 — Fase1.9E: reconciliación histórica implementada y validada
 
 [Orden](FASE-1.9E-orden.md), [ADR018](ADR-018-financial-history-reconciliation.md),

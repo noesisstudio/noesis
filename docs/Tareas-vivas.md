@@ -1,5 +1,11 @@
 # Tareas vivas
 
+## 2026-10-05 — Fase1.9F: PASS WITH LIMITATIONS, solo QA
+
+[Orden](architecture/FASE-1.9F-orden.md), [cierre](architecture/FASE-1.9F-cierre.md) y [runbook](architecture/FASE-1.9F-runbook.md).
+
+Pendiente revisión humana del cierre1.9F. No1.9G ni1.10 autorizadas. Para futura evaluación: muestras con candidatos efectivos, banco/fiscal/rectificativas y mayor escala; invoice historical v2 sigue bloqueado. Retención/destrucción de copia real requiere política y autorización separadas.
+
 ## 2026-10-05 — Fase1.9E: reconciliación histórica implementada y validada
 
 [Orden](architecture/FASE-1.9E-orden.md), [ADR018](architecture/ADR-018-financial-history-reconciliation.md),

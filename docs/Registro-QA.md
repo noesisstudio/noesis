@@ -1,5 +1,24 @@
 # Registro de QA
 
+## 2026-10-05 — Fase1.9F: PASS WITH LIMITATIONS, solo QA
+
+[Orden](architecture/FASE-1.9F-orden.md), [cierre](architecture/FASE-1.9F-cierre.md) y [runbook](architecture/FASE-1.9F-runbook.md).
+
+Dos rehearsals PostgreSQL18.6 reales desde snapshot limpio: cinco diagnósticos y cuatro C/D/E por run; hashes/semántica iguales, reintentos sin duplicados, writers rechazados por fence y tablas legacy intactas. Aislamiento/privacidad final PASS. No código cambiado; suite sintética previa no se presenta como nueva prueba real. Gates de cierre en adenda inferior.
+
+
+### Gates finales del cierre1.9F
+
+Ruff src/tests PASS; project truth PASS (esquema/precios/estado coherentes),
+secretos versionados y tres documentos nuevos PASS,440 enlaces locales revisados
+sin roturas, git diff --check y syntax de harness PASS. Src/tests/deps/workflows
+idénticos al runtime aprobado. Ninguna suite general/CI externa nueva ni servidor
+lanzado para documentación; pruebas reales del rehearsal son las del cierre F.
+Detector de secretos marcó el SHA público de commit en el JSON: referencia
+abreviada sin cambiar baseline. Fallo del verificador privado por pedir len() a
+SecretsCollection corregido; escaneo efectivo PASS, sin dato expuesto ni fuente
+modificada. No bug del Financial Core. ACL privada y PG detenido revalidados.
+
 ## 2026-10-05 — Cierre técnico1.9E: CI final PASS
 
 Objetivo: cerrar exclusivamente reconciliación histórica durable. Archivos de esta

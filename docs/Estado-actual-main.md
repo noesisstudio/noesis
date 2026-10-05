@@ -1,5 +1,11 @@
 # Estado actual del producto
 
+## 2026-10-05 — Fase1.9F: PASS WITH LIMITATIONS, solo QA
+
+[Orden](architecture/FASE-1.9F-orden.md), [cierre](architecture/FASE-1.9F-cierre.md) y [runbook](architecture/FASE-1.9F-runbook.md).
+
+Rehearsal técnico reproducible terminado; PASS WITH LIMITATIONS por cobertura escasa. Cinco flags OFF, sin1.9G/1.10. PostgreSQL QA detenido y fence conservado. No confundir BLOCKED de historia con fallo técnico ni PASS vacío con importación positiva.
+
 ## 2026-10-05 — Fase1.9E: reconciliación histórica implementada y validada
 
 [Orden](architecture/FASE-1.9E-orden.md), [ADR018](architecture/ADR-018-financial-history-reconciliation.md),

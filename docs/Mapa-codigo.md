@@ -1,5 +1,11 @@
 # Mapa de código
 
+## 2026-10-05 — Fase1.9F: PASS WITH LIMITATIONS, solo QA
+
+[Orden](architecture/FASE-1.9F-orden.md), [cierre](architecture/FASE-1.9F-cierre.md) y [runbook](architecture/FASE-1.9F-runbook.md).
+
+Código runtime y módulos B/C/D/E inalterados. Harness específico, snapshots y evidencias reales privados fuera de Git; no nuevo CLI/router/tool. El mapa operativo del rehearsal está en el runbook. Sobres C certifican; carrier B conserva su modo diagnóstico.
+
 ## 2026-10-05 — Fase1.9E: reconciliación histórica implementada y validada
 
 [Orden](architecture/FASE-1.9E-orden.md), [ADR018](architecture/ADR-018-financial-history-reconciliation.md),

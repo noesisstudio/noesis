@@ -1,5 +1,11 @@
 # AGENTS.md - Manual del proyecto Bynoesis
 
+## 2026-10-05 — Fase1.9F: PASS WITH LIMITATIONS, solo QA
+
+[Orden](docs/architecture/FASE-1.9F-orden.md), [cierre](docs/architecture/FASE-1.9F-cierre.md) y [runbook](docs/architecture/FASE-1.9F-runbook.md).
+
+Fase1.9F ejecutada en copia real aislada. Solo orquestación/documentación; ninguna funcionalidad nueva. Producción no consultada ni modificada. Leer cierre/runbook antes de retomar; las órdenes inferiores son históricas y no amplían el alcance.
+
 ## 2026-10-05 — Fase1.9E: reconciliación histórica implementada y validada
 
 [Orden](docs/architecture/FASE-1.9E-orden.md), [ADR018](docs/architecture/ADR-018-financial-history-reconciliation.md),
