@@ -15,6 +15,12 @@ durables cerrados; factura histórica v2 bloqueada. Nuevos inventarios reconocen
 evidencia histórica existente sin promover B a A ni modificar batches anteriores.
 Los encabezados inferiores conservan historia y no amplían autorización.
 
+Suite local1774 (2159.129 s) detectó cuatro incidencias: catálogo de retención no
+incluía las dos tablas D; simulador DDL sin pg_get_functiondef y literal SQLSTATE.
+Corregidos: dos nombres en la guardia de baja db.py (sin nueva lógica financiera),
+simulador con definición real generada por65 y formato SQLSTATE uniforme.
+Siete tests platform/baja PASS; revalidar D SQLite/PG y CI completa antes de cierre.
+
 CI inicial620f5fe detectó fallo exclusivamente en fixture SOURCE_DRIFT: pg_trigger
 se buscaba por nombre global y podía restaurar el trigger de otro esquema. Corrección:
 tgrelid='expenses'::regclass limita al target actual. No cambio runtime. Revalidación

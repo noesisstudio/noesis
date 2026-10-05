@@ -32,6 +32,15 @@ class _RecordingPGConn:
                 self.statements.append(statement.strip())
 
     def fetchone(self):
+        if "pg_get_functiondef('capture_event()'" in self.statements[-1]:
+            # Migración72 inspecciona el guard65 existente. Simular su definición
+            # real generada; no omitir la nueva migración de las comprobaciones.
+            from noesis.invoice_capture.schema import upgrade
+            capture = _RecordingPGConn()
+            upgrade(capture)
+            definition = next(stmt for stmt in capture.statements
+                              if stmt.startswith('CREATE FUNCTION capture_event()'))
+            return {'ddl': definition.replace('CREATE FUNCTION', 'CREATE OR REPLACE FUNCTION', 1)}
         return None
 
     def fetchall(self):

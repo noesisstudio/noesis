@@ -957,7 +957,20 @@
       "new_documentation_links": 125,
       "remote_ci_initial_run": 37297021397,
       "remote_ci_initial_postgres": "FAIL_fixture_trigger_catalog_lookup_scope",
-      "runtime_changed_by_ci_fix": false
+      "runtime_changed_by_ci_fix": false,
+      "full_suite_local_initial": 1774,
+      "full_suite_local_initial_seconds": 2159.129,
+      "full_suite_local_initial_failures": 1,
+      "full_suite_local_initial_errors": 3,
+      "full_suite_local_skipped": 2,
+      "platform_retention_retest": 7,
+      "postgres_import_decoy_retest": 25,
+      "postgres_import_decoy_seconds": 40.105,
+      "final_full_suite": "pending_remote_CI_after_retention_fixture_fix",
+      "sqlite_import_final": 19,
+      "sqlite_import_final_seconds": 61.247,
+      "postgres_import_final": 25,
+      "postgres_import_final_seconds": 33.005
     },
     "historical_importer_scope": "Internal frozen C candidates only; source readers real; one item transaction; flags off; no live transition"
   }

@@ -14092,6 +14092,7 @@ def delete_business_cascade(business_id) -> bool:
         for financial_table in ("financial_channel_proposals", "financial_channel_receipts", "financial_operations", "financial_authorizations",
                                 "financial_history_epochs", "financial_history_control", "financial_history_cut_manifests", "financial_history_epoch_audit",
                                 "financial_history_manifests", "financial_history_items",
+                                "financial_history_import_batches", "financial_history_import_items",
                                 "financial_history_incidences", "financial_history_decisions",
                                 "economic_events", "economic_event_links",
                                 "invoice_economic_coverage", "payment_economic_coverage",

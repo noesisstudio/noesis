@@ -22,7 +22,9 @@ readers añade lookup tenant+PK real; classifier reconoce evidencia D en nuevos
 inventarios; cutoff/service admiten esquema compatible posterior; migrations registra 72.
 Pruebas comunes/SQLite/PostgreSQL y workers de procesos; CI añade la batería D.
 Documentación obligatoria actualizada; listado completo al final.
-No cambios a db.py, config, canales, Capture, productores o fiscalidad funcional.
+db.py añade solo los dos nombres D a la guardia de retención de bajas; no nueva
+lógica financiera grande. Sin cambios a config, canales, Capture, productores
+o fiscalidad funcional.
 
 ## 3. Migración
 
@@ -212,6 +214,13 @@ se buscaba por nombre global y podía restaurar el trigger de otro esquema. Corr
 tgrelid='expenses'::regclass limita al target actual. No cambio runtime. Revalidación
 D25 con esquema señuelo/trigger homónimo y nueva CI completa antes de cerrar.
 
+
+Suite local1774 (2159.129 s) detectó cuatro incidencias: catálogo de retención no
+incluía las dos tablas D; simulador DDL sin pg_get_functiondef y literal SQLSTATE.
+Corregidos: dos nombres en la guardia de baja db.py (sin nueva lógica financiera),
+simulador con definición real generada por65 y formato SQLSTATE uniforme.
+Siete tests platform/baja PASS; revalidar D SQLite/PG y CI completa antes de cierre.
+
 ## 26. Decisiones, diferencias y riesgos
 
 Dentro del diseño aprobado: intent/result combinado con FK propia diferida, recorder
@@ -364,3 +373,6 @@ Numeración corresponde a la orden íntegra. Estados finales se consolidan con Q
 - Creado: [tests/history_legacy_schema.py](../../tests/history_legacy_schema.py)
 - Creado: [tests/postgres_financial_history_import.py](../../tests/postgres_financial_history_import.py)
 - Creado: [tests/test_financial_history_import.py](../../tests/test_financial_history_import.py)
+
+- Modificado: [src/noesis/db.py](../../src/noesis/db.py) — catálogo de retención.
+- Modificado: [tests/test_platform.py](../../tests/test_platform.py) — introspección DDL simulada.

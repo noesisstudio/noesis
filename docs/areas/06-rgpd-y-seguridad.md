@@ -15,6 +15,10 @@ durables cerrados; factura histórica v2 bloqueada. Nuevos inventarios reconocen
 evidencia histórica existente sin promover B a A ni modificar batches anteriores.
 Los encabezados inferiores conservan historia y no amplían autorización.
 
+Retención D: financial_history_import_batches/items se añaden a la guardia de
+baja. Con evidencia no se ejecuta cascade/delete ni se retira defensa; solicitud
+con conservación según flujo existente. Purga/transición futura sigue fuera de D.
+
 
 ## 2026-10-04 — Fase1.9C: epoch/T0/fence (implementada y validada)
 

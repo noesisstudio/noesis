@@ -245,7 +245,7 @@ def _fence_guard(conn, table, action, allow):
         conn.execute(f"""CREATE FUNCTION {name}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN
             {acquire}
             IF ({fenced})
-              AND NOT ({allow}) THEN RAISE EXCEPTION 'NOESIS_HISTORY_FENCE_ACTIVE' USING ERRCODE='23514'; END IF;
+              AND NOT ({allow}) THEN RAISE EXCEPTION 'NOESIS_HISTORY_FENCE_ACTIVE' USING ERRCODE = '23514'; END IF;
             RETURN NEW; END $$""")
         conn.execute(
             f"CREATE TRIGGER {name} BEFORE {action} ON {table} FOR EACH ROW EXECUTE FUNCTION {name}()"
