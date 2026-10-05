@@ -15,6 +15,11 @@ durables cerrados; factura histórica v2 bloqueada. Nuevos inventarios reconocen
 evidencia histórica existente sin promover B a A ni modificar batches anteriores.
 Los encabezados inferiores conservan historia y no amplían autorización.
 
+CI inicial620f5fe detectó fallo exclusivamente en fixture SOURCE_DRIFT: pg_trigger
+se buscaba por nombre global y podía restaurar el trigger de otro esquema. Corrección:
+tgrelid='expenses'::regclass limita al target actual. No cambio runtime. Revalidación
+D25 con esquema señuelo/trigger homónimo y nueva CI completa antes de cerrar.
+
 Objetivo/áreas: importer histórico por item, schema72 y contrato durable cerrado;
 financial_history, economic_events, migrations, tests y gobernanza/CI. Pruebas:
 SQLite179 (306.716 s, dos skips), PostgreSQL363 (239.055 s, D25 con seis procesos),

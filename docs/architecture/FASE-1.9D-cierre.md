@@ -206,6 +206,12 @@ noesis no se audita en PyPI. Ruff fuera de targets CI encontró avisos preexiste
 en branding/notebook; no se modifican. Golden tests y datos live forman parte
 real de matrices, no una declaración. Ejecuciones interrumpidas no se cuentan PASS.
 
+
+CI inicial620f5fe detectó fallo exclusivamente en fixture SOURCE_DRIFT: pg_trigger
+se buscaba por nombre global y podía restaurar el trigger de otro esquema. Corrección:
+tgrelid='expenses'::regclass limita al target actual. No cambio runtime. Revalidación
+D25 con esquema señuelo/trigger homónimo y nueva CI completa antes de cerrar.
+
 ## 26. Decisiones, diferencias y riesgos
 
 Dentro del diseño aprobado: intent/result combinado con FK propia diferida, recorder

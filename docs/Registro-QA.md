@@ -15,6 +15,11 @@ durables cerrados; factura histórica v2 bloqueada. Nuevos inventarios reconocen
 evidencia histórica existente sin promover B a A ni modificar batches anteriores.
 Los encabezados inferiores conservan historia y no amplían autorización.
 
+CI inicial620f5fe detectó fallo exclusivamente en fixture SOURCE_DRIFT: pg_trigger
+se buscaba por nombre global y podía restaurar el trigger de otro esquema. Corrección:
+tgrelid='expenses'::regclass limita al target actual. No cambio runtime. Revalidación
+D25 con esquema señuelo/trigger homónimo y nueva CI completa antes de cerrar.
+
 QA D actual: SQLite179 en306.716 s (dos skips previstos de carreras C), D19 compartidas;
 PostgreSQL363 en239.055 s, D25=19 comunes+6 procesos. PG16 localhost/noesis_ci,
 solo schemas/fixtures sintéticos. Migration golden71→72→71→72 y rollback inyectado

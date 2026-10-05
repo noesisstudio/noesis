@@ -604,7 +604,8 @@ class HistoryImportContract:
                 conn.execute("DROP TRIGGER " + name)
             else:
                 ddl = conn.execute(
-                    "SELECT pg_get_triggerdef(oid) AS ddl FROM pg_trigger WHERE tgname=?", (name,)
+                    "SELECT pg_get_triggerdef(oid) AS ddl FROM pg_trigger WHERE tgname=? AND tgrelid='expenses'::regclass",
+                    (name,),
                 ).fetchone()["ddl"]
                 conn.execute("DROP TRIGGER " + name + " ON expenses")
             conn.execute(

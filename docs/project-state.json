@@ -954,7 +954,10 @@
       "sqlite_seconds": 306.716,
       "sqlite_skipped": 2,
       "sqlite_import": 19,
-      "new_documentation_links": 125
+      "new_documentation_links": 125,
+      "remote_ci_initial_run": 37297021397,
+      "remote_ci_initial_postgres": "FAIL_fixture_trigger_catalog_lookup_scope",
+      "runtime_changed_by_ci_fix": false
     },
     "historical_importer_scope": "Internal frozen C candidates only; source readers real; one item transaction; flags off; no live transition"
   }
