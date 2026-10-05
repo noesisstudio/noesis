@@ -1,8 +1,14 @@
 # Decisiones
 
-2026-10-05, D: matriz v2 histórica cerrada también en HistoricalEconomicEvent;
-factura histórica v2 rechazada antes del wrapper A. SQL/importer no cambian.
-Golden de factura live real conserva bytes/hashes; no1.9E ni activación.
+## 2026-10-05 — Fase1.9E: reconciliación histórica implementada
+
+[Orden](architecture/FASE-1.9E-orden.md), [ADR018](architecture/ADR-018-financial-history-reconciliation.md),
+[contrato](architecture/FINANCIAL-HISTORY-RECONCILIATION-v1.md), [informe](architecture/FASE-1.9E-cierre.md).
+Solo audita por identidad; writes exclusivamente run/findings propios. TX/gate y
+conexión compartidos, repositorio especializado, Decimal/NUMERIC, IA sin autoridad.
+B/C/D siguen inmutables; unknown/B/NULL conservados. PASS no libera fence, activa
+flags ni acredita producción. Cinco flags OFF. Sin1.9F ni activación. Validación
+local registrada; cierre condicionado a CI completa. Encabezados inferiores históricos.
 
 ## 2026-10-05 — Fase1.9D: importer histórico (implementada y validada)
 

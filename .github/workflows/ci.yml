@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     # La suite completa ya roza 15 min en runners compartidos y después valida
     # upgrade/downgrade/upgrade. El límite debe detectar bloqueos, no cancelar QA sano.
-    timeout-minutes: 25
+    timeout-minutes: 35
 
     steps:
       - name: Descarregar el repositori
@@ -188,6 +188,9 @@ jobs:
 
       - name: Validar importer histórico, guards SQL y carreras de procesos
         run: uv run python -m unittest tests.postgres_financial_history_import.HistoryImportPostgres
+
+      - name: Validar reconciliación durable, corrupción y carreras de procesos
+        run: uv run python -m unittest tests.postgres_financial_history_reconciliation.HistoryReconciliationPostgres
 
       - name: Obtener código base para rollback seguro
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

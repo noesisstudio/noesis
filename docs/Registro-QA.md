@@ -1,11 +1,34 @@
-﻿# Registro de QA
+# Registro de QA
 
-CI final [37300038706](https://github.com/noesisstudio/noesis/actions/runs/37300038706)
-SUCCESS sobre942a113: suite general 1774 tests en1215.844 s, dos skips previstos;
-PostgreSQL363 PASS (151.231 s sumados, D25 con seis carreras de procesos). Ambos jobs, gates,
-migraciones y humos PASS. **57 criterios PASS, 0 FAIL**. Esta adenda solo modifica
-documentación; código, tests, workflow y dependencias coinciden con la CI validada. Sin
-producción consultada ni1.9E.
+## 2026-10-05 — Fase1.9E: reconciliación histórica implementada
+
+[Orden](architecture/FASE-1.9E-orden.md), [ADR018](architecture/ADR-018-financial-history-reconciliation.md),
+[contrato](architecture/FINANCIAL-HISTORY-RECONCILIATION-v1.md), [informe](architecture/FASE-1.9E-cierre.md).
+Solo audita por identidad; writes exclusivamente run/findings propios. TX/gate y
+conexión compartidos, repositorio especializado, Decimal/NUMERIC, IA sin autoridad.
+B/C/D siguen inmutables; unknown/B/NULL conservados. PASS no libera fence, activa
+flags ni acredita producción. Cinco flags OFF. Sin1.9F ni activación. Validación
+local registrada; cierre condicionado a CI completa. Encabezados inferiores históricos.
+
+### Evidencia local1.9E y diagnóstico de primeros fallos
+
+Schema73, módulo E, dos tablas y compatibilidad B/C/D. Regresiones A–D142 tests
+(271.077s, dos skips existentes); E PG29 tests (111.361s) con procesos reales;
+E SQLite24 (156.866s) más dos controles adicionales en ambos motores; repetición
+final tras auditoría global registrada en adenda. HTTP local /health,/ready,/,/login200;
+uv lock --check96 paquetes; pip-audit sin vulnerabilidades conocidas. Ruff/Bandit high/verdad/secretos/Node9
+verificados; auditoría dependencias y CI general se registran al finalizar.
+Primeros fallos corregidos: versión C rígida72; revisión wrapper vs objeto;
+snapshot de migration73 applied_at; política AccessDenied; fixture fiscal sin
+record; binary fixture contaminado por ALTER anterior; snapshot timestamp PG
+sin zona; migración con evidencia E de otros tests; fixture DDL de empresa2
+preparado durante TX retenida; match tiene amount de evidencia según catálogo.
+No guards productivos debilitados para fixtures. Las pruebas de corrupción
+suspenden/restauran guards exclusivamente sobre schemas/SQLite descartables.
+Riesgo: gate durante scan; ninguna producción/copia real, flags OFF, no1.9F.
+Rollback: conservar73 con evidencia; revertir servicio sin borrar E/B/C/D.
+Diagnóstico: result_hash/contexto, findings mínimos, import proof y source_recheck.
+
 
 ## 2026-10-05 — D: matriz durable también cerrada en aplicación
 

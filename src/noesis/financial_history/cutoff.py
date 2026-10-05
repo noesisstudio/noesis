@@ -173,7 +173,7 @@ class _CutInventory(HistoryDiagnostics):
 
     def _create(self, session, principal, manifest_uuid, repository_version, environment_identity):
         from .repository import HistoryRepository
-        if migrations.current_version_connection(session.borrowed_connection) not in (71, 72):
+        if migrations.current_version_connection(session.borrowed_connection) not in (71, 72, 73):
             raise ValueError('Schema71 requerido para certifiable_inventory.')
         epoch = self.cutoff._row(session, self.epoch_uuid, principal, active=True)
         if epoch['environment_identity'] != environment_identity:

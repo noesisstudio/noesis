@@ -1,11 +1,14 @@
 # Estado actual del producto
 
-CI final [37300038706](https://github.com/noesisstudio/noesis/actions/runs/37300038706)
-SUCCESS sobre942a113: suite general 1774 tests en1215.844 s, dos skips previstos;
-PostgreSQL363 PASS (151.231 s sumados, D25 con seis carreras de procesos). Ambos jobs, gates,
-migraciones y humos PASS. **57 criterios PASS, 0 FAIL**. Esta adenda solo modifica
-documentación; código, tests, workflow y dependencias coinciden con la CI validada. Sin
-producción consultada ni1.9E.
+## 2026-10-05 — Fase1.9E: reconciliación histórica implementada
+
+[Orden](architecture/FASE-1.9E-orden.md), [ADR018](architecture/ADR-018-financial-history-reconciliation.md),
+[contrato](architecture/FINANCIAL-HISTORY-RECONCILIATION-v1.md), [informe](architecture/FASE-1.9E-cierre.md).
+Solo audita por identidad; writes exclusivamente run/findings propios. TX/gate y
+conexión compartidos, repositorio especializado, Decimal/NUMERIC, IA sin autoridad.
+B/C/D siguen inmutables; unknown/B/NULL conservados. PASS no libera fence, activa
+flags ni acredita producción. Cinco flags OFF. Sin1.9F ni activación. Validación
+local registrada; cierre condicionado a CI completa. Encabezados inferiores históricos.
 
 ## 2026-10-05 — Fase1.9D: importer histórico (implementada y validada)
 

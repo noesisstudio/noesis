@@ -5,7 +5,7 @@
   "conversation_corrections_candidate_2026_09_24": "Local, no publicado: campos compuestos sobre propuestas existentes, consultas fiscales sin coincidencias parciales, concepto e IVA por linea. 70 regresiones dirigidas y suite completa local de 1197 tests correctas (1012.404 s); ultimo ajuste de interrogacion revalidado con 6 casos. Ruff, secretos y verdad documental correctos. Sin migracion, dependencias, proveedores ni cambios de flags. Meta real y memoria por actor pendientes.",
   "reliability_hotfix_2026_09_24": "df113b1: fechas compatibles PostgreSQL, correcciones multilínea sin pérdida de detalle y rollback 58 aditivo bloqueado ante borradores incompletos. CI 36012914685 verde: 1189 tests en 352.518 s, 36 rutas PostgreSQL, rollback y seguridad. Sin cambios de flags ni proveedores.",
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
-  "schema_version": 72,
+  "schema_version": 73,
   "conversation_transport_candidate_2026_09_24": "Local no publicado: esquemas 59/60, memoria por actor y transporte previo a vinculacion. NOESIS_CONVERSATION_ISOLATION_ENABLED y NOESIS_WHATSAPP_INBOX_ENABLED false por defecto. FIFO, acuse tras commit, incidencias sin replay automatico. 96 pruebas dirigidas correctas (71.801 s) y 460 backend/webhook correctas (397.517 s); Ruff, secretos y verdad documental correctos. Suite completa 1197 corresponde al bloque previo. Requiere CI PostgreSQL, procedimiento de revision/retencion y Meta real antes de activar.",
   "verified_test_count": 1774,
   "whatsapp_rounds_2026_10_01": "Producción hasta c52d3e2: presupuestos, citas (cancelar/mover), facturas de varias líneas, gasto a obra, abrir obra, ranking de clientes, pendientes, resumen semanal y abreviaturas de móvil por WhatsApp, todo con tarjeta de SÍ. Probado en real por WhatsApp Web (descartado con NO) y en simulador local. cryptography 50. Voz real sin probar.",
@@ -192,8 +192,8 @@
   ],
   "admin_workspace_release": "seven_departments_scoped_monthly_api_usage_owner_phone_search_mobile_disclosure_explicit_metric_sources_refresh_no_schema_changes_deployment_verification_after_push",
   "financial_core": {
-    "authorized_phase": "1.9D",
-    "status": "phase1_9D_implemented_validated_closed_flags_off",
+    "authorized_phase": "1.9E",
+    "status": "phase1_9E_implemented_local_PASS_CI_pending_flags_OFF",
     "next_phase_authorized": false,
     "governance": "docs/architecture/README.md",
     "closure": "docs/architecture/FASE-1.9D-cierre.md",
@@ -1004,6 +1004,47 @@
       "all_initial_failures_corrected": true,
       "local_postgres_qa_stopped": true
     },
-    "historical_importer_scope": "Internal frozen C candidates only; source readers real; one item transaction; flags off; no live transition"
+    "historical_importer_scope": "Internal frozen C candidates only; source readers real; one item transaction; flags off; no live transition",
+    "phase1_9E": {
+      "complete": false,
+      "next_phase_authorized": false,
+      "production_read": false,
+      "flags_off": true,
+      "adr": "docs/architecture/ADR-018-financial-history-reconciliation.md",
+      "contract": "docs/architecture/FINANCIAL-HISTORY-RECONCILIATION-v1.md",
+      "closure": "docs/architecture/FASE-1.9E-cierre.md",
+      "schema": 73,
+      "write_tables": [
+        "financial_history_reconciliations",
+        "financial_history_reconciliation_findings"
+      ],
+      "qa": {
+        "sqlite_directed": 24,
+        "postgres_directed": 29,
+        "additional_checks_both": 2,
+        "regression_history": 142,
+        "regression_skipped": 2,
+        "regression_seconds": 271.077,
+        "postgres_process_tests": 5,
+        "ruff": true,
+        "bandit_high": true,
+        "secrets": true,
+        "project_truth": true,
+        "node": 9,
+        "dependency_audit": true,
+        "lock_check": true,
+        "local_http_200": [
+          "/health",
+          "/ready",
+          "/",
+          "/login"
+        ],
+        "full_suite": "pending_remote_CI",
+        "flags_off": true,
+        "production_read": false,
+        "rehearsal_real_copy": false,
+        "next_phase_authorized": false
+      }
+    }
   }
 }
