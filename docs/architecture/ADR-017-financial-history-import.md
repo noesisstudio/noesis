@@ -35,6 +35,11 @@ NULL; resultado histórico en import_items. GuardsSQL impiden ejecución/promoci
 Solo los tres v2 aprobados y v1 contractualmente válido; factura histórica v2
 bloqueada. Bytes/hashes anteriores deben conservarse por pruebas golden.
 
+La matriz cerrada se exige también en HistoricalEconomicEvent antes del wrapper:
+el objeto durable no admite factura histórica v2 aunque el wrapper de A pudiera
+validarla en memoria. Golden usa una factura live v2 real y verifica preservación
+de bytes/hashes y rechazo histórico en ambos motores.
+
 Batch guarda hashes de C, epoch/generación/T0 indirectos e importer_version.
 Resultados son cobertura histórica indexada, jamás cobertura live65–67.
 Reintentar verifica el registro original; otro batch conserva su procedencia y

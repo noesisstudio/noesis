@@ -4,13 +4,15 @@ from dataclasses import dataclass
 from uuid import UUID, uuid5
 
 from noesis.economic_events.contracts import EconomicEvent, _canonical
-from .payloads import EventOrigin, EventPayload
+from .payloads import EventOrigin, EventPayload, HISTORICAL_V2
 
 
 class HistoricalEconomicEvent(EconomicEvent):
     __slots__ = ()
 
     def _validated_payload(self):
+        if self.payload_version == 2 and self.event_type not in HISTORICAL_V2:
+            raise ValueError("Versión historical v2 durable no autorizada para este tipo.")
         return EventPayload(
             self.event_type,
             self.payload_version,

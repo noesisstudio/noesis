@@ -1,5 +1,15 @@
 ﻿# Registro de cambios
 
+## 2026-10-05 — D: cerrar matriz v2 del objeto durable
+
+Objetivo: alinear HistoricalEconomicEvent con la matriz SQL y del importer;
+solo tres v2 históricos autorizados, factura histórica v2 rechazada también en
+memoria. Archivos: durable.py y golden común del importer; QA/estado/ADR y cierre.
+Pruebas: PostgreSQL80 PASS (83.365 s), SQLite86 PASS (84.708 s). Live v2 intacto.
+CI completa pendiente. Límites: fixtures sintéticos; ninguna producción ni1.9E.
+Riesgo: rechazo temprano más estricto; diagnóstico ValueError explícito. Rollback:
+flags OFF y conservar esquema/evidencia, sin downgrade destructivo.
+
 ## 2026-10-05 — Fase1.9D: importer histórico (validación en curso)
 
 Solo incorporación de candidatos congelados de C vigente. Flags OFF; no1.9E,

@@ -1,5 +1,15 @@
 ﻿# Registro de QA
 
+## 2026-10-05 — D: matriz durable también cerrada en aplicación
+
+HistoricalEconomicEvent rechaza explícitamente v2 fuera de los tres tipos
+históricos aprobados. SQL e importer ya lo impedían; la auditoría detectó que
+el wrapper podía validar factura v2 en memoria. Golden con InvoiceCapture live
+v2 real preserva bytes/hashes y comprueba el rechazo histórico. PostgreSQL80 PASS
+(83.365 s); SQLite86 PASS (84.708 s), incluidos D, contratos EE, plataformas y
+retención. Ruff/truth y CI completa del código final antes de cerrar D.
+Flags OFF, sin producción ni1.9E.
+
 ## 2026-10-05 — Fase1.9D: importer histórico (validación en curso)
 
 Solo incorporación de candidatos congelados de C vigente. Flags OFF; no1.9E,

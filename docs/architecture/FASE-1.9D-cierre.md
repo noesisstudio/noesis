@@ -91,6 +91,12 @@ HistoricalEconomicEvent separado valida wrapper A. EconomicEvent live conserva
 contrato y canonical_version=1; StoredEvent selecciona por origin durable.
 Factura historical v2 sigue bloqueada. Bytes/hashes anteriores intactos.
 
+Autoauditoría final cerró también el objeto durable: el wrapper de A permitía
+validar una factura v2 en memoria, aunque SQL e importer ya la bloqueaban.
+HistoricalEconomicEvent ahora exige la misma whitelist. Golden con factura live
+v2 real verifica rechazo histórico y bytes/hashes live intactos. Revalidación:
+PostgreSQL80 PASS (83.365 s), SQLite86 PASS (84.708 s).
+
 ## 10. Payloads v2
 
 Conservan schema cerrado A; evidence_basis y evidence_hash obligatorios.

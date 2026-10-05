@@ -970,7 +970,12 @@
       "sqlite_import_final": 19,
       "sqlite_import_final_seconds": 61.247,
       "postgres_import_final": 25,
-      "postgres_import_final_seconds": 33.005
+      "postgres_import_final_seconds": 33.005,
+      "application_durable_v2_matrix_closed": true,
+      "postgres_application_matrix_final": 80,
+      "postgres_application_matrix_final_seconds": 83.365,
+      "sqlite_application_matrix_final": 86,
+      "sqlite_application_matrix_final_seconds": 84.708
     },
     "historical_importer_scope": "Internal frozen C candidates only; source readers real; one item transaction; flags off; no live transition"
   }

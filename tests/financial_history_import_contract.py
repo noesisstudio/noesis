@@ -856,6 +856,8 @@ class HistoryImportContract:
         self.assertEqual(event.payload["evidence_basis"], "observed_state")
 
     def test_migration_71_72_preserves_existing_live_bytes_hashes_links_and_sequences(self):
+        from dataclasses import fields
+        from noesis.financial_history.durable import HistoricalEconomicEvent
         from noesis.purchasing_capture import ExpenseCapture
         from noesis.economic_events.persistence import StoredEvent
 
@@ -926,3 +928,7 @@ class HistoryImportContract:
                     self.assertEqual(stored.event.content_hash, row["content_hash"])
                     self.assertEqual(stored.event.payload_hash, payload_hash)
                     self.assertEqual(stored.event.canonical_bytes(), event_canonical)
+                    if stored.event.payload_version == 2:
+                        # Live invoice v2 no adquiere soporte historical durable.
+                        with self.assertRaises(ValueError):
+                            HistoricalEconomicEvent(**{f.name:getattr(stored.event,f.name) for f in fields(stored.event)})
