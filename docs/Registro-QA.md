@@ -30,6 +30,15 @@ Rollback: conservar73 con evidencia; revertir servicio sin borrar E/B/C/D.
 Diagnóstico: result_hash/contexto, findings mínimos, import proof y source_recheck.
 
 
+### Corrección de fixture heredado tras CI inicial
+
+CI37313115401 detectó en persistencia PG que legacy_history71 restauraba72 fijo,
+no la versión73 de entrada. Reproducido localmente; helper QA ahora guarda/restaura
+original_version. Ningún runtime/guard/migración financiera cambiado. PG persistencia
+28 tests y regresión de autoridad/persistencia SQLite se vuelven a ejecutar.
+Cierre exige CI final íntegra; primer run no acredita suite final.
+
+
 ## 2026-10-05 — D: matriz durable también cerrada en aplicación
 
 HistoricalEconomicEvent rechaza explícitamente v2 fuera de los tres tipos

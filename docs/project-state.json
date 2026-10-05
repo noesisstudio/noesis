@@ -1043,7 +1043,11 @@
         "flags_off": true,
         "production_read": false,
         "rehearsal_real_copy": false,
-        "next_phase_authorized": false
+        "next_phase_authorized": false,
+        "initial_ci_run": 37313115401,
+        "initial_ci_failure": "legacy_history71_fixture_restored72_instead_of_original73",
+        "runtime_changed_by_ci_fix": false,
+        "postgres_persistence_retest": 28
       }
     }
   }
