@@ -1,6 +1,20 @@
 # Registro de QA
 
-## 2026-10-05 — Fase1.9E: reconciliación histórica implementada
+## 2026-10-05 — Cierre técnico1.9E: CI final PASS
+
+Objetivo: cerrar exclusivamente reconciliación histórica durable. Archivos de esta
+adenda: gobernanza y mapa/cierre E; sin cambios adicionales de código/tests/CI.
+[CI SUCCESS](https://github.com/noesisstudio/noesis/actions/runs/37315021181) en `c6594fc`: suite general 1800 tests
+(1413.197s, dos skips existentes, cero fallos/errores), ciclo73→0→73 y
+PostgreSQL394 PASS (E31, procesos, migración, código anterior y rollback).
+Matrices locales E SQLite26/PG31 PASS; autoauditoría20 respuestas y52 criterios PASS.
+Servidores/cluster QA apagados; backups sintéticos fuera del repositorio.
+Límites: ningún dato de producción/copia real/Railway; flags OFF, fence intacto,
+no1.9F ni activación. Riesgo: scan largo retiene gate; hashes no son firmas.
+Diagnóstico: contexto/result_hash/findings/import proofs/source drift.
+Rollback: revertir servicio manteniendo73 y toda evidencia; downgrade con E prohibido.
+
+## 2026-10-05 — Fase1.9E: reconciliación histórica implementada y validada
 
 [Orden](architecture/FASE-1.9E-orden.md), [ADR018](architecture/ADR-018-financial-history-reconciliation.md),
 [contrato](architecture/FINANCIAL-HISTORY-RECONCILIATION-v1.md), [informe](architecture/FASE-1.9E-cierre.md).
@@ -8,7 +22,7 @@ Solo audita por identidad; writes exclusivamente run/findings propios. TX/gate y
 conexión compartidos, repositorio especializado, Decimal/NUMERIC, IA sin autoridad.
 B/C/D siguen inmutables; unknown/B/NULL conservados. PASS no libera fence, activa
 flags ni acredita producción. Cinco flags OFF. Sin1.9F ni activación. Validación
-local registrada; cierre condicionado a CI completa. Encabezados inferiores históricos.
+local y CI final PASS; cierre técnico1.9E registrado. Encabezados inferiores históricos.
 
 ### Evidencia local1.9E y diagnóstico de primeros fallos
 

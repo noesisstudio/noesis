@@ -1,6 +1,6 @@
 # Financial Core: punto de entrada y continuidad
 
-## 2026-10-05 — Fase1.9E: reconciliación histórica implementada
+## 2026-10-05 — Fase1.9E: reconciliación histórica implementada y validada
 
 [Orden](FASE-1.9E-orden.md), [ADR018](ADR-018-financial-history-reconciliation.md),
 [contrato](FINANCIAL-HISTORY-RECONCILIATION-v1.md), [informe](FASE-1.9E-cierre.md).
@@ -8,7 +8,7 @@ Solo audita por identidad; writes exclusivamente run/findings propios. TX/gate y
 conexión compartidos, repositorio especializado, Decimal/NUMERIC, IA sin autoridad.
 B/C/D siguen inmutables; unknown/B/NULL conservados. PASS no libera fence, activa
 flags ni acredita producción. Cinco flags OFF. Sin1.9F ni activación. Validación
-local registrada; cierre condicionado a CI completa. Encabezados inferiores históricos.
+local y CI final PASS; cierre técnico1.9E registrado. Encabezados inferiores históricos.
 
 ## 2026-10-05 — Fase1.9D: importer histórico (implementada y validada)
 

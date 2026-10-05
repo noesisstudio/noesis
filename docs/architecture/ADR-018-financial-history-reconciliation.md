@@ -1,6 +1,6 @@
 # ADR-018 — Reconciliación histórica sin reparación
 
-Estado: implementada; matrices locales PASS, CI final pendiente. 5-oct-2026.
+Estado: implementada y validada; matrices locales y CI final PASS. 5-oct-2026.
 [Orden completa](FASE-1.9E-orden.md). Solo1.9E; no1.9F ni activación.
 
 ## Auditoría previa de main

@@ -1,6 +1,6 @@
 # Mapa de código
 
-## 2026-10-05 — Fase1.9E: reconciliación histórica implementada
+## 2026-10-05 — Fase1.9E: reconciliación histórica implementada y validada
 
 [Orden](architecture/FASE-1.9E-orden.md), [ADR018](architecture/ADR-018-financial-history-reconciliation.md),
 [contrato](architecture/FINANCIAL-HISTORY-RECONCILIATION-v1.md), [informe](architecture/FASE-1.9E-cierre.md).
@@ -8,7 +8,21 @@ Solo audita por identidad; writes exclusivamente run/findings propios. TX/gate y
 conexión compartidos, repositorio especializado, Decimal/NUMERIC, IA sin autoridad.
 B/C/D siguen inmutables; unknown/B/NULL conservados. PASS no libera fence, activa
 flags ni acredita producción. Cinco flags OFF. Sin1.9F ni activación. Validación
-local registrada; cierre condicionado a CI completa. Encabezados inferiores históricos.
+local y CI final PASS; cierre técnico1.9E registrado. Encabezados inferiores históricos.
+
+
+### Módulo de reconciliación E
+
+| Archivo | Responsabilidad |
+|---|---|
+|[reconciliation.py](../src/noesis/financial_history/reconciliation.py)|API interna, permisos, TX, contexto y retry|
+|[reconciliation_contracts.py](../src/noesis/financial_history/reconciliation_contracts.py)|Catálogo cerrado, evidencia mínima y hashes|
+|[reconciliation_repository.py](../src/noesis/financial_history/reconciliation_repository.py)|Únicas escrituras E e integridad al leer|
+|[reconciliation_schema.py](../src/noesis/financial_history/reconciliation_schema.py)|Dos tablas, FK, índices y guards73|
+|[reconciliation_verifier.py](../src/noesis/financial_history/reconciliation_verifier.py)|Solo SELECT: fuentes/proofs/EE/op/auth/grafo|
+|[Pruebas comunes](../tests/financial_history_reconciliation_contract.py)|Happy/BLOCKED/corrupción/ciclos/side effects/performance|
+|[Procesos PG](../tests/postgres_financial_history_reconciliation.py)|Concurrencia, crash y progreso por negocio|
+
 
 ## 2026-10-05 — Fase1.9D: importer histórico (implementada y validada)
 

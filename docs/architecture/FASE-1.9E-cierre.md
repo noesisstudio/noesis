@@ -1,7 +1,7 @@
 # Cierre de Fase1.9E — Reconciliación histórica durable
 
-5-oct-2026. Estado: implementación y matrices locales PASS; cierre pendiente de
-suite general/CI del commit final. Solo1.9E. Sin1.9F, producción ni activación.
+5-oct-2026. Estado: implementación, matrices locales y CI final PASS.
+Cierre técnico1.9E: 52 criterios PASS, cero FAIL. Sin1.9F, producción ni activación.
 [Orden](FASE-1.9E-orden.md), [contrato](FINANCIAL-HISTORY-RECONCILIATION-v1.md),
 [ADR018](ADR-018-financial-history-reconciliation.md).
 
@@ -191,9 +191,36 @@ agrupados y metadatos/edges O(N+E). No SLO de producción ni prueba de volumen r
 
 Ruff, Bandit high, secretos, verdad del proyecto, Node9 y auditoría de dependencias.
 Regresiones A–D142 (dos skips existentes). Matrices E SQLite/PG, ciclos, HTTP/servidor
-sintético y suite completa/CI final se registran en adenda verificable antes del cierre.
+sintético y suite completa/CI final PASS; evidencia verificable en la adenda siguiente.
 El timeout general se amplía a35min para permitir suite completa más pruebas E y
 ciclos; no se filtra ni reduce QA. Primeros fallos y correcciones se conservan en QA.
+
+### Evidencia final verificable
+
+[CI final: SUCCESS](https://github.com/noesisstudio/noesis/actions/runs/37315021181), código `c6594fc` después del último cambio funcional.
+Suite general: **1800 tests**, 1413.197s, `OK (skipped=2)`; cero fallos y errores.
+Los dos skips son existentes. Ciclo SQLite completo **73→0→73 PASS**.
+Job PostgreSQL: **394 tests PASS** (185.759s sumados entre matrices), incluidos
+31 de E (69.677s), procesos reales, migración histórica, 36 rutas de humo,
+código anterior schema53 sobre73 y privacidad/rollback/backups sintéticos.
+Ruff, Bandit high, secretos, verdad documental, Node9 y auditoría de dependencias PASS.
+Matrices E locales en código final: SQLite26 (160.369s), PG31 (105.650s).
+Regresiones A–D142 (271.077s, dos skips), autoridad/persistencia SQLite61
+(57.267s) y persistencia PG28 (18.770s) PASS. HTTP local /health,/ready,/,/login200.
+
+Performance local final: 131 fuentes, page8, 267 consultas del verificador;
+393 consultas totales SQLite, 394 PostgreSQL. SQLite9.578s/909457 bytes de pico;
+PG8.093s/967265 bytes. EXPLAIN usa índices de sequence, import items y findings.
+Medición sintética, sin SLO ni volumen productivo. Servidor y cluster PG propios
+apagados; backups sintéticos retirados del checkout. Ninguna producción consultada.
+
+El primer job PostgreSQL falló por el helper QA legacy_history71 que restauraba72
+fijo en un schema73. Corregido conservando su versión original; no se debilitó
+ningún guard ni cambió runtime en esa corrección. Los runs anteriores no acreditan
+el código final. La adenda de cierre posterior solo modifica documentación:
+código, tests, workflow y dependencias siguen idénticos a `c6594fc`.
+Cinco flags OFF, fence intacto, cero writes de E fuera de sus dos tablas.
+PASS de reconciliación no equivale a rehearsal real, readiness ni activación.
 
 ## 29. Riesgos y diferencias
 
@@ -252,14 +279,14 @@ documentadas antes de implementar en ADR018. Ningún alcance adicional.
 |42|NO RELEASE FENCE|PASS|Fence permanece sin escrituras E|
 |43|NO 1.9F|PASS|Solo fixtures; nunca producción/restore|
 |44|MIGRACIONES|PASS|Clean/72/73 ciclos/retención|
-|45|TESTS HAPPY PATH|PASS local; cierre CI pendiente|Happy path completo y hash reproducible|
-|46|TESTS BLOCKED|PASS local; cierre CI pendiente|Matriz corrupción BLOCKED sin repair|
+|45|TESTS HAPPY PATH|PASS|Happy path completo y hash reproducible|
+|46|TESTS BLOCKED|PASS|Matriz corrupción BLOCKED sin repair|
 |47|TESTS SEMÁNTICOS|PASS|B/unknown/caja/fecha preservados|
 |48|TESTS EXISTING|PASS|Existing y covered live/historical|
 |49|SQL CORRUPTION TESTS|PASS|SQL corrupción QA sin debilitar producto|
 |50|PERFORMANCE|PASS|131 fuentes, page8, agrupación, pico/queries|
-|51|DOCUMENTACIÓN|PASS local; cierre CI pendiente|Contrato/ADR/informe/gobernanza|
-|52|AUTOAUDITORÍA|PASS local; cierre CI pendiente|20 respuestas explícitas, CI pendiente|
+|51|DOCUMENTACIÓN|PASS|Contrato/ADR/informe/gobernanza|
+|52|AUTOAUDITORÍA|PASS|20 respuestas explícitas y CI final PASS|
 
 ## 31. Autoauditoría
 
@@ -283,5 +310,47 @@ documentadas antes de implementar en ADR018. Ningún alcance adicional.
 |16|¿PASS libera fence?|NO; E no escribe epoch/control.|
 |17|¿PASS activa flags?|NO; cinco OFF y snapshot idéntico.|
 |18|¿Se consultó producción?|NO; solo SQLite/PG locales sintéticos y CI.|
-|19|¿Se inició1.9F?|NO; no restore real/Railway/backup/clientes.|
+|19|¿Se inició1.9F?|NO; no restore real/Railway/backup real/clientes.|
 |20|¿Cambios fuera de tablas E cero?|SÍ durante E, demostrado en PASS/BLOCKED/crash/retry.|
+
+## Lista exacta de archivos de esta entrega
+
+- [.github/workflows/ci.yml](../../.github/workflows/ci.yml)
+- [AGENTS.md](../../AGENTS.md)
+- [docs/02-tecnico/Guia-tecnica-ingeniero.md](../../docs/02-tecnico/Guia-tecnica-ingeniero.md)
+- [docs/Arquitectura.md](../../docs/Arquitectura.md)
+- [docs/Decisiones.md](../../docs/Decisiones.md)
+- [docs/Estado-actual-main.md](../../docs/Estado-actual-main.md)
+- [docs/Inicio.md](../../docs/Inicio.md)
+- [docs/Mapa-codigo.md](../../docs/Mapa-codigo.md)
+- [docs/Registro-QA.md](../../docs/Registro-QA.md)
+- [docs/Registro-cambios.md](../../docs/Registro-cambios.md)
+- [docs/Tareas-vivas.md](../../docs/Tareas-vivas.md)
+- [docs/architecture/ADR-018-financial-history-reconciliation.md](../../docs/architecture/ADR-018-financial-history-reconciliation.md)
+- [docs/architecture/FASE-1.9-plan.md](../../docs/architecture/FASE-1.9-plan.md)
+- [docs/architecture/FASE-1.9E-cierre.md](../../docs/architecture/FASE-1.9E-cierre.md)
+- [docs/architecture/FASE-1.9E-orden.md](../../docs/architecture/FASE-1.9E-orden.md)
+- [docs/architecture/FINANCIAL-HISTORY-RECONCILIATION-v1.md](../../docs/architecture/FINANCIAL-HISTORY-RECONCILIATION-v1.md)
+- [docs/architecture/README.md](../../docs/architecture/README.md)
+- [docs/areas/01-vision-general.md](../../docs/areas/01-vision-general.md)
+- [docs/areas/04-facturas.md](../../docs/areas/04-facturas.md)
+- [docs/areas/06-rgpd-y-seguridad.md](../../docs/areas/06-rgpd-y-seguridad.md)
+- [docs/areas/07-lo-automatico.md](../../docs/areas/07-lo-automatico.md)
+- [docs/areas/08-financial-core.md](../../docs/areas/08-financial-core.md)
+- [docs/project-state.json](../../docs/project-state.json)
+- [src/noesis/db.py](../../src/noesis/db.py)
+- [src/noesis/financial_history/cutoff.py](../../src/noesis/financial_history/cutoff.py)
+- [src/noesis/financial_history/importer.py](../../src/noesis/financial_history/importer.py)
+- [src/noesis/financial_history/reconciliation.py](../../src/noesis/financial_history/reconciliation.py)
+- [src/noesis/financial_history/reconciliation_contracts.py](../../src/noesis/financial_history/reconciliation_contracts.py)
+- [src/noesis/financial_history/reconciliation_repository.py](../../src/noesis/financial_history/reconciliation_repository.py)
+- [src/noesis/financial_history/reconciliation_schema.py](../../src/noesis/financial_history/reconciliation_schema.py)
+- [src/noesis/financial_history/reconciliation_verifier.py](../../src/noesis/financial_history/reconciliation_verifier.py)
+- [src/noesis/financial_history/service.py](../../src/noesis/financial_history/service.py)
+- [src/noesis/migrations.py](../../src/noesis/migrations.py)
+- [tests/financial_history_reconciliation_contract.py](../../tests/financial_history_reconciliation_contract.py)
+- [tests/financial_history_reconciliation_worker.py](../../tests/financial_history_reconciliation_worker.py)
+- [tests/history_legacy_schema.py](../../tests/history_legacy_schema.py)
+- [tests/postgres_financial_history_reconciliation.py](../../tests/postgres_financial_history_reconciliation.py)
+- [tests/test_financial_history.py](../../tests/test_financial_history.py)
+- [tests/test_financial_history_reconciliation.py](../../tests/test_financial_history_reconciliation.py)

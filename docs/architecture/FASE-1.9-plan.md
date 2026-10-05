@@ -1,6 +1,6 @@
 # Fase 1.9 — referencia de diseño aprobada
 
-## 2026-10-05 — Fase1.9E: reconciliación histórica implementada
+## 2026-10-05 — Fase1.9E: reconciliación histórica implementada y validada
 
 [Orden](FASE-1.9E-orden.md), [ADR018](ADR-018-financial-history-reconciliation.md),
 [contrato](FINANCIAL-HISTORY-RECONCILIATION-v1.md), [informe](FASE-1.9E-cierre.md).
@@ -8,7 +8,7 @@ Solo audita por identidad; writes exclusivamente run/findings propios. TX/gate y
 conexión compartidos, repositorio especializado, Decimal/NUMERIC, IA sin autoridad.
 B/C/D siguen inmutables; unknown/B/NULL conservados. PASS no libera fence, activa
 flags ni acredita producción. Cinco flags OFF. Sin1.9F ni activación. Validación
-local registrada; cierre condicionado a CI completa. Encabezados inferiores históricos.
+local y CI final PASS; cierre técnico1.9E registrado. Encabezados inferiores históricos.
 
 ## 2026-10-05 — Fase1.9D: importer histórico (implementada y validada)
 
@@ -118,7 +118,7 @@ Retención/exportación/acceso finales y activación pertenecen a1.10.
 |1.9B|Aceptada, inventario diagnóstico|[Cierre B](FASE-1.9B-cierre.md)|
 |1.9C|Aceptada, epoch/T0/fence|[Cierre C](FASE-1.9C-cierre.md)|
 |1.9D|Aceptada, incorporación durable|[Cierre D](FASE-1.9D-cierre.md)|
-|1.9E|Implementada, matrices locales PASS, CI final pendiente|[Cierre E](FASE-1.9E-cierre.md)|
+|1.9E|Implementada y validada; matrices locales y CI final PASS|[Cierre E](FASE-1.9E-cierre.md)|
 |1.9F|NO autorizada, NO iniciada; sin copia real ni producción|Orden humana futura separada|
 |1.10|NO autorizada; ninguna activación/readiness acreditada|Referencia únicamente|
 
