@@ -395,8 +395,7 @@ class EconomicEvent:
         object.__setattr__(self, "observed_at", _instant(self.observed_at))
         if self.occurred_at is not None:
             object.__setattr__(self, "occurred_at", _instant(self.occurred_at))
-        object.__setattr__(self, "payload", validate_payload(
-            event_type, self.payload, self.payload_version))
+        object.__setattr__(self, "payload", self._validated_payload())
         if not isinstance(self.relations, (tuple, list)) or any(
                 not isinstance(item, EventRelation) for item in self.relations):
             raise ValueError("Relaciones tipadas requeridas.")
@@ -421,6 +420,12 @@ class EconomicEvent:
         for key in path:
             value = value[key]
         return value
+
+    def _validated_payload(self):
+        return validate_payload(self.event_type, self.payload, self.payload_version)
+
+    def payload_bytes(self):
+        return _canonical(self._validated_payload())
 
     @property
     def economic_date(self) -> date | None:

@@ -8,6 +8,8 @@ import json
 from unittest.mock import patch
 from uuid import uuid4
 
+from tests.history_legacy_schema import legacy_history71
+
 from noesis import config, db, migrations
 from noesis.core.persistence import FinancialSession
 from noesis.economic_events.contracts import (
@@ -523,6 +525,7 @@ class EconomicPersistenceContract:
             with self.assertRaises(AccessDenied):
                 service.read(self.principal, stored.event.event_id)
 
+    @legacy_history71
     def test_historical_metadata_without_fake_approval_or_backfill(self):
         event = self.make_event()
         with self.transaction() as (service, _):
@@ -645,6 +648,7 @@ class EconomicPersistenceContract:
                     self.raw_clone(session, service.repo.load(event.event_id), **changes)
         self.assertEqual(stored.business_sequence, 1)
 
+    @legacy_history71
     def foreign_event(self):
         with db.get_conn() as conn:
             source_id = conn.execute(
@@ -780,6 +784,7 @@ class EconomicPersistenceContract:
                 )
         self.assertEqual(self.rows(), (2, 1, 1))
 
+    @legacy_history71
     def test_historical_unknown_receipt_is_preserved_without_human_actor(self):
         event = self.make_event()
         op = self.operation(event, approved=False, historical=True)
@@ -808,6 +813,7 @@ class EconomicPersistenceContract:
         self.assertIsNone(auth["actor_user_id"])
         self.assertEqual(op.state.value, "prepared")
 
+    @legacy_history71
     def test_historical_namespace_cannot_supply_live_event_authority(self):
         event = self.make_event()
         op = self.operation(event, approved=False, historical=True)

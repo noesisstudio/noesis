@@ -96,6 +96,24 @@ class RawReader:
         self.cut_scope = cut_scope
 
     def page(self, source_kind, after=None):
+        return self._rows(source_kind, after=after)
+
+    def read_key(self, source_kind, key):
+        """Lectura indexada de la fuente real; no devuelve una revisión declarada."""
+        if source_kind in ('invoice_record', 'invoice_cancellation_record'):
+            raise ValueError('El importer fiscal verifica referencias sin recalcular huellas.')
+        rows = self._rows(source_kind, exact_key=tuple(key))
+        return rows[0] if len(rows) == 1 else None
+
+    def read_fiscal_reference(self, frozen):
+        """Contrasta referencia congelada; no regenera ni recalcula huella fiscal."""
+        if frozen.source_kind not in ('invoice_record', 'invoice_cancellation_record'):
+            raise ValueError('Referencia fiscal cerrada requerida.')
+        rows = self._rows(frozen.source_kind, exact_key=frozen.key,
+                          frozen_fiscal_valid=frozen.fields['fiscal_hash_valid'])
+        return rows[0] if len(rows) == 1 else None
+
+    def _rows(self, source_kind, after=None, exact_key=None, frozen_fiscal_valid=None):
         spec = SOURCES[source_kind]
         columns = ['id AS business_id' if source_kind == 'scope_anchor' else 'business_id', *spec.fields, *spec.hashed, *spec.json_fields]
         for field in spec.money:
@@ -119,13 +137,20 @@ class RawReader:
                 raise ValueError('Cursor incompatible.')
             sql += f' AND ({",".join(spec.keys)})>({",".join("?" for _ in spec.keys)})'
             params += list(after)
+        if exact_key is not None:
+            if len(exact_key) != len(spec.keys):
+                raise ValueError('Clave exacta incompatible.')
+            sql += ' AND ' + ' AND '.join(f'{field}=?' for field in spec.keys)
+            params += list(exact_key)
         sql += f' ORDER BY {",".join(spec.keys)} LIMIT ?'
         params.append(self.page_size)
         self.query_count += 1
         rows = self.connection.execute_exact(sql, tuple(params)).fetchall()
-        return tuple(self._source(source_kind, row) for row in rows)
+        if frozen_fiscal_valid is None:
+            return tuple(self._source(source_kind, row) for row in rows)
+        return tuple(self._source(source_kind, row, frozen_fiscal_valid=frozen_fiscal_valid) for row in rows)
 
-    def _source(self, source_kind, row):
+    def _source(self, source_kind, row, *, frozen_fiscal_valid=None):
         spec = SOURCES[source_kind]
         fields = {key: minimal(row[key]) for key in spec.fields}
         if self.cut_scope:
@@ -165,7 +190,9 @@ class RawReader:
                 storage = 'double_precision'
             money[key] = observe_money(self.connection.dialect, row[key], storage,
                                        row[key + '_text'], row.get(key + '_bits'))
-        if source_kind in ('invoice_record','invoice_cancellation_record'):
+        if source_kind in ('invoice_record','invoice_cancellation_record') and frozen_fiscal_valid is not None:
+            fields['fiscal_hash_valid'] = frozen_fiscal_valid
+        elif source_kind in ('invoice_record','invoice_cancellation_record'):
             # Verifica huella YA almacenada, después de preservar raw. No genera
             # registros/XML/QR, ni convierte binarios legacy en dinero acreditado.
             from noesis.verifactu import cancellation_record_hash, invoice_record_hash

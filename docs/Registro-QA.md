@@ -1,5 +1,32 @@
 ﻿# Registro de QA
 
+## 2026-10-05 — Fase1.9D: importer histórico (validación en curso)
+
+Solo incorporación de candidatos congelados de C vigente. Flags OFF; no1.9E,
+reconciliación, activación, continuidad live ni producción.
+[Orden](architecture/FASE-1.9D-orden.md), [ADR017](architecture/ADR-017-financial-history-import.md),
+[contrato](architecture/FINANCIAL-HISTORY-IMPORT-v1.md), [cierre](architecture/FASE-1.9D-cierre.md).
+Monolito modular; importer/repositorio especializados sobre conexión y TX
+compartidas. Decimal/NUMERIC y JSON decimal string; IA sin autoridad.
+Intent item-scoped con UUID/request/candidato exactos; fence permanece activo.
+Operación histórica PREPARED y historical_unknown, actor/session NULL; resultado
+en import_items, ninguna ejecución ni cobertura live65–67. Tres v2 históricos
+durables cerrados; factura histórica v2 bloqueada. Nuevos inventarios reconocen
+evidencia histórica existente sin promover B a A ni modificar batches anteriores.
+Los encabezados inferiores conservan historia y no amplían autorización.
+
+QA D actual: SQLite179 en306.716 s (dos skips previstos de carreras C), D19 compartidas;
+PostgreSQL363 en239.055 s, D25=19 comunes+6 procesos. PG16 localhost/noesis_ci,
+solo schemas/fixtures sintéticos. Migration golden71→72→71→72 y rollback inyectado
+con live v1/v2/links conservados; clean/empty/retención. PG32→72, 36 rutas,
+código anterior53 sobre72, privacidad/rollback PASS. SQLite72→0→72 y HTTP local
+health/ready/home/login200, scheduler mock. Ruff src/tests, Bandit high/high,
+secretos de nuevos archivos staged, truth, Node9, uv lock, pip-audit y125 enlaces PASS.
+No contar las ejecuciones interrumpidas por pérdida de instancia QA como PASS.
+Suite general/CI final pendientes. Comandos y criterio detallado en el cierre D.
+
+
+
 ## 2026-10-04 — Fase1.9C: epoch/T0/fence (implementada y validada)
 
 Únicamente corte consistente por negocio, control durable y nuevo sobre de

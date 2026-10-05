@@ -7,6 +7,8 @@ import json
 from unittest.mock import patch
 from uuid import uuid4
 
+from tests.history_legacy_schema import legacy_history71
+
 from noesis import db, migrations
 from noesis.financial_operations.contracts import (
     AccessDenied, AuthorizationKind, CommandType, ConflictError, EntryIdentity, EntryNamespace,
@@ -231,6 +233,7 @@ class OperationsContract:
                     session_version=0, request=self.request, channel=EntryNamespace.WEB_API,
                     permission="financial.authorize", now=datetime.now(timezone.utc).isoformat())
 
+    @legacy_history71
     def test_old_historical_receipt_in_ordinary_namespace_never_promotes(self):
         # Fixture compatible con lo que permitía 1.2; no reescribir datos antiguos.
         op = self.reserve()
@@ -250,6 +253,7 @@ class OperationsContract:
             self.service.execute(self.principal, op.operation_uuid, self.effect)
         self.assertEqual(self.count_effects(), 0)
 
+    @legacy_history71
     def test_immutable_historical_namespace_blocks_execution_after_direct_sql_promotion(self):
         # SQL no autorizado puede almacenar una transición que schema69 no prohíbe.
         # El namespace inmutable impide que esa fila llegue al ejecutor/callback.

@@ -1,6 +1,5 @@
 """SQL de eventos sobre FinancialSession prestada; sin permisos ni transacciones propias."""
 
-from .contracts import canonical_payload
 from .persistence import StoredEvent, instant, record_hash
 from .schema import SOURCES
 
@@ -81,9 +80,7 @@ class EventsRepository:
             currency=event.currency.value,
             amount=event.amount,
             canonical_version=1,
-            payload_canonical=canonical_payload(
-                event.event_type, event.payload, event.payload_version
-            ).decode("utf-8"),
+            payload_canonical=event.payload_bytes().decode("utf-8"),
             canonical_event=event.canonical_bytes().decode("utf-8"),
             content_hash=event.content_hash,
             **metadata,

@@ -183,7 +183,31 @@ def _coverage(source, event_type, context):
             event_type = ET(events[0].fields['event_type'])
     if not coverages and not events:
         return None, False
-    if len(events) != 1 or (coverage_kind and len(coverages) != 1):
+    if not coverages and len(events)==1 and events[0].fields['origin']=='historical' and event_type in HISTORICAL_V2:
+        # Otra ejecución encuentra evidencia registrada por D. No promover B a A;
+        # el importer comprobará además su intent/result/operación reales.
+        e = events[0]
+        try:
+            ident = identity(source, fact_slots(source)[0][0], event_type)
+            planned = _candidate(source,ident,event_type,context,datetime.fromisoformat(e.fields['observed_at']),())
+            payload_digest = hashlib.sha256(canonical_bytes(planned.event_payload.payload)).hexdigest()
+            valid = (e.fields['canonical_event'].get('validated') and e.fields['payload_version']==2
+                     and e.fields['source_revision']==ident.revision.value and e.fields['event_uuid']==str(ident.event_uuid)
+                     and e.fields['provenance']=='historical_import_v1' and e.fields['currency']=='EUR'
+                     and e.fields['payload_canonical']['storage_hash']==payload_digest
+                     and not context.find('economic_event_link','event_uuid',e.fields['event_uuid']))
+            return (e,False) if valid else (None,True)
+        except (ValueError,TypeError,KeyError,ArithmeticError):
+            return None,True
+    historical_v1 = False
+    if not coverages and len(events)==1 and events[0].fields['origin']=='historical':
+        # Solo evidencia D determinista. Los contrastes de payload/links/targets
+        # siguientes siguen siendo obligatorios; D verifica además op/auth/result.
+        f = events[0].fields
+        ident = identity(source,fact_slots(source)[0][0],event_type)
+        historical_v1 = (f['payload_version']==1 and f['provenance']=='historical_import_v1'
+                         and f['source_revision']==ident.revision.value and f['event_uuid']==str(ident.event_uuid))
+    if len(events) != 1 or (coverage_kind and len(coverages) != 1 and not historical_v1):
         return None, True
     e = events[0]
     f, payload = e.fields, e.fields['payload_canonical']
@@ -364,10 +388,11 @@ def classify(source, slot, event_type, context, observed_at):
     covered, conflict = _coverage(source, event_type, context)
     if covered:
         from dataclasses import replace
-        actual_identity = replace(ident, event_type=ET(covered.fields['event_type']),
-            revision=RevisionIdentity(RevisionKind.DURABLE_REVISION,covered.fields['source_revision'],None))
+        historical = covered.fields['origin']=='historical'
+        actual_identity = (ident if historical else replace(ident, event_type=ET(covered.fields['event_type']),
+            revision=RevisionIdentity(RevisionKind.DURABLE_REVISION,covered.fields['source_revision'],None)))
         coverage = ExistingCoverage(actual_identity, covered.fields['event_uuid'], covered.fields['content_hash'], covered.fields['origin'])
-        return ClassificationResult(assess(h, CL.VERIFIED_HISTORY, DP.COVERED_EXISTING), None, (), (), coverage, 'covered_existing')
+        return ClassificationResult(assess(h, CL.OBSERVED_STATE if historical else CL.VERIFIED_HISTORY, DP.COVERED_EXISTING), None, (), (), coverage, 'covered_existing')
     codes = [IC.EXISTING_EVENT_CONFLICT] if conflict else _money_problems(source, event_type)
     warnings = []
     deps = []

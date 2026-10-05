@@ -5,7 +5,7 @@ from datetime import date, datetime, timezone
 import hashlib
 import json
 
-from .contracts import EconomicEvent, EventRelation, canonical_payload
+from .contracts import EconomicEvent, EventRelation
 from noesis.financial_operations.contracts import strict_json, uuid_text
 
 
@@ -82,13 +82,15 @@ class StoredEvent:
         )
         raw["observed_at"] = datetime.fromisoformat(raw["observed_at"])
         raw["relations"] = tuple(EventRelation(**rel) for rel in raw["relations"])
-        event = EconomicEvent(**raw)
+        event_class = EconomicEvent
+        if row['origin'] == 'historical':
+            from noesis.financial_history.durable import HistoricalEconomicEvent
+            event_class = HistoricalEconomicEvent
+        event = event_class(**raw)
         if (
             event.canonical_bytes().decode("utf-8") != row["canonical_event"]
             or event.content_hash != row["content_hash"]
-            or canonical_payload(event.event_type, event.payload, event.payload_version).decode(
-                "utf-8"
-            )
+            or event.payload_bytes().decode("utf-8")
             != row["payload_canonical"]
         ):
             raise ValueError("Payload/sobre/hash incoherentes; no reparar automáticamente.")

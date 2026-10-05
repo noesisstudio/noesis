@@ -1,5 +1,32 @@
 ﻿# Registro de cambios
 
+## 2026-10-05 — Fase1.9D: importer histórico (validación en curso)
+
+Solo incorporación de candidatos congelados de C vigente. Flags OFF; no1.9E,
+reconciliación, activación, continuidad live ni producción.
+[Orden](architecture/FASE-1.9D-orden.md), [ADR017](architecture/ADR-017-financial-history-import.md),
+[contrato](architecture/FINANCIAL-HISTORY-IMPORT-v1.md), [cierre](architecture/FASE-1.9D-cierre.md).
+Monolito modular; importer/repositorio especializados sobre conexión y TX
+compartidas. Decimal/NUMERIC y JSON decimal string; IA sin autoridad.
+Intent item-scoped con UUID/request/candidato exactos; fence permanece activo.
+Operación histórica PREPARED y historical_unknown, actor/session NULL; resultado
+en import_items, ninguna ejecución ni cobertura live65–67. Tres v2 históricos
+durables cerrados; factura histórica v2 bloqueada. Nuevos inventarios reconocen
+evidencia histórica existente sin promover B a A ni modificar batches anteriores.
+Los encabezados inferiores conservan historia y no amplían autorización.
+
+Objetivo/áreas: importer histórico por item, schema72 y contrato durable cerrado;
+financial_history, economic_events, migrations, tests y gobernanza/CI. Pruebas:
+SQLite179 (306.716 s, dos skips), PostgreSQL363 (239.055 s, D25 con seis procesos),
+36 rutas PG, código53 sobre schema72, privacidad/rollback y HTTP200 local.
+Ruff/Bandit/secretos/truth/Node9/lock/dependencias/enlaces PASS. Suite general/CI
+final en curso: no declarar cierre hasta su resultado. Límites: ninguna producción,
+copia real, proveedor o backfill real. Riesgo: SQL dual/contención y source binario
+ambiguo bloqueado. Diagnóstico: read_batch/blocking_code y frozen hashes; rollback
+code-first con flags OFF conservando esquema/evidencia; downgrade72 con datos bloqueado.
+
+
+
 ## 2026-10-04 — Fase1.9C: epoch/T0/fence (implementada y validada)
 
 Únicamente corte consistente por negocio, control durable y nuevo sobre de

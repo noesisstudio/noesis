@@ -569,7 +569,7 @@ class HistoryCutoffContract:
 
         for start in (0, 70):
             with self.subTest(start=start), self.empty_database(start):
-                self.assertEqual(migrations.upgrade(), 71)
+                self.assertEqual(migrations.upgrade(71), 71)
                 with db.get_conn() as conn:
                     sql = (
                         "SELECT name AS name FROM sqlite_master WHERE type='table'"
@@ -581,14 +581,14 @@ class HistoryCutoffContract:
                 with db.get_conn() as conn:
                     after = {r["name"] for r in conn.execute(sql).fetchall()}
                 self.assertEqual(before - after, set(TABLES))
-                self.assertEqual(migrations.upgrade(), 71)
+                self.assertEqual(migrations.upgrade(71), 71)
 
     def test_downgrade_with_epoch_even_released_blocked(self):
         self.open()
         self.cut.release(self.principal, self.epoch_uuid, reason="manual_end")
         with self.assertRaisesRegex(ValueError, "evidencia"):
             migrations.downgrade(70)
-        self.assertEqual(migrations.current_version(), 71)
+        self.assertEqual(migrations.current_version(), migrations.LATEST_VERSION)
 
     def test_diagnostic_cannot_promote_sql_or_attach_to_epoch(self):
         diagnostic = HistoryDiagnostics(self.bid).run(
