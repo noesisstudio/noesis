@@ -1,5 +1,17 @@
 # Registro de cambios
 
+## 2026-10-06 — Corrección documental de CI de 1.10B
+
+La [CI 37445611012](https://github.com/noesisstudio/noesis/actions/runs/37445611012)
+detectó tres falsos positivos en la evidencia nueva de `project-state.json`:
+la clave del resultado del escáner y dos SHA públicos completos. Se renombra
+esa clave a `credential_scan` y se conservan los mismos commits mediante sus
+identificadores abreviados. Sin cambios de runtime, tests, workflow, baseline ni
+filtros. Validación: escáner completo y sus tests, verdad documental y diff;
+CI completa se repite en la misma rama. Riesgo limitado a representación de
+metadatos; diagnóstico por run enlazado, rollback revirtiendo esta corrección.
+Sin merge, despliegue, producción, QA real ni inicio de 1.10C.
+
 ## 2026-10-06 — Fase 1.10B: antecedentes sin autoridad
 
 [Orden](architecture/FASE-1.10B-orden.md), [contrato](architecture/FINANCIAL-ANTECEDENTS-v1.md), [ADR020](architecture/ADR-020-financial-antecedents.md), [cierre](architecture/FASE-1.10B-cierre.md).

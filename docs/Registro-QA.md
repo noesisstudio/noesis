@@ -1,5 +1,15 @@
 # Registro de QA
 
+## 2026-10-06 — Corrección documental de CI de 1.10B
+
+La [CI 37445611012](https://github.com/noesisstudio/noesis/actions/runs/37445611012)
+se detuvo en el detector de secretos por tres valores documentales nuevos:
+resultado del escáner y dos SHA públicos. Se cambia únicamente su representación
+en `project-state.json`, con trazabilidad en la bitácora. Baseline, filtros,
+código financiero, tests y workflow intactos. Se verifican escáner completo,
+tests de la puerta y verdad documental antes de repetir ambos jobs de CI.
+Sin acceso a producción, Noesis19FQA o backups reales; no merge/deploy/1.10C.
+
 ## 2026-10-06 — Fase 1.10B: antecedentes sin autoridad
 
 [Orden](architecture/FASE-1.10B-orden.md), [contrato](architecture/FINANCIAL-ANTECEDENTS-v1.md), [ADR020](architecture/ADR-020-financial-antecedents.md), [cierre](architecture/FASE-1.10B-cierre.md).
