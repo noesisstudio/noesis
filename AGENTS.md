@@ -1,5 +1,16 @@
 # AGENTS.md - Manual del proyecto Bynoesis
 
+> Para continuar el control plane financiero, leer la orden, contrato, ADR y cierre
+> vigentes en `docs/architecture/README.md` y el estado JSON antes de ejecutar.
+> La activación requiere permiso específico y confirmación humana durable exacta.
+> Nunca inferir autoridad de IA, readiness, grants, flags o administrador global.
+> Tras ever_enabled, OFF global o pausa debe bloquear nuevos efectos sin fallback.
+> Todo writer final conserva guard de aplicación y guard SQL ligado a operación,
+> generación, capability y conexión/TX. No abrir conexiones ni confirmar dentro
+> de executors. Conservar histórico/certificado, EE, outboxes y resultados committed.
+> Las órdenes específicas de ramas/local/no push prevalecen sobre la regla de main.
+
+
 ## 2026-10-06 — Fase 1.10C: capabilities y captura fiscal exclusivamente local
 
 [Orden](docs/architecture/FASE-1.10C-orden.md), [contrato](docs/architecture/FINANCIAL-CAPABILITIES-FISCAL-CANCELLATION-v1.md), [ADR021](docs/architecture/ADR-021-capabilities-fiscal-cancellation.md), [cierre](docs/architecture/FASE-1.10C-cierre.md).

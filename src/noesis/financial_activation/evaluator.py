@@ -54,7 +54,7 @@ class FinancialReadinessEvaluator:
         self.s, self.bid = session, tenant(business_id)
         self.repo = ReadinessRepository(session, self.bid)
 
-    def _permission(self, principal, *, locking=False):
+    def _permission(self, principal, *, locking=False, activation_verification=False):
         if not isinstance(principal, Principal):
             raise AccessDenied(R.PERMISSION_DENIED.value)
         suffix = " FOR SHARE" if locking and self.s.dialect == "postgres" else ""
@@ -77,7 +77,8 @@ class FinancialReadinessEvaluator:
         check = dict(business)
         if hasattr(check["trial_ends_at"], "isoformat"):
             check["trial_ends_at"] = check["trial_ends_at"].isoformat()
-        if not db.subscription_allows_access(check) or any(getattr(config, f) for f in FLAGS):
+        flags = tuple(f for f in FLAGS if not activation_verification or f != "FINANCIAL_CORE_ENABLED")
+        if not db.subscription_allows_access(check) or any(getattr(config, f) for f in flags):
             raise AccessDenied(R.PERMISSION_DENIED.value)
         # Permiso específico: el usuario autenticado de cuenta escribible puede evaluar.
         # No se infiere financial.authorize ni historical.record de esta decisión.
@@ -177,19 +178,8 @@ class FinancialReadinessEvaluator:
         )
 
     def _configuration(self, business):
-        producer = (
-            "VERIFACTU_PRODUCER_NAME",
-            "VERIFACTU_PRODUCER_NIF",
-            "VERIFACTU_SYSTEM_NAME",
-            "VERIFACTU_SYSTEM_ID",
-            "VERIFACTU_SYSTEM_VERSION",
-            "VERIFACTU_INSTALLATION_PREFIX",
-            "VERIFACTU_RECORD_VERSION",
-            "VERIFACTU_HASH_ALGORITHM",
-            "VERIFACTU_HASH_TYPE",
-            "VERIFACTU_HASH_SPEC_VERSION",
-            "VERIFACTU_AEAT_ENV",
-        )
+        from .configuration_snapshot import PRODUCER_FIELDS
+        producer = PRODUCER_FIELDS
         # Solo huellas, sin certificados, tokens ni contenido personal en evidencia.
         fields = dict(
             business_hash=storage_hash(business),

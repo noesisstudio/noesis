@@ -26,6 +26,8 @@ def storage_hash(row):
     """Huella del registro observado, sin copiar strings grandes ni bins a Money."""
     values = {}
     for key, value in dict(row).items():
+        if key in ('activation_generation', 'activation_capability') and value is None:
+            continue  # Columnas77 aditivas: conservar hashes previos sin binding live.
         if isinstance(value, str):
             value = {"text_hash":hashlib.sha256(value.encode()).hexdigest()}
         elif isinstance(value, float):

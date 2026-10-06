@@ -5,9 +5,9 @@
   "conversation_corrections_candidate_2026_09_24": "Local, no publicado: campos compuestos sobre propuestas existentes, consultas fiscales sin coincidencias parciales, concepto e IVA por linea. 70 regresiones dirigidas y suite completa local de 1197 tests correctas (1012.404 s); ultimo ajuste de interrogacion revalidado con 6 casos. Ruff, secretos y verdad documental correctos. Sin migracion, dependencias, proveedores ni cambios de flags. Meta real y memoria por actor pendientes.",
   "reliability_hotfix_2026_09_24": "df113b1: fechas compatibles PostgreSQL, correcciones multilínea sin pérdida de detalle y rollback 58 aditivo bloqueado ante borradores incompletos. CI 36012914685 verde: 1189 tests en 352.518 s, 36 rutas PostgreSQL, rollback y seguridad. Sin cambios de flags ni proveedores.",
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
-  "schema_version": 76,
+  "schema_version": 77,
   "conversation_transport_candidate_2026_09_24": "Local no publicado: esquemas 59/60, memoria por actor y transporte previo a vinculacion. NOESIS_CONVERSATION_ISOLATION_ENABLED y NOESIS_WHATSAPP_INBOX_ENABLED false por defecto. FIFO, acuse tras commit, incidencias sin replay automatico. 96 pruebas dirigidas correctas (71.801 s) y 460 backend/webhook correctas (397.517 s); Ruff, secretos y verdad documental correctos. Suite completa 1197 corresponde al bloque previo. Requiere CI PostgreSQL, procedimiento de revision/retencion y Meta real antes de activar.",
-  "verified_test_count": 1919,
+  "verified_test_count": 1940,
   "whatsapp_rounds_2026_10_01": "Producción hasta c52d3e2: presupuestos, citas (cancelar/mover), facturas de varias líneas, gasto a obra, abrir obra, ranking de clientes, pendientes, resumen semanal y abreviaturas de móvil por WhatsApp, todo con tarjeta de SÍ. Probado en real por WhatsApp Web (descartado con NO) y en simulador local. cryptography 50. Voz real sin probar.",
   "release_gate_2026_09_25": "CI 36131891167 completamente verde sobre 9357a39: 1223 tests en 555.019 s, seguridad, migraciones SQLite, 36 rutas PostgreSQL y rollback/compatibilidad/recuperacion. Cambios posteriores solo documentales. Founder autoriza publicar; mantener flags nuevos apagados y Meta intacto. Verificar ready tras despliegue.",
   "validation_2026_09_21": "CI 35578171354 verde sobre 1dc65aa1a79a6bcacfd1057b1b2afd317d7734e5: 974 pruebas (402.446 s), seguridad, Node, migraciones SQLite y humos PostgreSQL con compatibilidad anterior/rollback. Railway b88619b7-6da0-4b68-83ab-fec3194a9897 SUCCESS; health/ready verifican release 1dc65aa1a79a y esquema 56. Cierre documental sin cambios de runtime.",
@@ -192,11 +192,11 @@
   ],
   "admin_workspace_release": "seven_departments_scoped_monthly_api_usage_owner_phone_search_mobile_disclosure_explicit_metric_sources_refresh_no_schema_changes_deployment_verification_after_push",
   "financial_core": {
-    "authorized_phase": "1.10C",
-    "status": "phase1_10C_local_registry_fiscal_capture_flags_OFF_no1_10D",
+    "authorized_phase": "1.10D",
+    "status": "phase1_10D_CODE_VERIFIED_PASS_local_flags_OFF_no_push_no1_10E",
     "next_phase_authorized": false,
     "governance": "docs/architecture/README.md",
-    "closure": "docs/architecture/FASE-1.10C-cierre.md",
+    "closure": "docs/architecture/FASE-1.10D-cierre.md",
     "schema_changed": true,
     "operational_events_are_economic_events": false,
     "money_contract": "Decimal; EUR HALF_UP; PostgreSQL NUMERIC; SQLite canonical TEXT; legacy unchanged",
@@ -1455,6 +1455,239 @@
         "criteria_FAIL": 0,
         "autoaudit_result": "PASS"
       },
+      "postgres_synthetic_cluster_stopped": true,
+      "status": "CODE-VERIFIED PASS; aceptada por orden D",
+      "remote_review_ci": {
+        "run_id": 37470621922,
+        "url": "https://github.com/noesisstudio/noesis/actions/runs/37470621922",
+        "general_tests": 1919,
+        "postgres_financial_tests": 521,
+        "jobs": "success"
+      }
+    },
+    "phase1_10D": {
+      "status": "CODE-VERIFIED PASS local; independent review pending",
+      "branch": "codex/phase-1-10d",
+      "base": "0e99db609b1f7ad21996b0eb9c48d95366913f4a",
+      "schema": 77,
+      "order": "docs/architecture/FASE-1.10D-orden.md",
+      "contract": "docs/architecture/FINANCIAL-ACTIVATION-HANDOFF-v1.md",
+      "adr": "docs/architecture/ADR-022-activation-handoff-generations.md",
+      "closure": "docs/architecture/FASE-1.10D-cierre.md",
+      "flags": "all five OFF",
+      "real_access": false,
+      "push": false,
+      "phase1_10E_started": false,
+      "complete_local": true,
+      "criteria_PASS": 12,
+      "criteria_FAIL": 0,
+      "autoaudit_dangerous_answers": "30 NO",
+      "validation": {
+        "general": {
+          "executed": 1940,
+          "initial_PASS": 1932,
+          "skipped": 2,
+          "initial_failures": 2,
+          "initial_errors": 4,
+          "initial_shards": [
+            {
+              "shard": 0,
+              "discovered": 1940,
+              "tests": 485,
+              "failures": 1,
+              "errors": 2,
+              "skipped": 1,
+              "successful": false,
+              "seconds": 1422.614
+            },
+            {
+              "shard": 1,
+              "discovered": 1940,
+              "tests": 485,
+              "failures": 1,
+              "errors": 1,
+              "skipped": 1,
+              "successful": false,
+              "seconds": 1208.236
+            },
+            {
+              "shard": 2,
+              "discovered": 1940,
+              "tests": 485,
+              "failures": 0,
+              "errors": 1,
+              "skipped": 0,
+              "successful": false,
+              "seconds": 1383.154
+            },
+            {
+              "shard": 3,
+              "discovered": 1940,
+              "tests": 485,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "successful": true,
+              "seconds": 1253.074
+            }
+          ],
+          "affected_case_retests": 7,
+          "retests_result": "PASS",
+          "PASS_after_retests": 1938,
+          "unresolved_failures": 0,
+          "clean_full_rerun": false,
+          "skip_reason": "two PostgreSQL-only races covered in PG matrix"
+        },
+        "sqlite_D": {
+          "tests": 21,
+          "result": "PASS",
+          "seconds": 122.66
+        },
+        "postgres": {
+          "version": "16.15",
+          "synthetic_local_only": true,
+          "executed": 556,
+          "initial_matrices": [
+            {
+              "matrix": "tests.postgres_financial_core",
+              "run": 6,
+              "failures": 0,
+              "errors": 0,
+              "success": true
+            },
+            {
+              "matrix": "tests.postgres_financial_operations",
+              "run": 37,
+              "failures": 0,
+              "errors": 0,
+              "success": true
+            },
+            {
+              "matrix": "tests.postgres_economic_persistence.EconomicPersistencePostgres",
+              "run": 28,
+              "failures": 0,
+              "errors": 0,
+              "success": true
+            },
+            {
+              "matrix": "tests.postgres_borrowed_writers.BorrowedWritersPostgres",
+              "run": 18,
+              "failures": 0,
+              "errors": 0,
+              "success": true
+            },
+            {
+              "matrix": "tests.postgres_invoice_capture.InvoiceCapturePostgres",
+              "run": 27,
+              "failures": 0,
+              "errors": 0,
+              "success": true
+            },
+            {
+              "matrix": "tests.postgres_payment_bank_capture.PaymentBankCapturePostgres",
+              "run": 41,
+              "failures": 0,
+              "errors": 0,
+              "success": true
+            },
+            {
+              "matrix": "tests.postgres_purchasing_capture.PurchasingCapturePostgres",
+              "run": 44,
+              "failures": 0,
+              "errors": 0,
+              "success": true
+            },
+            {
+              "matrix": "tests.postgres_financial_channels.FinancialChannelsPostgres",
+              "run": 50,
+              "failures": 0,
+              "errors": 0,
+              "success": true
+            },
+            {
+              "matrix": "tests.postgres_financial_history_inventory.HistoryInventoryPostgres",
+              "run": 37,
+              "failures": 0,
+              "errors": 0,
+              "success": true
+            },
+            {
+              "matrix": "tests.postgres_financial_history_cutoff.HistoryCutoffPostgres",
+              "run": 50,
+              "failures": 0,
+              "errors": 0,
+              "success": true
+            },
+            {
+              "matrix": "tests.postgres_financial_history_import.HistoryImportPostgres",
+              "run": 25,
+              "failures": 0,
+              "errors": 0,
+              "success": true
+            },
+            {
+              "matrix": "tests.postgres_financial_history_reconciliation.HistoryReconciliationPostgres",
+              "run": 31,
+              "failures": 0,
+              "errors": 0,
+              "success": true
+            },
+            {
+              "matrix": "tests.postgres_financial_readiness.ReadinessPostgres",
+              "run": 29,
+              "failures": 0,
+              "errors": 0,
+              "success": true
+            },
+            {
+              "matrix": "tests.postgres_financial_antecedents.AntecedentsPostgres",
+              "run": 52,
+              "failures": 0,
+              "errors": 0,
+              "success": true
+            },
+            {
+              "matrix": "tests.postgres_fiscal_cancellation_capture.FiscalCancellationPostgres",
+              "run": 46,
+              "failures": 1,
+              "errors": 0,
+              "success": false
+            },
+            {
+              "matrix": "tests.postgres_financial_activation_handoff.HandoffPostgres",
+              "run": 35,
+              "failures": 0,
+              "errors": 0,
+              "success": true
+            }
+          ],
+          "C_full_rerun": {
+            "tests": 46,
+            "failures": 0,
+            "errors": 0,
+            "successful": true,
+            "seconds": 55.754
+          },
+          "D_tests": 35,
+          "D_seconds": 68.487,
+          "result_after_C_rerun": "PASS",
+          "unresolved_failures": 0
+        },
+        "javascript_tests": 9,
+        "http_routes": 36,
+        "ruff": "PASS",
+        "bandit": "PASS",
+        "credential_scan": "PASS",
+        "pip_audit": "PASS",
+        "previous_migration_functions_AST_unchanged": 174,
+        "previous_migration_registry_entries_unchanged": 76,
+        "sqlite_cycle": "77/76/77/0/77 PASS FK ON",
+        "postgres_cycle": "77/76/77 PASS",
+        "postgres_cycle_to_zero": "inherited pre-D bank-reconciliation downgrade SQL missing ON; not changed; no PASS claimed",
+        "remote_CI_run": false
+      },
+      "local_main_unchanged": "e95c19beea7a9cda291f045459b06eb639e171e5",
+      "cached_origin_main_unchanged": "acff183319f476a5f0b25a820751dca4523fd8fd",
       "postgres_synthetic_cluster_stopped": true
     }
   }

@@ -323,12 +323,13 @@ class FiscalCancellationContract:
         self.cancel.execute(self.principal, op.operation_uuid)
 
     def test_downgrade_retains_durable_evidence(self):
+        original_version = migrations.current_version()
         op = self.authorized()
         self.cancel.execute(self.principal, op.operation_uuid)
         before = self.state()
         with self.assertRaises(ValueError):
             migrations.downgrade(75)
-        self.assertEqual(migrations.current_version(), 76)
+        self.assertEqual(migrations.current_version(), original_version)
         self.assertEqual(before, self.state())
 
     def test_draft_and_historical_invoice_blocked(self):

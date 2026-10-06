@@ -298,13 +298,14 @@ class ProofChecker:
             c.assessment.classification.value
         )
         require(quality is not None, R.HISTORICAL_INVALID)
+        from noesis.financial_activation.historical_proof import historical_cut_hash
         evidence = dict(
             origin="historical",
             source_hash=current.content_hash,
             import_hash=storage_hash(proof),
             item_hash=storage_hash(items[0]),
             batch_hash=storage_hash(batch),
-            cut_hash=storage_hash(cut),
+            cut_hash=historical_cut_hash(self.s, self.bid, cut),
             reconciliation_hash=rec["result_hash"],
             reconciliation_uuid=str(rec["reconciliation_uuid"]),
             batch_uuid=stored.historical_batch_uuid,

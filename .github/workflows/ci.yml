@@ -20,9 +20,9 @@ jobs:
   tests-and-migrations:
     name: Tests i migracions
     runs-on: ubuntu-latest
-    # La suite completa ya roza 15 min en runners compartidos y después valida
-    # upgrade/downgrade/upgrade. El límite debe detectar bloqueos, no cancelar QA sano.
-    timeout-minutes: 35
+    # M77 añade guards a las regresiones completas y después se valida el ciclo
+    # de migraciones. Dar margen a runners compartidos sin omitir ninguna prueba.
+    timeout-minutes: 60
 
     steps:
       - name: Descarregar el repositori
@@ -110,7 +110,8 @@ jobs:
   postgres-smoke:
     name: Humo contra Postgres
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Incluye todas las matrices financieras, las carreras y los crashes D.
+    timeout-minutes: 35
 
     services:
       postgres:
@@ -200,6 +201,9 @@ jobs:
 
       - name: Validar capabilities y captura fiscal local, SQL guards y crash de procesos
         run: uv run python -m unittest tests.postgres_fiscal_cancellation_capture.FiscalCancellationPostgres
+
+      - name: Validar handoff atómico, generaciones, pausa, SQL y procesos aislados
+        run: uv run python -m unittest tests.postgres_financial_activation_handoff.HandoffPostgres
 
       - name: Obtener código base para rollback seguro
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

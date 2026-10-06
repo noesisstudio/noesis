@@ -9,7 +9,9 @@ from .boundary import run
 
 def _mutate_cycle(conn, recurring_id, business_id, scheduled_for, *, today=None, draft_only=False):
     from noesis import config
-    draft_only = draft_only or config.FINANCIAL_CORE_ENABLED
+    from noesis.financial_activation.runtime import control
+    activation = control(conn, business_id)
+    draft_only = draft_only or config.FINANCIAL_CORE_ENABLED or bool(activation and activation['ever_enabled'])
     today = today or db.date.today()
     lock = " FOR UPDATE" if conn.dialect == "postgres" else ""
     schedule = conn.execute(

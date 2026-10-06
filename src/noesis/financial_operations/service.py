@@ -4,7 +4,7 @@ Los ejecutores futuros recibirán la misma FinancialSession. No llamadas externa
 conexiones propias ni commits en un ejecutor: efecto y resultado se confirman juntos.
 """
 
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from datetime import datetime, timezone
 
 from noesis import db
@@ -88,8 +88,9 @@ class FinancialOperations:
     def prepare(self, principal, identity, request):
         if not isinstance(identity, EntryIdentity) or not isinstance(request, FinancialRequest):
             raise TypeError("Identidad de servidor y request tipado requeridos.")
-        with self._transaction(principal) as (_, repo):
-            return repo.prepare(principal, identity, request, _now())
+        with self._transaction(principal) as (session, repo):
+            from noesis.financial_activation.runtime import binding
+            return repo.prepare(principal, identity, request, _now(), activation=binding(session, self.business_id, request))
 
     def recover(self, principal, operation_uuid):
         with self._transaction(principal, write=False) as (_, repo):
@@ -116,10 +117,15 @@ class FinancialOperations:
             raise StateError("El mandato debe caducar en el futuro.")
         with self._transaction(principal) as (session, repo):
             self._revision(session, request, revision_reader)
-            return repo.add_authorization(operation_uuid=None, kind=AuthorizationKind.MANDATE,
+            from noesis.financial_activation.runtime import binding
+            from noesis.financial_activation.execution_context import execution_context
+            activation = binding(session, self.business_id, request)
+            context = nullcontext() if activation is None else execution_context(session, dict(activation, kind='mandate', operation_uuid=None))
+            with context:
+                return repo.add_authorization(operation_uuid=None, kind=AuthorizationKind.MANDATE,
                 actor=principal.user_id, recorded_by=principal.user_id,
                 session_version=principal.session_version, request=request, channel=channel,
-                permission="financial.mandate", now=_now(), expires_at=expires.isoformat())
+                permission="financial.mandate", now=_now(), expires_at=expires.isoformat(), activation=activation)
 
     def _mandate(self, session, repo, mandate_uuid, principal, request):
         row = repo.authorization(mandate_uuid)
@@ -131,6 +137,10 @@ class FinancialOperations:
                 or row["approved_revision"] != request.expected_revision):
             raise AccessDenied("Mandato no válido para esta operación.")
         self._permission(session, Principal(row["actor_user_id"], row["actor_session_version"]), write=True)
+        from noesis.financial_activation.runtime import binding
+        activation = binding(session, self.business_id, request)
+        if activation is not None and (row.get('activation_generation') != activation['generation'] or row.get('activation_capability') != activation['capability']):
+            raise AccessDenied("Mandato pertenece a otra generación/capability.")
         return row
 
     def authorize(self, principal, operation_uuid, *, channel, approved_hash, approved_revision,
@@ -147,6 +157,8 @@ class FinancialOperations:
                                             has_history=repo.has_historical_receipt(operation_uuid))
             operation = Operation.from_row(row)
             request = operation.request
+            from noesis.financial_activation.runtime import binding
+            activation = None if operation.state == OperationState.COMMITTED else binding(session, self.business_id, request, row)
             guard = getattr(self, "_channel_guard", None)
             if guard is not None:
                 guard(session, operation, "authorize")
@@ -177,15 +189,18 @@ class FinancialOperations:
             historical = kind == AuthorizationKind.HISTORICAL_UNKNOWN
             if historical and channel != EntryNamespace.HISTORICAL:
                 raise StateError("Procedencia desconocida requiere canal histórico.")
-            authorization_uuid = repo.add_authorization(
+            from noesis.financial_activation.execution_context import execution_context
+            context = nullcontext() if activation is None else execution_context(session, dict(activation, kind='authorize', operation_uuid=operation_uuid))
+            with context:
+                authorization_uuid = repo.add_authorization(
                 operation_uuid=row["operation_uuid"], kind=kind,
                 actor=None if historical else principal.user_id, recorded_by=principal.user_id,
                 session_version=None if historical else principal.session_version, request=request,
                 channel=channel, permission=("historical.record" if historical else
                     "financial.mandate" if kind == AuthorizationKind.MANDATE else "financial.authorize"),
-                now=_now(), mandate_uuid=mandate_uuid)
-            repo.transition(row, OperationState.PREPARED if historical else OperationState.APPROVED,
-                            _now(), authorization_uuid=authorization_uuid)
+                now=_now(), mandate_uuid=mandate_uuid, activation=activation)
+                repo.transition(row, OperationState.PREPARED if historical else OperationState.APPROVED,
+                                _now(), authorization_uuid=authorization_uuid)
             operation = Operation.from_row(repo.load(operation_uuid, principal.user_id))
             if approval_recorder is not None:
                 approval_recorder(session, operation)
@@ -218,7 +233,11 @@ class FinancialOperations:
                 return operation  # Reintento tras perder la respuesta: no llamar al ejecutor.
             if operation.state != OperationState.APPROVED:
                 raise StateError("Operación sin aprobación ejecutable.")
+            from noesis.financial_activation.runtime import binding
+            activation = binding(session, self.business_id, operation.request, row)
             authorization = repo.authorization(operation.authorization_uuid)
+            if activation is not None and (authorization.get('activation_generation') != activation['generation'] or authorization.get('activation_capability') != activation['capability']):
+                raise AccessDenied("Autorización pertenece a otra generación/capability.")
             if (str(authorization["operation_uuid"]) != operation.operation_uuid
                     or authorization["approved_request_hash"] != operation.request.request_hash
                     or authorization["actor_user_id"] != principal.user_id
@@ -228,12 +247,15 @@ class FinancialOperations:
             if authorization["mandate_uuid"] is not None:
                 self._mandate(session, repo, authorization["mandate_uuid"], principal, operation.request)
             self._revision(session, operation.request, revision_reader)
-            result = executor(session, operation.request)
-            if not isinstance(result, dict):
-                raise TypeError("Resultado versionado requiere mapping JSON.")
-            canonical = canonical_json(result)
-            repo.transition(row, OperationState.COMMITTED, _now(), result=canonical, result_hash=digest(canonical))
-            return Operation.from_row(repo.load(operation_uuid, principal.user_id))
+            from noesis.financial_activation.execution_context import execution_context
+            context = nullcontext() if activation is None else execution_context(session, dict(activation, kind='effect', operation_uuid=operation_uuid))
+            with context:
+                result = executor(session, operation.request)
+                if not isinstance(result, dict):
+                    raise TypeError("Resultado versionado requiere mapping JSON.")
+                canonical = canonical_json(result)
+                repo.transition(row, OperationState.COMMITTED, _now(), result=canonical, result_hash=digest(canonical))
+                return Operation.from_row(repo.load(operation_uuid, principal.user_id))
 
     def finish_without_effect(self, principal, operation_uuid, state):
         state = OperationState(state)

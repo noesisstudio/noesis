@@ -62,6 +62,10 @@ def external_guard(business_id):
     from noesis import db
     with db.get_conn() as conn:
         assert_writable(conn, business_id)
+        from noesis.financial_activation.runtime import control, ActivationUnavailable
+        row = control(conn, business_id)
+        if row and row['ever_enabled']:
+            raise ActivationUnavailable('Dispatch externo post-handoff requiere la política F; D no concede acceso a providers.')
         yield
 
 

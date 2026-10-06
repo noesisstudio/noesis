@@ -18,13 +18,17 @@ class _RecordingPGConn:
     orden en que las enviaría db.Connection (split de executescript por ';')."""
 
     dialect = "postgres"
+    raw = None  # psycopg.sql puede renderizar identificadores sin conexión real.
 
     def __init__(self):
         self.statements: list[str] = []
 
     def execute(self, sql, params=()):
         self.statements.append(sql.strip())
+        self.params = params
         return self
+
+    execute_exact = execute
 
     def executescript(self, script):
         for statement in script.split(";"):
@@ -32,6 +36,8 @@ class _RecordingPGConn:
                 self.statements.append(statement.strip())
 
     def fetchone(self):
+        if self.statements[-1] == "SELECT current_schema() AS name":
+            return {"name": "recording"}
         if "pg_get_functiondef('capture_event()'" in self.statements[-1]:
             # Migración72 inspecciona el guard65 existente. Simular su definición
             # real generada; no omitir la nueva migración de las comprobaciones.
@@ -44,6 +50,26 @@ class _RecordingPGConn:
         return None
 
     def fetchall(self):
+        if "FROM pg_trigger t JOIN pg_proc p" in self.statements[-1]:
+            # M77 conserva/reutiliza las funciones reales de los padres. Generar
+            # esas definiciones previas, sin saltarse M77 ni fabricar un guard vacío.
+            from noesis.financial_history.cut_schema import upgrade as cut_upgrade
+            from noesis.financial_activation.schema import upgrade as readiness_upgrade
+            previous = _RecordingPGConn()
+            cut_upgrade(previous)
+            readiness_upgrade(previous)
+            table = self.params[0]
+            names = {
+                match.group(1) for stmt in previous.statements
+                if re.search(r"\bON " + re.escape(table) + r"\b", stmt)
+                for match in re.finditer(r"EXECUTE FUNCTION (\w+)\(\)", stmt)
+            }
+            return [
+                {"name": match.group(1), "sql": stmt}
+                for stmt in previous.statements
+                for match in re.finditer(r"^CREATE FUNCTION (\w+)\(\)", stmt)
+                if match.group(1) in names
+            ]
         return []
 
 

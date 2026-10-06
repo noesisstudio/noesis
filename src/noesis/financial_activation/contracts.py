@@ -72,7 +72,7 @@ class Reason(str, Enum):
 
 
 VERSION = 1
-SCHEMAS = (74, 75, 76)
+SCHEMAS = (74, 75, 76, 77)
 C = Capability
 DEPENDENCIES = MappingProxyType(
     {
