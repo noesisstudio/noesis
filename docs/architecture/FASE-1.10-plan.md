@@ -1,5 +1,16 @@
 # Fase1.10 — referencia aprobada y corrección1.10A
 
+## Adenda autorizada 2026-10-06 — exclusivamente 1.10B
+
+A validada. La [orden B](FASE-1.10B-orden.md) autoriza antecedentes durables
+en rama dedicada desde la base exacta de A, solo fixtures sintéticos. Leer
+[ADR020](ADR-020-financial-antecedents.md), [contrato](FINANCIAL-ANTECEDENTS-v1.md)
+y [cierre](FASE-1.10B-cierre.md). Revalidación every_use con sesión/gate/TX
+prestados; evidencia no autoridad. Cinco flags OFF. No activación, handoff,
+fence release, routing, EE/Operations, producción, QA real ni C–H. Los párrafos
+inferiores conservan la referencia aprobada y sus autorizaciones históricas;
+esta adenda no cambia diseño ni outcomes/blockers del evaluator A.
+
 Aceptación humana:2026-10-05.0–1.9 cerrado técnicamente con limitaciones;
 1.9F conserva PASS WITH LIMITATIONS. Solo1.10A autorizada actualmente.
 Este plan no autoriza implementación1.10B–H ni acceso/activación productivos.

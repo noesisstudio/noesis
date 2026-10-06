@@ -1,5 +1,12 @@
 # Decisiones
 
+## 2026-10-06 — Fase 1.10B: antecedentes sin autoridad
+
+[Orden](architecture/FASE-1.10B-orden.md), [contrato](architecture/FINANCIAL-ANTECEDENTS-v1.md), [ADR020](architecture/ADR-020-financial-antecedents.md), [cierre](architecture/FASE-1.10B-cierre.md).
+
+ADR020: antecedente es evidencia, nunca autoridad. Origen/calidad/propósito cerrados; histórico conserva A/B y proof original/E PASS; live exige committed/auth/coverage; revalidation every_use. Inspección permite observado sin habilitar comandos.
+
+
 ## 2026-10-05 — Fase 1.10A: evaluación sin activación
 
 [Orden](architecture/FASE-1.10A-orden.md), [contrato](architecture/FINANCIAL-READINESS-v1.md), [ADR019](architecture/ADR-019-financial-readiness.md), [cierre](architecture/FASE-1.10A-cierre.md), [plan](architecture/FASE-1.10-plan.md).

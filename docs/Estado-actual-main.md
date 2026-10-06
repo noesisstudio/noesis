@@ -1,5 +1,12 @@
 # Estado actual del producto
 
+## 2026-10-06 — Fase 1.10B: antecedentes sin autoridad
+
+[Orden](architecture/FASE-1.10B-orden.md), [contrato](architecture/FINANCIAL-ANTECEDENTS-v1.md), [ADR020](architecture/ADR-020-financial-antecedents.md), [cierre](architecture/FASE-1.10B-cierre.md).
+
+Candidato B en rama dedicada desde A validada. Solo resolución de evidencia por propósito, migration75 aditiva, flags OFF. Cierre técnico local PASS: B SQLite47/PG52, regresiones PG423, suite1875 (dos skips existentes), seguridad/documentación PASS. Aceptación y revisión remota de B pendientes; main y producción no modificados.
+
+
 ## 2026-10-05 — Fase 1.10A: evaluación sin activación
 
 [Orden](architecture/FASE-1.10A-orden.md), [contrato](architecture/FINANCIAL-READINESS-v1.md), [ADR019](architecture/ADR-019-financial-readiness.md), [cierre](architecture/FASE-1.10A-cierre.md), [plan](architecture/FASE-1.10-plan.md).

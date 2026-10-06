@@ -1,5 +1,18 @@
 # 01 · Visión general
 
+## 2026-10-06 — Fase 1.10B: frontera de antecedentes
+
+[Orden](../architecture/FASE-1.10B-orden.md), [ADR020](../architecture/ADR-020-financial-antecedents.md), [contrato](../architecture/FINANCIAL-ANTECEDENTS-v1.md), [cierre](../architecture/FASE-1.10B-cierre.md).
+
+A validada; B únicamente en rama dedicada. Encabezados inferiores históricos.
+Módulo especializado `financial_antecedents/`, FinancialSession/gate/TX compartidos,
+sin conexión/commit propio. db.py solo registra conservación de la tabla nueva.
+Migración aditiva y compatibilidad explícita; antiguas FKs y migraciones intactas.
+Evidencia no es autoridad: no routing, activación, fence release, productor ni
+EE/Operations. Cinco flags OFF. Solo fixtures sintéticos; no producción/QA real,
+merge/push main, despliegue ni 1.10C–H. Revalidación en cada uso y documentación
+durable obligatoria; Decimal/NUMERIC e IA sin autoridad.
+
 ## 2026-10-05 — Fase 1.10A: evaluación sin activación
 
 [Orden](../architecture/FASE-1.10A-orden.md), [contrato](../architecture/FINANCIAL-READINESS-v1.md), [ADR019](../architecture/ADR-019-financial-readiness.md), [cierre](../architecture/FASE-1.10A-cierre.md), [plan](../architecture/FASE-1.10-plan.md).

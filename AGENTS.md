@@ -1,5 +1,28 @@
 # AGENTS.md - Manual del proyecto Bynoesis
 
+## 2026-10-06 — Fase 1.10B: antecedentes, exclusivamente evidencia
+
+[Orden](docs/architecture/FASE-1.10B-orden.md), [ADR020](docs/architecture/ADR-020-financial-antecedents.md), [contrato](docs/architecture/FINANCIAL-ANTECEDENTS-v1.md), [cierre](docs/architecture/FASE-1.10B-cierre.md).
+
+A validada; B es la única implementación autorizada en `codex/phase-1-10b`,
+desde la base exacta indicada en la orden. Los encabezados inferiores son
+históricos. No merge/push main, despliegue, producción, QA real ni 1.10C–H.
+Validación de B solo sobre fixtures SQLite/PostgreSQL sintéticos.
+
+`financial_antecedents/` separa contratos, proof checker, resolver y repository.
+Monolito modular, repositorios por dominio y FinancialSession/gate/TX prestados;
+sin conexión/commit propios ni lógica grande en db.py. `resolve` solo lee;
+persistir escribe exclusivamente resoluciones B inmutables. Toda referencia/FK
+filtra business. Revalidar cada uso con `verify_resolution` en la futura TX.
+Antecedente/evidencia no concede autorización, readiness, activación ni ejecución.
+Historical conserva proof original y historical_unknown; observed_state nunca
+promueve, factura histórica v2 sigue bloqueada. Decimal/NUMERIC y JSON decimal
+string; binary legacy es solo identidad opaca, jamás certeza monetaria. Unknown
+se conserva. IA sin autoridad. Cinco flags OFF, fence/control/generation intactos.
+No routing, productores, EE/Operations, Open Items, provider I/O ni efectos fiscales.
+Antes de cerrar: matriz B/PG/carreras/migración, A–E/readiness, suite general,
+seguridad, verdad documental, enlaces y autoauditoría de veinte preguntas.
+
 ## 2026-10-05 — Fase 1.10A: evaluación sin activación
 
 [Orden](docs/architecture/FASE-1.10A-orden.md), [contrato](docs/architecture/FINANCIAL-READINESS-v1.md), [ADR019](docs/architecture/ADR-019-financial-readiness.md), [cierre](docs/architecture/FASE-1.10A-cierre.md), [plan](docs/architecture/FASE-1.10-plan.md).

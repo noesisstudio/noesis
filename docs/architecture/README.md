@@ -1,5 +1,19 @@
 # Financial Core: punto de entrada y continuidad
 
+## 2026-10-06 — Fase 1.10B: antecedentes por propósito
+
+[Orden](FASE-1.10B-orden.md), [ADR020](ADR-020-financial-antecedents.md),
+[contrato](FINANCIAL-ANTECEDENTS-v1.md), [cierre](FASE-1.10B-cierre.md).
+Leerlos antes de continuar. A validada; B solamente en rama dedicada y fixtures
+sintéticos. Encabezados inferiores históricos; ninguna referencia autoriza C–H,
+merge/push main, producción, QA real o despliegue.
+
+Evidencia ≠ autoridad. Resolver/check solo SELECT con sesión/gate/TX prestados;
+persistencia separada e inmutable, revalidación obligatoria en cada uso. Identidad
+fuerte, referencias tenant-scoped, historical original/observed_state sin promoción,
+live con operación/auth/coverage verificables. Factura histórica v2 bloqueada.
+Cinco flags OFF; sin routing, activación, fence release ni nuevos efectos financieros.
+
 ## 2026-10-05 — Fase 1.10A: evaluación sin activación
 
 [Orden](FASE-1.10A-orden.md), [contrato](FINANCIAL-READINESS-v1.md), [ADR019](ADR-019-financial-readiness.md), [cierre](FASE-1.10A-cierre.md), [plan](FASE-1.10-plan.md).

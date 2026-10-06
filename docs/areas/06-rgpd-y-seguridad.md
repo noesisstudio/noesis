@@ -1,5 +1,18 @@
 # 06 · RGPD y seguridad
 
+## 2026-10-06 — Fase 1.10B: evidencia mínima por tenant
+
+[Orden](../architecture/FASE-1.10B-orden.md), [ADR020](../architecture/ADR-020-financial-antecedents.md), [contrato](../architecture/FINANCIAL-ANTECEDENTS-v1.md), [cierre](../architecture/FASE-1.10B-cierre.md).
+
+Encabezados inferiores históricos. Antecedentes solo por identidad fuerte y
+business; refs/FKs compuestas, actor/sesión actuales, AccessDenied uniforme para
+referencia inexistente o ajena. Permisos resolve/read no son financial.authorize,
+mandate ni historical_unknown. Guardar refs/hashes/known-unknown, sin duplicar
+payload completo ni PII libre. Revalidar cada uso; stale bloquea, SQL inmutable.
+SQL privilegiado que deshabilita guards queda fuera del threat model. Aún no
+integrado en export de cliente ni rutas: no levantar blockers de privacidad de A.
+Sin proveedores/producción/QA real; cinco flags OFF e IA sin autoridad; no C–H.
+
 ## 2026-10-05 — Fase 1.10A: evaluación sin activación
 
 [Orden](../architecture/FASE-1.10A-orden.md), [contrato](../architecture/FINANCIAL-READINESS-v1.md), [ADR019](../architecture/ADR-019-financial-readiness.md), [cierre](../architecture/FASE-1.10A-cierre.md), [plan](../architecture/FASE-1.10-plan.md).

@@ -1,5 +1,26 @@
 # 08 · Financial Core
 
+## 2026-10-06 — Fase 1.10B: antecedentes, no autoridad
+
+[Orden](../architecture/FASE-1.10B-orden.md), [ADR020](../architecture/ADR-020-financial-antecedents.md), [contrato](../architecture/FINANCIAL-ANTECEDENTS-v1.md), [cierre](../architecture/FASE-1.10B-cierre.md).
+
+Zona: `src/noesis/financial_antecedents/{contracts,proofs,resolver,repository,schema}.py`.
+Solo B en rama dedicada, no C–H; encabezados inferiores históricos. Monolito
+modular, repositorio especializado, infraestructura compartida de conexión/TX/gate.
+Resolver/check solo SELECT; persistir exclusivamente tabla B. Revalidar cada uso.
+Referencia fuerte y FK por business; propósito cerrado, origen historical/live,
+calidad verified_fact/observed_state sin promoción. Historical exige importación
+original y E PASS durable; live exige operación/auth/coverage/links exactos.
+No normalización legacy para conceder certeza: Decimal/NUMERIC y JSON string,
+NULL/binary desconocidos conservados; no saldo desde status/registro_anterior.
+Factura histórica v2 bloqueada, bank match solo evidencia. IA sin autoridad.
+
+Comprobar UUID/contexto/idempotencia/rollback/stale, SQL inmutable/estructural,
+tenant uniforme, dependencias faltantes/extra, cobertura exhaustiva de cobros,
+proof histórica y live positivas reales sintéticas, unknowns, precisión, snapshots
+de todas las tablas anteriores/flags, PG concurrencia y migración aditiva.
+Sin routing, provider I/O, EE/Operations, activación/generation/fence ni 1.10C.
+
 ## 2026-10-05 — Fase 1.10A: evaluación sin activación
 
 [Orden](../architecture/FASE-1.10A-orden.md), [contrato](../architecture/FINANCIAL-READINESS-v1.md), [ADR019](../architecture/ADR-019-financial-readiness.md), [cierre](../architecture/FASE-1.10A-cierre.md), [plan](../architecture/FASE-1.10-plan.md).

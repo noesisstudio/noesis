@@ -4424,6 +4424,16 @@ def _downgrade_financial_readiness(conn):
     downgrade(conn)
 
 
+def _upgrade_financial_antecedents(conn):
+    from .financial_antecedents.schema import upgrade
+    upgrade(conn)
+
+
+def _downgrade_financial_antecedents(conn):
+    from .financial_antecedents.schema import downgrade
+    downgrade(conn)
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
     (2, "integridad_multiempresa", _upgrade_tenant_integrity, _downgrade_tenant_integrity),
@@ -4538,6 +4548,7 @@ MIGRATIONS: tuple[Migration, ...] = (
     (72, "incorporacion_historica_durable", _upgrade_financial_history_import, _downgrade_financial_history_import),
     (73, "reconciliacion_historica_durable", _upgrade_financial_history_reconciliation, _downgrade_financial_history_reconciliation),
     (74, "evaluacion_readiness_financiera", _upgrade_financial_readiness, _downgrade_financial_readiness),
+    (75, "resoluciones_antecedentes_financieros", _upgrade_financial_antecedents, _downgrade_financial_antecedents),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

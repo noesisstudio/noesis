@@ -1,5 +1,12 @@
 # Mapa de código
 
+## 2026-10-06 — Fase 1.10B: antecedentes sin autoridad
+
+[Orden](architecture/FASE-1.10B-orden.md), [contrato](architecture/FINANCIAL-ANTECEDENTS-v1.md), [ADR020](architecture/ADR-020-financial-antecedents.md), [cierre](architecture/FASE-1.10B-cierre.md).
+
+Nuevo financial_antecedents/{contracts,proofs,resolver,repository,schema}.py. SELECT prestado separado de persistencia append-only; FK por tenant; ninguna conexión propia ni productor/runtime. Matrices A–E aditivas.
+
+
 ## 2026-10-05 — Fase 1.10A: evaluación sin activación
 
 [Orden](architecture/FASE-1.10A-orden.md), [contrato](architecture/FINANCIAL-READINESS-v1.md), [ADR019](architecture/ADR-019-financial-readiness.md), [cierre](architecture/FASE-1.10A-cierre.md), [plan](architecture/FASE-1.10-plan.md).

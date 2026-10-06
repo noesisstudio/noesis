@@ -1,5 +1,12 @@
 # Registro de QA
 
+## 2026-10-06 — Fase 1.10B: antecedentes sin autoridad
+
+[Orden](architecture/FASE-1.10B-orden.md), [contrato](architecture/FINANCIAL-ANTECEDENTS-v1.md), [ADR020](architecture/ADR-020-financial-antecedents.md), [cierre](architecture/FASE-1.10B-cierre.md).
+
+PASS B: SQLite47 (98.710s), PG52 (33.367s), regresiones PG423; total PG475. Suite1875 (2596.044s), cero errores/fallos y dos skips existentes. Ruff/Bandit/secrets/pip-audit/JS9/verdad/enlaces1321 PASS. SQLite3.45.1/PG16.15 sintéticos; import original/E PASS y capture live, unknown/Decimal/guards/drift/UUID/concurrencia/snapshots íntegros. Cluster detenido y artefactos fuera de Git. Sin QA real ni CI remota B.
+
+
 ## 2026-10-05 — Fase 1.10A: evaluación sin activación
 
 [Orden](architecture/FASE-1.10A-orden.md), [contrato](architecture/FINANCIAL-READINESS-v1.md), [ADR019](architecture/ADR-019-financial-readiness.md), [cierre](architecture/FASE-1.10A-cierre.md), [plan](architecture/FASE-1.10-plan.md).

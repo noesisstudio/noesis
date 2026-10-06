@@ -14091,6 +14091,7 @@ def delete_business_cascade(business_id) -> bool:
         # La baja no destruye evidencia durable del núcleo financiero.
         for financial_table in ("financial_channel_proposals", "financial_channel_receipts", "financial_operations", "financial_authorizations",
                                 "financial_activation_control", "financial_readiness_evaluations", "financial_readiness_capabilities",
+                                "financial_antecedent_resolutions",
                                 "financial_history_epochs", "financial_history_control", "financial_history_cut_manifests", "financial_history_epoch_audit",
                                 "financial_history_manifests", "financial_history_items",
                                 "financial_history_import_batches", "financial_history_import_items",
@@ -14119,6 +14120,7 @@ def delete_business_cascade(business_id) -> bool:
             )
         # Primero confirma todas las eliminaciones referenciales en la base de datos.
         for table in (
+            'financial_antecedent_resolutions',
             'financial_readiness_capabilities', 'financial_activation_control', 'financial_readiness_evaluations',
             'financial_channel_receipts', 'financial_channel_proposals',
             # Vacías tras la comprobación anterior; no borrar evidencia para la baja.

@@ -1,5 +1,12 @@
 # Tareas vivas
 
+## 2026-10-06 — Fase 1.10B: antecedentes sin autoridad
+
+[Orden](architecture/FASE-1.10B-orden.md), [contrato](architecture/FINANCIAL-ANTECEDENTS-v1.md), [ADR020](architecture/ADR-020-financial-antecedents.md), [cierre](architecture/FASE-1.10B-cierre.md).
+
+B completada y validada localmente; pendiente aceptación humana y revisión/CI remota de la rama. C–H, activación, privacidad/export, providers/handoff y fusión/publicación requieren autorización posterior. Invoice histórica v2 y registro_anterior siguen bloqueados.
+
+
 ## 2026-10-05 — Fase 1.10A: evaluación sin activación
 
 [Orden](architecture/FASE-1.10A-orden.md), [contrato](architecture/FINANCIAL-READINESS-v1.md), [ADR019](architecture/ADR-019-financial-readiness.md), [cierre](architecture/FASE-1.10A-cierre.md), [plan](architecture/FASE-1.10-plan.md).

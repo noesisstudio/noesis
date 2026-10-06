@@ -555,7 +555,7 @@ class FinancialHistoryContractsTest(unittest.TestCase):
         for name in ("FINANCIAL_CORE_ENABLED", "LEDGER_REPORTING_ENABLED", "OPEN_ITEMS_ENABLED",
                      "NEW_TAX_ENGINE_ENABLED", "NEW_BANK_RECONCILIATION_ENABLED"):
             self.assertFalse(getattr(config, name))
-        self.assertEqual(migrations.LATEST_VERSION, 74)
+        self.assertEqual(migrations.LATEST_VERSION, 75)
 
 
 if __name__ == "__main__":

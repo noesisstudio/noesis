@@ -20,7 +20,7 @@ def migration_cycle(test):
             storage_hash(r) for r in conn.execute_exact("SELECT * FROM businesses").fetchall()
         ]
     test.assertEqual(migrations.downgrade(73), 73)
-    test.assertEqual(migrations.upgrade(), 74)
+    test.assertEqual(migrations.upgrade(), migrations.LATEST_VERSION)
     with db.get_conn() as conn:
         test.assertEqual(
             before,
@@ -32,7 +32,7 @@ def migration_cycle(test):
     # A verifica74→73→74 en ambos motores; SQLite amplía hasta0.
     if config.DATABASE_URL == "":
         test.assertEqual(migrations.downgrade(0), 0)
-        test.assertEqual(migrations.upgrade(), 74)
+        test.assertEqual(migrations.upgrade(), migrations.LATEST_VERSION)
 
 
 class ReadinessMigrationSQLite(unittest.TestCase):
