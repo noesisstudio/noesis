@@ -1,5 +1,27 @@
 # Mapa de código
 
+## 2026-10-06 — Fase 1.10C
+
+[Orden](architecture/FASE-1.10C-orden.md), [contrato](architecture/FINANCIAL-CAPABILITIES-FISCAL-CANCELLATION-v1.md), [ADR021](architecture/ADR-021-capabilities-fiscal-cancellation.md), [cierre](architecture/FASE-1.10C-cierre.md).
+
+Monolito modular y repositorios especializados sobre FinancialSession/gate/TX
+compartidos. Registry único de A con spec v1 y once mappings cerrados, sin
+enforcement/routing. FiscalCancellationCapture interno reutiliza writer fiscal:
+resolución B durable live/verified/resolved, revalidación every_use, autoridad
+humana exacta, registro/outbox pendiente/coverage/EE evidence-only/result atómicos.
+Decimal/EUR, total contextual del EE verificado, amount=None, snapshot real.
+No nueva lógica grande en db.py ni autoridad IA. Migration76 aditiva protegida;
+tuplas explícitas A/B/history. No provider I/O, activación, generation, handoff,
+fence release o cambios de cinco flags OFF. Historical v2, observed_state,
+mandates y rectificativas negativas bloqueadas por B se conservan.
+No routing público ni 1.10D–H. Solo fixtures sintéticos, no producción/QA real/backups.
+Capability Enum/dependencias A reutilizados, no catálogo paralelo; once CommandType
+mapeados. Schema76 crea invoice_fiscal_cancellation_coverage y guards/FKs diferidas.
+db.py solo inventario/conservación de esa tabla, writer y algoritmos fiscales intactos.
+Los tests genéricos de infraestructura con efectos ficticios se ejecutan explícitamente
+en75; C y todos los Captures/readiness/antecedents/history se prueban en76. No se
+debilita el guard global de COMMIT fiscal para admitir fixtures sin cobertura.
+
 ## 2026-10-06 — Fase 1.10B: antecedentes sin autoridad
 
 [Orden](architecture/FASE-1.10B-orden.md), [contrato](architecture/FINANCIAL-ANTECEDENTS-v1.md), [ADR020](architecture/ADR-020-financial-antecedents.md), [cierre](architecture/FASE-1.10B-cierre.md).

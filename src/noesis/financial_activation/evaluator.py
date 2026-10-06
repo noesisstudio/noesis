@@ -362,7 +362,8 @@ class FinancialReadinessEvaluator:
                 r.update((R.PRIVACY_NOT_READY, R.EXPORT_NOT_READY))
             if c in (C.WHATSAPP, C.EMAIL) or c == C.AEAT and fiscal:
                 r.add(R.PROVIDER_PREFLIGHT_MISSING)
-            if c == C.FISCAL_CANCEL:
+            from .capabilities import specification
+            if c == C.FISCAL_CANCEL and not specification(c).implemented:
                 r.add(R.FISCAL_CAPABILITY_INCOMPLETE)
             if c in (C.BANK_IMPORT, C.BANK_MATCH):
                 r.add(R.BANK_EVIDENCE_UNVALIDATED)

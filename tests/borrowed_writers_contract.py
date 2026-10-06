@@ -519,7 +519,7 @@ class BorrowedWritersContract:
         principal = Principal(user["id"], 0)
         service = FinancialOperations(self.bid)
         request = FinancialRequest(
-            # Operación sintética de infraestructura; expense.confirm exige productor1.7.
+            # Infraestructura en esquema75, antes de coverage fiscal76.
             CommandType.INVOICE_FISCAL_CANCEL,
             None,
             Decimal("10"),

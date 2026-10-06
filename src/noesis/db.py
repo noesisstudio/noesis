@@ -14089,7 +14089,13 @@ def delete_business_cascade(business_id) -> bool:
                 "Solicita una baja con conservación fiscal."
             )
         # La baja no destruye evidencia durable del núcleo financiero.
-        for financial_table in ("financial_channel_proposals", "financial_channel_receipts", "financial_operations", "financial_authorizations",
+        coverage_exists = conn.execute(
+            "SELECT 1 FROM information_schema.tables WHERE table_schema=current_schema() "
+            "AND table_name='invoice_fiscal_cancellation_coverage'" if conn.dialect == "postgres"
+            else "SELECT 1 FROM sqlite_master WHERE type='table' AND name='invoice_fiscal_cancellation_coverage'"
+        ).fetchone()
+        fiscal_capture_tables = ("invoice_fiscal_cancellation_coverage",) if coverage_exists else ()
+        for financial_table in fiscal_capture_tables + ("financial_channel_proposals", "financial_channel_receipts", "financial_operations", "financial_authorizations",
                                 "financial_activation_control", "financial_readiness_evaluations", "financial_readiness_capabilities",
                                 "financial_antecedent_resolutions",
                                 "financial_history_epochs", "financial_history_control", "financial_history_cut_manifests", "financial_history_epoch_audit",
@@ -14119,7 +14125,7 @@ def delete_business_cascade(business_id) -> bool:
                 "durante cuatro años. Solicita una baja con conservación legal."
             )
         # Primero confirma todas las eliminaciones referenciales en la base de datos.
-        for table in (
+        for table in fiscal_capture_tables + (
             'financial_antecedent_resolutions',
             'financial_readiness_capabilities', 'financial_activation_control', 'financial_readiness_evaluations',
             'financial_channel_receipts', 'financial_channel_proposals',

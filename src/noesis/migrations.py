@@ -4434,6 +4434,16 @@ def _downgrade_financial_antecedents(conn):
     downgrade(conn)
 
 
+def _upgrade_fiscal_cancellation_capture(conn):
+    from .fiscal_cancellation_capture.schema import upgrade
+    upgrade(conn)
+
+
+def _downgrade_fiscal_cancellation_capture(conn):
+    from .fiscal_cancellation_capture.schema import downgrade
+    downgrade(conn)
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
     (2, "integridad_multiempresa", _upgrade_tenant_integrity, _downgrade_tenant_integrity),
@@ -4549,6 +4559,7 @@ MIGRATIONS: tuple[Migration, ...] = (
     (73, "reconciliacion_historica_durable", _upgrade_financial_history_reconciliation, _downgrade_financial_history_reconciliation),
     (74, "evaluacion_readiness_financiera", _upgrade_financial_readiness, _downgrade_financial_readiness),
     (75, "resoluciones_antecedentes_financieros", _upgrade_financial_antecedents, _downgrade_financial_antecedents),
+    (76, "cobertura_cancelacion_fiscal_live", _upgrade_fiscal_cancellation_capture, _downgrade_fiscal_cancellation_capture),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

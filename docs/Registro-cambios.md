@@ -1,5 +1,19 @@
 # Registro de cambios
 
+## 2026-10-06 — Fase 1.10C: capacidades y captura fiscal local
+
+[Orden](architecture/FASE-1.10C-orden.md), [contrato](architecture/FINANCIAL-CAPABILITIES-FISCAL-CANCELLATION-v1.md), [ADR021](architecture/ADR-021-capabilities-fiscal-cancellation.md), [cierre](architecture/FASE-1.10C-cierre.md).
+
+Objetivo: registry/spec único, mapping cerrado y productor interno fiscal con
+Operations/B/writer existente/coverage/EE/result atómicos. Migration76 aditiva;
+solo conservación en db.py, matrices explícitas y fixture infraestructura75.
+PASS: C SQLite44/PG46, regresiones PG475 (total521), suite1919 (856.985s, 2 skips existentes), JS9, Ruff/Bandit/credential_scan/dependencias/verdad/enlaces1389/AST y veinte autoauditorías NO. PostgreSQL16.15 sintético detenido. No CI remota C (sin push).
+B CI final [37446339192](https://github.com/noesisstudio/noesis/actions/runs/37446339192)
+SUCCESS; A/B CODE-VERIFIED PASS y validadas. No providers/producción/QA real.
+Riesgo: source/config/cadena stale aborta; diagnosticar request/resolution hashes,
+coverage y result. Rollback76→75 solo sin evidencia; conservar outbox/result y
+reparar, nunca eliminar prueba para retroceder. Cinco flags OFF, D no iniciada.
+
 ## 2026-10-06 — Corrección documental de CI de 1.10B
 
 La [CI 37445611012](https://github.com/noesisstudio/noesis/actions/runs/37445611012)

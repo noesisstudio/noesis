@@ -1,5 +1,16 @@
 # Tareas vivas
 
+## 2026-10-06 — C local; D no iniciada
+
+[Orden](architecture/FASE-1.10C-orden.md), [contrato](architecture/FINANCIAL-CAPABILITIES-FISCAL-CANCELLATION-v1.md), [ADR021](architecture/ADR-021-capabilities-fiscal-cancellation.md), [cierre](architecture/FASE-1.10C-cierre.md).
+
+A/B CODE-VERIFIED PASS y aceptadas. C requiere revisión/aceptación del cierre
+local y autorización separada antes de push/merge/publicación/D. Preflight,
+privacy/export y continuidad/activation por generación siguen pendientes.
+No activar negocios. Factura historical v2, observed_state operativo, mandatos
+sin proof y rectificativas negativas por B permanecen bloqueados.
+QA real/backup/retención ajenos a esta entrega. Encabezados inferiores históricos.
+
 ## 2026-10-06 — Fase 1.10B: antecedentes sin autoridad
 
 [Orden](architecture/FASE-1.10B-orden.md), [contrato](architecture/FINANCIAL-ANTECEDENTS-v1.md), [ADR020](architecture/ADR-020-financial-antecedents.md), [cierre](architecture/FASE-1.10B-cierre.md).

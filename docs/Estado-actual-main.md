@@ -1,5 +1,26 @@
 # Estado actual del producto
 
+## 2026-10-06 — Candidato local de Fase 1.10C
+
+[Orden](architecture/FASE-1.10C-orden.md), [contrato](architecture/FINANCIAL-CAPABILITIES-FISCAL-CANCELLATION-v1.md), [ADR021](architecture/ADR-021-capabilities-fiscal-cancellation.md), [cierre](architecture/FASE-1.10C-cierre.md).
+
+A/B CODE-VERIFIED PASS y aceptadas. B CI final37446339192 SUCCESS en ambos jobs;
+la corrección de su base fue exclusivamente documental. C candidato local desde
+esa base, no fusionado/publicado/desplegado; no describe el esquema de producción.
+Registry/capture fiscal y migration76 implementados. Validación C en cierre/JSON.
+Cinco flags OFF. D no iniciada. Encabezados inferiores históricos.
+Monolito modular y repositorios especializados sobre FinancialSession/gate/TX
+compartidos. Registry único de A con spec v1 y once mappings cerrados, sin
+enforcement/routing. FiscalCancellationCapture interno reutiliza writer fiscal:
+resolución B durable live/verified/resolved, revalidación every_use, autoridad
+humana exacta, registro/outbox pendiente/coverage/EE evidence-only/result atómicos.
+Decimal/EUR, total contextual del EE verificado, amount=None, snapshot real.
+No nueva lógica grande en db.py ni autoridad IA. Migration76 aditiva protegida;
+tuplas explícitas A/B/history. No provider I/O, activación, generation, handoff,
+fence release o cambios de cinco flags OFF. Historical v2, observed_state,
+mandates y rectificativas negativas bloqueadas por B se conservan.
+No routing público ni 1.10D–H. Solo fixtures sintéticos, no producción/QA real/backups.
+
 ## 2026-10-06 — Fase 1.10B: antecedentes sin autoridad
 
 [Orden](architecture/FASE-1.10B-orden.md), [contrato](architecture/FINANCIAL-ANTECEDENTS-v1.md), [ADR020](architecture/ADR-020-financial-antecedents.md), [cierre](architecture/FASE-1.10B-cierre.md).

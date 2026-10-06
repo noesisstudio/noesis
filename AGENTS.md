@@ -1,5 +1,28 @@
 # AGENTS.md - Manual del proyecto Bynoesis
 
+## 2026-10-06 — Fase 1.10C: capabilities y captura fiscal exclusivamente local
+
+[Orden](docs/architecture/FASE-1.10C-orden.md), [contrato](docs/architecture/FINANCIAL-CAPABILITIES-FISCAL-CANCELLATION-v1.md), [ADR021](docs/architecture/ADR-021-capabilities-fiscal-cancellation.md), [cierre](docs/architecture/FASE-1.10C-cierre.md).
+
+A y B CODE-VERIFIED PASS, validadas por el titular. Solo C autorizada en
+codex/phase-1-10c desde la base exacta de la orden. No push, merge, main ni deploy.
+Encabezados inferiores históricos; D no iniciada y requiere autorización posterior.
+
+Monolito modular y repositorios especializados sobre FinancialSession/gate/TX
+compartidos. Registry único de A con spec v1 y once mappings cerrados, sin
+enforcement/routing. FiscalCancellationCapture interno reutiliza writer fiscal:
+resolución B durable live/verified/resolved, revalidación every_use, autoridad
+humana exacta, registro/outbox pendiente/coverage/EE evidence-only/result atómicos.
+Decimal/EUR, total contextual del EE verificado, amount=None, snapshot real.
+No nueva lógica grande en db.py ni autoridad IA. Migration76 aditiva protegida;
+tuplas explícitas A/B/history. No provider I/O, activación, generation, handoff,
+fence release o cambios de cinco flags OFF. Historical v2, observed_state,
+mandates y rectificativas negativas bloqueadas por B se conservan.
+No routing público ni 1.10D–H. Solo fixtures sintéticos, no producción/QA real/backups.
+Antes de cerrar: matrices C SQLite/PG, carreras/crashes reales, migración,
+regresiones A/B/history/captures/Veri*Factu/Operations, suite completa, JS,
+Ruff/Bandit/credential_scan/dependencias/verdad/enlaces/AST y veinte autoauditorías.
+
 ## 2026-10-06 — Fase 1.10B: antecedentes, exclusivamente evidencia
 
 [Orden](docs/architecture/FASE-1.10B-orden.md), [ADR020](docs/architecture/ADR-020-financial-antecedents.md), [contrato](docs/architecture/FINANCIAL-ANTECEDENTS-v1.md), [cierre](docs/architecture/FASE-1.10B-cierre.md).

@@ -198,6 +198,9 @@ jobs:
       - name: Validar antecedentes por propósito, revalidación y concurrencia sin efectos
         run: uv run python -m unittest tests.postgres_financial_antecedents.AntecedentsPostgres
 
+      - name: Validar capabilities y captura fiscal local, SQL guards y crash de procesos
+        run: uv run python -m unittest tests.postgres_fiscal_cancellation_capture.FiscalCancellationPostgres
+
       - name: Obtener código base para rollback seguro
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

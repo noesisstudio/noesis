@@ -1,5 +1,13 @@
 # Financial Readiness v1 — contrato1.10A
 
+## Compatibilidad C, 2026-10-06
+
+Schema76 admitido explícitamente; spec registry único reutiliza Capability/Profile/
+DEPENDENCIES v1. Evaluaciones/hash anteriores intactos. Nuevo producer fiscal
+disponible localmente, sin quitar privacy/export/continuity/preflight ni activar.
+Ver [contrato C](FINANCIAL-CAPABILITIES-FISCAL-CANCELLATION-v1.md). A CODE-VERIFIED PASS.
+El contenido inferior conserva el contrato A original y sus límites de esa fase.
+
 [ADR019](ADR-019-financial-readiness.md), [orden](FASE-1.10A-orden.md),
 [plan aprobado](FASE-1.10-plan.md). Solo evaluación, sin ready ni activación.
 

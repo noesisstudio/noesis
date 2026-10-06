@@ -1,5 +1,14 @@
 # Financial Antecedents v1
 
+## Consumo C, 2026-10-06
+
+Schema76 admitido explícitamente; proofs/hash/resolver B intactos. C requiere
+verify_resolution every_use sobre TX prestada, live/verified/resolved y propósito
+fiscal_cancel_invoice exacto; no autoridad implícita. Historical, observed_state,
+mandate y rechazo de rectificativas negativas por B se conservan. B CODE-VERIFIED PASS.
+Ver [contrato C](FINANCIAL-CAPABILITIES-FISCAL-CANCELLATION-v1.md).
+El contenido inferior es el contrato B original, sin ampliación silenciosa.
+
 [Orden](FASE-1.10B-orden.md) · [ADR020](ADR-020-financial-antecedents.md) ·
 [Cierre](FASE-1.10B-cierre.md). Evidencia ≠ autorización ≠ activación ≠ ejecución.
 

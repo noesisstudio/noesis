@@ -19,7 +19,8 @@ class EconomicPersistenceSQLite(EconomicPersistenceContract, unittest.TestCase):
             config, DATABASE_URL="", DB_PATH=Path(self.temp.name) / "events.db"
         )
         self.settings.start()
-        migrations.upgrade()
+        # Catálogo genérico pre-productor fiscal; Capture C se prueba en76.
+        migrations.upgrade(75)
         self.seed()
 
     def tearDown(self):

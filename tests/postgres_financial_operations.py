@@ -18,6 +18,7 @@ from tests.financial_operations_contract import OperationsContract
 
 
 class FinancialOperationsPostgres(OperationsContract, unittest.TestCase):
+    schema_target = 75  # Efectos ficticios de infraestructura, sin Capture C.
     @classmethod
     def setUpClass(cls):
         url = urlsplit(config.DATABASE_URL)
@@ -31,7 +32,7 @@ class FinancialOperationsPostgres(OperationsContract, unittest.TestCase):
         cls.scoped_url = cls.original_url + separator + "options=" + quote("-csearch_path=" + cls.schema)
         cls.settings = patch.object(config, "DATABASE_URL", cls.scoped_url)
         cls.settings.start()
-        migrations.upgrade()
+        migrations.upgrade(getattr(cls, "schema_target", None))
 
     @classmethod
     def tearDownClass(cls):
