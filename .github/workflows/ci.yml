@@ -107,6 +107,11 @@ jobs:
           )
           PY
 
+      - name: Validar conservación E de history y handoff D en SQLite
+        env:
+          NOESIS_SECRET: noesis-ci-secret-fixed-32-characters-minimum
+        run: uv run python -m tests.financial_privacy_history_integration
+
   postgres-smoke:
     name: Humo contra Postgres
     runs-on: ubuntu-latest
@@ -204,6 +209,11 @@ jobs:
 
       - name: Validar handoff atómico, generaciones, pausa, SQL y procesos aislados
         run: uv run python -m unittest tests.postgres_financial_activation_handoff.HandoffPostgres
+
+      - name: Validar export, retención y cierre financiero sin providers
+        run: |
+          uv run python -m unittest tests.postgres_financial_privacy.PrivacyPostgres
+          uv run python -m tests.financial_privacy_history_integration postgres
 
       - name: Obtener código base para rollback seguro
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

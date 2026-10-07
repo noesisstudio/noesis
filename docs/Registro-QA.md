@@ -1,5 +1,39 @@
 # Registro de QA
 
+## 2026-10-07 — Fase 1.10E local: CODE-VERIFIED PASS técnico
+
+[Orden E](architecture/FASE-1.10E-orden.md), [contrato v1](architecture/FINANCIAL-PRIVACY-EXPORT-RETENTION-v1.md),
+[ADR023](architecture/ADR-023-financial-privacy-export-retention.md) e
+[informe de cierre](architecture/FASE-1.10E-cierre.md) son la continuidad vigente.
+Los encabezados inferiores conservan historia. Rama local codex/phase-1-10e,
+base exacta autorizada; candidato sin publicar, no estado desplegado de main.
+
+financial_privacy separa contratos/catálogo/export/repositorio/retención/inventario/
+cierre/cliente/dispatch/restore. Migration78 aditiva: nueve tablas, contexto privado
+E, pool/conexión/gate/TX compartidos. Decimal/NUMERIC; binary64 legacy etiquetado
+como evidencia, nunca dinero exacto. No nueva autoridad IA ni efectos financieros.
+Export snapshot único, manifest verificable y subgrafo de cliente por FKs fuertes.
+Cierre formal conserva evidencia/bytes, invalida acceso local y exige pausa D previa.
+Tombstone cerrada deriva replay de scope/category; registro vigente obligatorio
+antes de servir restores. A sólo puede retirar los dos motivos E con prueba válida.
+
+QA: E SQLite50/PG62 PASS; todas las matrices PG618 PASS; integración history→B→D→
+export→pause→closure PASS en ambos motores. General completa: 2011 ejecutados,
+2006 PASS/2 skips/3 errores iniciales de fake DDL. Sólo se corrigió la respuesta
+pg_get_functiondef de la fixture; módulo plataforma completo repetido32 PASS.
+Cobertura final: 2009 casos PASS y 2 skips SQLite específicos de PG cubiertos allí.
+No se presenta como una única ejecución general limpia después de esa corrección.
+Ruff/Bandit/secret scan/dependency audit/JS9/migraciones/AST/documentation truth/
+enlaces PASS. Detalles y fallos corregidos se conservan en el informe.
+
+Política legal real PROVISIONAL: revisión profesional pendiente, sin plazos ni
+aprobación automática. Ningún piloto real usa una policy sintética como aprobada.
+Riesgos: export materializado en RAM, restores externos requieren protocolo,
+roles DB con DDL fuera de perímetro; cierre autorizado stale requiere revisión.
+Diagnóstico: hashes/UUIDs/receipts, sin PII en logs. Rollback78→77 sólo sin evidencia E;
+con evidencia falla cerrado, no borrarla. Cinco flags OFF. Sin push/merge/deploy/
+producción/QA real/backups reales/providers. F–H no autorizadas.
+
 ## 2026-10-07 — Fixture PostgreSQL D con autenticación
 
 Run 37587241672: gates previos y matrices PG hasta C PASS; D ejecuta 35 casos y termina con 35 errores de autenticación del login sin contraseña (1052,269 s). Suite general todavía en curso al preparar la corrección; ningún PASS completo se declara. Fixture corregida con credencial efímera sin ampliar privilegios ni usar trust. Ruff PASS; nueva CI completa desde cero pendiente.

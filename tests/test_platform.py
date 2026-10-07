@@ -38,6 +38,15 @@ class _RecordingPGConn:
     def fetchone(self):
         if self.statements[-1] == "SELECT current_schema() AS name":
             return {"name": "recording"}
+        if "pg_get_functiondef('noesis_execution_context()'" in self.statements[-1]:
+            # M78 deriva su verificador administrativo de la definición D real.
+            # Simular pg_get_functiondef sin saltar M78 ni fabricar seguridad vacía.
+            from noesis.financial_activation.context_schema import install
+            previous = _RecordingPGConn()
+            install(previous)
+            definition = next(stmt for stmt in previous.statements
+                              if stmt.startswith('CREATE FUNCTION noesis_execution_context()'))
+            return {'body': definition.replace('CREATE FUNCTION', 'CREATE OR REPLACE FUNCTION', 1)}
         if "pg_get_functiondef('capture_event()'" in self.statements[-1]:
             # Migración72 inspecciona el guard65 existente. Simular su definición
             # real generada; no omitir la nueva migración de las comprobaciones.

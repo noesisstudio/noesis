@@ -88,6 +88,10 @@ def _create_sqlite_backup() -> tuple[Path, dict[str, int]] | None:
 
 def _verify_sqlite_backup(path: Path, origin_counts: dict[str, int]) -> None:
     """Restaura la copia en otro archivo y valida esquema, integridad y recuentos."""
+    from ..core.persistence import FinancialSession
+    from ..financial_privacy.restore import restore_bundle, prepare_restored_database
+    with db.get_conn() as live:
+        suppressions = restore_bundle(FinancialSession(live))
     with tempfile.TemporaryDirectory(prefix="noesis-backup-verify-") as temporary:
         restored_path = Path(temporary) / "restored.db"
         with (
@@ -107,6 +111,12 @@ def _verify_sqlite_backup(path: Path, origin_counts: dict[str, int]) -> None:
                     f"Esquema restaurado {version}/{migrations.LATEST_VERSION}"
                 )
             restored_counts = _sqlite_counts(restored)
+            restored.row_factory = sqlite3.Row
+            wrapped = db.Connection(restored, "sqlite")
+            wrapped.execute_exact("PRAGMA foreign_keys=ON")
+            wrapped.execute_exact("BEGIN IMMEDIATE")
+            prepare_restored_database(FinancialSession(wrapped), suppressions)
+            wrapped.commit()
     if restored_counts != origin_counts:
         raise RuntimeError(
             f"Los recuentos restaurados no cuadran: "
@@ -389,6 +399,10 @@ def _restore_postgres_dump(raw, path: Path) -> tuple[dict, list[str]]:
 
 def _verify_postgres_backup(path: Path, origin_counts: dict[str, int]) -> None:
     """Restaura en un esquema desechable de la misma instancia y luego lo elimina."""
+    from ..core.persistence import FinancialSession
+    from ..financial_privacy.restore import restore_bundle, prepare_restored_database
+    with db.get_conn() as live:
+        suppressions = restore_bundle(FinancialSession(live))
     if psycopg is None:
         raise RuntimeError("psycopg no está instalado.")
     schema = f"noesis_backup_verify_{uuid.uuid4().hex}"
@@ -436,6 +450,7 @@ def _verify_postgres_backup(path: Path, origin_counts: dict[str, int]) -> None:
                     f"Los recuentos restaurados no cuadran: "
                     f"{restored_counts} != {origin_counts}"
                 )
+            prepare_restored_database(FinancialSession(wrapped), suppressions)
     finally:
         with psycopg.connect(config.DATABASE_URL, autocommit=True) as control:
             control.execute(

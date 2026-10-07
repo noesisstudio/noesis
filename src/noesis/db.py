@@ -250,6 +250,10 @@ def init_db(*, auto_migrate: bool | None = None) -> None:
         raise RuntimeError(
             "El esquema no está actualizado. Ejecuta: python -m noesis.migrations upgrade"
         )
+    with get_conn() as conn:
+        from .financial_privacy.closure import reapply_tombstones
+        from .core.persistence import FinancialSession
+        reapply_tombstones(FinancialSession(conn))
     _backfill_phone_norms()
 
 
@@ -7815,6 +7819,7 @@ def list_email_messages(
 
 
 def claim_next_email_message(*, now: str, stale_before: str) -> dict | None:
+    from .financial_privacy.dispatch import available_predicate
     with get_conn() as conn:
         conn.execute("BEGIN IMMEDIATE")
         suffix = " FOR UPDATE SKIP LOCKED" if conn.dialect == "postgres" else ""
@@ -7822,7 +7827,8 @@ def claim_next_email_message(*, now: str, stale_before: str) -> dict | None:
             "SELECT * FROM email_outbox WHERE "
             "((status IN ('queued','retrying') AND next_attempt_at<=?) "
             "OR (status='processing' AND locked_at<=?)) "
-            "ORDER BY next_attempt_at, id LIMIT 1" + suffix,
+            "AND " + available_predicate(conn, "email_outbox.business_id")
+            + " ORDER BY next_attempt_at, id LIMIT 1" + suffix,
             (now, stale_before),
         ).fetchone()
         if not row:
@@ -11472,6 +11478,7 @@ def claim_next_whatsapp_message(
     only_ids: list[int] | None = None,
 ) -> dict | None:
     """Bloquea un mensaje vencido; SKIP LOCKED evita dobles envíos en Postgres."""
+    from .financial_privacy.dispatch import available_predicate
     filters = (
         "((status IN ('queued', 'retrying') AND next_attempt_at<=?) "
         "OR (status='processing' AND locked_at<=?))"
@@ -11485,6 +11492,7 @@ def claim_next_whatsapp_message(
         suffix = " FOR UPDATE SKIP LOCKED" if conn.dialect == "postgres" else ""
         row = conn.execute(
             "SELECT * FROM whatsapp_outbox WHERE " + filters
+            + " AND " + available_predicate(conn, "whatsapp_outbox.business_id")
             + " ORDER BY next_attempt_at, id LIMIT 1" + suffix,
             tuple(params),
         ).fetchone()
@@ -13794,139 +13802,12 @@ def update_privacy_request(
     return dict(row) if row else None
 
 
-def export_business_data(business_id) -> dict:
-    """Vuelca TODOS los datos de un negocio (derecho de portabilidad RGPD)."""
-    return {
-        "business": get_business(business_id),
-        "clients": list_clients(business_id),
-        "jobs": [dict(r) for r in _rows(
-            "SELECT * FROM jobs WHERE business_id=?", business_id)],
-        "workers": [dict(r) for r in _rows(
-            "SELECT id, business_id, name, phone, phone_norm, color, access_code, "
-            "active, created_at FROM workers WHERE business_id=? ORDER BY id",
-            business_id)],
-        "worker_clockins": [dict(r) for r in _rows(
-            "SELECT * FROM worker_clockins WHERE business_id=? ORDER BY at, id",
-            business_id)],
-        "worker_clockin_corrections": [dict(r) for r in _rows(
-            "SELECT * FROM worker_clockin_corrections "
-            "WHERE business_id=? ORDER BY id",
-            business_id)],
-        "invoices": list_invoices(business_id),
-        "invoice_lines": [dict(r) for r in _rows(
-            "SELECT * FROM invoice_lines WHERE business_id=? "
-            "ORDER BY invoice_id, position", business_id)],
-        "invoice_series": list_invoice_series(business_id),
-        "recurring_invoices": list_recurring_invoices(business_id),
-        "recurring_invoice_runs": [dict(r) for r in _rows(
-            "SELECT * FROM recurring_invoice_runs WHERE business_id=? "
-            "ORDER BY recurring_id, scheduled_for", business_id)],
-        "invoice_payments": [dict(r) for r in _rows(
-            "SELECT * FROM invoice_payments WHERE business_id=? "
-            "ORDER BY paid_at, id",
-            business_id)],
-        "bank_transactions": list_bank_transactions(business_id, limit=500),
-        "email_outbox": list_email_messages(business_id, limit=500),
-        "privacy_requests": [dict(r) for r in _rows(
-            "SELECT id, business_id, request_type, status, retention_required, "
-            "requested_at, updated_at, resolved_at FROM privacy_requests "
-            "WHERE business_id=? ORDER BY requested_at, id", business_id)],
-        "invoice_records": list_invoice_records(business_id),
-        "invoice_events": list_invoice_events(business_id),
-        "verifactu_outbox": list_verifactu_outbox(business_id, limit=500),
-        "invoice_cancellation_records": [dict(r) for r in _rows(
-            "SELECT * FROM invoice_cancellation_records WHERE business_id=? "
-            "ORDER BY generated_at, id", business_id)],
-        "verifactu_cancellation_outbox": [dict(r) for r in _rows(
-            "SELECT * FROM verifactu_cancellation_outbox WHERE business_id=? "
-            "ORDER BY created_at, id", business_id)],
-        "quotes": list_quotes(business_id),
-        "expenses": list_expenses(business_id),
-        "suppliers": list_suppliers(business_id),
-        "received_invoices": list_received_invoices(business_id),
-        "products": list_products(business_id, include_inactive=True),
-        "leads": list_leads(business_id),
-        "gestoria_requests": list_gestoria_requests(business_id),
-        "gestoria_deliveries": list_gestoria_deliveries(business_id),
-        "projects": list_projects(business_id),
-        "project_members": [dict(r) for r in _rows(
-            "SELECT * FROM project_members WHERE business_id=? ORDER BY project_id, worker_id",
-            business_id)],
-        "project_entries": [dict(r) for r in _rows(
-            "SELECT * FROM project_entries WHERE business_id=? ORDER BY project_id, id",
-            business_id)],
-        "project_tasks": [dict(r) for r in _rows(
-            "SELECT * FROM project_tasks WHERE business_id=? ORDER BY project_id, id",
-            business_id)],
-        "job_materials": [dict(r) for r in _rows(
-            "SELECT * FROM job_materials WHERE business_id=? ORDER BY job_id, id",
-            business_id)],
-        "job_updates": [dict(r) for r in _rows(
-            "SELECT * FROM job_updates WHERE business_id=? ORDER BY job_id, id",
-            business_id)],
-        "job_completions": [dict(r) for r in _rows(
-            "SELECT * FROM job_completions WHERE business_id=? ORDER BY job_id, id",
-            business_id)],
-        "client_preferences": [dict(r) for r in _rows(
-            "SELECT * FROM client_preferences WHERE business_id=? ORDER BY client_id",
-            business_id)],
-        "product_events": [dict(r) for r in _rows(
-            "SELECT * FROM product_events WHERE business_id=? ORDER BY id",
-            business_id)],
-        "assistant_messages": [dict(r) for r in _rows(
-            "SELECT * FROM assistant_messages WHERE business_id=? ORDER BY id",
-            business_id)],
-        "whatsapp_ingress": [dict(r) for r in _rows(
-            "SELECT * FROM whatsapp_ingress WHERE business_id=? ORDER BY id",
-            business_id)],
-        "business_memories": [dict(r) for r in _rows(
-            "SELECT * FROM business_memories WHERE business_id=? ORDER BY id",
-            business_id)],
-        "automation_permissions": [dict(r) for r in _rows(
-            "SELECT * FROM automation_permissions WHERE business_id=? "
-            "ORDER BY action_key",
-            business_id)],
-        "integration_settings": [dict(r) for r in _rows(
-            "SELECT * FROM integration_settings WHERE business_id=? "
-            "ORDER BY integration_key",
-            business_id)],
-        "assistant_actions": [dict(r) for r in _rows(
-            "SELECT * FROM assistant_actions WHERE business_id=? ORDER BY id",
-            business_id)],
-        "useful_actions": [dict(r) for r in _rows(
-            "SELECT * FROM useful_actions WHERE business_id=? ORDER BY id",
-            business_id)],
-        "useful_action_events": [dict(r) for r in _rows(
-            "SELECT * FROM useful_action_events WHERE business_id=? ORDER BY id",
-            business_id)],
-        "useful_outcomes": [dict(r) for r in _rows(
-            "SELECT * FROM useful_outcomes WHERE business_id=? ORDER BY id",
-            business_id)],
-        "useful_action_outcomes": [dict(r) for r in _rows(
-            "SELECT * FROM useful_action_outcomes WHERE business_id=? "
-            "ORDER BY useful_action_id, useful_outcome_id",
-            business_id)],
-        "document_classifications": [dict(r) for r in _rows(
-            "SELECT * FROM document_classifications WHERE business_id=? ORDER BY id",
-            business_id)],
-        "document_client_candidates": [dict(r) for r in _rows(
-            "SELECT * FROM document_client_candidates WHERE business_id=? ORDER BY id",
-            business_id)],
-        "inbound_email_routes": [dict(r) for r in _rows(
-            "SELECT business_id, active, created_at, rotated_at "
-            "FROM inbound_email_routes WHERE business_id=?",
-            business_id)],
-        "inbound_email_messages": [dict(r) for r in _rows(
-            "SELECT id, business_id, status, attempts, attachment_count, "
-            "document_count, error_code, received_at, updated_at "
-            "FROM inbound_email_messages WHERE business_id=? ORDER BY id",
-            business_id)],
-        "copilot_recommendations": [dict(r) for r in _rows(
-            "SELECT * FROM copilot_recommendations WHERE business_id=? ORDER BY id",
-            business_id)],
-        "documents": _documents_repo().export_for_business(business_id),
-        "exported_at": _now(),
-    }
+def export_business_data(business_id, *, principal=None, export_uuid=None) -> dict:
+    """Fachada compatible; HTTP aporta identidad para manifest financiero durable."""
+    from .financial_privacy.export import compatibility_export, legacy_projection
+    if principal is None:
+        return legacy_projection(business_id)
+    return compatibility_export(business_id, principal, export_uuid=export_uuid)
 
 
 def _documents_repo():
@@ -13935,53 +13816,12 @@ def _documents_repo():
     return repo
 
 
-def export_client_data(client_id, business_id) -> dict | None:
-    """Vuelca los datos de un cliente final concreto (RGPD por persona)."""
-    client = get_client(client_id, business_id)
-    if not client:
-        return None
-    return {
-        "client": client,
-        "jobs": [dict(r) for r in _rows(
-            "SELECT * FROM jobs WHERE business_id=? AND client_id=?",
-            business_id, client_id)],
-        "invoices": [dict(r) for r in _rows(
-            "SELECT * FROM invoices WHERE business_id=? AND client_id=?",
-            business_id, client_id)],
-        "invoice_payments": [dict(r) for r in _rows(
-            "SELECT p.* FROM invoice_payments p JOIN invoices i "
-            "ON i.business_id=p.business_id AND i.id=p.invoice_id "
-            "WHERE p.business_id=? AND i.client_id=? ORDER BY p.paid_at, p.id",
-            business_id, client_id)],
-        "bank_transactions": [dict(r) for r in _rows(
-            "SELECT bt.* FROM bank_transactions bt JOIN invoices i "
-            "ON i.business_id=bt.business_id AND i.id=bt.suggested_invoice_id "
-            "WHERE bt.business_id=? AND i.client_id=? ORDER BY bt.booked_on, bt.id",
-            business_id, client_id)],
-        "quotes": [dict(r) for r in _rows(
-            "SELECT * FROM quotes WHERE business_id=? AND client_id=?",
-            business_id, client_id)],
-        "projects": [dict(r) for r in _rows(
-            "SELECT * FROM projects WHERE business_id=? AND client_id=?",
-            business_id, client_id)],
-        "job_materials": [dict(r) for r in _rows(
-            "SELECT m.* FROM job_materials m JOIN jobs j "
-            "ON j.business_id=m.business_id AND j.id=m.job_id "
-            "WHERE m.business_id=? AND j.client_id=? ORDER BY m.id",
-            business_id, client_id)],
-        "job_updates": [dict(r) for r in _rows(
-            "SELECT u.* FROM job_updates u JOIN jobs j "
-            "ON j.business_id=u.business_id AND j.id=u.job_id "
-            "WHERE u.business_id=? AND j.client_id=? ORDER BY u.id",
-            business_id, client_id)],
-        "job_completions": [dict(r) for r in _rows(
-            "SELECT jc.* FROM job_completions jc JOIN jobs j "
-            "ON j.business_id=jc.business_id AND j.id=jc.job_id "
-            "WHERE jc.business_id=? AND j.client_id=? ORDER BY jc.id",
-            business_id, client_id)],
-        "client_preferences": get_client_preferences(client_id, business_id),
-        "exported_at": _now(),
-    }
+def export_client_data(client_id, business_id, *, principal=None, export_uuid=None) -> dict | None:
+    """Subgrafo tenant/cliente; evidencia E durable sólo con actor autenticado."""
+    from .financial_privacy.export import compatibility_export, legacy_projection
+    if principal is None:
+        return legacy_projection(business_id, client_id=client_id)
+    return compatibility_export(business_id, principal, client_id=client_id, export_uuid=export_uuid)
 
 
 def _rows(sql: str, *params):
@@ -13989,8 +13829,12 @@ def _rows(sql: str, *params):
         return conn.execute(sql, params).fetchall()
 
 
-def delete_client_cascade(client_id, business_id) -> bool:
+def delete_client_cascade(client_id, business_id, *, principal=None) -> bool:
     """Borra lo prescindible y conserva facturas emitidas por obligación fiscal."""
+    from .financial_privacy.client import preserve_financial_client
+    retained = preserve_financial_client(client_id, business_id, principal)
+    if retained is not None:
+        return retained
     client = get_client(client_id, business_id)
     if not client:
         return False
@@ -14109,7 +13953,14 @@ def delete_business_cascade(business_id) -> bool:
             "financial_activation_source_payment", "financial_activation_source_bank_import",
             "financial_activation_source_bank_match", "financial_activation_effect_commits",
         ) if activation_exists else ()
-        for financial_table in activation_retained + fiscal_capture_tables + ("financial_channel_proposals", "financial_channel_receipts", "financial_operations", "financial_authorizations",
+        from .financial_privacy.repository import installed
+        from .core.persistence import FinancialSession
+        privacy_retained = (
+            "financial_export_manifests", "financial_retention_policies", "financial_retention_inventories",
+            "financial_closure_plans", "financial_closure_authorizations", "financial_closure_receipts",
+            "financial_privacy_tombstones", "financial_client_erasure_receipts", "financial_restore_suppressions",
+        ) if installed(FinancialSession(conn)) else ()
+        for financial_table in privacy_retained + activation_retained + fiscal_capture_tables + ("financial_channel_proposals", "financial_channel_receipts", "financial_operations", "financial_authorizations",
                                 "financial_activation_control", "financial_readiness_evaluations", "financial_readiness_capabilities",
                                 "financial_antecedent_resolutions",
                                 "financial_history_epochs", "financial_history_control", "financial_history_cut_manifests", "financial_history_epoch_audit",
@@ -14139,7 +13990,7 @@ def delete_business_cascade(business_id) -> bool:
                 "durante cuatro años. Solicita una baja con conservación legal."
             )
         # Primero confirma todas las eliminaciones referenciales en la base de datos.
-        for table in activation_retained + fiscal_capture_tables + (
+        for table in privacy_retained + activation_retained + fiscal_capture_tables + (
             'financial_antecedent_resolutions',
             'financial_readiness_capabilities', 'financial_activation_control', 'financial_readiness_evaluations',
             'financial_channel_receipts', 'financial_channel_proposals',

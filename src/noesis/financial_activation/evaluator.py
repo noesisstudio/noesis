@@ -281,6 +281,8 @@ class FinancialReadinessEvaluator:
         if self.s.dialect == "sqlite" and not self.s.borrowed_connection.raw.in_transaction:
             raise StateError("Transacción exterior requerida.")
         self._permission(principal)
+        from noesis.financial_privacy.repository import assert_open
+        assert_open(self.s, self.bid)
         lock_business(self.s, self.bid)
         business = self._permission(principal, locking=True)
         if migrations.current_version_connection(self.s.borrowed_connection) not in SCHEMAS:
@@ -338,6 +340,10 @@ class FinancialReadinessEvaluator:
             dependencies=edges,
             **sources,
         )
+        from noesis.financial_privacy.retention import readiness_evidence
+        privacy = readiness_evidence(self.s, self.bid)
+        if migrations.current_version_connection(self.s.borrowed_connection) == 78:
+            context["privacy_evidence"] = privacy
         existing = self.repo.load(uid)
         if existing:
             if existing["profile_hash"] != profile.content_hash or existing[
@@ -349,7 +355,10 @@ class FinancialReadinessEvaluator:
         for c in needed:
             r = set(global_reasons)
             if c in FINANCIAL:
-                r.update((R.PRIVACY_NOT_READY, R.EXPORT_NOT_READY))
+                if not privacy["privacy_ready"]:
+                    r.add(R.PRIVACY_NOT_READY)
+                if not privacy["export_ready"]:
+                    r.add(R.EXPORT_NOT_READY)
             if c in (C.WHATSAPP, C.EMAIL) or c == C.AEAT and fiscal:
                 r.add(R.PROVIDER_PREFLIGHT_MISSING)
             from .capabilities import specification

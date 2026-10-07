@@ -1,5 +1,17 @@
 # 06 · RGPD y seguridad
 
+## 2026-10-07 — Fase 1.10E local, CODE-VERIFIED PASS técnico
+
+[Orden E](../architecture/FASE-1.10E-orden.md), [contrato](../architecture/FINANCIAL-PRIVACY-EXPORT-RETENTION-v1.md),
+[ADR023](../architecture/ADR-023-financial-privacy-export-retention.md), [cierre](../architecture/FASE-1.10E-cierre.md).
+Account/client HTTP conserva auth/tenant. Cierre no es cascade: exige policy aprobada y plan humano exacto; conserva evidencia. No plazos legales inventados.
+Migration78 aditiva, catálogo cerrado y snapshot completo sin límites silenciosos.
+Policy provisional no permite activación; revisión profesional real pendiente.
+Readiness nuevo sólo retira los dos motivos E con evidencia válida; A antigua intacta.
+Export/client/cierre conserva EE/Operations/history/A–D y documentos. Restore requiere
+registro vigente y reaplica antes de servir. E no borra bytes ni consulta QA/backups reales.
+Cinco flags OFF. No push/merge/deploy/providers/F–H. Resultados finales en cierre E.
+
 ## 2026-10-06 — Fase 1.10D, cierre local CODE-VERIFIED PASS
 
 A/B/C CODE-VERIFIED PASS según la orden del titular.

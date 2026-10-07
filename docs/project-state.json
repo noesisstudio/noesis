@@ -5,9 +5,9 @@
   "conversation_corrections_candidate_2026_09_24": "Local, no publicado: campos compuestos sobre propuestas existentes, consultas fiscales sin coincidencias parciales, concepto e IVA por linea. 70 regresiones dirigidas y suite completa local de 1197 tests correctas (1012.404 s); ultimo ajuste de interrogacion revalidado con 6 casos. Ruff, secretos y verdad documental correctos. Sin migracion, dependencias, proveedores ni cambios de flags. Meta real y memoria por actor pendientes.",
   "reliability_hotfix_2026_09_24": "df113b1: fechas compatibles PostgreSQL, correcciones multilínea sin pérdida de detalle y rollback 58 aditivo bloqueado ante borradores incompletos. CI 36012914685 verde: 1189 tests en 352.518 s, 36 rutas PostgreSQL, rollback y seguridad. Sin cambios de flags ni proveedores.",
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
-  "schema_version": 77,
+  "schema_version": 78,
   "conversation_transport_candidate_2026_09_24": "Local no publicado: esquemas 59/60, memoria por actor y transporte previo a vinculacion. NOESIS_CONVERSATION_ISOLATION_ENABLED y NOESIS_WHATSAPP_INBOX_ENABLED false por defecto. FIFO, acuse tras commit, incidencias sin replay automatico. 96 pruebas dirigidas correctas (71.801 s) y 460 backend/webhook correctas (397.517 s); Ruff, secretos y verdad documental correctos. Suite completa 1197 corresponde al bloque previo. Requiere CI PostgreSQL, procedimiento de revision/retencion y Meta real antes de activar.",
-  "verified_test_count": 1940,
+  "verified_test_count": 2011,
   "whatsapp_rounds_2026_10_01": "Producción hasta c52d3e2: presupuestos, citas (cancelar/mover), facturas de varias líneas, gasto a obra, abrir obra, ranking de clientes, pendientes, resumen semanal y abreviaturas de móvil por WhatsApp, todo con tarjeta de SÍ. Probado en real por WhatsApp Web (descartado con NO) y en simulador local. cryptography 50. Voz real sin probar.",
   "release_gate_2026_09_25": "CI 36131891167 completamente verde sobre 9357a39: 1223 tests en 555.019 s, seguridad, migraciones SQLite, 36 rutas PostgreSQL y rollback/compatibilidad/recuperacion. Cambios posteriores solo documentales. Founder autoriza publicar; mantener flags nuevos apagados y Meta intacto. Verificar ready tras despliegue.",
   "validation_2026_09_21": "CI 35578171354 verde sobre 1dc65aa1a79a6bcacfd1057b1b2afd317d7734e5: 974 pruebas (402.446 s), seguridad, Node, migraciones SQLite y humos PostgreSQL con compatibilidad anterior/rollback. Railway b88619b7-6da0-4b68-83ab-fec3194a9897 SUCCESS; health/ready verifican release 1dc65aa1a79a y esquema 56. Cierre documental sin cambios de runtime.",
@@ -1711,6 +1711,168 @@
           "full_fresh_ci": "pending on corrective commit"
         }
       }
+    },
+    "phase_1_10e": {
+      "status": "CODE_VERIFIED_PASS_TECHNICAL_LOCAL_NOT_PUBLISHED_LEGAL_POLICY_PENDING",
+      "branch": "codex/phase-1-10e",
+      "base": "8a775989e350daf3c2bb8c4f9c4d515b7b3ef696",
+      "scope": "privacy_export_retention_closure",
+      "legal_policy": "provisional_professional_approval_pending",
+      "flags": "all_five_off",
+      "next_phase_authorized": false,
+      "schema_version": 78,
+      "tables": 9,
+      "export_contract": "financial_privacy_v1",
+      "restore_contract": "closed_tombstone_scope_categories_current_signed_registry_required",
+      "document_bytes_deleted": 0,
+      "provider_io": false,
+      "published": false,
+      "production_access": false,
+      "real_qa_access": false,
+      "real_backups_used": false,
+      "destructive_real_copy_action": false,
+      "validation": {
+        "sqlite_e": {
+          "executed": 50,
+          "pass": 50,
+          "seconds": 89.074
+        },
+        "postgres_e": {
+          "executed": 62,
+          "pass": 62,
+          "seconds": 34.118
+        },
+        "postgres_all_matrices": {
+          "executed": 618,
+          "pass": 618,
+          "payment_bank_initial_failure_fixed_and_full_retest_pass": true
+        },
+        "history_import_reconciliation_b_d_export_pause_closure": {
+          "sqlite": "PASS",
+          "postgres": "PASS",
+          "eligibility_fixture": "structural_synthetic_not_real_readiness"
+        },
+        "general": {
+          "status": "COMPLETE_CASE_COVERAGE_PASS_WITH_FULL_PLATFORM_MODULE_RETEST",
+          "executed": 2011,
+          "initial_pass": 2006,
+          "initial_errors_fixture_only": 3,
+          "skipped": 2,
+          "corrected_case_coverage_pass": 2009,
+          "single_final_clean_general_run": false,
+          "shards": [
+            {
+              "shard": 0,
+              "discovered": 2011,
+              "tests": 503,
+              "failures": 0,
+              "errors": 1,
+              "skipped": 1,
+              "successful": false,
+              "seconds": 1436.203
+            },
+            {
+              "shard": 1,
+              "discovered": 2011,
+              "tests": 503,
+              "failures": 0,
+              "errors": 1,
+              "skipped": 1,
+              "successful": false,
+              "seconds": 1408.328
+            },
+            {
+              "shard": 2,
+              "discovered": 2011,
+              "tests": 503,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "successful": true,
+              "seconds": 1420.141
+            },
+            {
+              "shard": 3,
+              "discovered": 2011,
+              "tests": 502,
+              "failures": 0,
+              "errors": 1,
+              "skipped": 0,
+              "successful": false,
+              "seconds": 1321.641
+            }
+          ],
+          "retest": {
+            "module": "tests.test_platform",
+            "executed": 32,
+            "pass": 32,
+            "errors": 0,
+            "failures": 0,
+            "seconds": 39.958,
+            "scope": "only_fake_pg_get_functiondef_response_no_product_change"
+          },
+          "skip_reasons": "SQLite skips PG gate try-lock and repeatable snapshot; covered by PG matrices"
+        },
+        "ruff": "PASS",
+        "bandit": "PASS",
+        "dependency_audit": "PASS",
+        "javascript": {
+          "executed": 9,
+          "pass": 9
+        },
+        "migrations_old_ast": {
+          "functions_unchanged": 176,
+          "registry_entries_unchanged": 77
+        },
+        "migration_cycles": {
+          "sqlite": "78->77->78->0->78_FK_ON_PASS",
+          "postgres": "78->77->78_PASS_with_historical_32_to_78_and_baseline53_smokes"
+        },
+        "old_client_restore_final": "PASS_business_active_other_client_unchanged_invoice_exact",
+        "credential_scan": "PASS",
+        "documentation_truth": "PASS",
+        "links": {
+          "result": "PASS",
+          "local_links_checked": 1518
+        },
+        "autoaudit_30": "NO_dangerous_answers_with_documented_runtime_and_restore_protocol_scope"
+      },
+      "performance": {
+        "synthetic_only": true,
+        "historical_items": 64,
+        "economic_events": 1000,
+        "bank_rows": 501,
+        "outbox_rows": 501,
+        "sqlite": {
+          "export_seconds": 4.828,
+          "peak_python_bytes": 21275694,
+          "canonical_json_bytes": 5761677
+        },
+        "postgres_16_15": {
+          "export_seconds": 7.344,
+          "peak_python_bytes": 21529368,
+          "canonical_json_bytes": 5786943
+        },
+        "limits": "tracemalloc_not_RSS_materialized_not_constant_memory_no_production_SLO"
+      },
+      "limits": [
+        "professional_real_policy_not_approved_no_real_pilot",
+        "all_document_bytes_retained_no_filesystem_cleanup",
+        "external_restores_require_fresh_registry_before_service",
+        "database_owner_DDL_outside_runtime_threat_model",
+        "remote_provider_revocations_pending_future_authorization",
+        "legacy_internal_read_without_principal_not_E_manifest_or_readiness",
+        "stale_authorized_closure_requires_manual_review_no_auto_rebase"
+      ],
+      "delivery_files": 49
+    },
+    "phase_1_10d_remote_final": {
+      "run_id": 37590092792,
+      "status": "SUCCESS",
+      "general_executed": 1940,
+      "general_pass": 1938,
+      "general_skips": 2,
+      "postgres_pass": 556
     }
   }
 }

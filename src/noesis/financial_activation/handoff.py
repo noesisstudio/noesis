@@ -50,8 +50,10 @@ class FinancialActivation:
             lock_business(s, self.bid)
             FinancialReadinessEvaluator(s, self.bid)._permission(
                 principal, locking=True, activation_verification=True)
-            if migrations.current_version_connection(conn) != 77:
-                raise StateError('Schema77 requerido.')
+            if migrations.current_version_connection(conn) not in (77, 78):
+                raise StateError('Schema77/78 requerido.')
+            from noesis.financial_privacy.repository import assert_open
+            assert_open(s, self.bid)
             yield s
 
     def control(self, s):

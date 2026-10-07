@@ -1,5 +1,15 @@
 # AGENTS.md - Manual del proyecto Bynoesis
 
+> Financial Privacy: leer el contrato/ADR/cierre vigentes en arquitectura antes
+> de tocar export, retención, bajas o restore. Nunca aprobar policy por migración
+> ni atribuir autoridad a IA. Provisional mantiene hold; las fechas sin revisión
+> no autorizan purga. Export por snapshot único/catálogo cerrado, Decimal exacto,
+> sin secretos ni chat completo. Conservar EE/Operations/coverage/history/A–E.
+> Cierre formal requiere plan/hash humano exacto, pausa D previa si ever_enabled
+> y recibo/tombstone atómicos; no fallback/resume ni nuevos efectos después.
+> Antes de servir restore, aplicar registro vigente de supresiones; un backup
+> antiguo no acredita actualidad. E no borra bytes documentales ni copias QA reales.
+
 > Para continuar el control plane financiero, leer la orden, contrato, ADR y cierre
 > vigentes en `docs/architecture/README.md` y el estado JSON antes de ejecutar.
 > La activación requiere permiso específico y confirmación humana durable exacta.
