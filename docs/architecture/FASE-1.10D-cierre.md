@@ -1,5 +1,9 @@
 # Fase 1.10D — cierre técnico local
 
+## 2026-10-07 — Corrección de CI remota 1.10D
+
+La publicación de la rama D fue autorizada posteriormente por el titular. La primera CI remota (37586733490) falló antes de la suite general: conflicto de PK en la restauración sintética de semillas M77 y tres SHAs públicos señalados por credential scan. Se corrigen únicamente el restaurador y sus excepciones exactas revisadas; sin nueva migración, guard, workflow, activación o E. CI completa desde cero pendiente; el cierre local inferior se conserva como registro histórico.
+
 Estado: **CODE-VERIFIED PASS local**, pendiente de revisión independiente. Publicación no autorizada.
 
 Rama `codex/phase-1-10d`. Padre exacto autorizado:

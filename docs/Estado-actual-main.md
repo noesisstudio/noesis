@@ -1,5 +1,9 @@
 # Estado actual del producto
 
+## 2026-10-07 — Corrección de CI remota 1.10D
+
+La rama D se publicó por autorización específica del titular. Primera CI remota 37586733490 FAIL; se corrigen conflicto de semillas M77 en restore sintético y falsos positivos de tres IDs Git. CI completa nueva pendiente. Este es un candidato de rama: main no cambia, no hay merge/deploy, cinco flags OFF y 1.10E no iniciada.
+
 ## 2026-10-06 — Fase 1.10D, cierre local CODE-VERIFIED PASS
 
 A/B/C CODE-VERIFIED PASS según la orden del titular.

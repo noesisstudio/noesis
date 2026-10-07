@@ -364,8 +364,17 @@ def _restore_postgres_dump(raw, path: Path) -> tuple[dict, list[str]]:
                 current_table = record["name"]
                 columns = record["columns"]
                 tables.append(current_table)
-                if current_table == "schema_migrations":
-                    raw.execute("DELETE FROM schema_migrations")
+                # M77 siembra estas dos tablas al crear el esquema desechable.
+                # Reemplazar solo esas semillas con las filas exactas del dump;
+                # los triggers USER ya están suspendidos y las FKs siguen activas.
+                if current_table in (
+                    "schema_migrations",
+                    "financial_activation_schema_baseline",
+                    "financial_execution_verifier_key",
+                ):
+                    raw.execute(
+                        sql.SQL("DELETE FROM {}").format(sql.Identifier(current_table))
+                    )
             elif record["type"] == "row":
                 pending_rows.append(
                     [_decode_value(value) for value in record["values"]]

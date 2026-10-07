@@ -1,5 +1,9 @@
 # Mapa de código
 
+## 2026-10-07 — Corrección de CI remota 1.10D
+
+`src/noesis/web/backups.py::_restore_postgres_dump` reemplaza las semillas M77 de `financial_activation_schema_baseline` y `financial_execution_verifier_key` solo al cargar sus tablas en el esquema desechable. No cambia el formato de copia ni el origen. La regresión PostgreSQL existente cubre el roundtrip completo.
+
 ## 2026-10-06 — Fase 1.10D, cierre local CODE-VERIFIED PASS
 
 A/B/C CODE-VERIFIED PASS según la orden del titular.

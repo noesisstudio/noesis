@@ -1,5 +1,9 @@
 # 07 · Lo automático: reloj, colas y copias
 
+## 2026-10-07 — Corrección de CI remota 1.10D
+
+Corrección D de restore: la migración crea semillas de baseline/verifier; el restaurador sustituye solo esas semillas en el esquema desechable por las filas del dump. Las FKs siguen activas y los triggers USER se reactivan antes de validar, como ya hacía el restaurador. No se toca el origen ni se usan backups reales. CI nueva pendiente.
+
 ## 2026-10-05 — Fase1.9E: reconciliación histórica implementada y validada
 
 [Orden](../architecture/FASE-1.9E-orden.md), [ADR018](../architecture/ADR-018-financial-history-reconciliation.md),

@@ -1,5 +1,9 @@
 # Tareas vivas
 
+## 2026-10-07 — Corrección de CI remota 1.10D
+
+Único trabajo autorizado: corregir los dos fallos de CI D y ejecutar toda la CI remota desde cero. Pendiente revisión de la rama; no fusionar ni iniciar 1.10E. No consultar producción, Noesis19FQA, backups reales o providers.
+
 ## 2026-10-06 — Fase 1.10D, cierre local CODE-VERIFIED PASS
 
 A/B/C CODE-VERIFIED PASS según la orden del titular.

@@ -1,5 +1,9 @@
 # Registro de cambios
 
+## 2026-10-07 — Corrección de CI remota 1.10D
+
+Objetivo: corregir los dos fallos de la primera CI remota D (run 37586733490). `web/backups.py` reemplaza solo las semillas M77 del esquema de restauración desechable antes de cargar sus filas exactas; FKs y restricciones internas siguen activas. `.secrets.baseline` añade únicamente las huellas revisadas de tres IDs públicos de commits en project-state. No se cambia migración, guard SQL, workflow ni reglas de activación. Pruebas: backups 10/10 PASS (18,333 s), Ruff completo, Bandit dirigido y documentation truth con base HEAD PASS; CI completa nueva pendiente. Riesgo acotado al restaurador PostgreSQL; diagnóstico: PK duplicada de baseline/verifier. Rollback: revertir este commit solo en la rama D. Sin main, deploy, producción, QA real, backups reales, providers ni E.
+
 ## 2026-10-06 — Fase 1.10D, cierre local CODE-VERIFIED PASS
 
 A/B/C CODE-VERIFIED PASS según la orden del titular.

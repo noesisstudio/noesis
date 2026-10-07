@@ -1,5 +1,5 @@
 {
-  "state_date": "2026-10-06",
+  "state_date": "2026-10-07",
   "recovery_candidate_2026_09_25": "Rama codex/conversation-recovery-validation, codigo 9357a39. Recuperacion explicita de routing_changed con administrador, auditoria previa y orden conservado. processing_failed/interrupted siguen bloqueados. CI PostgreSQL 36131891167 verde: 36 rutas, migraciones, codigo anterior, rollback, concurrencia y recuperacion. Suite general aun ejecutandose al registrar; main/Meta/produccion intactos.",
   "ingress_diagnostics_candidate_2026_09_24": "CLI por negocio, solo lectura sin payload/telefonos. Saturacion cuenta eventos nuevos, no duplicados. 25 pruebas dirigidas correctas (14.243 s), Ruff correcto. Sin publicar. Resolucion segura, retencion, PostgreSQL y Meta pendientes antes de activar.",
   "conversation_corrections_candidate_2026_09_24": "Local, no publicado: campos compuestos sobre propuestas existentes, consultas fiscales sin coincidencias parciales, concepto e IVA por linea. 70 regresiones dirigidas y suite completa local de 1197 tests correctas (1012.404 s); ultimo ajuste de interrogacion revalidado con 6 casos. Ruff, secretos y verdad documental correctos. Sin migracion, dependencias, proveedores ni cambios de flags. Meta real y memoria por actor pendientes.",
@@ -1688,7 +1688,21 @@
       },
       "local_main_unchanged": "e95c19beea7a9cda291f045459b06eb639e171e5",
       "cached_origin_main_unchanged": "acff183319f476a5f0b25a820751dca4523fd8fd",
-      "postgres_synthetic_cluster_stopped": true
+      "postgres_synthetic_cluster_stopped": true,
+      "remote_ci_followup": {
+        "first_run_id": 37586733490,
+        "first_result": "FAIL: M77 seeded rows collide in synthetic PostgreSQL restore; credential scan flags three public Git commit IDs",
+        "correction": "Restore replaces only M77 baseline/verifier seeds in the disposable schema; exact reviewed Git-ID fingerprints added to secrets baseline",
+        "full_fresh_ci": "pending on corrective commit",
+        "production_access": false,
+        "real_backups_used": false,
+        "phase1_10E_started": false,
+        "local_backup_tests": {
+          "executed": 10,
+          "result": "PASS",
+          "duration_seconds": 18.333
+        }
+      }
     }
   }
 }

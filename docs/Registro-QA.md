@@ -1,5 +1,9 @@
 # Registro de QA
 
+## 2026-10-07 — Corrección de CI remota 1.10D
+
+Primera ejecución remota completa solicitada: run 37586733490, FAIL antes de la suite general. PostgreSQL detectó PK duplicada de la semilla M77 durante restore sintético; credential scan detectó tres SHAs públicos en project-state. Corrección acotada al restaurador y excepciones exactas revisadas. Backups 10/10 PASS (18,333 s), Ruff completo, Bandit dirigido y documentation truth con base HEAD PASS; CI completa desde cero pendiente. Ningún PASS remoto global se declara aún.
+
 ## 2026-10-06 — Fase 1.10D, cierre local CODE-VERIFIED PASS
 
 A/B/C CODE-VERIFIED PASS según la orden del titular.
