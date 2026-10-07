@@ -1,5 +1,9 @@
 # Decisiones
 
+## 2026-10-07 — Fixture PostgreSQL D con autenticación
+
+El fixture D debe funcionar también bajo autenticación PostgreSQL obligatoria. Usar credencial aleatoria efímera del rol descartable; nunca cambiar el contenedor a trust ni ampliar permisos para hacer pasar la matriz.
+
 ## 2026-10-07 — Corrección de CI remota 1.10D
 
 Corrección D derivada de CI: conservar las filas exactas del dump de las dos tablas sembradas por M77, sustituyendo exclusivamente las semillas del destino desechable; no omitir esas tablas ni debilitar constraints. Excepciones del scanner solo por archivo/tipo/huella exactos de tres commits públicos verificados. Nuevo commit descendiente, sin reescribir el commit D ni su padre C.

@@ -1701,6 +1701,14 @@
           "executed": 10,
           "result": "PASS",
           "duration_seconds": 18.333
+        },
+        "second_run": {
+          "id": 37587241672,
+          "postgres_D_executed": 35,
+          "postgres_D_errors": 35,
+          "cause": "runtime fixture login lacks password under container host authentication",
+          "correction": "test-only ephemeral password with identical restricted runtime privileges; no trust; no functional/migration/workflow changes",
+          "full_fresh_ci": "pending on corrective commit"
         }
       }
     }

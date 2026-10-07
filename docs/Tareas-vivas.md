@@ -1,5 +1,9 @@
 # Tareas vivas
 
+## 2026-10-07 — Fixture PostgreSQL D con autenticación
+
+Pendiente única ejecución completa limpia sobre el commit con fixture D autenticada. Run anterior D: 35 errores de setup; no se omiten tests ni se reutilizan resultados segmentados. No merge, deploy ni 1.10E.
+
 ## 2026-10-07 — Corrección de CI remota 1.10D
 
 Único trabajo autorizado: corregir los dos fallos de CI D y ejecutar toda la CI remota desde cero. Pendiente revisión de la rama; no fusionar ni iniciar 1.10E. No consultar producción, Noesis19FQA, backups reales o providers.

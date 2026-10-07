@@ -1,5 +1,9 @@
 # Mapa de código
 
+## 2026-10-07 — Fixture PostgreSQL D con autenticación
+
+`tests/postgres_financial_activation_handoff.py::HandoffPostgres.setUpClass` crea el login runtime con contraseña aleatoria efímera y pasa esa identidad a los procesos; conserva aislamiento loopback/noesis_ci y privilegios restringidos. No cambia código funcional.
+
 ## 2026-10-07 — Corrección de CI remota 1.10D
 
 `src/noesis/web/backups.py::_restore_postgres_dump` reemplaza las semillas M77 de `financial_activation_schema_baseline` y `financial_execution_verifier_key` solo al cargar sus tablas en el esquema desechable. No cambia el formato de copia ni el origen. La regresión PostgreSQL existente cubre el roundtrip completo.

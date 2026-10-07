@@ -1,5 +1,9 @@
 # Registro de cambios
 
+## 2026-10-07 — Fixture PostgreSQL D con autenticación
+
+Run 37587241672: restore y credential scan PASS; los 35 casos D fallan en setup con no password supplied. Corrección exclusivamente de fixture en `tests/postgres_financial_activation_handoff.py`: contraseña aleatoria efímera para el login runtime y URL de los workers; identificador/literal SQL escapados por psycopg. Conserva NOSUPERUSER/NOCREATEDB/NOCREATEROLE/NOINHERIT/NOBYPASSRLS y prohibición de leer la clave. Sin cambio funcional, guard SQL, migración o workflow. Ruff completo PASS; CI completa nueva pendiente. Riesgo limitado a autenticación del cluster CI descartable; rollback por revert del commit de fixture en rama D. Sin producción, QA real, backups reales, providers, main, deploy ni E.
+
 ## 2026-10-07 — Corrección de CI remota 1.10D
 
 Objetivo: corregir los dos fallos de la primera CI remota D (run 37586733490). `web/backups.py` reemplaza solo las semillas M77 del esquema de restauración desechable antes de cargar sus filas exactas; FKs y restricciones internas siguen activas. `.secrets.baseline` añade únicamente las huellas revisadas de tres IDs públicos de commits en project-state. No se cambia migración, guard SQL, workflow ni reglas de activación. Pruebas: backups 10/10 PASS (18,333 s), Ruff completo, Bandit dirigido y documentation truth con base HEAD PASS; CI completa nueva pendiente. Riesgo acotado al restaurador PostgreSQL; diagnóstico: PK duplicada de baseline/verifier. Rollback: revertir este commit solo en la rama D. Sin main, deploy, producción, QA real, backups reales, providers ni E.

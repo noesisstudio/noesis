@@ -38,9 +38,17 @@ class HandoffPostgres(HandoffSQLite):
         cls.admin_url = config.DATABASE_URL
         cls.schema = 'activation_d_' + uuid4().hex
         cls.role = 'activation_runtime_' + uuid4().hex
+        # CI exige autenticación; conservar el login restringido sin depender
+        # de que el cluster local tenga host authentication=trust.
+        runtime_password = uuid4().hex
+        from psycopg import sql
+
         with db.get_conn() as c:
             c.execute('CREATE SCHEMA ' + cls.schema)
-            c.execute('CREATE ROLE ' + cls.role + ' LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS')
+            c.execute_exact(sql.SQL(
+                'CREATE ROLE {} LOGIN PASSWORD {} NOSUPERUSER NOCREATEDB '
+                'NOCREATEROLE NOINHERIT NOBYPASSRLS'
+            ).format(sql.Identifier(cls.role), sql.Literal(runtime_password)).as_string(c.raw))
         cls.admin_scoped = cls.admin_url + ('&' if parts.query else '?') + 'options=' + quote('-csearch_path=' + cls.schema)
         db.close_pool()
         with patch.object(config, 'DATABASE_URL', cls.admin_scoped):
@@ -54,7 +62,7 @@ class HandoffPostgres(HandoffSQLite):
                     c.execute('GRANT SELECT,INSERT,UPDATE,DELETE ON ' + row['table_name'] + ' TO ' + cls.role)
                 c.execute('GRANT USAGE,SELECT ON ALL SEQUENCES IN SCHEMA ' + cls.schema + ' TO ' + cls.role)
             db.close_pool()
-        runtime = urlunsplit(('postgresql', cls.role + '@' + parts.hostname + ':' + str(parts.port), parts.path,
+        runtime = urlunsplit(('postgresql', cls.role + ':' + quote(runtime_password, safe='') + '@' + parts.hostname + ':' + str(parts.port), parts.path,
                               'options=' + quote('-csearch_path=' + cls.schema), ''))
         cls.settings = patch.object(config, 'DATABASE_URL', runtime)
         cls.settings.start()

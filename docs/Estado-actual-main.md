@@ -1,5 +1,9 @@
 # Estado actual del producto
 
+## 2026-10-07 — Fixture PostgreSQL D con autenticación
+
+Segundo fallo remoto D limitado al fixture: el login runtime no tenía contraseña para host authentication del contenedor. Se añade credencial efímera al test, conservando privilegios restringidos. Nueva CI íntegra pendiente; main no cambia y 1.10E sigue sin iniciar.
+
 ## 2026-10-07 — Corrección de CI remota 1.10D
 
 La rama D se publicó por autorización específica del titular. Primera CI remota 37586733490 FAIL; se corrigen conflicto de semillas M77 en restore sintético y falsos positivos de tres IDs Git. CI completa nueva pendiente. Este es un candidato de rama: main no cambia, no hay merge/deploy, cinco flags OFF y 1.10E no iniciada.
