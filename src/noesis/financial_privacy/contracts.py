@@ -13,7 +13,7 @@ from noesis.financial_operations.contracts import positive_id, uuid_text, StateE
 
 VERSION = 1
 CANONICAL_VERSION = "financial_privacy_v1"
-SCHEMAS = (78,)
+SCHEMAS = (78, 79)
 
 
 class Purpose(StrEnum):

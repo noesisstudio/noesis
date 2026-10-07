@@ -1,5 +1,10 @@
 # 01 · Visión general
 
+## 2026-10-07 — F CODE-VERIFIED PASS técnico local
+
+[Orden F](../architecture/FASE-1.10F-orden.md), [ADR024](../architecture/ADR-024-providers-integrated-preflight.md), [contrato](../architecture/FINANCIAL-PROVIDERS-PREFLIGHT-v1.md), [cierre](../architecture/FASE-1.10F-cierre.md). Registry único C; FinancialSession/gate/TX compartidos, sin lógica financiera grande en db.py. Attestations/preflight/attempts separados de autoridad/economía. HMAC de secretos, ninguna red en A/D. Post-handoff con binding explícito; UNKNOWN sin retry automático, pausa/cierre dominan. D sigue protegido en producción, cinco flags OFF y policy real provisional. Sólo fixtures sintéticos; sin push ni G–H.
+
+
 ## 2026-10-06 — Fase 1.10D, cierre local CODE-VERIFIED PASS
 
 A/B/C CODE-VERIFIED PASS según la orden del titular.

@@ -80,4 +80,7 @@ def available_predicate(connection, tenant_expression):
     from noesis.financial_privacy.repository import installed as privacy_installed
     session = connection if isinstance(connection, FinancialSession) else FinancialSession(connection)
     privacy = f" AND NOT EXISTS(SELECT 1 FROM financial_closure_authorizations ca WHERE ca.business_id={tenant_expression}) AND NOT EXISTS(SELECT 1 FROM financial_restore_suppressions rs WHERE rs.business_id={tenant_expression} AND rs.scope='account_local_access')" if privacy_installed(session) else ''
+    if tenant_expression != 'r.business_id':
+        from noesis.financial_providers.dispatch import legacy_predicate
+        privacy += ' AND ' + legacy_predicate(session, tenant_expression)
     return f'NOT EXISTS(SELECT 1 FROM financial_history_control hc WHERE hc.business_id={tenant_expression} AND hc.fence_enabled=TRUE)' + privacy

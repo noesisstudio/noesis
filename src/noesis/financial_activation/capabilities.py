@@ -17,6 +17,7 @@ class CapabilitySpec:
     producer: str | None
     implemented: bool
     requirements: tuple[str, ...]
+    provider_requirement: str | None = None
     registry_version: int = REGISTRY_VERSION
 
 
@@ -44,6 +45,9 @@ REGISTRY = MappingProxyType({
         + (("durable_verified_fiscal_antecedent", "accepted_original_fiscal_record")
            if capability == Capability.FISCAL_CANCEL else ())
         if capability in PRODUCERS else ("preflight", "activation_generation"),
+        provider_requirement=("AEAT_VERIFACTU" if capability == Capability.AEAT else
+                              "META_WHATSAPP" if capability == Capability.WHATSAPP else
+                              "EMAIL_DELIVERY" if capability == Capability.EMAIL else None),
     ) for capability in Capability
 })
 

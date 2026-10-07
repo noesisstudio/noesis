@@ -174,7 +174,7 @@ def _postgres_table_order(conn) -> list[str]:
     ]
     dependencies = {table: set() for table in tables}
     rows = conn.execute(
-        "SELECT tc.table_name AS child, ccu.table_name AS parent "
+        "SELECT tc.table_name AS child, ccu.table_name AS parent, tc.constraint_name, tc.initially_deferred "
         "FROM information_schema.table_constraints tc "
         "JOIN information_schema.constraint_column_usage ccu "
         "ON ccu.constraint_catalog=tc.constraint_catalog "
@@ -185,6 +185,17 @@ def _postgres_table_order(conn) -> list[str]:
         "AND ccu.table_schema=current_schema()"
     ).fetchall()
     for row in rows:
+        # Operation/authorization ya forman un ciclo diferido desde M63.
+        # Sólo las FKs inmediatas imponen el orden; las otras siguen validadas
+        # por PostgreSQL al confirmar la restauración completa.
+        if row['initially_deferred'] == 'YES':
+            continue
+        # M79: observed referencia al intento y el intento a su attestation.
+        # Esa única FK es diferible y se comprueba al terminar la restauración.
+        if (row['constraint_name'] == 'fp_observed_attempt_fk'
+                and row['child'] == 'financial_provider_attestations'
+                and row['parent'] == 'financial_provider_dispatch_attempts'):
+            continue
         if row["child"] in dependencies and row["parent"] != row["child"]:
             dependencies[row["child"]].add(row["parent"])
 
@@ -349,6 +360,9 @@ def _reset_postgres_sequences(raw) -> None:
 def _restore_postgres_dump(raw, path: Path) -> tuple[dict, list[str]]:
     wrapped = db.Connection(raw, "postgres")
     migrations.upgrade_connection(wrapped)
+    if migrations.current_version_connection(wrapped) == 79:
+        # No suspender FKs. La única relación circular F se difiere hasta commit.
+        raw.execute('SET CONSTRAINTS fp_observed_attempt_fk DEFERRED')
     tables: list[str] = []
     current_table = ""
     columns: list[str] = []
@@ -393,6 +407,9 @@ def _restore_postgres_dump(raw, path: Path) -> tuple[dict, list[str]]:
                     flush()
         flush()
     _reset_postgres_sequences(raw)
+    # Comprobar los ciclos diferidos antes de reactivar los triggers USER:
+    # PostgreSQL no admite ALTER TABLE si quedan eventos FK pendientes.
+    raw.execute('SET CONSTRAINTS ALL IMMEDIATE')
     _set_postgres_user_triggers(raw, expected_tables, enabled=True)
     return header, tables
 

@@ -12,7 +12,7 @@ import json
 from noesis.economic_events.contracts import SourceType
 from noesis.financial_operations.contracts import positive_id, uuid_text
 
-SCHEMAS = (75, 76, 77, 78)
+SCHEMAS = (75, 76, 77, 78, 79)
 
 
 def canonical(value):

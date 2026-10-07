@@ -1,5 +1,27 @@
 # Arquitectura
 
+## Fase 1.10F — arquitectura local vigente
+
+Leer [ADR024](architecture/ADR-024-providers-integrated-preflight.md),
+[contrato](architecture/FINANCIAL-PROVIDERS-PREFLIGHT-v1.md),
+[límites](architecture/FINANCIAL-OPERATIONAL-LIMITS-v1.md) y
+[cierre](architecture/FASE-1.10F-cierre.md). M79 aditiva. La spec C es el registry
+único: tres providers, cinco implementaciones; repositorios especializados y
+conexión/gate/TX compartidos. `core.persistence.schema_version` evita incluso
+normalización legacy en metadatos. Decimal/NUMERIC intacto; IA sin autoridad.
+
+Attestation, preflight, binding D, binding outbox, attempt/start/result y
+observaciones son evidencia separada. D79 consume un preflight vigente exacto;
+las versiones 77/78 conservan su semántica. El resultado de un provider no crea
+EE/Operations. Dispatch: claim/start durable, I/O fuera de gate/TX, resultado y
+outbox atómicos; UNKNOWN requiere revisión y no permite retry automático.
+Email/Meta HOLD en pausa; AEAT sólo drena obligaciones committed exactas de G.
+Cierre E domina. Ninguna nueva lógica financiera grande se incorpora a db.py.
+
+F sólo se valida con datos sintéticos, sin providers. Readiness/D nunca hacen
+checks de red. D mantiene su guard de producción; policy REAL provisional,
+cinco flags OFF, sin push/deploy/producción/QA real/backups reales/G–H.
+
 ## 2026-10-07 — Corrección de credential scan remoto E
 
 La rama E está publicada únicamente para revisión. Primera CI remota (run 37620132017): credential scan bloqueó antes de la suite general un SHA público de la base E en project-state. Se añade únicamente su excepción exacta por archivo/detector/huella, sin desactivar detectores ni aceptar hallazgos automáticamente. No cambia producto, SQL, migration78, fixture, workflow ni invariantes E. CI completa nueva desde cero pendiente; main intacto y política real provisional, cinco flags OFF, sin producción/QA/backups reales/providers/F.

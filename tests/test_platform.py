@@ -38,6 +38,15 @@ class _RecordingPGConn:
     def fetchone(self):
         if self.statements[-1] == "SELECT current_schema() AS name":
             return {"name": "recording"}
+        if "pg_get_functiondef('noesis_privacy_context()'" in self.statements[-1]:
+            # M79 deriva su contexto F de la función E real. Conservar todas las
+            # sentencias/guards; no sustituir el verificador por una función vacía.
+            from noesis.financial_privacy.schema import upgrade
+            previous = _RecordingPGConn()
+            upgrade(previous)
+            definition = next(stmt for stmt in previous.statements
+                              if stmt.startswith('CREATE OR REPLACE FUNCTION noesis_privacy_context()'))
+            return {'body': definition}
         if "pg_get_functiondef('noesis_execution_context()'" in self.statements[-1]:
             # M78 deriva su verificador administrativo de la definición D real.
             # Simular pg_get_functiondef sin saltar M78 ni fabricar seguridad vacía.

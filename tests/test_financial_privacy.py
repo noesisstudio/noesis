@@ -470,12 +470,15 @@ class PrivacyContract:
         self.applied()
         with db.get_conn() as conn:
             conn.execute("UPDATE users SET is_active=TRUE,password_hash='restored-old-value' WHERE id=?", (self.user["id"],))  # pragma: allowlist secret
-        db.init_db()
+        # Regresión del contrato E78; F79 se prueba en su matriz independiente.
+        with patch.object(migrations,'LATEST_VERSION',78):
+            db.init_db()
         u = db.get_user(self.user["id"])
         self.assertFalse(u["is_active"])
         self.assertEqual(u["password_hash"], "")
         version = u["session_version"]
-        db.init_db()
+        with patch.object(migrations,'LATEST_VERSION',78):
+            db.init_db()
         self.assertEqual(db.get_user(self.user["id"])["session_version"], version)
 
     def test_every_e_record_sql_immutable(self):
@@ -555,6 +558,8 @@ class PrivacySQLite(PrivacyContract, unittest.TestCase):
         settings.start()
         self.addCleanup(settings.stop)
         db.init_db()
+        # Compatibilidad E exacta; las integraciones A→F viven en la matriz F79.
+        migrations.downgrade(78)
         self.setup_privacy()
 
     def test_restore_older_than_closure_uses_current_suppression_registry(self):

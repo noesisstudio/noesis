@@ -60,7 +60,7 @@ class PrivacyRepository:
 def installed(session):
     # Incluso la consulta de versión evita Cursor legacy/_normalise_row.
     row = session.execute("SELECT COALESCE(MAX(version),0) AS version FROM schema_migrations").fetchone()
-    return row["version"] == 78
+    return row["version"] in (78, 79)
 
 
 def assert_open(session, business_id):

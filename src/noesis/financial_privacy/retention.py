@@ -147,10 +147,18 @@ def readiness_evidence(session, bid):
     if row:
         manifest = json.loads(row["body_canonical"])
         from .export import read_section
+        excluded = {"financial_readiness_evaluations", "financial_readiness_capabilities", "financial_activation_control"}
+        if manifest["schema_version"] == 79:
+            # En 79, la prueba de export depende de fuentes económicas, no de los
+            # recibos del propio handoff que se crean DESPUÉS de la exportación.
+            # Los contratos 78 y sus snapshots/hashes anteriores quedan intactos.
+            excluded |= {"financial_activation_requests", "financial_activation_authorizations",
+                         "financial_activation_transitions", "financial_activation_generations",
+                         "financial_activation_grants", "financial_activation_revisions"}
         export_ready = (digest(manifest) == row["content_hash"] and manifest["client_id"] is None
-                        and manifest["schema_version"] == 78 and manifest["final_result"] == "complete"
+                        and manifest["schema_version"] in (78, 79) and manifest["final_result"] == "complete"
                         and all(manifest["sections"].get(t) == {"count": len(rows), "content_hash": digest(rows)}
-                                for t in FINANCIAL_TABLES if t in COLUMNS and t not in ("financial_readiness_evaluations", "financial_readiness_capabilities", "financial_activation_control")
+                                for t in FINANCIAL_TABLES if t in COLUMNS and t not in excluded
                                 for rows in [read_section(session, bid, t)]))
     policy = session.execute(f"SELECT * FROM {POLICIES} WHERE business_id=? ORDER BY created_at DESC,evidence_uuid DESC LIMIT 1", (bid,)).fetchone()
     privacy_ready = False

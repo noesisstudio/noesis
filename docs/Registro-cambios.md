@@ -1,5 +1,30 @@
 # Registro de cambios
 
+## 2026-10-07 — Fase 1.10F CODE-VERIFIED PASS técnico local
+
+[Orden F](architecture/FASE-1.10F-orden.md), [ADR024](architecture/ADR-024-providers-integrated-preflight.md), [contrato](architecture/FINANCIAL-PROVIDERS-PREFLIGHT-v1.md), [cierre](architecture/FASE-1.10F-cierre.md). Monolito modular: financial_providers con repositorios sobre conexión/gate/TX compartidos, M79 aditiva. Preflight/attestation no autoridad, Decimal exacto, sin IA financiera. D77/E78 compatibles explícitamente; F79 exige binding. Suite fresca 2074 total/2072 PASS/2 skips/0 FAIL/ERROR (1751.766 s); F63 SQLite/F69 PostgreSQL, 687 matrices PG PASS, JS9 y gates de seguridad/AST/verdad/enlaces PASS. Cierre técnico local completo; pruebas reales pendientes. Policy real provisional, flags OFF, sin push/merge/deploy/producción/QA/backups reales/providers/G. Diagnóstico por UUID/hash, rollback79 sólo sin evidencia F. Los encabezados inferiores conservan historia, no autorización vigente.
+
+Objetivo: evidencia durable de providers y preflight con dispatch financiero seguro.
+Áreas: núcleo, A–E, captures/queues/workers/WhatsApp y backups sintéticos. M79 agrega
+ocho tablas; no modifica AST de migraciones previas. Checker externo no implementado
+queda BLOCKED, nunca finge prueba real. Guías/ADR/contrato/runbook/estado actualizados.
+Correcciones durante validación: placeholder literal PostgreSQL del downgrade M79;
+fixtures 77/78 con versión explícita; restore de ciclos Operation/authorization y F;
+metadatos financieros Meta sin binding retenidos; fingerprints Graph/Gmail completos.
+La suite general detectó además ocho tablas F ausentes del registro de baja:
+se protegen explícitamente cuando existe schema79. Una attestation aislada impide
+el borrado de la cuenta; su evidencia y el inventario de conservación permanecen.
+El test de contratos history conservaba la expectativa global schema78: se
+actualiza exactamente a la migración autorizada 79 y mantiene los cinco flags OFF.
+El recorder DDL PostgreSQL simula ahora pg_get_functiondef de la función E real
+para la derivación de contexto M79, conservando íntegros los checks de FKs,
+placeholders y SQLSTATE; no omite ninguna migración ni fabrica un guard vacío.
+Riesgo principal: transporte externo incierto y expiración operativa. Diagnóstico por
+binding/attempt/start/result/preflight UUID/hash; nunca respuestas libres o secretos.
+Rollback: pause/conservar/reparar/revalidar; downgrade79 sólo con F vacía. No borrar
+pruebas ni restaurar para deshacer una entrega committed. Cierre detalla pruebas frescas.
+
+
 ## 2026-10-07 — Corrección de credential scan remoto E
 
 La rama E está publicada únicamente para revisión. Primera CI remota (run 37620132017): credential scan bloqueó antes de la suite general un SHA público de la base E en project-state. Se añade únicamente su excepción exacta por archivo/detector/huella, sin desactivar detectores ni aceptar hallazgos automáticamente. No cambia producto, SQL, migration78, fixture, workflow ni invariantes E. CI completa nueva desde cero pendiente; main intacto y política real provisional, cinco flags OFF, sin producción/QA/backups reales/providers/F.

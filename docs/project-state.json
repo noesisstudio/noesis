@@ -5,9 +5,9 @@
   "conversation_corrections_candidate_2026_09_24": "Local, no publicado: campos compuestos sobre propuestas existentes, consultas fiscales sin coincidencias parciales, concepto e IVA por linea. 70 regresiones dirigidas y suite completa local de 1197 tests correctas (1012.404 s); ultimo ajuste de interrogacion revalidado con 6 casos. Ruff, secretos y verdad documental correctos. Sin migracion, dependencias, proveedores ni cambios de flags. Meta real y memoria por actor pendientes.",
   "reliability_hotfix_2026_09_24": "df113b1: fechas compatibles PostgreSQL, correcciones multilínea sin pérdida de detalle y rollback 58 aditivo bloqueado ante borradores incompletos. CI 36012914685 verde: 1189 tests en 352.518 s, 36 rutas PostgreSQL, rollback y seguridad. Sin cambios de flags ni proveedores.",
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
-  "schema_version": 78,
+  "schema_version": 79,
   "conversation_transport_candidate_2026_09_24": "Local no publicado: esquemas 59/60, memoria por actor y transporte previo a vinculacion. NOESIS_CONVERSATION_ISOLATION_ENABLED y NOESIS_WHATSAPP_INBOX_ENABLED false por defecto. FIFO, acuse tras commit, incidencias sin replay automatico. 96 pruebas dirigidas correctas (71.801 s) y 460 backend/webhook correctas (397.517 s); Ruff, secretos y verdad documental correctos. Suite completa 1197 corresponde al bloque previo. Requiere CI PostgreSQL, procedimiento de revision/retencion y Meta real antes de activar.",
-  "verified_test_count": 2011,
+  "verified_test_count": 2074,
   "whatsapp_rounds_2026_10_01": "Producción hasta c52d3e2: presupuestos, citas (cancelar/mover), facturas de varias líneas, gasto a obra, abrir obra, ranking de clientes, pendientes, resumen semanal y abreviaturas de móvil por WhatsApp, todo con tarjeta de SÍ. Probado en real por WhatsApp Web (descartado con NO) y en simulador local. cryptography 50. Voz real sin probar.",
   "release_gate_2026_09_25": "CI 36131891167 completamente verde sobre 9357a39: 1223 tests en 555.019 s, seguridad, migraciones SQLite, 36 rutas PostgreSQL y rollback/compatibilidad/recuperacion. Cambios posteriores solo documentales. Founder autoriza publicar; mantener flags nuevos apagados y Meta intacto. Verificar ready tras despliegue.",
   "validation_2026_09_21": "CI 35578171354 verde sobre 1dc65aa1a79a6bcacfd1057b1b2afd317d7734e5: 974 pruebas (402.446 s), seguridad, Node, migraciones SQLite y humos PostgreSQL con compatibilidad anterior/rollback. Railway b88619b7-6da0-4b68-83ab-fec3194a9897 SUCCESS; health/ready verifican release 1dc65aa1a79a y esquema 56. Cierre documental sin cambios de runtime.",
@@ -1883,5 +1883,140 @@
       "general_skips": 2,
       "postgres_pass": 556
     }
+  },
+  "phase_1_10f": {
+    "status": "CODE_VERIFIED_TECHNICAL_PASS_LOCAL_ONLY",
+    "branch": "codex/phase-1-10f",
+    "schema_version": 79,
+    "flags": "ALL_FIVE_OFF",
+    "real_legal_policy": "PROVISIONAL_PROFESSIONAL_APPROVAL_PENDING",
+    "real_provider_attestations": "PENDING",
+    "production_activation": "BLOCKED_D_GUARD_RETAINED",
+    "real_data_used": false,
+    "next_phase_authorized": false,
+    "general": {
+      "total": 2074,
+      "passed": 2072,
+      "skipped": 2,
+      "failures": 0,
+      "errors": 0,
+      "seconds": 1751.766,
+      "skip_cases": [
+        [
+          "test_pg_direct_sql_busy_fails_closed_no_gate_inversion (test_financial_history_cutoff.HistoryCutoffSQLite.test_pg_direct_sql_busy_fails_closed_no_gate_inversion)",
+          "PG gate try-lock; SQLite BEGIN IMMEDIATE probado en carrera común."
+        ],
+        [
+          "test_pg_repeatable_snapshot_direct_sql_rejected (test_financial_history_cutoff.HistoryCutoffSQLite.test_pg_repeatable_snapshot_direct_sql_rejected)",
+          "Aislamiento PostgreSQL."
+        ]
+      ],
+      "failed_cases": [],
+      "execution": "one_fresh_invocation_all_modules_4_isolated_processes",
+      "modules": 90,
+      "discovery_completeness": "EXACT_MULTISET_EQUAL"
+    },
+    "postgres": {
+      "total": 687,
+      "matrices": [
+        {
+          "name": "Core",
+          "cases": 6,
+          "seconds": 0.121
+        },
+        {
+          "name": "Operations",
+          "cases": 37,
+          "seconds": 9.412
+        },
+        {
+          "name": "Economic Events",
+          "cases": 28,
+          "seconds": 21.862
+        },
+        {
+          "name": "Borrowed writers",
+          "cases": 18,
+          "seconds": 13.26
+        },
+        {
+          "name": "Invoice",
+          "cases": 27,
+          "seconds": 32.356
+        },
+        {
+          "name": "Payment Bank",
+          "cases": 41,
+          "seconds": 42.796
+        },
+        {
+          "name": "Purchasing",
+          "cases": 44,
+          "seconds": 31.299
+        },
+        {
+          "name": "Channels",
+          "cases": 50,
+          "seconds": 28.166
+        },
+        {
+          "name": "History Inventory",
+          "cases": 37,
+          "seconds": 30.743
+        },
+        {
+          "name": "History Cutoff",
+          "cases": 50,
+          "seconds": 41.878
+        },
+        {
+          "name": "History Import",
+          "cases": 25,
+          "seconds": 41.789
+        },
+        {
+          "name": "History Reconciliation",
+          "cases": 31,
+          "seconds": 148.317
+        },
+        {
+          "name": "A",
+          "cases": 29,
+          "seconds": 21.13
+        },
+        {
+          "name": "B",
+          "cases": 52,
+          "seconds": 30.941
+        },
+        {
+          "name": "C",
+          "cases": 46,
+          "seconds": 59.403
+        },
+        {
+          "name": "D",
+          "cases": 35,
+          "seconds": 65.065
+        },
+        {
+          "name": "E",
+          "cases": 62,
+          "seconds": 38.437
+        },
+        {
+          "name": "F",
+          "cases": 69,
+          "seconds": 146.727
+        }
+      ]
+    },
+    "sqlite_f": 63,
+    "postgres_f": 69,
+    "javascript_pass": 9,
+    "security_gates": "PASS",
+    "remote_ci": "NOT_EXECUTED_NO_PUSH",
+    "real_world_blockers": "docs/architecture/FASE-1.10F-cierre.md",
+    "closure": "docs/architecture/FASE-1.10F-cierre.md"
   }
 }

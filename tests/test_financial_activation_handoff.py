@@ -8,7 +8,7 @@ from unittest.mock import patch
 from contextlib import nullcontext
 from uuid import uuid4
 
-from noesis import config, db
+from noesis import config, db, migrations
 from noesis.core.persistence import FinancialSession
 from noesis.financial_activation.contracts import Capability as C, CapabilityResult as CR, Profile, Policy, capability_proof, instant
 from noesis.financial_activation.evaluator import FinancialReadinessEvaluator
@@ -33,6 +33,9 @@ class HandoffSQLite(unittest.TestCase):
         settings.start()
         self.addCleanup(settings.stop)
         db.init_db()
+        # Contrato D anterior sin binding F: ejecutar explícitamente schema77.
+        # La matriz F ejercita el handoff real en 79 con preflight obligatorio.
+        migrations.downgrade(77)
         self.setup_readiness()
         self.cut()
         self.api = FinancialActivation(self.bid, code_version='fixture')

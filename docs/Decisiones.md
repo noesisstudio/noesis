@@ -1,5 +1,10 @@
 # Decisiones
 
+## 2026-10-07 — Fase 1.10F CODE-VERIFIED PASS técnico local
+
+[Orden F](architecture/FASE-1.10F-orden.md), [ADR024](architecture/ADR-024-providers-integrated-preflight.md), [contrato](architecture/FINANCIAL-PROVIDERS-PREFLIGHT-v1.md), [cierre](architecture/FASE-1.10F-cierre.md). Monolito modular: financial_providers con repositorios sobre conexión/gate/TX compartidos, M79 aditiva. Preflight/attestation no autoridad, Decimal exacto, sin IA financiera. D77/E78 compatibles explícitamente; F79 exige binding. Suite fresca 2074 total/2072 PASS/2 skips/0 FAIL/ERROR (1751.766 s); F63 SQLite/F69 PostgreSQL, 687 matrices PG PASS, JS9 y gates de seguridad/AST/verdad/enlaces PASS. Cierre técnico local completo; pruebas reales pendientes. Policy real provisional, flags OFF, sin push/merge/deploy/producción/QA/backups reales/providers/G. Diagnóstico por UUID/hash, rollback79 sólo sin evidencia F. Los encabezados inferiores conservan historia, no autorización vigente.
+
+
 ## 2026-10-07 — Corrección de credential scan remoto E
 
 La rama E está publicada únicamente para revisión. Primera CI remota (run 37620132017): credential scan bloqueó antes de la suite general un SHA público de la base E en project-state. Se añade únicamente su excepción exacta por archivo/detector/huella, sin desactivar detectores ni aceptar hallazgos automáticamente. No cambia producto, SQL, migration78, fixture, workflow ni invariantes E. CI completa nueva desde cero pendiente; main intacto y política real provisional, cinco flags OFF, sin producción/QA/backups reales/providers/F.

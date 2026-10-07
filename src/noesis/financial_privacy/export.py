@@ -7,7 +7,7 @@ from uuid import uuid4
 
 from noesis import db
 from noesis.core.locks import lock_business
-from noesis.core.persistence import FinancialSession
+from noesis.core.persistence import FinancialSession, schema_version
 from noesis.financial_operations.contracts import ConflictError, StateError
 from .catalog import COLUMNS, FINANCIAL_TABLES, LEGACY_KEYS
 from .contracts import CANONICAL_VERSION, Purpose, canonical, digest, evidence_value, export_identity
@@ -27,6 +27,9 @@ def snapshot():
 
 
 def _columns(session, table):
+    from noesis.financial_providers.schema import TABLES as PROVIDER_TABLES
+    if table in PROVIDER_TABLES:
+        return ("business_id", "evidence_uuid", "contract_version", "created_by", "session_version", "created_at", "body_canonical", "content_hash")
     if table == RESTORED:
         return ("business_id", "evidence_uuid", "scope", "client_id", "body_canonical", "content_hash")
     if table in TABLES:
@@ -38,6 +41,10 @@ def _client_scope(table):
     """Subgrafo por FKs fuertes, nunca por sugerencias ni texto del payload."""
     invoices = "SELECT id FROM invoices WHERE business_id=? AND client_id=?"
     ik = ("bid", "cid")
+    if table.startswith("financial_provider_") or table in ("financial_activation_preflight_bindings", "financial_operational_observations"):
+        # El catálogo F no contiene PII ni atribución de cliente independiente.
+        # Una exportación de cliente no añade evidencia de otros clientes.
+        return "1=0", ()
     payments = f"SELECT id FROM invoice_payments WHERE business_id=? AND invoice_id IN ({invoices})"
     pk = ("bid",) + ik
     banks = f"SELECT bank_transaction_id FROM bank_payment_links WHERE business_id=? AND payment_id IN ({payments})"
@@ -112,6 +119,9 @@ def read_section(session, bid, table, *, client_id=None, excluded_uuid=None, pag
 
 def read_sections(session, business_id, *, client_id=None, excluded_uuid=None, legacy=False):
     tables = sorted(set(FINANCIAL_TABLES) | set(TABLES) | {RESTORED} | (set(LEGACY_KEYS) | {"businesses"} if legacy else set()))
+    if schema_version(session.borrowed_connection) == 79:
+        from noesis.financial_providers.schema import TABLES as PROVIDER_TABLES
+        tables = sorted(set(tables) | set(PROVIDER_TABLES))
     # Compatibilidad de claves no convierte chat/memoria/contenido de correo en
     # evidencia financiera. Sin segunda copia de conversaciones completas.
     excluded_content = {"assistant_messages", "business_memories", "assistant_actions", "inbound_email_messages"}
@@ -148,7 +158,7 @@ class FinancialEvidenceExporter:
             if existing and existing["context_hash"] != context_hash:
                 raise ConflictError("Export UUID vinculada a otro snapshot/contexto.")
             manifest = prior or dict(**identity, contract_version=1, canonical_version=CANONICAL_VERSION,
-                                     schema_version=78, code_version=self.code_version, snapshot_identity=digest(section_proofs),
+                                     schema_version=schema_version(session.borrowed_connection), code_version=self.code_version, snapshot_identity=digest(section_proofs),
                                      created_by=principal.user_id, session_version=principal.session_version,
                                      created_at=datetime.now(timezone.utc).isoformat(timespec="microseconds"),
                                      sections=section_proofs, total_hash=digest(sections), final_result="complete",
@@ -233,7 +243,7 @@ def verify_export(value):
         raise ValueError("Metadatos de manifest inválidos.")
     if datetime.fromisoformat(m["created_at"]).tzinfo is None:
         raise ValueError("Manifest exige instante con zona.")
-    if (m["schema_version"] != 78 or m["canonical_version"] != CANONICAL_VERSION
+    if (m["schema_version"] not in (78, 79) or m["canonical_version"] != CANONICAL_VERSION
             or m["sections"] != {t: {"count": len(r), "content_hash": digest(r)} for t, r in sections.items()}
             or m["total_hash"] != digest(sections) or m["snapshot_identity"] != digest(m["sections"])):
         raise ConflictError("Manifest/contenido de export incompatible.")

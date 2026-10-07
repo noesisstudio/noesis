@@ -10,4 +10,5 @@ def available_predicate(connection, tenant_expression):
     s = connection if isinstance(connection, FinancialSession) else FinancialSession(connection)
     if not installed(s):
         return "TRUE"
-    return f"NOT EXISTS(SELECT 1 FROM financial_closure_authorizations ca WHERE ca.business_id={tenant_expression}) AND NOT EXISTS(SELECT 1 FROM financial_restore_suppressions rs WHERE rs.business_id={tenant_expression} AND rs.scope='account_local_access')"
+    from noesis.financial_providers.dispatch import legacy_predicate
+    return f"NOT EXISTS(SELECT 1 FROM financial_closure_authorizations ca WHERE ca.business_id={tenant_expression}) AND NOT EXISTS(SELECT 1 FROM financial_restore_suppressions rs WHERE rs.business_id={tenant_expression} AND rs.scope='account_local_access') AND " + legacy_predicate(s, tenant_expression)

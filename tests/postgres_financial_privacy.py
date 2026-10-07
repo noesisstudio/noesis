@@ -257,7 +257,7 @@ class PrivacyPostgres(PrivacyContract, unittest.TestCase):
         db.close_pool()
         with patch.object(config, "DATABASE_URL", self.admin_scoped), patch.object(backups, "prepare_restored_database", checked_restore, create=True):
             # La importación local del verificador usa el módulo restore.
-            with patch("noesis.financial_privacy.restore.prepare_restored_database", checked_restore):
+            with patch("noesis.financial_privacy.restore.prepare_restored_database", checked_restore), patch.object(migrations,'LATEST_VERSION',78):
                 backups._verify_postgres_backup(path, counts)
             with db.get_conn() as c:
                 self.assertEqual(definition, c.execute_exact("SELECT pg_get_functiondef('noesis_execution_context()'::regprocedure) AS d").fetchone()["d"])

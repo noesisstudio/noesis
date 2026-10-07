@@ -29,6 +29,18 @@ def _check_exact(value) -> None:
             _check_exact(item)
 
 
+def schema_version(connection) -> int:
+    """Metadatos exactos sobre la conexión prestada, también antes del esquema."""
+    raw = connection.borrowed_connection if isinstance(connection, FinancialSession) else connection
+    if raw.dialect == 'sqlite':
+        exists = raw.execute_exact("SELECT 1 FROM sqlite_master WHERE type='table' AND name='schema_migrations'").fetchone()
+    else:
+        exists = raw.execute_exact("SELECT 1 FROM information_schema.tables WHERE table_schema=current_schema() AND table_name='schema_migrations'").fetchone()
+    if not exists:
+        return 0
+    return int(raw.execute_exact('SELECT COALESCE(MAX(version),0) AS version FROM schema_migrations').fetchone()['version'])
+
+
 class _ExactCursor:
     def __init__(self, cursor: Cursor):
         self._cursor = cursor

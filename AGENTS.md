@@ -1,5 +1,14 @@
 # AGENTS.md - Manual del proyecto Bynoesis
 
+> Orden vigente: exclusivamente F local. Leer orden, ADR024, contrato y cierre F
+> en docs/architecture/README.md. No push ni G–H. F evidence no es autoridad,
+> credencial ni provider result. Registry C único; fingerprints HMAC, sin secretos
+> en evidencia/export. Readiness/D sólo verifican recibos: nunca checks de red.
+> Post-handoff requiere binding/attempt durable, I/O fuera de TX y resultado
+> atómico. UNKNOWN nunca autoriza retry. Pausa HOLD email/Meta, drain AEAT sólo
+> committed exacto; cierre E domina. Producción D bloqueada, cinco flags OFF,
+> policy REAL provisional. Validación sólo sintética y outbound bloqueado.
+
 > Financial Privacy: leer el contrato/ADR/cierre vigentes en arquitectura antes
 > de tocar export, retención, bajas o restore. Nunca aprobar policy por migración
 > ni atribuir autoridad a IA. Provisional mantiene hold; las fechas sin revisión

@@ -255,7 +255,10 @@ class FinancialOperations:
                     raise TypeError("Resultado versionado requiere mapping JSON.")
                 canonical = canonical_json(result)
                 repo.transition(row, OperationState.COMMITTED, _now(), result=canonical, result_hash=digest(canonical))
-                return Operation.from_row(repo.load(operation_uuid, principal.user_id))
+            if activation is not None:
+                from noesis.financial_providers.dispatch import bind_committed_fiscal
+                bind_committed_fiscal(session, self.business_id, principal, operation_uuid)
+            return Operation.from_row(repo.load(operation_uuid, principal.user_id))
 
     def finish_without_effect(self, principal, operation_uuid, state):
         state = OperationState(state)

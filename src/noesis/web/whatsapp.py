@@ -1309,6 +1309,8 @@ def _attach_new_invoice_pdf(business: dict, phone: str, invoice_ids) -> None:
 
 def _send_owner_invoice_pdf(business: dict, phone: str, text: str) -> dict:
     """Envía al titular el PDF real como documento reactivo de WhatsApp."""
+    from ..financial_providers.dispatch import reject_unbound_direct_io
+    reject_unbound_direct_io(business['id'])
     invoice, error = _invoice_for_owner_pdf(business["id"], text, phone)
     if not invoice:
         db.clear_pending_action(business["id"], f"invoice-focus:{phone}")
@@ -1590,6 +1592,7 @@ def _execute_collection(business: dict, payload: dict) -> str:
             idempotency_key=(
                 f"collect-confirmed:{business['id']}:{invoice['id']}:{day}"
             ),
+            financial_invoice_id=invoice['id'],
         )
     except (db.DatabaseError, ValueError) as exc:
         log.exception("No se pudo encolar el recordatorio confirmado.")
@@ -2253,7 +2256,7 @@ def _handle_inbound(payload: dict, claimed_ids: list[str]) -> dict:
             invoice_ids = reply.get('invoice_ids',[])
             whatsapp_documents.complete_captured(business['id'],phone,reply)
             send(phone,reply.get('reply',''),business_id=business['id'],invoice_id=invoice_ids[0] if len(invoice_ids)==1 else None,
-                 idempotency_key=financial_review_key(reply))
+                 idempotency_key=financial_review_key(reply), financial_operation_uuid=reply.get('operation_uuid'))
             _attach_new_invoice_pdf(business,phone,invoice_ids)
             results.append({'business_id':business['id'],'financial_review':True})
             _finish_inbound_message(message_id,claimed_ids)
@@ -2609,7 +2612,8 @@ def process_outbox(
     point = now or datetime.now()
     now_text = point.isoformat(timespec="seconds")
     stale_before = (point - timedelta(minutes=5)).isoformat(timespec="seconds")
-    processed: list[dict] = []
+    from ..financial_providers.dispatch import process_bound
+    processed: list[dict] = process_bound('whatsapp_outbox', limit=limit, only_ids=only_ids)
     for _ in range(max(1, min(limit, 100))):
         message = db.claim_next_whatsapp_message(
             now=now_text,
@@ -2703,6 +2707,8 @@ def queue_text(
     connection_id: int | None = None,
     idempotency_key: str | None = None,
     now: datetime | None = None,
+    financial_operation_uuid: str | None = None,
+    financial_invoice_id: int | None = None,
 ) -> dict:
     point = now or datetime.now()
     return db.enqueue_whatsapp_message(
@@ -2711,6 +2717,8 @@ def queue_text(
         to_phone=to,
         message_type="text",
         text_body=whatsapp_markup(text),
+        financial_operation_uuid=financial_operation_uuid,
+        financial_invoice_id=financial_invoice_id,
         idempotency_key=idempotency_key,
         max_attempts=config.WHATSAPP_MAX_ATTEMPTS,
         now=point.isoformat(timespec="seconds"),
@@ -2758,6 +2766,7 @@ def queue_template(
     language: str | None = None,
     idempotency_key: str | None = None,
     now: datetime | None = None,
+    financial_invoice_id: int | None = None,
 ) -> dict:
     point = now or datetime.now()
     return db.enqueue_whatsapp_message(
@@ -2766,6 +2775,7 @@ def queue_template(
         to_phone=to,
         message_type="template",
         template_name=template_name,
+        financial_invoice_id=financial_invoice_id,
         template_language=language or config.WHATSAPP_TEMPLATE_LANGUAGE,
         template_params=json.dumps(
             [sanitize_template_param(p) for p in (params or [])],
@@ -2785,6 +2795,7 @@ def send(
     connection_id: int | None = None,
     idempotency_key: str | None = None,
     invoice_id: int | None = None,
+    financial_operation_uuid: str | None = None,
 ) -> bool:
     """Encola de forma durable y hace un primer intento inmediato."""
     message = queue_text(
@@ -2793,6 +2804,8 @@ def send(
         business_id=business_id,
         connection_id=connection_id,
         idempotency_key=idempotency_key,
+        financial_operation_uuid=financial_operation_uuid,
+        financial_invoice_id=invoice_id,
     )
     deliveries = process_outbox(only_ids=[message["id"]], limit=1)
     if business_id and invoice_id:
@@ -2836,6 +2849,7 @@ def queue_payment_reminder(
     *,
     business_id: int,
     idempotency_key: str,
+    financial_invoice_id: int | None = None,
 ) -> dict:
     """Persiste el recordatorio aprobable por Meta sin enviarlo en línea."""
     return queue_template(
@@ -2843,6 +2857,7 @@ def queue_payment_reminder(
         config.WHATSAPP_TEMPLATE_PAYMENT_REMINDER,
         [client_name, business_name, invoice_number, amount, portal_url],
         business_id=business_id,
+        financial_invoice_id=financial_invoice_id,
         idempotency_key=idempotency_key,
     )
 

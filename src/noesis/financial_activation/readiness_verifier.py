@@ -47,6 +47,9 @@ def verify_readiness(session, business_id, principal, evaluation_uuid, *, now=No
     if "privacy_evidence" in current:
         from noesis.financial_privacy.retention import readiness_evidence
         current["privacy_evidence"] = readiness_evidence(session, business_id)
+    if "provider_evidence" in current:
+        from noesis.financial_providers.attestations import readiness_evidence
+        current["provider_evidence"] = readiness_evidence(session, business_id, closure, code_version=result["context"]["code_version"])
     if current != external_context(result["context"]):
         raise ConflictError("Evidencia externa de readiness cambió.")
     grants = [proofs[c] for c in sorted(needed)]

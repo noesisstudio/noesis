@@ -215,6 +215,9 @@ jobs:
           uv run python -m unittest tests.postgres_financial_privacy.PrivacyPostgres
           uv run python -m tests.financial_privacy_history_integration postgres
 
+      - name: Validar providers F, preflight, dispatch, procesos y rehearsal sin red
+        run: uv run python -m unittest tests.postgres_financial_providers.ProviderPostgres
+
       - name: Obtener código base para rollback seguro
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

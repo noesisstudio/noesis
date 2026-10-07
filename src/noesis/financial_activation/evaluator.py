@@ -3,9 +3,9 @@
 from datetime import datetime, timedelta, timezone
 import hashlib
 
-from noesis import config, db, migrations
+from noesis import config, db
 from noesis.core.locks import lock_business
-from noesis.core.persistence import FinancialSession
+from noesis.core.persistence import FinancialSession, schema_version
 from noesis.financial_operations.contracts import (
     AccessDenied,
     ConflictError,
@@ -165,10 +165,17 @@ class FinancialReadinessEvaluator:
                 for r in rows
             ):
                 relevant.append("pending_live_operation")
-            elif table.endswith("outbox") and any(
-                r.get("status") not in ("sent", "delivered", "cancelled", "failed") for r in rows
-            ):
-                relevant.append("uncertain_dispatch")
+            elif table.endswith("outbox"):
+                for r in rows:
+                    if r.get("status") in ("sent", "delivered", "read", "cancelled", "failed"):
+                        continue
+                    if schema_version(self.s.borrowed_connection) == 79 and r.get("status") in ("queued", "retrying"):
+                        # HOLD identificado, aún sin intento: no es un resultado externo incierto.
+                        from noesis.financial_providers.schema import OUTBOX_BINDINGS, ATTEMPTS
+                        held = self.s.execute(f"SELECT b.evidence_uuid FROM {OUTBOX_BINDINGS} b WHERE b.business_id=? AND b.outbox_type=? AND b.outbox_id=? AND NOT EXISTS(SELECT 1 FROM {ATTEMPTS} a WHERE a.business_id=b.business_id AND a.binding_uuid=b.evidence_uuid)", (self.bid, table, r["id"])).fetchone()
+                        if held:
+                            continue
+                    relevant.append("uncertain_dispatch")
         return dict(
             source_hash=h.hexdigest(),
             counts=counts,
@@ -285,7 +292,7 @@ class FinancialReadinessEvaluator:
         assert_open(self.s, self.bid)
         lock_business(self.s, self.bid)
         business = self._permission(principal, locking=True)
-        if migrations.current_version_connection(self.s.borrowed_connection) not in SCHEMAS:
+        if schema_version(self.s.borrowed_connection) not in SCHEMAS:
             raise StateError("Esquema readiness incompatible; matriz explícita requerida.")
         control = self.s.execute(
             "SELECT state,activation_generation,ever_enabled FROM "
@@ -342,8 +349,14 @@ class FinancialReadinessEvaluator:
         )
         from noesis.financial_privacy.retention import readiness_evidence
         privacy = readiness_evidence(self.s, self.bid)
-        if migrations.current_version_connection(self.s.borrowed_connection) == 78:
+        actual_schema = schema_version(self.s.borrowed_connection)
+        if actual_schema in (78, 79):
             context["privacy_evidence"] = privacy
+        provider_evidence = {}
+        if actual_schema == 79:
+            from noesis.financial_providers.attestations import readiness_evidence
+            provider_evidence = readiness_evidence(self.s, self.bid, needed, code_version=code_version)
+            context["provider_evidence"] = provider_evidence
         existing = self.repo.load(uid)
         if existing:
             if existing["profile_hash"] != profile.content_hash or existing[
@@ -360,7 +373,8 @@ class FinancialReadinessEvaluator:
                 if not privacy["export_ready"]:
                     r.add(R.EXPORT_NOT_READY)
             if c in (C.WHATSAPP, C.EMAIL) or c == C.AEAT and fiscal:
-                r.add(R.PROVIDER_PREFLIGHT_MISSING)
+                if not provider_evidence.get(c.value):
+                    r.add(R.PROVIDER_PREFLIGHT_MISSING)
             from .capabilities import specification
             if c == C.FISCAL_CANCEL and not specification(c).implemented:
                 r.add(R.FISCAL_CAPABILITY_INCOMPLETE)

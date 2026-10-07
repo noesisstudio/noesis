@@ -7764,6 +7764,9 @@ def enqueue_email_message(
         entity_id = int(entity_id)
     try:
         with get_conn() as conn:
+            if entity_type == 'invoice':
+                from .financial_providers.dispatch import prepare_queue
+                prepare_queue(conn, business_id)
             row = conn.execute(
                 "INSERT INTO email_outbox "
                 "(business_id, to_email, subject, text_body, html_body, "
@@ -7778,6 +7781,9 @@ def enqueue_email_message(
                 ),
             ).fetchone()
             message_id = row["id"]
+            if entity_type == 'invoice':
+                from .financial_providers.dispatch import bind_delivery
+                bind_delivery(conn, business_id, 'email_outbox', message_id, invoice_id=entity_id)
     except IntegrityError:
         if not idempotency_key:
             raise
@@ -11231,6 +11237,8 @@ def enqueue_whatsapp_message(
     idempotency_key: str | None = None,
     max_attempts: int = 6,
     now: str | None = None,
+    financial_operation_uuid: str | None = None,
+    financial_invoice_id: int | None = None,
 ) -> dict:
     """Persiste un mensaje antes de intentar enviarlo a Meta."""
     if message_type not in {"text", "template"}:
@@ -11247,6 +11255,9 @@ def enqueue_whatsapp_message(
     created_at = now or _now()
     try:
         with get_conn() as conn:
+            if financial_operation_uuid is not None or financial_invoice_id is not None:
+                from .financial_providers.dispatch import prepare_queue
+                prepare_queue(conn, business_id)
             row = conn.execute(
                 "INSERT INTO whatsapp_outbox "
                 "(business_id, connection_id, to_phone, message_type, text_body, template_name, "
@@ -11261,6 +11272,10 @@ def enqueue_whatsapp_message(
                 ),
             ).fetchone()
             message_id = row["id"]
+            if financial_operation_uuid is not None or financial_invoice_id is not None:
+                from .financial_providers.dispatch import bind_delivery
+                bind_delivery(conn, business_id, 'whatsapp_outbox', message_id,
+                              invoice_id=financial_invoice_id, operation_uuid=financial_operation_uuid)
     except IntegrityError:
         if not idempotency_key:
             raise
@@ -13960,7 +13975,14 @@ def delete_business_cascade(business_id) -> bool:
             "financial_closure_plans", "financial_closure_authorizations", "financial_closure_receipts",
             "financial_privacy_tombstones", "financial_client_erasure_receipts", "financial_restore_suppressions",
         ) if installed(FinancialSession(conn)) else ()
-        for financial_table in privacy_retained + activation_retained + fiscal_capture_tables + ("financial_channel_proposals", "financial_channel_receipts", "financial_operations", "financial_authorizations",
+        from .core.persistence import schema_version
+        provider_retained = (
+            "financial_provider_attestations", "financial_provider_preflight_runs",
+            "financial_activation_preflight_bindings", "financial_provider_outbox_bindings",
+            "financial_provider_dispatch_attempts", "financial_provider_dispatch_starts",
+            "financial_provider_dispatch_results", "financial_operational_observations",
+        ) if schema_version(conn) == 79 else ()
+        for financial_table in provider_retained + privacy_retained + activation_retained + fiscal_capture_tables + ("financial_channel_proposals", "financial_channel_receipts", "financial_operations", "financial_authorizations",
                                 "financial_activation_control", "financial_readiness_evaluations", "financial_readiness_capabilities",
                                 "financial_antecedent_resolutions",
                                 "financial_history_epochs", "financial_history_control", "financial_history_cut_manifests", "financial_history_epoch_audit",

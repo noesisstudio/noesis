@@ -1,5 +1,10 @@
 # 07 · Lo automático: reloj, colas y copias
 
+## 2026-10-07 — F CODE-VERIFIED PASS técnico local
+
+[Orden F](../architecture/FASE-1.10F-orden.md), [ADR024](../architecture/ADR-024-providers-integrated-preflight.md), [contrato](../architecture/FINANCIAL-PROVIDERS-PREFLIGHT-v1.md), [cierre](../architecture/FASE-1.10F-cierre.md). Registry único C; FinancialSession/gate/TX compartidos, sin lógica financiera grande en db.py. Attestations/preflight/attempts separados de autoridad/economía. HMAC de secretos, ninguna red en A/D. Post-handoff con binding explícito; UNKNOWN sin retry automático, pausa/cierre dominan. D sigue protegido en producción, cinco flags OFF y policy real provisional. Sólo fixtures sintéticos; sin push ni G–H.
+
+
 ## 2026-10-07 — Corrección de CI remota 1.10D
 
 Corrección D de restore: la migración crea semillas de baseline/verifier; el restaurador sustituye solo esas semillas en el esquema desechable por las filas del dump. Las FKs siguen activas y los triggers USER se reactivan antes de validar, como ya hacía el restaurador. No se toca el origen ni se usan backups reales. CI nueva pendiente.

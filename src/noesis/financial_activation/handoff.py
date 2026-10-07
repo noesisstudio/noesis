@@ -4,9 +4,9 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
-from noesis import config, db, migrations
+from noesis import config, db
 from noesis.core.locks import lock_business
-from noesis.core.persistence import FinancialSession
+from noesis.core.persistence import FinancialSession, schema_version
 from noesis.financial_operations.contracts import AccessDenied, ConflictError, StateError, uuid_text
 from noesis.financial_operations.repository import OperationsRepository
 from noesis.financial_operations.contracts import OperationState
@@ -45,13 +45,17 @@ class FinancialActivation:
             raise AccessDenied("financial.activation.manage requerido.")
         with db.get_conn() as conn:
             s = FinancialSession(conn)
-            if s.dialect == 'sqlite':
-                s.execute('BEGIN IMMEDIATE')
-            lock_business(s, self.bid)
+            if schema_version(conn) == 79:
+                from noesis.financial_providers.limits import acquire_gate
+                acquire_gate(s, self.bid)
+            else:
+                if s.dialect == 'sqlite':
+                    s.execute('BEGIN IMMEDIATE')
+                lock_business(s, self.bid)
             FinancialReadinessEvaluator(s, self.bid)._permission(
                 principal, locking=True, activation_verification=True)
-            if migrations.current_version_connection(conn) not in (77, 78):
-                raise StateError('Schema77/78 requerido.')
+            if schema_version(conn) not in (77, 78, 79):
+                raise StateError('Schema77/78/79 requerido.')
             from noesis.financial_privacy.repository import assert_open
             assert_open(s, self.bid)
             yield s
@@ -90,6 +94,8 @@ class FinancialActivation:
         for table in tables:
             if table in ('verifactu_outbox', 'verifactu_cancellation_outbox'):
                 excluded = {'status', 'sent_at', 'completed_at', 'updated_at', 'attempts'}
+                if schema_version(s.borrowed_connection) == 79:
+                    excluded |= {'locked_at', 'aeat_csv', 'aeat_error_code', 'aeat_error_message', 'aeat_response', 'aeat_global_status', 'wait_seconds', 'next_attempt_at', 'last_error'}
             else:
                 excluded = set()
             values[table] = sorted(storage_hash({k: v for k, v in dict(row).items() if k not in excluded})
@@ -150,7 +156,7 @@ class FinancialActivation:
                                      pause_receipt_hash=digest(pause), generation_receipt_hash=digest(generation_receipt),
                                      snapshot=current)
 
-    def prepare(self, principal, request_uuid, action, *, evaluation_uuid=None, pause_reason=None,
+    def prepare(self, principal, request_uuid, action, *, evaluation_uuid=None, pause_reason=None, preflight_uuid=None,
                 permission=ActivationPermission.MANAGE):
         action, uid = ActivationAction(action), uuid_text(request_uuid)
         with self.transaction(principal, permission) as s:
@@ -159,6 +165,11 @@ class FinancialActivation:
                 req = self.request(s, uid, principal)
                 if req.body['action'] != action.value or (evaluation_uuid is not None and req.body['evaluation_uuid'] != uuid_text(evaluation_uuid)) or req.body['pause_reason'] != pause_reason:
                     raise ConflictError('Reutilización de identidad con distinto contenido.')
+                if action in (ActivationAction.ENABLE, ActivationAction.RESUME) and schema_version(s.borrowed_connection) == 79:
+                    from noesis.financial_providers.preflight import verify_activation
+                    binding = verify_activation(s, self.bid, principal, req, self.code_version)
+                    if preflight_uuid is not None and binding['preflight_uuid'] != uuid_text(preflight_uuid):
+                        raise ConflictError('Solicitud ya ligada a otro preflight.')
                 return req
             control = self.control(s)
             recovery = None
@@ -205,6 +216,11 @@ class FinancialActivation:
                      body['evaluation_uuid'], body['evaluation_content_hash'], canonical(body['profile']), body['profile_hash'],
                      canonical(body['capabilities']), body['capability_grant_hash'], principal.user_id, principal.session_version,
                      body['permission'], body['created_at'], body['expires_at'], req.canonical(), req.content_hash))
+            if action in (ActivationAction.ENABLE, ActivationAction.RESUME) and schema_version(s.borrowed_connection) == 79:
+                if preflight_uuid is None:
+                    raise StateError('Schema79 requiere preflight F PASS exacto.')
+                from noesis.financial_providers.preflight import bind_activation
+                bind_activation(s, self.bid, principal, req, preflight_uuid, self.code_version)
             return req
 
     def authorize(self, principal, request_uuid, *, approved_hash, kind='human_confirmation',
@@ -239,6 +255,8 @@ class FinancialActivation:
         """Puntos de inyección de fallo en tests; ningún callback externo configurable."""
 
     def advance(self, principal, request_uuid, stage, *, permission=ActivationPermission.MANAGE):
+        import time
+        started = time.monotonic()
         with self.transaction(principal, permission) as s:
             req = self.request(s, request_uuid, principal)
             old = s.execute(f'SELECT receipt_uuid FROM {TRANSITIONS} WHERE business_id=? AND request_uuid=? AND stage=?',
@@ -254,6 +272,9 @@ class FinancialActivation:
             if b['action'] != 'pause' and configuration_hash(s, self.bid) != b['configuration_hash']:
                 raise ConflictError('Configuración congelada de activación cambió.')
             action = b['action']
+            if action in ('enable', 'resume') and schema_version(s.borrowed_connection) == 79:
+                from noesis.financial_providers.preflight import verify_activation
+                verify_activation(s, self.bid, principal, req, self.code_version)
             allowed = dict(enable=('validating', 'ready', 'enabled'), abort=('off',), pause=('paused',), resume=('enabled',))
             if stage not in allowed[action]:
                 raise StateError('Stage/action incompatibles.')
@@ -303,6 +324,15 @@ class FinancialActivation:
                 receipt = self.transition(s, req, auth, control, stage,
                                           dict(history=evidence['history'], external_hash=evidence['external_hash']), evidence['grants'])
             self.checkpoint('before_commit')
+            if action in ('enable','resume') and schema_version(s.borrowed_connection) == 79:
+                from noesis.financial_providers.limits import handoff_timing
+                timing = handoff_timing(int((time.monotonic()-started)*1000))
+                if timing == 'MANUAL_REVIEW_REQUIRED':
+                    raise StateError('HANDOFF_TX_MANUAL_REVIEW_REQUIRED')
+                if timing == 'HANDOFF_WARNING':
+                    from noesis.financial_providers.observability import observe
+                    from noesis.financial_providers.contracts import Observation
+                    observe(s,self.bid,principal,uuid4(),Observation.ACTIVATION_BLOCKED,reference_hash=digest({'request_hash':req.content_hash,'timing':timing}))
         self.checkpoint('after_commit')
         return receipt
 

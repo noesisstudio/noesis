@@ -1,5 +1,10 @@
 # 06 · RGPD y seguridad
 
+## 2026-10-07 — F CODE-VERIFIED PASS técnico local
+
+[Orden F](../architecture/FASE-1.10F-orden.md), [ADR024](../architecture/ADR-024-providers-integrated-preflight.md), [contrato](../architecture/FINANCIAL-PROVIDERS-PREFLIGHT-v1.md), [cierre](../architecture/FASE-1.10F-cierre.md). Registry único C; FinancialSession/gate/TX compartidos, sin lógica financiera grande en db.py. Attestations/preflight/attempts separados de autoridad/economía. HMAC de secretos, ninguna red en A/D. Post-handoff con binding explícito; UNKNOWN sin retry automático, pausa/cierre dominan. D sigue protegido en producción, cinco flags OFF y policy real provisional. Sólo fixtures sintéticos; sin push ni G–H.
+
+
 ## 2026-10-07 — Fase 1.10E local, CODE-VERIFIED PASS técnico
 
 [Orden E](../architecture/FASE-1.10E-orden.md), [contrato](../architecture/FINANCIAL-PRIVACY-EXPORT-RETENTION-v1.md),

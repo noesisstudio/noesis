@@ -4464,6 +4464,16 @@ def _downgrade_financial_privacy(conn):
     downgrade(conn)
 
 
+def _upgrade_financial_providers(conn):
+    from .financial_providers.schema import upgrade
+    upgrade(conn)
+
+
+def _downgrade_financial_providers(conn):
+    from .financial_providers.schema import downgrade
+    downgrade(conn)
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
     (2, "integridad_multiempresa", _upgrade_tenant_integrity, _downgrade_tenant_integrity),
@@ -4582,6 +4592,7 @@ MIGRATIONS: tuple[Migration, ...] = (
     (76, "cobertura_cancelacion_fiscal_live", _upgrade_fiscal_cancellation_capture, _downgrade_fiscal_cancellation_capture),
     (77, "activacion_handoff_generaciones", _upgrade_financial_activation_handoff, _downgrade_financial_activation_handoff),
     (78, "privacy_export_retention_closure", _upgrade_financial_privacy, _downgrade_financial_privacy),
+    (79, "providers_preflight_dispatch_evidence", _upgrade_financial_providers, _downgrade_financial_providers),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 
