@@ -1,5 +1,11 @@
 # Fase 1.10E — CODE-VERIFIED PASS técnico local
 
+## Publicación E y primera CI remota
+
+La rama E está publicada únicamente para revisión. Primera CI remota (run 37620132017): credential scan bloqueó antes de la suite general un SHA público de la base E en project-state. Se añade únicamente su excepción exacta por archivo/detector/huella, sin desactivar detectores ni aceptar hallazgos automáticamente. No cambia producto, SQL, migration78, fixture, workflow ni invariantes E. CI completa nueva desde cero pendiente; main intacto y política real provisional, cinco flags OFF, sin producción/QA/backups reales/providers/F.
+
+Las secciones de entrega local siguientes son históricas; no constituyen resultados de la nueva CI remota.
+
 Fecha: 2026-10-07. Rama codex/phase-1-10e, base exacta de la orden.
 Base/padre exacto: 8a775989e350daf3c2bb8c4f9c4d515b7b3ef696. Entrega local sin push.
 No constituye aceptación profesional de una política real ni autorización F.

@@ -1,5 +1,9 @@
 # Tareas vivas
 
+## 2026-10-07 — Corrección de credential scan remoto E
+
+La rama E está publicada únicamente para revisión. Primera CI remota (run 37620132017): credential scan bloqueó antes de la suite general un SHA público de la base E en project-state. Se añade únicamente su excepción exacta por archivo/detector/huella, sin desactivar detectores ni aceptar hallazgos automáticamente. No cambia producto, SQL, migration78, fixture, workflow ni invariantes E. CI completa nueva desde cero pendiente; main intacto y política real provisional, cinco flags OFF, sin producción/QA/backups reales/providers/F.
+
 ## 2026-10-07 — Fase 1.10E local: CODE-VERIFIED PASS técnico
 
 [Orden E](architecture/FASE-1.10E-orden.md), [contrato v1](architecture/FINANCIAL-PRIVACY-EXPORT-RETENTION-v1.md),

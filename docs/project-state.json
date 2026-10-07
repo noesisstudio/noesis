@@ -1713,7 +1713,7 @@
       }
     },
     "phase_1_10e": {
-      "status": "CODE_VERIFIED_PASS_TECHNICAL_LOCAL_NOT_PUBLISHED_LEGAL_POLICY_PENDING",
+      "status": "PUBLISHED_BRANCH_ONLY_FRESH_REMOTE_CI_PENDING_LEGAL_POLICY_PENDING",
       "branch": "codex/phase-1-10e",
       "base": "8a775989e350daf3c2bb8c4f9c4d515b7b3ef696",
       "scope": "privacy_export_retention_closure",
@@ -1726,7 +1726,7 @@
       "restore_contract": "closed_tombstone_scope_categories_current_signed_registry_required",
       "document_bytes_deleted": 0,
       "provider_io": false,
-      "published": false,
+      "published": true,
       "production_access": false,
       "real_qa_access": false,
       "real_backups_used": false,
@@ -1864,7 +1864,16 @@
         "legacy_internal_read_without_principal_not_E_manifest_or_readiness",
         "stale_authorized_closure_requires_manual_review_no_auto_rebase"
       ],
-      "delivery_files": 49
+      "delivery_files": 49,
+      "remote_ci": {
+        "first_run_id": 37620132017,
+        "first_general_result": "credential_scan_failed_before_general_suite",
+        "cause": "public_original_parent_SHA_flagged_as_Hex_High_Entropy_String",
+        "correction": "exact_file_detector_fingerprint_exception_only",
+        "classification": "CI_documentation",
+        "functional_contract_invariants_changed": false,
+        "fresh_full_final_ci": "pending"
+      }
     },
     "phase_1_10d_remote_final": {
       "run_id": 37590092792,
