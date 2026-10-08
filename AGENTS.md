@@ -1,5 +1,14 @@
 # AGENTS.md - Manual del proyecto Bynoesis
 
+> Orden vigente: exclusivamente G-PREP local desde F, sin push ni G-LIVE/H.
+> Leer orden/contrato/checklist/runbook/cierre G-PREP en docs/architecture/README.md.
+> Report puro sin DB/red/writers/authority; Profile A/spec C/OperationalPolicy F únicos.
+> Policy real provisional + PRIVACY_NOT_READY; cinco flags OFF, D producción guard
+> intacto. No real data/QA/backups/Railway/provider calls; no selección automática.
+> Documentación/refs/synthetic nunca production proof ni READY. Integración main
+> y recuperación D79 con A caducada pendientes de autorización. No nueva migration.
+> Encabezados F y anteriores conservan historia y no amplían esta orden.
+
 > Orden vigente: exclusivamente F local. Leer orden, ADR024, contrato y cierre F
 > en docs/architecture/README.md. No push ni G–H. F evidence no es autoridad,
 > credencial ni provider result. Registry C único; fingerprints HMAC, sin secretos

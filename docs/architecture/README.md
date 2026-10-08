@@ -1,5 +1,12 @@
 # Financial Core: punto de entrada y continuidad
 
+## 2026-10-08 — Fase 1.10G-PREP local, sin piloto
+
+A–F CODE-VERIFIED PASS. F CI remota fresca [37743993745](https://github.com/noesisstudio/noesis/actions/runs/37743993745) PASS: suite general 2074/2072 PASS/2 skips/0 FAIL/ERROR, 2353.757 s; PostgreSQL687 y JS9 PASS. Esa prueba corresponde al SHA F, no es una nueva suite general de G-PREP.
+G-PREP calcula PilotReadinessReport v1 puro en financial_pilot, sin conexión/estado/persistencia ni migration. Reutiliza A Profile/C spec/F límites; refs documentales/sintéticas no acreditan realidad y READY no está habilitado. Perfil recomendado expense.confirm + expense.void + dependencia web, sin providers; cuenta/perfil aún no seleccionados. Policy REAL provisional, PRIVACY_NOT_READY conservado; cinco flags OFF. G-LIVE NO AUTORIZADO, H NO INICIADA.
+[Orden](FASE-1.10G-prep-orden.md), [contrato](FINANCIAL-PILOT-READINESS-v1.md), [checklist](FINANCIAL-PILOT-CHECKLIST-v1.md), [runbook](FINANCIAL-PILOT-RUNBOOK-v1.md), [cierre](FASE-1.10G-prep-cierre.md).
+Rama local desde F exacta, no main/rebase/integración/push/deploy. Datos reales, QA, backups/providers/Railway no consultados. main divergente sólo eliminó sigue.md según orden; integración futura y CI fresca obligatorias. Guard D producción y recuperación con A original caducada requieren revisión posterior, no se eluden. Diagnóstico por report/context hash y reason cerrado; rollback sólo retirar estos archivos puros, ninguna DB que restaurar. Headers inferiores son historia.
+
 Continuidad F: [runbook sin ejecución real](FINANCIAL-PROVIDERS-runbook.md) y
 [límites operativos v1](FINANCIAL-OPERATIONAL-LIMITS-v1.md). No confundir una
 medición/fixture con autorización para iniciar G o un check real.

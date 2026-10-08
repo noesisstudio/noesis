@@ -1,0 +1,243 @@
+{
+  "activation_authorized": false,
+  "blockers": [
+    {
+      "evidence_reference": {
+        "business_id": null,
+        "content_hash": null,
+        "kind": "missing"
+      },
+      "reason_code": "BACKUP_CUSTODIAN_NOT_ASSIGNED",
+      "remediation": "Asignar responsable humano de custodia y restauración.",
+      "requires_external_action": true,
+      "responsible_party": "business_holder"
+    },
+    {
+      "evidence_reference": {
+        "business_id": null,
+        "content_hash": null,
+        "kind": "missing"
+      },
+      "reason_code": "BACKUP_NOT_VERIFIED",
+      "remediation": "Verificar copia reciente, hash, custodia y cifrado at-rest bajo permiso separado.",
+      "requires_external_action": true,
+      "responsible_party": "backup_custodian"
+    },
+    {
+      "evidence_reference": {
+        "business_id": null,
+        "content_hash": null,
+        "kind": "missing"
+      },
+      "reason_code": "DEPLOYMENT_COMPATIBILITY_UNKNOWN",
+      "remediation": "Verificar SHA/schema79/roles/replicas/workers/scheduler compatibles sin réplicas antiguas.",
+      "requires_external_action": true,
+      "responsible_party": "engineering_owner"
+    },
+    {
+      "evidence_reference": {
+        "business_id": null,
+        "content_hash": null,
+        "kind": "missing"
+      },
+      "reason_code": "EXPORT_NOT_READY",
+      "remediation": "Verificar export E completo y vigente; G-PREP no crea un manifest.",
+      "requires_external_action": true,
+      "responsible_party": "primary_operator"
+    },
+    {
+      "evidence_reference": {
+        "business_id": null,
+        "content_hash": null,
+        "kind": "missing"
+      },
+      "reason_code": "HISTORY_BLOCKED",
+      "remediation": "Verificar corte/import/reconciliación/antecedentes existentes sin omitir fuentes.",
+      "requires_external_action": true,
+      "responsible_party": "primary_operator"
+    },
+    {
+      "evidence_reference": {
+        "business_id": null,
+        "content_hash": null,
+        "kind": "missing"
+      },
+      "reason_code": "LEGAL_POLICY_UNAPPROVED",
+      "remediation": "Obtener revisión profesional y confirmación humana exacta de policy E.",
+      "requires_external_action": true,
+      "responsible_party": "privacy_legal_owner"
+    },
+    {
+      "evidence_reference": {
+        "business_id": null,
+        "content_hash": null,
+        "kind": "missing"
+      },
+      "reason_code": "MAIN_INTEGRATION_PENDING",
+      "remediation": "Integrar A–G en rama futura desde main actual y ejecutar CI completa antes de deploy.",
+      "requires_external_action": false,
+      "responsible_party": "engineering_owner"
+    },
+    {
+      "evidence_reference": {
+        "business_id": null,
+        "content_hash": null,
+        "kind": "missing"
+      },
+      "reason_code": "MONITORING_NOT_READY",
+      "remediation": "Verificar acceso al read model F y evidencia de freshness de backup.",
+      "requires_external_action": true,
+      "responsible_party": "primary_operator"
+    },
+    {
+      "evidence_reference": {
+        "business_id": null,
+        "content_hash": null,
+        "kind": "missing"
+      },
+      "reason_code": "OPERATOR_NOT_ASSIGNED",
+      "remediation": "Asignar operador primario, suplente y privacy/legal owner por decisión humana.",
+      "requires_external_action": true,
+      "responsible_party": "business_holder"
+    },
+    {
+      "evidence_reference": {
+        "business_id": null,
+        "content_hash": null,
+        "kind": "missing"
+      },
+      "reason_code": "PAUSE_RUNBOOK_UNVERIFIED",
+      "remediation": "Ensayar runbook D/F en sintético y validar su ejecutabilidad real por operador.",
+      "requires_external_action": true,
+      "responsible_party": "primary_operator"
+    },
+    {
+      "evidence_reference": {
+        "business_id": null,
+        "content_hash": null,
+        "kind": "missing"
+      },
+      "reason_code": "PILOT_BUSINESS_NOT_SELECTED",
+      "remediation": "Seleccionar explícitamente un único negocio tras checklist EMPTY autorizada.",
+      "requires_external_action": true,
+      "responsible_party": "business_holder"
+    },
+    {
+      "evidence_reference": {
+        "business_id": null,
+        "content_hash": null,
+        "kind": "missing"
+      },
+      "reason_code": "PILOT_PROFILE_NOT_SELECTED",
+      "remediation": "Confirmar el perfil exacto y su closure C; no reducirlo para ocultar historia.",
+      "requires_external_action": true,
+      "responsible_party": "business_holder"
+    },
+    {
+      "evidence_reference": {
+        "business_id": null,
+        "content_hash": null,
+        "kind": "missing"
+      },
+      "reason_code": "PRIVACY_NOT_READY",
+      "remediation": "Verificar readiness E real; provisional sigue bloqueando.",
+      "requires_external_action": true,
+      "responsible_party": "privacy_legal_owner"
+    },
+    {
+      "evidence_reference": {
+        "business_id": null,
+        "content_hash": null,
+        "kind": "missing"
+      },
+      "reason_code": "PRODUCTION_ACTIVATION_NOT_AUTHORIZED",
+      "remediation": "Revisar guard de producción D con autorización futura explícita; no desactivarlo aquí.",
+      "requires_external_action": false,
+      "responsible_party": "engineering_owner"
+    },
+    {
+      "evidence_reference": {
+        "business_id": null,
+        "content_hash": null,
+        "kind": "missing"
+      },
+      "reason_code": "READINESS_NOT_FULL",
+      "remediation": "Obtener A FULL vigente del negocio/perfil exactos y comprobar su contexto.",
+      "requires_external_action": true,
+      "responsible_party": "primary_operator"
+    },
+    {
+      "evidence_reference": {
+        "business_id": null,
+        "content_hash": null,
+        "kind": "missing"
+      },
+      "reason_code": "REAL_EVIDENCE_NOT_VERIFIED",
+      "remediation": "Verificar evidencia real autorizada; hashes/documentación/fixtures no acreditan readiness.",
+      "requires_external_action": true,
+      "responsible_party": "primary_operator"
+    },
+    {
+      "evidence_reference": {
+        "business_id": null,
+        "content_hash": null,
+        "kind": "missing"
+      },
+      "reason_code": "RESTORE_NOT_VERIFIED",
+      "remediation": "Verificar restore aislado actual con replay E antes de servir; existencia no basta.",
+      "requires_external_action": true,
+      "responsible_party": "backup_custodian"
+    },
+    {
+      "evidence_reference": {
+        "business_id": null,
+        "content_hash": null,
+        "kind": "missing"
+      },
+      "reason_code": "RESUME_READINESS_CONTINUITY_UNVERIFIED",
+      "remediation": "Resolver antes del piloto la recuperación D79 cuando A original haya caducado.",
+      "requires_external_action": false,
+      "responsible_party": "engineering_owner"
+    },
+    {
+      "evidence_reference": {
+        "business_id": null,
+        "content_hash": null,
+        "kind": "missing"
+      },
+      "reason_code": "RUNTIME_KEY_NOT_VERIFIED",
+      "remediation": "Verificar runtime/verifier y estabilidad de HMAC sin mostrar ni copiar claves.",
+      "requires_external_action": true,
+      "responsible_party": "engineering_owner"
+    },
+    {
+      "evidence_reference": {
+        "business_id": null,
+        "content_hash": null,
+        "kind": "missing"
+      },
+      "reason_code": "UNKNOWN_RESULT_RUNBOOK_UNVERIFIED",
+      "remediation": "Ensayar UNKNOWN por provider y aprobar revisión externa sin retry automático.",
+      "requires_external_action": true,
+      "responsible_party": "secondary_on_call"
+    }
+  ],
+  "capability_closure": [],
+  "context": {
+    "business_id": null,
+    "code_sha": "981ffc2f26e645aa98792d9968f7d85c1246d688",
+    "findings": [],
+    "fiscal_required": null,
+    "profile": null,
+    "source_context_hash": "ac842244cbe89f8b55276c7538b26bea7f2bc716ab7de0f0f6ceaace669a8582"
+  },
+  "context_hash": "5dea7312bd72e8bf58cd841f96b8313b3d3910a2f68317a4f47ed9f3896c338a",
+  "created_at": "2026-10-08T15:12:24.850711+00:00",
+  "expires_at": "2026-10-08T15:17:24.850711+00:00",
+  "provider_requirements": {},
+  "real_evidence_verified": false,
+  "result": "PILOT_BLOCKED",
+  "scope": "G_PREP_ONLY",
+  "software_status": "A_F_CODE_VERIFIED_PASS",
+  "version": 1
+}

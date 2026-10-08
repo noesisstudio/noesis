@@ -1,5 +1,12 @@
 # Arquitectura
 
+## 2026-10-08 — Fase 1.10G-PREP local, sin piloto
+
+A–F CODE-VERIFIED PASS. F CI remota fresca [37743993745](https://github.com/noesisstudio/noesis/actions/runs/37743993745) PASS: suite general 2074/2072 PASS/2 skips/0 FAIL/ERROR, 2353.757 s; PostgreSQL687 y JS9 PASS. Esa prueba corresponde al SHA F, no es una nueva suite general de G-PREP.
+G-PREP calcula PilotReadinessReport v1 puro en financial_pilot, sin conexión/estado/persistencia ni migration. Reutiliza A Profile/C spec/F límites; refs documentales/sintéticas no acreditan realidad y READY no está habilitado. Perfil recomendado expense.confirm + expense.void + dependencia web, sin providers; cuenta/perfil aún no seleccionados. Policy REAL provisional, PRIVACY_NOT_READY conservado; cinco flags OFF. G-LIVE NO AUTORIZADO, H NO INICIADA.
+[Orden](architecture/FASE-1.10G-prep-orden.md), [contrato](architecture/FINANCIAL-PILOT-READINESS-v1.md), [checklist](architecture/FINANCIAL-PILOT-CHECKLIST-v1.md), [runbook](architecture/FINANCIAL-PILOT-RUNBOOK-v1.md), [cierre](architecture/FASE-1.10G-prep-cierre.md).
+Rama local desde F exacta, no main/rebase/integración/push/deploy. Datos reales, QA, backups/providers/Railway no consultados. main divergente sólo eliminó sigue.md según orden; integración futura y CI fresca obligatorias. Guard D producción y recuperación con A original caducada requieren revisión posterior, no se eluden. Diagnóstico por report/context hash y reason cerrado; rollback sólo retirar estos archivos puros, ninguna DB que restaurar. Headers inferiores son historia.
+
 ## Fase 1.10F — arquitectura local vigente
 
 Leer [ADR024](architecture/ADR-024-providers-integrated-preflight.md),
