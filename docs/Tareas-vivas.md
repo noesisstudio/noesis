@@ -1,5 +1,13 @@
 # Tareas vivas
 
+## 2026-10-08 — Fase 1.10G-VERIFY local, sin G-LIVE
+
+PilotGate/verifiers separados de G-PREP; assess sigue documental/anti-READY. Catálogo cerrado de 20 verifiers/seis tipos, fuentes A/history/B/E/F, recibos de origen autenticado y objetos opacos; REAL permanece bloqueado. READY no autoriza activación. RecoveryReadiness D79 permite A original caducada sólo con continuidad actual exacta, mismo perfil/grants/G, E/F vigentes; drift/UNKNOWN bloquean. Sin migration80 ni cambios63–79; TX prestada y monolito modular, Decimal/NUMERIC, sin nueva lógica grande en db.py ni autoridad IA. Cinco flags reales OFF, policy REAL provisional/PRIVACY_NOT_READY. No main/push/deploy/producción/QA/backups/provider I/O/G-LIVE/H. CODE-VERIFIED PASS técnico local: suite fresca2144/2142 PASS/2 skips PG previstos/0 FAIL/ERROR (2073.016 s); PG724 casos únicos PASS, JS9 PASS, gates de seguridad/migraciones/docs PASS. REAL continúa PILOT_BLOCKED; detalle y límites en cierre.
+
+[Orden](architecture/FASE-1.10G-verify-orden.md), [contrato G](architecture/FINANCIAL-PILOT-VERIFICATION-v1.md), [recovery](architecture/FINANCIAL-RECOVERY-READINESS-v1.md), [ADR025](architecture/ADR-025-pilot-verification-recovery-continuity.md), [cierre](architecture/FASE-1.10G-verify-cierre.md).
+
+Pendientes reales: revisión profesional E, orígenes/colectores confiables, elección humana, backup/drill/deployment/main CI/review; requerir permiso separado. G-LIVE/H no autorizados.
+
 ## 2026-10-08 — Fase 1.10G-PREP local, sin piloto
 
 Validación final G-PREP: una invocación fresca de 98 casos (34 Pilot +16 Core +21 Economic Events +27 Readiness), 98 PASS/0 skips/0 FAIL/0 ERROR en 225.323 s. Ruff global, Bandit global y paquete final, dependency audit (paquete editable noesis fuera de PyPI), documentation truth y enlaces locales PASS. Credential scan final completo PASS; sólo tres excepciones nuevas de huella exacta para SHA público F y hashes derivados de contexto documental sin datos reales; detectores/filtros/excepciones previas intactos. SQL sintético schema79: 15 fragmentos EXPLAIN QUERY PLAN +query_only PASS; dos de catálogo PG preparados, no ejecutados. AST de migrations completo sin cambios. General/PG/JS F base son evidencia separada; no sumar como nueva ejecución completa G-PREP.

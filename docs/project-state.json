@@ -7,7 +7,7 @@
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
   "schema_version": 79,
   "conversation_transport_candidate_2026_09_24": "Local no publicado: esquemas 59/60, memoria por actor y transporte previo a vinculacion. NOESIS_CONVERSATION_ISOLATION_ENABLED y NOESIS_WHATSAPP_INBOX_ENABLED false por defecto. FIFO, acuse tras commit, incidencias sin replay automatico. 96 pruebas dirigidas correctas (71.801 s) y 460 backend/webhook correctas (397.517 s); Ruff, secretos y verdad documental correctos. Suite completa 1197 corresponde al bloque previo. Requiere CI PostgreSQL, procedimiento de revision/retencion y Meta real antes de activar.",
-  "verified_test_count": 2074,
+  "verified_test_count": 2144,
   "whatsapp_rounds_2026_10_01": "Producción hasta c52d3e2: presupuestos, citas (cancelar/mover), facturas de varias líneas, gasto a obra, abrir obra, ranking de clientes, pendientes, resumen semanal y abreviaturas de móvil por WhatsApp, todo con tarjeta de SÍ. Probado en real por WhatsApp Web (descartado con NO) y en simulador local. cryptography 50. Voz real sin probar.",
   "release_gate_2026_09_25": "CI 36131891167 completamente verde sobre 9357a39: 1223 tests en 555.019 s, seguridad, migraciones SQLite, 36 rutas PostgreSQL y rollback/compatibilidad/recuperacion. Cambios posteriores solo documentales. Founder autoriza publicar; mantener flags nuevos apagados y Meta intacto. Verificar ready tras despliegue.",
   "validation_2026_09_21": "CI 35578171354 verde sobre 1dc65aa1a79a6bcacfd1057b1b2afd317d7734e5: 974 pruebas (402.446 s), seguridad, Node, migraciones SQLite y humos PostgreSQL con compatibilidad anterior/rollback. Railway b88619b7-6da0-4b68-83ab-fec3194a9897 SUCCESS; health/ready verifican release 1dc65aa1a79a y esquema 56. Cierre documental sin cambios de runtime.",
@@ -192,12 +192,12 @@
   ],
   "admin_workspace_release": "seven_departments_scoped_monthly_api_usage_owner_phone_search_mobile_disclosure_explicit_metric_sources_refresh_no_schema_changes_deployment_verification_after_push",
   "financial_core": {
-    "authorized_phase": "1.10D",
-    "status": "phase1_10D_CODE_VERIFIED_PASS_local_flags_OFF_no_push_no1_10E",
+    "authorized_phase": "1.10G-VERIFY LOCAL",
+    "status": "phase1_10G_VERIFY_CODE_VERIFIED_PASS_local_flags_OFF_no_push_no_G_LIVE_H",
     "next_phase_authorized": false,
     "governance": "docs/architecture/README.md",
-    "closure": "docs/architecture/FASE-1.10D-cierre.md",
-    "schema_changed": true,
+    "closure": "docs/architecture/FASE-1.10G-verify-cierre.md",
+    "schema_changed": false,
     "operational_events_are_economic_events": false,
     "money_contract": "Decimal; EUR HALF_UP; PostgreSQL NUMERIC; SQLite canonical TEXT; legacy unchanged",
     "persistence": "InvoiceCapture, PaymentCapture, BankCapture, SupplierInvoiceCapture, ExpenseCapture and FiscalCancellationCapture: borrowed writers, mandatory immutable domain coverage, events and durable result in shared transaction",
@@ -2074,5 +2074,225 @@
     "real_business_selected": false,
     "real_profile_selected": false,
     "credential_exceptions": "THREE_EXACT_REVIEWED_NONSECRET_SHA_VALUES_ONLY"
+  },
+  "phase_1_10g_verify": {
+    "status": "CODE_VERIFIED_PASS_LOCAL",
+    "branch": "codex/phase-1-10g-verify",
+    "schema_version": 79,
+    "new_migration": false,
+    "base_reference": "docs/architecture/FASE-1.10G-verify-orden.md",
+    "real_policy": "PROVISIONAL_PROFESSIONAL_APPROVAL_PENDING",
+    "flags": "ALL_FIVE_OFF",
+    "real_access": false,
+    "provider_io": false,
+    "real_business_selected": false,
+    "real_profile_selected": false,
+    "g_live_authorized": false,
+    "h_started": false,
+    "production_guard": "PRESERVED_BLOCKED",
+    "verifier_count": 20,
+    "evidence_type_count": 6,
+    "activation_authorized": false,
+    "synthetic_is_real": false,
+    "recovery_contract": "docs/architecture/FINANCIAL-RECOVERY-READINESS-v1.md",
+    "contract": "docs/architecture/FINANCIAL-PILOT-VERIFICATION-v1.md",
+    "closure": "docs/architecture/FASE-1.10G-verify-cierre.md",
+    "validation": {
+      "version": 1,
+      "scope": "LOCAL_SYNTHETIC_ONLY",
+      "technical_status": "CODE_VERIFIED_PASS",
+      "real_status": "PILOT_BLOCKED_EXTERNAL_PREREQUISITES_PENDING",
+      "general": {
+        "total": 2144,
+        "passed": 2142,
+        "skips": 2,
+        "failures": 0,
+        "errors": 0,
+        "seconds": 2073.016,
+        "execution": "fresh_full_discovery_exact_multiset_four_isolated_processes",
+        "modules": 94,
+        "source_frozen": true,
+        "known_skips": [
+          {
+            "test": "test_financial_history_cutoff.HistoryCutoffSQLite.test_pg_direct_sql_busy_fails_closed_no_gate_inversion",
+            "reason": "PG gate try-lock; SQLite BEGIN IMMEDIATE probado en carrera común."
+          },
+          {
+            "test": "test_financial_history_cutoff.HistoryCutoffSQLite.test_pg_repeatable_snapshot_direct_sql_rejected",
+            "reason": "Aislamiento PostgreSQL."
+          }
+        ]
+      },
+      "new_sqlite": {
+        "pilot_verification": 24,
+        "recovery_readiness": 12,
+        "total": 36,
+        "result": "PASS"
+      },
+      "javascript": {
+        "total": 9,
+        "passed": 9,
+        "failed": 0
+      },
+      "postgres": {
+        "version": "16.15",
+        "matrices": [
+          {
+            "name": "Core",
+            "cases": 6,
+            "result": "PASS"
+          },
+          {
+            "name": "Operations_Auth",
+            "cases": 37,
+            "result": "PASS"
+          },
+          {
+            "name": "EconomicEvents",
+            "cases": 28,
+            "result": "PASS"
+          },
+          {
+            "name": "Borrowed_writers",
+            "cases": 18,
+            "result": "PASS"
+          },
+          {
+            "name": "Invoice_Capture",
+            "cases": 27,
+            "result": "PASS"
+          },
+          {
+            "name": "Payment_Bank",
+            "cases": 41,
+            "result": "PASS"
+          },
+          {
+            "name": "Supplier_Expense",
+            "cases": 44,
+            "result": "PASS"
+          },
+          {
+            "name": "Channels",
+            "cases": 50,
+            "result": "PASS"
+          },
+          {
+            "name": "History_inventory",
+            "cases": 37,
+            "result": "PASS"
+          },
+          {
+            "name": "History_cutoff",
+            "cases": 50,
+            "result": "PASS"
+          },
+          {
+            "name": "History_import",
+            "cases": 25,
+            "result": "PASS"
+          },
+          {
+            "name": "History_reconciliation",
+            "cases": 31,
+            "result": "PASS"
+          },
+          {
+            "name": "A",
+            "cases": 29,
+            "result": "PASS"
+          },
+          {
+            "name": "B",
+            "cases": 52,
+            "result": "PASS"
+          },
+          {
+            "name": "C",
+            "cases": 46,
+            "result": "PASS"
+          },
+          {
+            "name": "D",
+            "cases": 35,
+            "result": "PASS"
+          },
+          {
+            "name": "E",
+            "cases": 62,
+            "result": "PASS"
+          },
+          {
+            "name": "F",
+            "cases": 69,
+            "result": "PASS"
+          },
+          {
+            "name": "G_VERIFY",
+            "cases": 37,
+            "result": "PASS"
+          }
+        ],
+        "unique_cases": 724,
+        "failed": 0,
+        "errors": 0,
+        "final_affected_rerun": {
+          "cases": 170,
+          "seconds": 486.178,
+          "result": "PASS",
+          "matrices": [
+            "A",
+            "D",
+            "F",
+            "G_VERIFY"
+          ],
+          "additional_unique_cases": false
+        }
+      },
+      "migration": {
+        "schema": 79,
+        "new_migration": false,
+        "ast_previous": "UNCHANGED_ALL_79",
+        "sqlite_roundtrip": [
+          79,
+          0,
+          79
+        ],
+        "postgres_upgrade": [
+          32,
+          79
+        ],
+        "synthetic_restore": "PASS",
+        "legacy_schema53_code_on_schema79": "PASS"
+      },
+      "http_smoke": {
+        "routes": 36,
+        "result": "PASS"
+      },
+      "integration_history_B_D_E": {
+        "sqlite": "PASS",
+        "postgres": "PASS"
+      },
+      "gates": {
+        "ruff": "PASS",
+        "bandit": "PASS",
+        "credential_scan": "PASS",
+        "dependency_audit": "PASS",
+        "documentation_truth": "PASS",
+        "links": "PASS",
+        "migration_ast": "PASS"
+      },
+      "remote_ci_started": false,
+      "push": false,
+      "merge": false,
+      "deploy": false,
+      "real_access": false,
+      "provider_io": false,
+      "real_flags": "OFF",
+      "real_policy": "PROVISIONAL_PENDING_PROFESSIONAL_APPROVAL",
+      "G_LIVE": false,
+      "H": false
+    },
+    "validation_report": "docs/architecture/FASE-1.10G-verify-evidencia.json"
   }
 }

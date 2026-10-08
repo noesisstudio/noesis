@@ -1,5 +1,17 @@
 # AGENTS.md - Manual del proyecto Bynoesis
 
+> Orden vigente: exclusivamente G-VERIFY LOCAL, sin push/main/G-LIVE/H.
+> Leer orden/ADR025/contratos G y RecoveryReadiness/cierre en arquitectura.
+> G-PREP assess sigue anti-READY. Gate sólo acepta objetos sellados de verifiers;
+> sources/trust bootstrap privado, no hashes/claims/JSON como autoridad.
+> Synthetic nunca REAL; READY no activa. D79 resume revalida continuidad actual
+> y conserva A aunque caduque, perfil/grants/history/receipts intactos.
+> Primera activación conserva TTL A; drift/stale/privacy/UNKNOWN bloquean.
+> Sin migration80; D producción bloqueada, cinco flags reales OFF y E provisional.
+> Sólo fixtures sintéticos; no producción/QA/backups/providers ni colectores reales.
+> TX prestada consistente, SELECT; ninguna conexión/commit propio.
+> Encabezados inferiores conservan historia y no amplían esta orden.
+
 > Orden vigente: exclusivamente G-PREP local desde F, sin push ni G-LIVE/H.
 > Leer orden/contrato/checklist/runbook/cierre G-PREP en docs/architecture/README.md.
 > Report puro sin DB/red/writers/authority; Profile A/spec C/OperationalPolicy F únicos.

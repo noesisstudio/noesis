@@ -57,6 +57,29 @@ def validate(table, value):
             raise ValueError('Preflight incoherente.')
         context = value['context']
         expected = {'evaluation_uuid', 'evaluation_hash', 'profile', 'profile_hash', 'capabilities', 'dependencies', 'requirements', 'attestations', 'environment', 'privacy', 'privacy_refs', 'history_hash', 'source_hash', 'configuration_hash', 'volume', 'uncertain_attempts_hash', 'control', 'policy_version', 'operational_limits', 'code_version', 'schema_version', 'actor_user_id', 'actor_session_version', 'permission', 'action', 'recovery'}
+        if context.get('action') == 'resume' and 'recovery_readiness' in context:
+            expected.add('recovery_readiness')
+            proof = context['recovery_readiness']
+            if proof is not None:
+                from noesis.financial_activation.recovery_readiness import validate_proof
+                validate_proof(proof)
+                if (proof['business_id'] != value['business_id'] or proof['evaluation_uuid'] != value['evaluation_uuid']
+                        or proof['evaluation_hash'] != context['evaluation_hash']
+                        or proof['profile_hash'] != context['profile_hash'] or proof['capabilities'] != context['capabilities']
+                        or proof['actor_user_id'] != context['actor_user_id']
+                          or proof['actor_session_version'] != context['actor_session_version']
+                          or proof['previous_generation'] != context['control']['activation_generation']
+                          or proof['configuration_hash'] != context['configuration_hash']
+                          or proof['source_hash'] != context['source_hash']
+                          or proof['code_version'] != context['code_version']
+                          or not context['recovery']
+                          or proof['pause_receipt_uuid'] != context['recovery']['pause_receipt_uuid']
+                          or proof['pause_receipt_hash'] != context['recovery']['pause_receipt_hash']
+                          or proof['generation_receipt_hash'] != context['recovery']['generation_receipt_hash']
+                          or proof['snapshot_hash'] != digest(context['recovery']['snapshot'])):
+                    raise ValueError('Continuidad/preflight distintos.')
+            elif value['result'] == Result.PASS:
+                raise ValueError('PASS resume requiere continuidad.')
         if set(context) != expected or context['schema_version'] != 79 or context['policy_version'] != 1 or context['action'] not in ('enable', 'resume'):
             raise ValueError('Contexto preflight cerrado requerido.')
         Environment(context['environment'])

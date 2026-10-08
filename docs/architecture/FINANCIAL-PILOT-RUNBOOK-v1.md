@@ -195,3 +195,8 @@ inventado, gasto de prueba ni banco simulado en negocio real. No es pilot de fac
 Dos horas activas y 72 h observación son propuesta, **no SLO**. TTL A/F/providers
 de 5 min exige verificación every_use; no se promete que un único preflight cubra
 72 h. No programar automations/alertas. Cada hard-stop prevalece sobre calendario.
+
+
+## Continuidad G-VERIFY
+
+G-PREP permanece documental/anti-READY, sin ingestión de approvals. La [capa de verificación](FINANCIAL-PILOT-VERIFICATION-v1.md) es separada y sólo acepta pruebas de verifiers, sin acceso real autorizado. La [continuidad D79](FINANCIAL-RECOVERY-READINESS-v1.md) resuelve el TTL A para nuevos resumes con proof actual; guard producción/policy real/flags siguen bloqueados. No afirmar real-world readiness ni G-LIVE. El cierre G-PREP anterior conserva su alcance histórico.

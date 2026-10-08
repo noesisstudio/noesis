@@ -1,5 +1,13 @@
 # Mapa de código
 
+## 2026-10-08 — Fase 1.10G-VERIFY local, sin G-LIVE
+
+PilotGate/verifiers separados de G-PREP; assess sigue documental/anti-READY. Catálogo cerrado de 20 verifiers/seis tipos, fuentes A/history/B/E/F, recibos de origen autenticado y objetos opacos; REAL permanece bloqueado. READY no autoriza activación. RecoveryReadiness D79 permite A original caducada sólo con continuidad actual exacta, mismo perfil/grants/G, E/F vigentes; drift/UNKNOWN bloquean. Sin migration80 ni cambios63–79; TX prestada y monolito modular, Decimal/NUMERIC, sin nueva lógica grande en db.py ni autoridad IA. Cinco flags reales OFF, policy REAL provisional/PRIVACY_NOT_READY. No main/push/deploy/producción/QA/backups/provider I/O/G-LIVE/H. CODE-VERIFIED PASS técnico local: suite fresca2144/2142 PASS/2 skips PG previstos/0 FAIL/ERROR (2073.016 s); PG724 casos únicos PASS, JS9 PASS, gates de seguridad/migraciones/docs PASS. REAL continúa PILOT_BLOCKED; detalle y límites en cierre.
+
+[Orden](architecture/FASE-1.10G-verify-orden.md), [contrato G](architecture/FINANCIAL-PILOT-VERIFICATION-v1.md), [recovery](architecture/FINANCIAL-RECOVERY-READINESS-v1.md), [ADR025](architecture/ADR-025-pilot-verification-recovery-continuity.md), [cierre](architecture/FASE-1.10G-verify-cierre.md).
+
+Código nuevo: financial_pilot/{verification_contracts,evidence,verifiers,gate}.py y financial_activation/recovery_readiness.py; integración aditiva handoff D y preflight/validation F, sin conexiones propias.
+
 ## 2026-10-08 — Fase 1.10G-PREP local, sin piloto
 
 A–F CODE-VERIFIED PASS. F CI remota fresca [37743993745](https://github.com/noesisstudio/noesis/actions/runs/37743993745) PASS: suite general 2074/2072 PASS/2 skips/0 FAIL/ERROR, 2353.757 s; PostgreSQL687 y JS9 PASS. Esa prueba corresponde al SHA F, no es una nueva suite general de G-PREP.

@@ -45,13 +45,13 @@ class FinancialIntegratedPreflight:
         ev = FinancialReadinessEvaluator(s, self.bid)
         business = ev._permission(principal, locking=True, activation_verification=True)
         row = ev.repo.load(uuid_text(evaluation_uuid))
-        if not row or row["created_by"] != principal.user_id or row["session_version"] != principal.session_version:
+        if not row or (action != "resume" and (row["created_by"] != principal.user_id or row["session_version"] != principal.session_version)):
             raise AccessDenied(Reason.SESSION_STALE)
         value = ev.repo.result(row)
         reasons = set()
         if value["outcome"] != "fully_eligible" or value["reasons"]:
             reasons.add(Reason.READINESS_NOT_FULL)
-        if clock() >= datetime.fromisoformat(value["expires_at"]):
+        if action != "resume" and clock() >= datetime.fromisoformat(value["expires_at"]):
             reasons.add(Reason.READINESS_STALE)
         if value["context"]["code_version"] != self.code_version or self.code_version != config.RELEASE_ID:
             reasons.add(Reason.CONFIGURATION_CHANGED)
@@ -85,10 +85,11 @@ class FinancialIntegratedPreflight:
                 proofs[c.value] = verify(s, self.bid, uid, c.value, environment=environment, code_version=self.code_version)
             except StateError as exc:
                 reasons.add(Reason(str(exc)))
-        control = ev.s.execute("SELECT state,activation_generation,ever_enabled,control_revision,current_transition_uuid FROM financial_activation_control WHERE business_id=?", (self.bid,)).fetchone()
+        control = ev.s.execute("SELECT * FROM financial_activation_control WHERE business_id=?", (self.bid,)).fetchone()
         if control is None:
             raise StateError("Control A ausente.")
         recovery = None
+        recovery_readiness = None
         try:
             if action == "enable":
                 evidence = verify_readiness(s, self.bid, principal, value["evaluation_uuid"])
@@ -100,9 +101,14 @@ class FinancialIntegratedPreflight:
                 if origin["evaluation_uuid"] != value["evaluation_uuid"] or origin["profile"] != value["profile"]:
                     reasons.add(Reason.READINESS_NOT_FULL)
                 history_hash = digest(origin["history"])
+                from noesis.financial_activation.recovery_readiness import verify_continuity
+                _, grants, generation_receipt = api.generation(s, control['activation_generation'])
+                pause = api.receipt(s, control['current_transition_uuid'])
+                recovery_readiness = verify_continuity(s, self.bid, principal, api, control,
+                    origin, grants, pause, generation_receipt, recovery['snapshot'])
             else:
                 raise ValueError("Preflight sólo enable/resume.")
-        except (ConflictError, StateError):
+        except (ConflictError, StateError, ValueError, TypeError, KeyError):
             history_hash = digest(value["context"]["history"])
             reasons.add(Reason.HISTORY_INVALID)
         sources = ev._sources()
@@ -122,7 +128,7 @@ class FinancialIntegratedPreflight:
             reasons.add(Reason.CLOSED)
         elif s.execute(f"SELECT 1 FROM {AUTHORIZATIONS} WHERE business_id=?", (self.bid,)).fetchone():
             reasons.add(Reason.CLOSING)
-        return dict(evaluation_uuid=value["evaluation_uuid"], evaluation_hash=value["content_hash"],
+        context = dict(evaluation_uuid=value["evaluation_uuid"], evaluation_hash=value["content_hash"],
                     profile=value["profile"], profile_hash=profile.content_hash, capabilities=[c.value for c in closure],
                     dependencies=edges, requirements=requirements, attestations=proofs, environment=Environment(environment).value,
                     privacy=privacy, privacy_refs=privacy_refs, history_hash=history_hash, source_hash=digest(sources), configuration_hash=configuration_hash(s, self.bid),
@@ -130,7 +136,10 @@ class FinancialIntegratedPreflight:
                     control={k: bool(control[k]) if k == "ever_enabled" else control[k] for k in ('state','activation_generation','ever_enabled','control_revision')},
                     policy_version=1, operational_limits=OperationalPolicy().value(), code_version=self.code_version,
                     schema_version=79, actor_user_id=principal.user_id, actor_session_version=principal.session_version,
-                    permission=Permission.PREFLIGHT.value, action=action, recovery=recovery), reasons
+                    permission=Permission.PREFLIGHT.value, action=action, recovery=recovery)
+        if action == 'resume':
+            context['recovery_readiness'] = recovery_readiness
+        return context, reasons
 
     def evaluate(self, principal, evaluation_uuid, *, preflight_uuid=None, attestations=None,
                  environment=Environment.PRODUCTION, action="enable", permission=Permission.PREFLIGHT):
@@ -198,4 +207,16 @@ def verify_activation(session, business_id, principal, request, code_version):
         session, principal, binding["preflight_uuid"], activation_request=request)
     if digest(value) != binding["preflight_hash"]:
         raise ConflictError("Hash de preflight cambió.")
+    if request.body['action'] == 'resume' and value['context'].get('recovery_readiness') is None:
+        raise StateError('RecoveryReadiness actual requerida para nuevos resumes79.')
     return binding
+
+
+def verify_resume_continuity(session, business_id, principal, request, code_version):
+    """Prueba durable F, rederivada every_use; nunca autoriza por hash aislado."""
+    binding = verify_activation(session, business_id, principal, request, code_version)
+    value = ProviderRepository(session, business_id).load(RUNS, binding['preflight_uuid'])
+    proof = value['context'].get('recovery_readiness')
+    if request.body['action'] != 'resume' or proof is None:
+        raise StateError('Prueba exclusiva de resume requerida.')
+    return proof

@@ -99,3 +99,8 @@ con IS_PRODUCTION=false en producción, reset de control, resume sin prueba,
 otra generación, policy sintética o flag ON. No existe CLI pública de pausa real
 en D; el runbook distingue pasos humanos y APIs internas que deberá exponer una
 integración futura autorizada. Ningún comando ficticio se presenta como ejecutable.
+
+
+## Continuidad G-VERIFY
+
+G-PREP permanece documental/anti-READY, sin ingestión de approvals. La [capa de verificación](FINANCIAL-PILOT-VERIFICATION-v1.md) es separada y sólo acepta pruebas de verifiers, sin acceso real autorizado. La [continuidad D79](FINANCIAL-RECOVERY-READINESS-v1.md) resuelve el TTL A para nuevos resumes con proof actual; guard producción/policy real/flags siguen bloqueados. No afirmar real-world readiness ni G-LIVE. El cierre G-PREP anterior conserva su alcance histórico.

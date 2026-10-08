@@ -97,3 +97,8 @@ y los drills sintéticos no demuestran freshness/replay/runtime del futuro pilot
 - [ ] Plan T0/+15m/+1h/+2h/+24h/+72h, hard stops y suplente disponibles.
 
 Hoy **PILOT_BLOCKED — EXTERNAL PREREQUISITES PENDING**. G-LIVE y H bloqueados.
+
+
+## Continuidad G-VERIFY
+
+G-PREP permanece documental/anti-READY, sin ingestión de approvals. La [capa de verificación](FINANCIAL-PILOT-VERIFICATION-v1.md) es separada y sólo acepta pruebas de verifiers, sin acceso real autorizado. La [continuidad D79](FINANCIAL-RECOVERY-READINESS-v1.md) resuelve el TTL A para nuevos resumes con proof actual; guard producción/policy real/flags siguen bloqueados. No afirmar real-world readiness ni G-LIVE. El cierre G-PREP anterior conserva su alcance histórico.

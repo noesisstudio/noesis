@@ -12,9 +12,19 @@ def external_context(context):
     return {k: v for k, v in context.items() if k != "control"}
 
 
-def verify_readiness(session, business_id, principal, evaluation_uuid, *, now=None):
+def verify_readiness(session, business_id, principal, evaluation_uuid, *, now=None, locking=True):
+    if type(locking) is not bool:
+        raise TypeError('Modo de lectura bool estricto requerido.')
+    if not locking:
+        # Sólo lectura consistente sin efecto: D/F conservan el default con lock.
+        if session.dialect == 'postgres':
+            level = session.execute("SELECT current_setting('transaction_isolation') AS level").fetchone()['level']
+            if level not in ('repeatable read', 'serializable'):
+                raise StateError('Snapshot consistente requerido sin FOR SHARE.')
+        elif not session.borrowed_connection.raw.in_transaction:
+            raise StateError('TX SQLite exterior requerida sin lock de permiso.')
     evaluator = FinancialReadinessEvaluator(session, business_id)
-    business = evaluator._permission(principal, locking=True, activation_verification=True)
+    business = evaluator._permission(principal, locking=locking, activation_verification=True)
     row = evaluator.repo.load(uuid_text(evaluation_uuid))
     if not row or row["created_by"] != principal.user_id or row["session_version"] != principal.session_version:
         raise AccessDenied("Evidencia de activación no disponible.")

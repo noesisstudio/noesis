@@ -284,9 +284,16 @@ class FinancialActivation:
                 _, proofs, proof = self.recovery(s, principal, control)
                 if proof != b['recovery_proof']:
                     raise ConflictError('Prueba de recuperación cambió.')
+                continuity = None
+                if schema_version(s.borrowed_connection) == 79:
+                    from noesis.financial_providers.preflight import verify_resume_continuity
+                    continuity = verify_resume_continuity(s, self.bid, principal, req, self.code_version)
                 for target in ('validating', 'ready', 'enabled'):
                     control = self.control(s)
-                    receipt = self.transition(s, req, auth, control, target, dict(recovery=proof), proofs)
+                    evidence = dict(recovery=proof)
+                    if continuity is not None:
+                        evidence['recovery_readiness_hash'] = digest(continuity)
+                    receipt = self.transition(s, req, auth, control, target, evidence, proofs)
             elif action == 'pause':
                 if control['state'] != 'enabled' or control['control_revision'] != b['expected_control_revision']:
                     raise ConflictError('Generación/control cambió.')
