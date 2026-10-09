@@ -28,7 +28,8 @@ class HistoryImporter(HistoryCutoff):
         """Punto interno de observación para pruebas de crash; no callback de canal."""
 
     def _boundary(self, session, manifest_uuid):
-        if migrations.current_version_connection(session.borrowed_connection) not in (72,73):
+        from .schema_compatibility import IMPORT_SCHEMAS
+        if migrations.current_version_connection(session.borrowed_connection) not in IMPORT_SCHEMAS:
             raise StateError("Schema72 requerido.")
         row = session.execute(
             "SELECT * FROM financial_history_cut_manifests WHERE business_id=? AND manifest_uuid=?",

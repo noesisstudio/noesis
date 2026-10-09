@@ -1,5 +1,170 @@
 # Registro de cambios
 
+## 2026-10-08 — Fase 1.10G-VERIFY local, sin G-LIVE
+
+PilotGate/verifiers separados de G-PREP; assess sigue documental/anti-READY. Catálogo cerrado de 20 verifiers/seis tipos, fuentes A/history/B/E/F, recibos de origen autenticado y objetos opacos; REAL permanece bloqueado. READY no autoriza activación. RecoveryReadiness D79 permite A original caducada sólo con continuidad actual exacta, mismo perfil/grants/G, E/F vigentes; drift/UNKNOWN bloquean. Sin migration80 ni cambios63–79; TX prestada y monolito modular, Decimal/NUMERIC, sin nueva lógica grande en db.py ni autoridad IA. Cinco flags reales OFF, policy REAL provisional/PRIVACY_NOT_READY. No main/push/deploy/producción/QA/backups/provider I/O/G-LIVE/H. CODE-VERIFIED PASS técnico local: suite fresca2144/2142 PASS/2 skips PG previstos/0 FAIL/ERROR (2073.016 s); PG724 casos únicos PASS, JS9 PASS, gates de seguridad/migraciones/docs PASS. REAL continúa PILOT_BLOCKED; detalle y límites en cierre.
+
+[Orden](architecture/FASE-1.10G-verify-orden.md), [contrato G](architecture/FINANCIAL-PILOT-VERIFICATION-v1.md), [recovery](architecture/FINANCIAL-RECOVERY-READINESS-v1.md), [ADR025](architecture/ADR-025-pilot-verification-recovery-continuity.md), [cierre](architecture/FASE-1.10G-verify-cierre.md).
+
+Objetivo: gate verificado y continuidad D79, exclusivamente local. Pruebas/gates: en cierre; riesgo: orígenes reales pendientes y bloqueo conservador ante drift. Diagnóstico por failure/context/proof/hash; rollback: retirar rama local, sin migración ni datos reales afectados.
+
+## 2026-10-08 — Fase 1.10G-PREP local, sin piloto
+
+Validación final G-PREP: una invocación fresca de 98 casos (34 Pilot +16 Core +21 Economic Events +27 Readiness), 98 PASS/0 skips/0 FAIL/0 ERROR en 225.323 s. Ruff global, Bandit global y paquete final, dependency audit (paquete editable noesis fuera de PyPI), documentation truth y enlaces locales PASS. Credential scan final completo PASS; sólo tres excepciones nuevas de huella exacta para SHA público F y hashes derivados de contexto documental sin datos reales; detectores/filtros/excepciones previas intactos. SQL sintético schema79: 15 fragmentos EXPLAIN QUERY PLAN +query_only PASS; dos de catálogo PG preparados, no ejecutados. AST de migrations completo sin cambios. General/PG/JS F base son evidencia separada; no sumar como nueva ejecución completa G-PREP.
+
+A–F CODE-VERIFIED PASS. F CI remota fresca [37743993745](https://github.com/noesisstudio/noesis/actions/runs/37743993745) PASS: suite general 2074/2072 PASS/2 skips/0 FAIL/ERROR, 2353.757 s; PostgreSQL687 y JS9 PASS. Esa prueba corresponde al SHA F, no es una nueva suite general de G-PREP.
+G-PREP calcula PilotReadinessReport v1 puro en financial_pilot, sin conexión/estado/persistencia ni migration. Reutiliza A Profile/C spec/F límites; refs documentales/sintéticas no acreditan realidad y READY no está habilitado. Perfil recomendado expense.confirm + expense.void + dependencia web, sin providers; cuenta/perfil aún no seleccionados. Policy REAL provisional, PRIVACY_NOT_READY conservado; cinco flags OFF. G-LIVE NO AUTORIZADO, H NO INICIADA.
+[Orden](architecture/FASE-1.10G-prep-orden.md), [contrato](architecture/FINANCIAL-PILOT-READINESS-v1.md), [checklist](architecture/FINANCIAL-PILOT-CHECKLIST-v1.md), [runbook](architecture/FINANCIAL-PILOT-RUNBOOK-v1.md), [cierre](architecture/FASE-1.10G-prep-cierre.md).
+Rama local desde F exacta, no main/rebase/integración/push/deploy. Datos reales, QA, backups/providers/Railway no consultados. main divergente sólo eliminó sigue.md según orden; integración futura y CI fresca obligatorias. Guard D producción y recuperación con A original caducada requieren revisión posterior, no se eluden. Diagnóstico por report/context hash y reason cerrado; rollback sólo retirar estos archivos puros, ninguna DB que restaurar. Headers inferiores son historia.
+
+## 2026-10-07 — Fase 1.10F CODE-VERIFIED PASS técnico local
+
+[Orden F](architecture/FASE-1.10F-orden.md), [ADR024](architecture/ADR-024-providers-integrated-preflight.md), [contrato](architecture/FINANCIAL-PROVIDERS-PREFLIGHT-v1.md), [cierre](architecture/FASE-1.10F-cierre.md). Monolito modular: financial_providers con repositorios sobre conexión/gate/TX compartidos, M79 aditiva. Preflight/attestation no autoridad, Decimal exacto, sin IA financiera. D77/E78 compatibles explícitamente; F79 exige binding. Suite fresca 2074 total/2072 PASS/2 skips/0 FAIL/ERROR (1751.766 s); F63 SQLite/F69 PostgreSQL, 687 matrices PG PASS, JS9 y gates de seguridad/AST/verdad/enlaces PASS. Cierre técnico local completo; pruebas reales pendientes. Policy real provisional, flags OFF, sin push/merge/deploy/producción/QA/backups reales/providers/G. Diagnóstico por UUID/hash, rollback79 sólo sin evidencia F. Los encabezados inferiores conservan historia, no autorización vigente.
+
+Objetivo: evidencia durable de providers y preflight con dispatch financiero seguro.
+Áreas: núcleo, A–E, captures/queues/workers/WhatsApp y backups sintéticos. M79 agrega
+ocho tablas; no modifica AST de migraciones previas. Checker externo no implementado
+queda BLOCKED, nunca finge prueba real. Guías/ADR/contrato/runbook/estado actualizados.
+Correcciones durante validación: placeholder literal PostgreSQL del downgrade M79;
+fixtures 77/78 con versión explícita; restore de ciclos Operation/authorization y F;
+metadatos financieros Meta sin binding retenidos; fingerprints Graph/Gmail completos.
+La suite general detectó además ocho tablas F ausentes del registro de baja:
+se protegen explícitamente cuando existe schema79. Una attestation aislada impide
+el borrado de la cuenta; su evidencia y el inventario de conservación permanecen.
+El test de contratos history conservaba la expectativa global schema78: se
+actualiza exactamente a la migración autorizada 79 y mantiene los cinco flags OFF.
+El recorder DDL PostgreSQL simula ahora pg_get_functiondef de la función E real
+para la derivación de contexto M79, conservando íntegros los checks de FKs,
+placeholders y SQLSTATE; no omite ninguna migración ni fabrica un guard vacío.
+Riesgo principal: transporte externo incierto y expiración operativa. Diagnóstico por
+binding/attempt/start/result/preflight UUID/hash; nunca respuestas libres o secretos.
+Rollback: pause/conservar/reparar/revalidar; downgrade79 sólo con F vacía. No borrar
+pruebas ni restaurar para deshacer una entrega committed. Cierre detalla pruebas frescas.
+
+
+## 2026-10-07 — Corrección de credential scan remoto E
+
+La rama E está publicada únicamente para revisión. Primera CI remota (run 37620132017): credential scan bloqueó antes de la suite general un SHA público de la base E en project-state. Se añade únicamente su excepción exacta por archivo/detector/huella, sin desactivar detectores ni aceptar hallazgos automáticamente. No cambia producto, SQL, migration78, fixture, workflow ni invariantes E. CI completa nueva desde cero pendiente; main intacto y política real provisional, cinco flags OFF, sin producción/QA/backups reales/providers/F.
+
+Archivos: .secrets.baseline, project-state y documentación de continuidad/QA. Riesgo: excepción limitada al ID Git público revisado; el resto del scanner sigue intacto. Diagnóstico: Hex High Entropy String en la base E. Rollback: revertir este commit en la rama E. Pruebas: scan y verdad documental se verifican antes de publicar; el cierre remoto completo permanece pendiente.
+
+## 2026-10-07 — Fase 1.10E local: CODE-VERIFIED PASS técnico
+
+[Orden E](architecture/FASE-1.10E-orden.md), [contrato v1](architecture/FINANCIAL-PRIVACY-EXPORT-RETENTION-v1.md),
+[ADR023](architecture/ADR-023-financial-privacy-export-retention.md) e
+[informe de cierre](architecture/FASE-1.10E-cierre.md) son la continuidad vigente.
+Los encabezados inferiores conservan historia. Rama local codex/phase-1-10e,
+base exacta autorizada; candidato sin publicar, no estado desplegado de main.
+
+financial_privacy separa contratos/catálogo/export/repositorio/retención/inventario/
+cierre/cliente/dispatch/restore. Migration78 aditiva: nueve tablas, contexto privado
+E, pool/conexión/gate/TX compartidos. Decimal/NUMERIC; binary64 legacy etiquetado
+como evidencia, nunca dinero exacto. No nueva autoridad IA ni efectos financieros.
+Export snapshot único, manifest verificable y subgrafo de cliente por FKs fuertes.
+Cierre formal conserva evidencia/bytes, invalida acceso local y exige pausa D previa.
+Tombstone cerrada deriva replay de scope/category; registro vigente obligatorio
+antes de servir restores. A sólo puede retirar los dos motivos E con prueba válida.
+
+QA: E SQLite50/PG62 PASS; todas las matrices PG618 PASS; integración history→B→D→
+export→pause→closure PASS en ambos motores. General completa: 2011 ejecutados,
+2006 PASS/2 skips/3 errores iniciales de fake DDL. Sólo se corrigió la respuesta
+pg_get_functiondef de la fixture; módulo plataforma completo repetido32 PASS.
+Cobertura final: 2009 casos PASS y 2 skips SQLite específicos de PG cubiertos allí.
+No se presenta como una única ejecución general limpia después de esa corrección.
+Ruff/Bandit/secret scan/dependency audit/JS9/migraciones/AST/documentation truth/
+enlaces PASS. Detalles y fallos corregidos se conservan en el informe.
+
+Política legal real PROVISIONAL: revisión profesional pendiente, sin plazos ni
+aprobación automática. Ningún piloto real usa una policy sintética como aprobada.
+Riesgos: export materializado en RAM, restores externos requieren protocolo,
+roles DB con DDL fuera de perímetro; cierre autorizado stale requiere revisión.
+Diagnóstico: hashes/UUIDs/receipts, sin PII en logs. Rollback78→77 sólo sin evidencia E;
+con evidencia falla cerrado, no borrarla. Cinco flags OFF. Sin push/merge/deploy/
+producción/QA real/backups reales/providers. F–H no autorizadas.
+
+## 2026-10-07 — Fixture PostgreSQL D con autenticación
+
+Run 37587241672: restore y credential scan PASS; los 35 casos D fallan en setup con no password supplied. Corrección exclusivamente de fixture en `tests/postgres_financial_activation_handoff.py`: contraseña aleatoria efímera para el login runtime y URL de los workers; identificador/literal SQL escapados por psycopg. Conserva NOSUPERUSER/NOCREATEDB/NOCREATEROLE/NOINHERIT/NOBYPASSRLS y prohibición de leer la clave. Sin cambio funcional, guard SQL, migración o workflow. Ruff completo PASS; CI completa nueva pendiente. Riesgo limitado a autenticación del cluster CI descartable; rollback por revert del commit de fixture en rama D. Sin producción, QA real, backups reales, providers, main, deploy ni E.
+
+## 2026-10-07 — Corrección de CI remota 1.10D
+
+Objetivo: corregir los dos fallos de la primera CI remota D (run 37586733490). `web/backups.py` reemplaza solo las semillas M77 del esquema de restauración desechable antes de cargar sus filas exactas; FKs y restricciones internas siguen activas. `.secrets.baseline` añade únicamente las huellas revisadas de tres IDs públicos de commits en project-state. No se cambia migración, guard SQL, workflow ni reglas de activación. Pruebas: backups 10/10 PASS (18,333 s), Ruff completo, Bandit dirigido y documentation truth con base HEAD PASS; CI completa nueva pendiente. Riesgo acotado al restaurador PostgreSQL; diagnóstico: PK duplicada de baseline/verifier. Rollback: revertir este commit solo en la rama D. Sin main, deploy, producción, QA real, backups reales, providers ni E.
+
+## 2026-10-06 — Fase 1.10D, cierre local CODE-VERIFIED PASS
+
+A/B/C CODE-VERIFIED PASS según la orden del titular.
+[Orden D](architecture/FASE-1.10D-orden.md), [contrato](architecture/FINANCIAL-ACTIVATION-HANDOFF-v1.md),
+[ADR022](architecture/ADR-022-activation-handoff-generations.md) y [cierre](architecture/FASE-1.10D-cierre.md)
+son la continuación vigente; los encabezados posteriores son históricos.
+D se trabaja únicamente en `codex/phase-1-10d`, sin push, merge ni despliegue.
+La migración candidata es aditiva respecto de las fuentes; las CHECK de lifecycle
+se amplían conservando las FKs y la evidencia histórica. Activación por tenant,
+generaciones, grants exactos y contexto ligado a operación/TX; Decimal/EUR,
+repositorios de dominio y conexión/gate/TX compartidos. Ninguna autoridad IA.
+Después de ever_enabled, flag OFF o pause no permite fallback financiero legacy.
+Pausa cancela operaciones pendientes y revoca mandatos; resume exige prueba D
+sin drift y otra generación. El corte mantiene certifiable al quedar handed_off.
+Borradores y preparación operativa siguen permitidos; transporte outbox se conserva.
+No nuevos endpoints ni cambios de UI; el control plane es interno.
+E/F/G/H no iniciadas; blockers de privacidad/export/provider siguen vigentes en A.
+Cinco flags OFF. Sin producción, restauración real, backups ni providers.
+D CODE-VERIFIED PASS local: criterios, resultados iniciales y retests se detallan
+en el informe de cierre enlazado. E/F/G/H no autorizadas ni iniciadas.
+
+
+## 2026-10-06 — Fase 1.10C: capacidades y captura fiscal local
+
+[Orden](architecture/FASE-1.10C-orden.md), [contrato](architecture/FINANCIAL-CAPABILITIES-FISCAL-CANCELLATION-v1.md), [ADR021](architecture/ADR-021-capabilities-fiscal-cancellation.md), [cierre](architecture/FASE-1.10C-cierre.md).
+
+Objetivo: registry/spec único, mapping cerrado y productor interno fiscal con
+Operations/B/writer existente/coverage/EE/result atómicos. Migration76 aditiva;
+solo conservación en db.py, matrices explícitas y fixture infraestructura75.
+PASS: C SQLite44/PG46, regresiones PG475 (total521), suite1919 (856.985s, 2 skips existentes), JS9, Ruff/Bandit/credential_scan/dependencias/verdad/enlaces1389/AST y veinte autoauditorías NO. PostgreSQL16.15 sintético detenido. No CI remota C (sin push).
+B CI final [37446339192](https://github.com/noesisstudio/noesis/actions/runs/37446339192)
+SUCCESS; A/B CODE-VERIFIED PASS y validadas. No providers/producción/QA real.
+Riesgo: source/config/cadena stale aborta; diagnosticar request/resolution hashes,
+coverage y result. Rollback76→75 solo sin evidencia; conservar outbox/result y
+reparar, nunca eliminar prueba para retroceder. Cinco flags OFF, D no iniciada.
+
+## 2026-10-06 — Corrección documental de CI de 1.10B
+
+La [CI 37445611012](https://github.com/noesisstudio/noesis/actions/runs/37445611012)
+detectó tres falsos positivos en la evidencia nueva de `project-state.json`:
+la clave del resultado del escáner y dos SHA públicos completos. Se renombra
+esa clave a `credential_scan` y se conservan los mismos commits mediante sus
+identificadores abreviados. Sin cambios de runtime, tests, workflow, baseline ni
+filtros. Validación: escáner completo y sus tests, verdad documental y diff;
+CI completa se repite en la misma rama. Riesgo limitado a representación de
+metadatos; diagnóstico por run enlazado, rollback revirtiendo esta corrección.
+Sin merge, despliegue, producción, QA real ni inicio de 1.10C.
+
+## 2026-10-06 — Fase 1.10B: antecedentes sin autoridad
+
+[Orden](architecture/FASE-1.10B-orden.md), [contrato](architecture/FINANCIAL-ANTECEDENTS-v1.md), [ADR020](architecture/ADR-020-financial-antecedents.md), [cierre](architecture/FASE-1.10B-cierre.md).
+
+Objetivo: evidencia durable de antecedentes historical/live por propósito, sin autoridad. Áreas: módulo financial_antecedents, migración75, matrices de compatibilidad, db.py solo conservación, tests y CI futura. Pruebas PASS: B SQLite47/PG52, PG previo423, suite1875 con dos skips existentes, Ruff/Bandit/secrets/dependencias/JS9/verdad/enlaces. Cierre técnico local; aceptación humana/revisión remota pendientes. Límites: sin proveedores/producción/QA real/activación. Riesgo: resolución stale no utilizable; diagnóstico: hashes/ref/proof/reasons y revalidación. Rollback de esquema vacío; evidencia durable impide bajar75.
+
+
+## 2026-10-05 — Fase 1.10A: evaluación sin activación
+
+[Orden](architecture/FASE-1.10A-orden.md), [contrato](architecture/FINANCIAL-READINESS-v1.md), [ADR019](architecture/ADR-019-financial-readiness.md), [cierre](architecture/FASE-1.10A-cierre.md), [plan](architecture/FASE-1.10-plan.md).
+
+Objetivo: implementar exclusivamente A en rama dedicada, sin publicación.
+Áreas: financial_activation, compatibilidad history, migration, retención db,
+tests SQLite/PG, CI y gobernanza. Sin dependencias nuevas ni edición de 63–73.
+Pruebas y estado final: informe enlazado. Límites: no producción/QA real/proveedores;
+1.9F mantiene PASS WITH LIMITATIONS. Riesgo: gate retenido durante escaneo; evidencia
+no autoriza activar y políticas privacy/export siguen pendientes.
+Diagnóstico: UUID, context/content/source hashes, reason/dependency proof.
+Rollback: revertir código manteniendo evidencia/esquema; downgrade solo si las
+tres tablas están vacías. Baja con evidencia conserva; no borrar para bajar.
+
+## 2026-10-05 — Fase1.9F: PASS WITH LIMITATIONS, solo QA
+
+[Orden](architecture/FASE-1.9F-orden.md), [cierre](architecture/FASE-1.9F-cierre.md) y [runbook](architecture/FASE-1.9F-runbook.md).
+
+Objetivo: exclusivamente rehearsal1.9F en QA y gobernanza heredable. Archivos: orden/cierre/runbook F, AGENTS, arquitectura/guía08, estado/pendientes/mapa/QA/decisiones/JSON. Sin cambios src/tests/schema/deps/flags. Riesgo: datos personales en copia privada y cobertura limitada. Diagnóstico/rollback: hashes y snapshots privados; detener/restaurar copia limpia, nunca reparar sources ni downgrade de evidencia. Ningún push/deploy productivo.
+
 ## 2026-10-05 — Cierre técnico1.9E: CI final PASS
 
 Objetivo: cerrar exclusivamente reconciliación histórica durable. Archivos de esta

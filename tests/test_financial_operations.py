@@ -16,7 +16,8 @@ class FinancialOperationsSQLite(OperationsContract, unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.settings = patch.multiple(config, DATABASE_URL="", DB_PATH=Path(self.temp.name) / "operations.db")
         self.settings.start()
-        migrations.upgrade()
+        # Contrato sintético anterior al último productor: no evade guards76.
+        migrations.upgrade(75)
         self.seed()
 
     def tearDown(self):

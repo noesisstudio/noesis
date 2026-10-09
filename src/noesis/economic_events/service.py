@@ -1,6 +1,7 @@
 """Incorporación de hechos: sin productores, cálculos, IA ni commit propio."""
 
 from datetime import datetime, timezone
+from contextlib import nullcontext
 import hashlib
 import json
 import re
@@ -114,9 +115,13 @@ class EconomicEvents:
         self.permissions._permission(self.session, principal, write=True, locking=True)
         from noesis.financial_history.fence import assert_writable
         assert_writable(self.session, self.business_id)
+        from noesis.financial_activation.runtime import require_context
+        activation = require_context(self.session, self.business_id, operation_uuid=kwargs.get('operation_uuid'))
         self.session.execute("SAVEPOINT economic_append")
         try:
-            result = self._append(principal, event, **kwargs)
+            from noesis.financial_activation.execution_context import event_context
+            with event_context(self.session, event) if activation is not None else nullcontext():
+                result = self._append(principal, event, **kwargs)
         except BaseException:
             self.session.execute("ROLLBACK TO SAVEPOINT economic_append")
             self.session.execute("RELEASE SAVEPOINT economic_append")

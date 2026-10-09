@@ -1,5 +1,100 @@
 # 06 · RGPD y seguridad
 
+## 2026-10-08 — Fase 1.10G-PREP local, sin piloto
+
+A–F CODE-VERIFIED PASS. F CI remota fresca [37743993745](https://github.com/noesisstudio/noesis/actions/runs/37743993745) PASS: suite general 2074/2072 PASS/2 skips/0 FAIL/ERROR, 2353.757 s; PostgreSQL687 y JS9 PASS. Esa prueba corresponde al SHA F, no es una nueva suite general de G-PREP.
+G-PREP calcula PilotReadinessReport v1 puro en financial_pilot, sin conexión/estado/persistencia ni migration. Reutiliza A Profile/C spec/F límites; refs documentales/sintéticas no acreditan realidad y READY no está habilitado. Perfil recomendado expense.confirm + expense.void + dependencia web, sin providers; cuenta/perfil aún no seleccionados. Policy REAL provisional, PRIVACY_NOT_READY conservado; cinco flags OFF. G-LIVE NO AUTORIZADO, H NO INICIADA.
+[Orden](../architecture/FASE-1.10G-prep-orden.md), [contrato](../architecture/FINANCIAL-PILOT-READINESS-v1.md), [checklist](../architecture/FINANCIAL-PILOT-CHECKLIST-v1.md), [runbook](../architecture/FINANCIAL-PILOT-RUNBOOK-v1.md), [cierre](../architecture/FASE-1.10G-prep-cierre.md).
+Rama local desde F exacta, no main/rebase/integración/push/deploy. Datos reales, QA, backups/providers/Railway no consultados. main divergente sólo eliminó sigue.md según orden; integración futura y CI fresca obligatorias. Guard D producción y recuperación con A original caducada requieren revisión posterior, no se eluden. Diagnóstico por report/context hash y reason cerrado; rollback sólo retirar estos archivos puros, ninguna DB que restaurar. Headers inferiores son historia.
+
+## 2026-10-07 — F CODE-VERIFIED PASS técnico local
+
+[Orden F](../architecture/FASE-1.10F-orden.md), [ADR024](../architecture/ADR-024-providers-integrated-preflight.md), [contrato](../architecture/FINANCIAL-PROVIDERS-PREFLIGHT-v1.md), [cierre](../architecture/FASE-1.10F-cierre.md). Registry único C; FinancialSession/gate/TX compartidos, sin lógica financiera grande en db.py. Attestations/preflight/attempts separados de autoridad/economía. HMAC de secretos, ninguna red en A/D. Post-handoff con binding explícito; UNKNOWN sin retry automático, pausa/cierre dominan. D sigue protegido en producción, cinco flags OFF y policy real provisional. Sólo fixtures sintéticos; sin push ni G–H.
+
+
+## 2026-10-07 — Fase 1.10E local, CODE-VERIFIED PASS técnico
+
+[Orden E](../architecture/FASE-1.10E-orden.md), [contrato](../architecture/FINANCIAL-PRIVACY-EXPORT-RETENTION-v1.md),
+[ADR023](../architecture/ADR-023-financial-privacy-export-retention.md), [cierre](../architecture/FASE-1.10E-cierre.md).
+Account/client HTTP conserva auth/tenant. Cierre no es cascade: exige policy aprobada y plan humano exacto; conserva evidencia. No plazos legales inventados.
+Migration78 aditiva, catálogo cerrado y snapshot completo sin límites silenciosos.
+Policy provisional no permite activación; revisión profesional real pendiente.
+Readiness nuevo sólo retira los dos motivos E con evidencia válida; A antigua intacta.
+Export/client/cierre conserva EE/Operations/history/A–D y documentos. Restore requiere
+registro vigente y reaplica antes de servir. E no borra bytes ni consulta QA/backups reales.
+Cinco flags OFF. No push/merge/deploy/providers/F–H. Resultados finales en cierre E.
+
+## 2026-10-06 — Fase 1.10D, cierre local CODE-VERIFIED PASS
+
+A/B/C CODE-VERIFIED PASS según la orden del titular.
+[Orden D](../architecture/FASE-1.10D-orden.md), [contrato](../architecture/FINANCIAL-ACTIVATION-HANDOFF-v1.md),
+[ADR022](../architecture/ADR-022-activation-handoff-generations.md) y [cierre](../architecture/FASE-1.10D-cierre.md)
+son la continuación vigente; los encabezados posteriores son históricos.
+D se trabaja únicamente en `codex/phase-1-10d`, sin push, merge ni despliegue.
+La migración candidata es aditiva respecto de las fuentes; las CHECK de lifecycle
+se amplían conservando las FKs y la evidencia histórica. Activación por tenant,
+generaciones, grants exactos y contexto ligado a operación/TX; Decimal/EUR,
+repositorios de dominio y conexión/gate/TX compartidos. Ninguna autoridad IA.
+Después de ever_enabled, flag OFF o pause no permite fallback financiero legacy.
+Pausa cancela operaciones pendientes y revoca mandatos; resume exige prueba D
+sin drift y otra generación. El corte mantiene certifiable al quedar handed_off.
+Borradores y preparación operativa siguen permitidos; transporte outbox se conserva.
+No nuevos endpoints ni cambios de UI; el control plane es interno.
+E/F/G/H no iniciadas; blockers de privacidad/export/provider siguen vigentes en A.
+Cinco flags OFF. Sin producción, restauración real, backups ni providers.
+D CODE-VERIFIED PASS local: criterios, resultados iniciales y retests se detallan
+en el informe de cierre enlazado. E/F/G/H no autorizadas ni iniciadas.
+
+
+## 2026-10-06 — Alcance C: registry y anulación fiscal interna
+
+[Orden](../architecture/FASE-1.10C-orden.md), [contrato](../architecture/FINANCIAL-CAPABILITIES-FISCAL-CANCELLATION-v1.md), [ADR021](../architecture/ADR-021-capabilities-fiscal-cancellation.md), [cierre](../architecture/FASE-1.10C-cierre.md).
+
+Zona nueva: src/noesis/financial_activation/capabilities.py y
+src/noesis/fiscal_cancellation_capture/{service,schema}.py. A/B CODE-VERIFIED PASS.
+Monolito modular y repositorios especializados sobre FinancialSession/gate/TX
+compartidos. Registry único de A con spec v1 y once mappings cerrados, sin
+enforcement/routing. FiscalCancellationCapture interno reutiliza writer fiscal:
+resolución B durable live/verified/resolved, revalidación every_use, autoridad
+humana exacta, registro/outbox pendiente/coverage/EE evidence-only/result atómicos.
+Decimal/EUR, total contextual del EE verificado, amount=None, snapshot real.
+No nueva lógica grande en db.py ni autoridad IA. Migration76 aditiva protegida;
+tuplas explícitas A/B/history. No provider I/O, activación, generation, handoff,
+fence release o cambios de cinco flags OFF. Historical v2, observed_state,
+mandates y rectificativas negativas bloqueadas por B se conservan.
+No routing público ni 1.10D–H. Solo fixtures sintéticos, no producción/QA real/backups.
+Revisar callbacks prestados, hashes/request, source revision, FKs/guards,
+exact money, SQL adversarial, rollback/recovery, ausencia de provider I/O y snapshots.
+La conservación de coverage impide baja destructiva del negocio; no hay nuevo
+tratamiento/export/privacy productivo aún. Límites completos en contrato/cierre.
+
+## 2026-10-06 — Fase 1.10B: evidencia mínima por tenant
+
+[Orden](../architecture/FASE-1.10B-orden.md), [ADR020](../architecture/ADR-020-financial-antecedents.md), [contrato](../architecture/FINANCIAL-ANTECEDENTS-v1.md), [cierre](../architecture/FASE-1.10B-cierre.md).
+
+Encabezados inferiores históricos. Antecedentes solo por identidad fuerte y
+business; refs/FKs compuestas, actor/sesión actuales, AccessDenied uniforme para
+referencia inexistente o ajena. Permisos resolve/read no son financial.authorize,
+mandate ni historical_unknown. Guardar refs/hashes/known-unknown, sin duplicar
+payload completo ni PII libre. Revalidar cada uso; stale bloquea, SQL inmutable.
+SQL privilegiado que deshabilita guards queda fuera del threat model. Aún no
+integrado en export de cliente ni rutas: no levantar blockers de privacidad de A.
+Sin proveedores/producción/QA real; cinco flags OFF e IA sin autoridad; no C–H.
+
+## 2026-10-05 — Fase 1.10A: evaluación sin activación
+
+[Orden](../architecture/FASE-1.10A-orden.md), [contrato](../architecture/FINANCIAL-READINESS-v1.md), [ADR019](../architecture/ADR-019-financial-readiness.md), [cierre](../architecture/FASE-1.10A-cierre.md), [plan](../architecture/FASE-1.10-plan.md).
+
+Readiness revalida usuario activo/sesión/suscripción y permiso específico
+financial.readiness.evaluate; no concede autoridad financiera ni activación.
+Evidencia sin PII literal: huellas de configuración/fuentes, referencias y razones
+cerradas. Tenant en cada SELECT/write/FK; evaluación propia en read.
+Final y capabilities append-only por SQL; baja física bloqueada si existe evidencia,
+incluida en inventario de conservación. No ampliar export financiero por un stub:
+PRIVACY_NOT_READY/EXPORT_NOT_READY bloquean comandos hasta E futura.
+Datos reales QA no se consultan ni destruyen. Política formal QA/export/retención
+productiva permanece pendiente; hashes no son firmas ni cifrado. Sin provider I/O.
+
 ## 2026-10-05 — Fase1.9E: reconciliación histórica implementada y validada
 
 [Orden](../architecture/FASE-1.9E-orden.md), [ADR018](../architecture/ADR-018-financial-history-reconciliation.md),

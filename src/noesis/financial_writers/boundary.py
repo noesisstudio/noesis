@@ -316,6 +316,8 @@ def _run(
     lock_business(conn, business_id)
     from noesis.financial_history.fence import assert_writable
     assert_writable(conn, business_id)
+    from noesis.financial_activation.runtime import require_writer
+    require_writer(conn, business_id, mutation.__name__)
     # Capturar la entrada antes de cualquier normalizador legacy.
     inputs = {k: v for k, v in bound.arguments.items() if k != "conn"}
 

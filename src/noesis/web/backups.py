@@ -88,6 +88,10 @@ def _create_sqlite_backup() -> tuple[Path, dict[str, int]] | None:
 
 def _verify_sqlite_backup(path: Path, origin_counts: dict[str, int]) -> None:
     """Restaura la copia en otro archivo y valida esquema, integridad y recuentos."""
+    from ..core.persistence import FinancialSession
+    from ..financial_privacy.restore import restore_bundle, prepare_restored_database
+    with db.get_conn() as live:
+        suppressions = restore_bundle(FinancialSession(live))
     with tempfile.TemporaryDirectory(prefix="noesis-backup-verify-") as temporary:
         restored_path = Path(temporary) / "restored.db"
         with (
@@ -107,6 +111,12 @@ def _verify_sqlite_backup(path: Path, origin_counts: dict[str, int]) -> None:
                     f"Esquema restaurado {version}/{migrations.LATEST_VERSION}"
                 )
             restored_counts = _sqlite_counts(restored)
+            restored.row_factory = sqlite3.Row
+            wrapped = db.Connection(restored, "sqlite")
+            wrapped.execute_exact("PRAGMA foreign_keys=ON")
+            wrapped.execute_exact("BEGIN IMMEDIATE")
+            prepare_restored_database(FinancialSession(wrapped), suppressions)
+            wrapped.commit()
     if restored_counts != origin_counts:
         raise RuntimeError(
             f"Los recuentos restaurados no cuadran: "
@@ -164,7 +174,7 @@ def _postgres_table_order(conn) -> list[str]:
     ]
     dependencies = {table: set() for table in tables}
     rows = conn.execute(
-        "SELECT tc.table_name AS child, ccu.table_name AS parent "
+        "SELECT tc.table_name AS child, ccu.table_name AS parent, tc.constraint_name, tc.initially_deferred "
         "FROM information_schema.table_constraints tc "
         "JOIN information_schema.constraint_column_usage ccu "
         "ON ccu.constraint_catalog=tc.constraint_catalog "
@@ -175,6 +185,17 @@ def _postgres_table_order(conn) -> list[str]:
         "AND ccu.table_schema=current_schema()"
     ).fetchall()
     for row in rows:
+        # Operation/authorization ya forman un ciclo diferido desde M63.
+        # Sólo las FKs inmediatas imponen el orden; las otras siguen validadas
+        # por PostgreSQL al confirmar la restauración completa.
+        if row['initially_deferred'] == 'YES':
+            continue
+        # M79: observed referencia al intento y el intento a su attestation.
+        # Esa única FK es diferible y se comprueba al terminar la restauración.
+        if (row['constraint_name'] == 'fp_observed_attempt_fk'
+                and row['child'] == 'financial_provider_attestations'
+                and row['parent'] == 'financial_provider_dispatch_attempts'):
+            continue
         if row["child"] in dependencies and row["parent"] != row["child"]:
             dependencies[row["child"]].add(row["parent"])
 
@@ -339,6 +360,9 @@ def _reset_postgres_sequences(raw) -> None:
 def _restore_postgres_dump(raw, path: Path) -> tuple[dict, list[str]]:
     wrapped = db.Connection(raw, "postgres")
     migrations.upgrade_connection(wrapped)
+    if migrations.current_version_connection(wrapped) == 79:
+        # No suspender FKs. La única relación circular F se difiere hasta commit.
+        raw.execute('SET CONSTRAINTS fp_observed_attempt_fk DEFERRED')
     tables: list[str] = []
     current_table = ""
     columns: list[str] = []
@@ -364,8 +388,17 @@ def _restore_postgres_dump(raw, path: Path) -> tuple[dict, list[str]]:
                 current_table = record["name"]
                 columns = record["columns"]
                 tables.append(current_table)
-                if current_table == "schema_migrations":
-                    raw.execute("DELETE FROM schema_migrations")
+                # M77 siembra estas dos tablas al crear el esquema desechable.
+                # Reemplazar solo esas semillas con las filas exactas del dump;
+                # los triggers USER ya están suspendidos y las FKs siguen activas.
+                if current_table in (
+                    "schema_migrations",
+                    "financial_activation_schema_baseline",
+                    "financial_execution_verifier_key",
+                ):
+                    raw.execute(
+                        sql.SQL("DELETE FROM {}").format(sql.Identifier(current_table))
+                    )
             elif record["type"] == "row":
                 pending_rows.append(
                     [_decode_value(value) for value in record["values"]]
@@ -374,12 +407,19 @@ def _restore_postgres_dump(raw, path: Path) -> tuple[dict, list[str]]:
                     flush()
         flush()
     _reset_postgres_sequences(raw)
+    # Comprobar los ciclos diferidos antes de reactivar los triggers USER:
+    # PostgreSQL no admite ALTER TABLE si quedan eventos FK pendientes.
+    raw.execute('SET CONSTRAINTS ALL IMMEDIATE')
     _set_postgres_user_triggers(raw, expected_tables, enabled=True)
     return header, tables
 
 
 def _verify_postgres_backup(path: Path, origin_counts: dict[str, int]) -> None:
     """Restaura en un esquema desechable de la misma instancia y luego lo elimina."""
+    from ..core.persistence import FinancialSession
+    from ..financial_privacy.restore import restore_bundle, prepare_restored_database
+    with db.get_conn() as live:
+        suppressions = restore_bundle(FinancialSession(live))
     if psycopg is None:
         raise RuntimeError("psycopg no está instalado.")
     schema = f"noesis_backup_verify_{uuid.uuid4().hex}"
@@ -427,6 +467,7 @@ def _verify_postgres_backup(path: Path, origin_counts: dict[str, int]) -> None:
                     f"Los recuentos restaurados no cuadran: "
                     f"{restored_counts} != {origin_counts}"
                 )
+            prepare_restored_database(FinancialSession(wrapped), suppressions)
     finally:
         with psycopg.connect(config.DATABASE_URL, autocommit=True) as control:
             control.execute(

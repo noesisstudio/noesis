@@ -550,12 +550,12 @@ class FinancialHistoryContractsTest(unittest.TestCase):
                     self.assertNotIn(node.module, ("noesis.db", "noesis.financial_writers", "noesis.invoice_capture",
                         "noesis.payment_capture", "noesis.purchasing_capture", "noesis.financial_operations.service"))
 
-    def test_five_flags_and_schema_unchanged(self):
+    def test_five_flags_off_and_authorized_schema79(self):
         from noesis import config, migrations
         for name in ("FINANCIAL_CORE_ENABLED", "LEDGER_REPORTING_ENABLED", "OPEN_ITEMS_ENABLED",
                      "NEW_TAX_ENGINE_ENABLED", "NEW_BANK_RECONCILIATION_ENABLED"):
             self.assertFalse(getattr(config, name))
-        self.assertEqual(migrations.LATEST_VERSION, 73)
+        self.assertEqual(migrations.LATEST_VERSION, 79)
 
 
 if __name__ == "__main__":

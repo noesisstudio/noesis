@@ -700,6 +700,7 @@ def prepare_invoice_delivery(
                 invoice["number"], amount, pdf_url or config.BASE_URL,
             ],
             business_id=business_id,
+            financial_invoice_id=factura_id,
             idempotency_key=f"invoice:{business_id}:{factura_id}:whatsapp:{day}",
         )
         queued = True

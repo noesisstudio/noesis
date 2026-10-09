@@ -1,13 +1,13 @@
 {
-  "state_date": "2026-10-05",
+  "state_date": "2026-10-08",
   "recovery_candidate_2026_09_25": "Rama codex/conversation-recovery-validation, codigo 9357a39. Recuperacion explicita de routing_changed con administrador, auditoria previa y orden conservado. processing_failed/interrupted siguen bloqueados. CI PostgreSQL 36131891167 verde: 36 rutas, migraciones, codigo anterior, rollback, concurrencia y recuperacion. Suite general aun ejecutandose al registrar; main/Meta/produccion intactos.",
   "ingress_diagnostics_candidate_2026_09_24": "CLI por negocio, solo lectura sin payload/telefonos. Saturacion cuenta eventos nuevos, no duplicados. 25 pruebas dirigidas correctas (14.243 s), Ruff correcto. Sin publicar. Resolucion segura, retencion, PostgreSQL y Meta pendientes antes de activar.",
   "conversation_corrections_candidate_2026_09_24": "Local, no publicado: campos compuestos sobre propuestas existentes, consultas fiscales sin coincidencias parciales, concepto e IVA por linea. 70 regresiones dirigidas y suite completa local de 1197 tests correctas (1012.404 s); ultimo ajuste de interrogacion revalidado con 6 casos. Ruff, secretos y verdad documental correctos. Sin migracion, dependencias, proveedores ni cambios de flags. Meta real y memoria por actor pendientes.",
   "reliability_hotfix_2026_09_24": "df113b1: fechas compatibles PostgreSQL, correcciones multilínea sin pérdida de detalle y rollback 58 aditivo bloqueado ante borradores incompletos. CI 36012914685 verde: 1189 tests en 352.518 s, 36 rutas PostgreSQL, rollback y seguridad. Sin cambios de flags ni proveedores.",
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
-  "schema_version": 73,
+  "schema_version": 79,
   "conversation_transport_candidate_2026_09_24": "Local no publicado: esquemas 59/60, memoria por actor y transporte previo a vinculacion. NOESIS_CONVERSATION_ISOLATION_ENABLED y NOESIS_WHATSAPP_INBOX_ENABLED false por defecto. FIFO, acuse tras commit, incidencias sin replay automatico. 96 pruebas dirigidas correctas (71.801 s) y 460 backend/webhook correctas (397.517 s); Ruff, secretos y verdad documental correctos. Suite completa 1197 corresponde al bloque previo. Requiere CI PostgreSQL, procedimiento de revision/retencion y Meta real antes de activar.",
-  "verified_test_count": 1800,
+  "verified_test_count": 2144,
   "whatsapp_rounds_2026_10_01": "Producción hasta c52d3e2: presupuestos, citas (cancelar/mover), facturas de varias líneas, gasto a obra, abrir obra, ranking de clientes, pendientes, resumen semanal y abreviaturas de móvil por WhatsApp, todo con tarjeta de SÍ. Probado en real por WhatsApp Web (descartado con NO) y en simulador local. cryptography 50. Voz real sin probar.",
   "release_gate_2026_09_25": "CI 36131891167 completamente verde sobre 9357a39: 1223 tests en 555.019 s, seguridad, migraciones SQLite, 36 rutas PostgreSQL y rollback/compatibilidad/recuperacion. Cambios posteriores solo documentales. Founder autoriza publicar; mantener flags nuevos apagados y Meta intacto. Verificar ready tras despliegue.",
   "validation_2026_09_21": "CI 35578171354 verde sobre 1dc65aa1a79a6bcacfd1057b1b2afd317d7734e5: 974 pruebas (402.446 s), seguridad, Node, migraciones SQLite y humos PostgreSQL con compatibilidad anterior/rollback. Railway b88619b7-6da0-4b68-83ab-fec3194a9897 SUCCESS; health/ready verifican release 1dc65aa1a79a y esquema 56. Cierre documental sin cambios de runtime.",
@@ -192,15 +192,15 @@
   ],
   "admin_workspace_release": "seven_departments_scoped_monthly_api_usage_owner_phone_search_mobile_disclosure_explicit_metric_sources_refresh_no_schema_changes_deployment_verification_after_push",
   "financial_core": {
-    "authorized_phase": "1.9E",
-    "status": "phase1_9E_complete_PASS_flags_OFF_no1_9F",
+    "authorized_phase": "1.10G-VERIFY LOCAL",
+    "status": "phase1_10G_VERIFY_CODE_VERIFIED_PASS_local_flags_OFF_no_push_no_G_LIVE_H",
     "next_phase_authorized": false,
     "governance": "docs/architecture/README.md",
-    "closure": "docs/architecture/FASE-1.9E-cierre.md",
-    "schema_changed": true,
+    "closure": "docs/architecture/FASE-1.10G-verify-cierre.md",
+    "schema_changed": false,
     "operational_events_are_economic_events": false,
     "money_contract": "Decimal; EUR HALF_UP; PostgreSQL NUMERIC; SQLite canonical TEXT; legacy unchanged",
-    "persistence": "InvoiceCapture, PaymentCapture, BankCapture, SupplierInvoiceCapture and ExpenseCapture: borrowed writers, mandatory immutable domain coverage, events and durable result in shared transaction",
+    "persistence": "InvoiceCapture, PaymentCapture, BankCapture, SupplierInvoiceCapture, ExpenseCapture and FiscalCancellationCapture: borrowed writers, mandatory immutable domain coverage, events and durable result in shared transaction",
     "flags_default": {
       "NOESIS_FINANCIAL_CORE_ENABLED": false,
       "NOESIS_LEDGER_REPORTING_ENABLED": false,
@@ -217,9 +217,7 @@
       "tax_ledger",
       "new_reporting",
       "posting",
-      "invoice.fiscal_cancellation_registered_producer",
       "financial_activation",
-      "historical_reconciliation",
       "invoice_v2_historical_line_raw",
       "historical_eligible_manifest"
     ],
@@ -261,7 +259,8 @@
         "supplier_invoice.corrected",
         "supplier_invoice.voided",
         "expense.confirmed",
-        "expense.voided"
+        "expense.voided",
+        "invoice.fiscal_cancellation_registered"
       ],
       "producer_payload_versions": {
         "invoice.issued": 2,
@@ -273,7 +272,8 @@
         "supplier_invoice.corrected": 1,
         "supplier_invoice.voided": 1,
         "expense.confirmed": 1,
-        "expense.voided": 1
+        "expense.voided": 1,
+        "invoice.fiscal_cancellation_registered": 1
       }
     },
     "phase1_1_validation": {
@@ -1100,6 +1100,1199 @@
         "deploy_verified": false,
         "closure_addenda_only_documentation": true
       }
+    },
+    "phase1_9F": {
+      "result": "PASS WITH LIMITATIONS",
+      "technical_rehearsal_completed": true,
+      "user_acceptance_pending": false,
+      "runtime_code": "acff183",
+      "order": "docs/architecture/FASE-1.9F-orden.md",
+      "closure": "docs/architecture/FASE-1.9F-cierre.md",
+      "runbook": "docs/architecture/FASE-1.9F-runbook.md",
+      "schema_initial": 73,
+      "schema_final": 73,
+      "migrations_applied": 0,
+      "engine": "PostgreSQL18.6 local WSL2 Noesis19FQA",
+      "production_connections_during_rehearsal": 0,
+      "outbound_application_connections": 0,
+      "application_code_changed": false,
+      "flags_off": true,
+      "cluster_stopped": true,
+      "fences_QA_preserved": true,
+      "clean_runs": 2,
+      "diagnostic_businesses_per_run": 5,
+      "cut_import_reconcile_businesses_per_run": 4,
+      "classification": {
+        "A": 0,
+        "B": 129,
+        "C": 29,
+        "D": 1
+      },
+      "candidates": 0,
+      "events_operations_created": 0,
+      "positive_import_path_validated": false,
+      "legacy_tables_hashes_unchanged": 95,
+      "item_retries": 105,
+      "duplicates": 0,
+      "reconciliation_results": {
+        "BLOCKED": 3,
+        "PASS_empty_control": 1
+      },
+      "largest_items": 64,
+      "maximum_E_gate_seconds": 1.295369,
+      "criteria_total": 41,
+      "criteria_fail": 0,
+      "criteria_NA": 3,
+      "criteria_with_limits": true,
+      "autoaudit_questions": 20,
+      "limits": [
+        "no positive candidates",
+        "no bank/fiscal/rectification data",
+        "small dataset",
+        "customer historical provenance unconfirmed",
+        "no scale SLO",
+        "invoice historical v2 remains blocked"
+      ],
+      "next_phase_authorized": false,
+      "deployment_changed": false,
+      "private_data_in_git": false,
+      "gates": {
+        "ruff": true,
+        "project_truth": true,
+        "secrets_tracked_and_new_docs": true,
+        "local_links_checked": 440,
+        "local_links_broken": 0,
+        "harness_syntax": true,
+        "runtime_unchanged": true
+      }
+    },
+    "phase1_9_technical_closure": {
+      "result": "PASS WITH LIMITATIONS",
+      "human_design_order_accepts_closure": true,
+      "invoice_historical_v2_supported": false,
+      "positive_real_import_validated": false
+    },
+    "phase1_10A": {
+      "result": "CODE-VERIFIED PASS",
+      "branch": "codex/phase-1-10a",
+      "merged": false,
+      "pushed": true,
+      "schema": 74,
+      "order": "docs/architecture/FASE-1.10A-orden.md",
+      "contract": "docs/architecture/FINANCIAL-READINESS-v1.md",
+      "adr": "docs/architecture/ADR-019-financial-readiness.md",
+      "closure": "docs/architecture/FASE-1.10A-cierre.md",
+      "capability_catalog_version": 1,
+      "capabilities": 15,
+      "profile_version": 1,
+      "evaluation_version": 1,
+      "policy_version": 1,
+      "control_states": [
+        "off",
+        "validating"
+      ],
+      "activation_generation": 0,
+      "ever_enabled": false,
+      "flags_off": true,
+      "runtime_routing_changed": false,
+      "production_access": false,
+      "real_QA_access": false,
+      "partial_can_be_ready": false,
+      "financial_commands_eligible": false,
+      "provider_IO": false,
+      "new_operations_events": false,
+      "history_fence_released": false,
+      "next_phase_authorized": false,
+      "technical_closure_completed": true,
+      "user_acceptance_pending": false,
+      "plan": "docs/architecture/FASE-1.10-plan.md",
+      "permission": "financial.readiness.evaluate",
+      "max_items": 64,
+      "ttl_seconds": 300,
+      "postgres_synthetic_cluster_stopped": true,
+      "validation": {
+        "sqlite_specific_with_migration": 28,
+        "postgres_specific_with_migration_concurrency": 29,
+        "postgres_related_regressions": 410,
+        "full_suite": 1828,
+        "full_suite_seconds": 2093.223,
+        "full_suite_skips": 2,
+        "full_suite_failures": 0,
+        "full_suite_errors": 0,
+        "frontend_js": 9,
+        "ruff": true,
+        "bandit_CI_threshold": true,
+        "pip_audit": true,
+        "secrets": true,
+        "project_truth": true,
+        "local_links": 623,
+        "broken_links": 0,
+        "legacy_tables_snapshots_unchanged": true,
+        "previous_migration_functions_unchanged": true,
+        "sqlite_74_0_74": true,
+        "postgres_74_73_74": true,
+        "postgres_full_downgrade_zero": "preexisting_bank_reconciliation_DROP_TRIGGER_without_ON_out_of_scope",
+        "CI_remote_executed": true,
+        "autoaudit_questions": 20,
+        "criteria_PASS": 18,
+        "criteria_FAIL": 0,
+        "CI_run_id": 37375367370,
+        "CI_result": "success"
+      }
+    },
+    "phase1_10B": {
+      "result": "CODE-VERIFIED PASS",
+      "branch": "codex/phase-1-10b",
+      "schema": 75,
+      "merged": false,
+      "pushed": true,
+      "order": "docs/architecture/FASE-1.10B-orden.md",
+      "contract": "docs/architecture/FINANCIAL-ANTECEDENTS-v1.md",
+      "adr": "docs/architecture/ADR-020-financial-antecedents.md",
+      "closure": "docs/architecture/FASE-1.10B-cierre.md",
+      "flags_off": true,
+      "production_access": false,
+      "real_QA_access": false,
+      "activation_changed": false,
+      "history_fence_released": false,
+      "routing_changed": false,
+      "new_operations_events": false,
+      "next_phase_authorized": false,
+      "user_acceptance_pending": false,
+      "revalidation": "every_use",
+      "resolution_version": 1,
+      "purposes": 8,
+      "reasons": 18,
+      "validation": {
+        "B_SQLite": {
+          "result": "PASS",
+          "tests": 47,
+          "seconds": 98.71
+        },
+        "B_PostgreSQL": {
+          "result": "PASS",
+          "tests": 52,
+          "seconds": 33.367
+        },
+        "PostgreSQL_regressions": {
+          "result": "PASS",
+          "tests": 423
+        },
+        "PostgreSQL_total_tests": 475,
+        "PostgreSQL_version": "16.15",
+        "SQLite_version": "3.45.1",
+        "full_suite": {
+          "result": "PASS",
+          "tests": 1875,
+          "skipped": 2,
+          "seconds": 2596.044,
+          "failures": 0,
+          "errors": 0
+        },
+        "ruff": "PASS",
+        "bandit": "PASS",
+        "credential_scan": "PASS",
+        "dependency_audit": "PASS_no_known_vulnerabilities_local_package_skipped",
+        "javascript_tests": 9,
+        "links_checked": 1321,
+        "broken_links": 0,
+        "migration_75_cycle_both": "PASS",
+        "SQLite_75_0_75": "PASS",
+        "preexisting_migrations_AST_unchanged": "PASS",
+        "CI_remote_executed": true,
+        "production_or_real_QA_access": false,
+        "documentation_truth": "PASS",
+        "synthetic_backups_outside_git": true,
+        "main_local_unchanged": "e95c19b",
+        "main_remote_unchanged": "acff183",
+        "autoaudit_questions": 20,
+        "autoaudit_result": "PASS",
+        "CI_run_id": 37446339192,
+        "CI_result": "success"
+      },
+      "postgres_synthetic_cluster_stopped": true
+    },
+    "phase1_10C": {
+      "result": "PASS_LOCAL_GATES_PENDING_HUMAN_ACCEPTANCE",
+      "branch": "codex/phase-1-10c",
+      "schema": 76,
+      "base_commit": "8eb18db",
+      "merged": false,
+      "pushed": false,
+      "deployed": false,
+      "order": "docs/architecture/FASE-1.10C-orden.md",
+      "contract": "docs/architecture/FINANCIAL-CAPABILITIES-FISCAL-CANCELLATION-v1.md",
+      "adr": "docs/architecture/ADR-021-capabilities-fiscal-cancellation.md",
+      "closure": "docs/architecture/FASE-1.10C-cierre.md",
+      "registry_version": 1,
+      "capabilities": 15,
+      "financial_commands_mapped": 11,
+      "producer": "fiscal_cancellation_capture.FiscalCancellationCapture",
+      "amount": null,
+      "currency": "EUR",
+      "original_total_source": "verified_original_event_decimal",
+      "event_version": 1,
+      "event_origin": "live",
+      "event_relation": "evidence_for",
+      "authorization": "human_confirmation_only",
+      "resolution_revalidation": "every_new_use",
+      "flags_off": true,
+      "activation_changed": false,
+      "history_fence_released": false,
+      "activation_generation": 0,
+      "ever_enabled": false,
+      "runtime_routing_changed": false,
+      "provider_IO": false,
+      "production_access": false,
+      "real_QA_access": false,
+      "real_backup_access": false,
+      "next_phase_authorized": false,
+      "phase1_10D_started": false,
+      "historical_invoice_v2_supported": false,
+      "negative_rectification_blocked_by_B": true,
+      "user_acceptance_pending": true,
+      "validation": {
+        "C_SQLite": {
+          "result": "PASS",
+          "tests": 44,
+          "seconds": 105.505
+        },
+        "C_PostgreSQL": {
+          "result": "PASS",
+          "tests": 46,
+          "seconds": 76.05
+        },
+        "PostgreSQL_regressions": {
+          "result": "PASS",
+          "tests": 475,
+          "seconds": 478.483
+        },
+        "PostgreSQL_total_tests": 521,
+        "PostgreSQL_version": "16.15",
+        "SQLite_version": "3.45.1",
+        "Python_version": "3.12.3",
+        "full_suite": {
+          "result": "PASS",
+          "tests": 1919,
+          "seconds": 856.985,
+          "skipped": 2,
+          "failures": 0,
+          "errors": 0
+        },
+        "ruff": "PASS",
+        "bandit_CI_threshold": "PASS",
+        "credential_scan": "PASS",
+        "dependency_audit": "PASS_no_known_vulnerabilities_local_package_skipped",
+        "javascript_tests": 9,
+        "local_links_checked": 1389,
+        "broken_links": 0,
+        "documentation_truth": "PASS",
+        "previous_migrations_1_75_AST": "PASS",
+        "protected_writers_events_verifactu_config_files_unchanged": 20,
+        "SQLite_76_75_76": "PASS",
+        "SQLite_76_0_76": "PASS",
+        "PostgreSQL_76_75_76": "PASS",
+        "PostgreSQL_migration_smoke": "PASS",
+        "PostgreSQL_HTTP_routes": 36,
+        "PostgreSQL_legacy_code53_on76": "PASS",
+        "PostgreSQL_release_privacy_rollback": "PASS",
+        "synthetic_backup_restore": "PASS_outside_git",
+        "provider_IO_calls": 0,
+        "excluded_effects_snapshots_unchanged": "PASS",
+        "A_evaluation_bytes_hashes_unchanged": "PASS",
+        "real_process_crash_points": 7,
+        "exception_rollback_points_both": 6,
+        "main_local_unchanged": "e95c19b",
+        "origin_main_local_reference_unchanged": "acff183",
+        "CI_remote_executed": false,
+        "autoaudit_questions": 20,
+        "autoaudit_dangerous_answers": "NO",
+        "full_suite_mode": "unittest_discover_all_cases_partition_by_index_no_exclusions",
+        "full_suite_shards": [
+          {
+            "shard": 0,
+            "discovered": 1919,
+            "tests": 480,
+            "skipped": 1,
+            "failures": 0,
+            "errors": 0,
+            "successful": true
+          },
+          {
+            "shard": 1,
+            "discovered": 1919,
+            "tests": 480,
+            "skipped": 0,
+            "failures": 0,
+            "errors": 0,
+            "successful": true
+          },
+          {
+            "shard": 2,
+            "discovered": 1919,
+            "tests": 480,
+            "skipped": 0,
+            "failures": 0,
+            "errors": 0,
+            "successful": true
+          },
+          {
+            "shard": 3,
+            "discovered": 1919,
+            "tests": 479,
+            "skipped": 1,
+            "failures": 0,
+            "errors": 0,
+            "successful": true
+          }
+        ],
+        "initial_full_suite_static_SQL_spacing_failure_fixed": true,
+        "PostgreSQL_SQLSTATE_static_retest": {
+          "tests": 3,
+          "result": "PASS"
+        },
+        "criteria_PASS": 10,
+        "criteria_FAIL": 0,
+        "autoaudit_result": "PASS"
+      },
+      "postgres_synthetic_cluster_stopped": true,
+      "status": "CODE-VERIFIED PASS; aceptada por orden D",
+      "remote_review_ci": {
+        "run_id": 37470621922,
+        "url": "https://github.com/noesisstudio/noesis/actions/runs/37470621922",
+        "general_tests": 1919,
+        "postgres_financial_tests": 521,
+        "jobs": "success"
+      }
+    },
+    "phase1_10D": {
+      "status": "CODE-VERIFIED PASS local; independent review pending",
+      "branch": "codex/phase-1-10d",
+      "base": "0e99db609b1f7ad21996b0eb9c48d95366913f4a",
+      "schema": 77,
+      "order": "docs/architecture/FASE-1.10D-orden.md",
+      "contract": "docs/architecture/FINANCIAL-ACTIVATION-HANDOFF-v1.md",
+      "adr": "docs/architecture/ADR-022-activation-handoff-generations.md",
+      "closure": "docs/architecture/FASE-1.10D-cierre.md",
+      "flags": "all five OFF",
+      "real_access": false,
+      "push": false,
+      "phase1_10E_started": false,
+      "complete_local": true,
+      "criteria_PASS": 12,
+      "criteria_FAIL": 0,
+      "autoaudit_dangerous_answers": "30 NO",
+      "validation": {
+        "general": {
+          "executed": 1940,
+          "initial_PASS": 1932,
+          "skipped": 2,
+          "initial_failures": 2,
+          "initial_errors": 4,
+          "initial_shards": [
+            {
+              "shard": 0,
+              "discovered": 1940,
+              "tests": 485,
+              "failures": 1,
+              "errors": 2,
+              "skipped": 1,
+              "successful": false,
+              "seconds": 1422.614
+            },
+            {
+              "shard": 1,
+              "discovered": 1940,
+              "tests": 485,
+              "failures": 1,
+              "errors": 1,
+              "skipped": 1,
+              "successful": false,
+              "seconds": 1208.236
+            },
+            {
+              "shard": 2,
+              "discovered": 1940,
+              "tests": 485,
+              "failures": 0,
+              "errors": 1,
+              "skipped": 0,
+              "successful": false,
+              "seconds": 1383.154
+            },
+            {
+              "shard": 3,
+              "discovered": 1940,
+              "tests": 485,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "successful": true,
+              "seconds": 1253.074
+            }
+          ],
+          "affected_case_retests": 7,
+          "retests_result": "PASS",
+          "PASS_after_retests": 1938,
+          "unresolved_failures": 0,
+          "clean_full_rerun": false,
+          "skip_reason": "two PostgreSQL-only races covered in PG matrix"
+        },
+        "sqlite_D": {
+          "tests": 21,
+          "result": "PASS",
+          "seconds": 122.66
+        },
+        "postgres": {
+          "version": "16.15",
+          "synthetic_local_only": true,
+          "executed": 556,
+          "initial_matrices": [
+            {
+              "matrix": "tests.postgres_financial_core",
+              "run": 6,
+              "failures": 0,
+              "errors": 0,
+              "success": true
+            },
+            {
+              "matrix": "tests.postgres_financial_operations",
+              "run": 37,
+              "failures": 0,
+              "errors": 0,
+              "success": true
+            },
+            {
+              "matrix": "tests.postgres_economic_persistence.EconomicPersistencePostgres",
+              "run": 28,
+              "failures": 0,
+              "errors": 0,
+              "success": true
+            },
+            {
+              "matrix": "tests.postgres_borrowed_writers.BorrowedWritersPostgres",
+              "run": 18,
+              "failures": 0,
+              "errors": 0,
+              "success": true
+            },
+            {
+              "matrix": "tests.postgres_invoice_capture.InvoiceCapturePostgres",
+              "run": 27,
+              "failures": 0,
+              "errors": 0,
+              "success": true
+            },
+            {
+              "matrix": "tests.postgres_payment_bank_capture.PaymentBankCapturePostgres",
+              "run": 41,
+              "failures": 0,
+              "errors": 0,
+              "success": true
+            },
+            {
+              "matrix": "tests.postgres_purchasing_capture.PurchasingCapturePostgres",
+              "run": 44,
+              "failures": 0,
+              "errors": 0,
+              "success": true
+            },
+            {
+              "matrix": "tests.postgres_financial_channels.FinancialChannelsPostgres",
+              "run": 50,
+              "failures": 0,
+              "errors": 0,
+              "success": true
+            },
+            {
+              "matrix": "tests.postgres_financial_history_inventory.HistoryInventoryPostgres",
+              "run": 37,
+              "failures": 0,
+              "errors": 0,
+              "success": true
+            },
+            {
+              "matrix": "tests.postgres_financial_history_cutoff.HistoryCutoffPostgres",
+              "run": 50,
+              "failures": 0,
+              "errors": 0,
+              "success": true
+            },
+            {
+              "matrix": "tests.postgres_financial_history_import.HistoryImportPostgres",
+              "run": 25,
+              "failures": 0,
+              "errors": 0,
+              "success": true
+            },
+            {
+              "matrix": "tests.postgres_financial_history_reconciliation.HistoryReconciliationPostgres",
+              "run": 31,
+              "failures": 0,
+              "errors": 0,
+              "success": true
+            },
+            {
+              "matrix": "tests.postgres_financial_readiness.ReadinessPostgres",
+              "run": 29,
+              "failures": 0,
+              "errors": 0,
+              "success": true
+            },
+            {
+              "matrix": "tests.postgres_financial_antecedents.AntecedentsPostgres",
+              "run": 52,
+              "failures": 0,
+              "errors": 0,
+              "success": true
+            },
+            {
+              "matrix": "tests.postgres_fiscal_cancellation_capture.FiscalCancellationPostgres",
+              "run": 46,
+              "failures": 1,
+              "errors": 0,
+              "success": false
+            },
+            {
+              "matrix": "tests.postgres_financial_activation_handoff.HandoffPostgres",
+              "run": 35,
+              "failures": 0,
+              "errors": 0,
+              "success": true
+            }
+          ],
+          "C_full_rerun": {
+            "tests": 46,
+            "failures": 0,
+            "errors": 0,
+            "successful": true,
+            "seconds": 55.754
+          },
+          "D_tests": 35,
+          "D_seconds": 68.487,
+          "result_after_C_rerun": "PASS",
+          "unresolved_failures": 0
+        },
+        "javascript_tests": 9,
+        "http_routes": 36,
+        "ruff": "PASS",
+        "bandit": "PASS",
+        "credential_scan": "PASS",
+        "pip_audit": "PASS",
+        "previous_migration_functions_AST_unchanged": 174,
+        "previous_migration_registry_entries_unchanged": 76,
+        "sqlite_cycle": "77/76/77/0/77 PASS FK ON",
+        "postgres_cycle": "77/76/77 PASS",
+        "postgres_cycle_to_zero": "inherited pre-D bank-reconciliation downgrade SQL missing ON; not changed; no PASS claimed",
+        "remote_CI_run": false
+      },
+      "local_main_unchanged": "e95c19beea7a9cda291f045459b06eb639e171e5",
+      "cached_origin_main_unchanged": "acff183319f476a5f0b25a820751dca4523fd8fd",
+      "postgres_synthetic_cluster_stopped": true,
+      "remote_ci_followup": {
+        "first_run_id": 37586733490,
+        "first_result": "FAIL: M77 seeded rows collide in synthetic PostgreSQL restore; credential scan flags three public Git commit IDs",
+        "correction": "Restore replaces only M77 baseline/verifier seeds in the disposable schema; exact reviewed Git-ID fingerprints added to secrets baseline",
+        "full_fresh_ci": "pending on corrective commit",
+        "production_access": false,
+        "real_backups_used": false,
+        "phase1_10E_started": false,
+        "local_backup_tests": {
+          "executed": 10,
+          "result": "PASS",
+          "duration_seconds": 18.333
+        },
+        "second_run": {
+          "id": 37587241672,
+          "postgres_D_executed": 35,
+          "postgres_D_errors": 35,
+          "cause": "runtime fixture login lacks password under container host authentication",
+          "correction": "test-only ephemeral password with identical restricted runtime privileges; no trust; no functional/migration/workflow changes",
+          "full_fresh_ci": "pending on corrective commit"
+        }
+      }
+    },
+    "phase_1_10e": {
+      "status": "PUBLISHED_BRANCH_ONLY_FRESH_REMOTE_CI_PENDING_LEGAL_POLICY_PENDING",
+      "branch": "codex/phase-1-10e",
+      "base": "8a775989e350daf3c2bb8c4f9c4d515b7b3ef696",
+      "scope": "privacy_export_retention_closure",
+      "legal_policy": "provisional_professional_approval_pending",
+      "flags": "all_five_off",
+      "next_phase_authorized": false,
+      "schema_version": 78,
+      "tables": 9,
+      "export_contract": "financial_privacy_v1",
+      "restore_contract": "closed_tombstone_scope_categories_current_signed_registry_required",
+      "document_bytes_deleted": 0,
+      "provider_io": false,
+      "published": true,
+      "production_access": false,
+      "real_qa_access": false,
+      "real_backups_used": false,
+      "destructive_real_copy_action": false,
+      "validation": {
+        "sqlite_e": {
+          "executed": 50,
+          "pass": 50,
+          "seconds": 89.074
+        },
+        "postgres_e": {
+          "executed": 62,
+          "pass": 62,
+          "seconds": 34.118
+        },
+        "postgres_all_matrices": {
+          "executed": 618,
+          "pass": 618,
+          "payment_bank_initial_failure_fixed_and_full_retest_pass": true
+        },
+        "history_import_reconciliation_b_d_export_pause_closure": {
+          "sqlite": "PASS",
+          "postgres": "PASS",
+          "eligibility_fixture": "structural_synthetic_not_real_readiness"
+        },
+        "general": {
+          "status": "COMPLETE_CASE_COVERAGE_PASS_WITH_FULL_PLATFORM_MODULE_RETEST",
+          "executed": 2011,
+          "initial_pass": 2006,
+          "initial_errors_fixture_only": 3,
+          "skipped": 2,
+          "corrected_case_coverage_pass": 2009,
+          "single_final_clean_general_run": false,
+          "shards": [
+            {
+              "shard": 0,
+              "discovered": 2011,
+              "tests": 503,
+              "failures": 0,
+              "errors": 1,
+              "skipped": 1,
+              "successful": false,
+              "seconds": 1436.203
+            },
+            {
+              "shard": 1,
+              "discovered": 2011,
+              "tests": 503,
+              "failures": 0,
+              "errors": 1,
+              "skipped": 1,
+              "successful": false,
+              "seconds": 1408.328
+            },
+            {
+              "shard": 2,
+              "discovered": 2011,
+              "tests": 503,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "successful": true,
+              "seconds": 1420.141
+            },
+            {
+              "shard": 3,
+              "discovered": 2011,
+              "tests": 502,
+              "failures": 0,
+              "errors": 1,
+              "skipped": 0,
+              "successful": false,
+              "seconds": 1321.641
+            }
+          ],
+          "retest": {
+            "module": "tests.test_platform",
+            "executed": 32,
+            "pass": 32,
+            "errors": 0,
+            "failures": 0,
+            "seconds": 39.958,
+            "scope": "only_fake_pg_get_functiondef_response_no_product_change"
+          },
+          "skip_reasons": "SQLite skips PG gate try-lock and repeatable snapshot; covered by PG matrices"
+        },
+        "ruff": "PASS",
+        "bandit": "PASS",
+        "dependency_audit": "PASS",
+        "javascript": {
+          "executed": 9,
+          "pass": 9
+        },
+        "migrations_old_ast": {
+          "functions_unchanged": 176,
+          "registry_entries_unchanged": 77
+        },
+        "migration_cycles": {
+          "sqlite": "78->77->78->0->78_FK_ON_PASS",
+          "postgres": "78->77->78_PASS_with_historical_32_to_78_and_baseline53_smokes"
+        },
+        "old_client_restore_final": "PASS_business_active_other_client_unchanged_invoice_exact",
+        "credential_scan": "PASS",
+        "documentation_truth": "PASS",
+        "links": {
+          "result": "PASS",
+          "local_links_checked": 1518
+        },
+        "autoaudit_30": "NO_dangerous_answers_with_documented_runtime_and_restore_protocol_scope"
+      },
+      "performance": {
+        "synthetic_only": true,
+        "historical_items": 64,
+        "economic_events": 1000,
+        "bank_rows": 501,
+        "outbox_rows": 501,
+        "sqlite": {
+          "export_seconds": 4.828,
+          "peak_python_bytes": 21275694,
+          "canonical_json_bytes": 5761677
+        },
+        "postgres_16_15": {
+          "export_seconds": 7.344,
+          "peak_python_bytes": 21529368,
+          "canonical_json_bytes": 5786943
+        },
+        "limits": "tracemalloc_not_RSS_materialized_not_constant_memory_no_production_SLO"
+      },
+      "limits": [
+        "professional_real_policy_not_approved_no_real_pilot",
+        "all_document_bytes_retained_no_filesystem_cleanup",
+        "external_restores_require_fresh_registry_before_service",
+        "database_owner_DDL_outside_runtime_threat_model",
+        "remote_provider_revocations_pending_future_authorization",
+        "legacy_internal_read_without_principal_not_E_manifest_or_readiness",
+        "stale_authorized_closure_requires_manual_review_no_auto_rebase"
+      ],
+      "delivery_files": 49,
+      "remote_ci": {
+        "first_run_id": 37620132017,
+        "first_general_result": "credential_scan_failed_before_general_suite",
+        "cause": "public_original_parent_SHA_flagged_as_Hex_High_Entropy_String",
+        "correction": "exact_file_detector_fingerprint_exception_only",
+        "classification": "CI_documentation",
+        "functional_contract_invariants_changed": false,
+        "fresh_full_final_ci": "pending"
+      }
+    },
+    "phase_1_10d_remote_final": {
+      "run_id": 37590092792,
+      "status": "SUCCESS",
+      "general_executed": 1940,
+      "general_pass": 1938,
+      "general_skips": 2,
+      "postgres_pass": 556
     }
+  },
+  "phase_1_10f": {
+    "status": "CODE_VERIFIED_TECHNICAL_PASS_REMOTE",
+    "branch": "codex/phase-1-10f",
+    "schema_version": 79,
+    "flags": "ALL_FIVE_OFF",
+    "real_legal_policy": "PROVISIONAL_PROFESSIONAL_APPROVAL_PENDING",
+    "real_provider_attestations": "PENDING",
+    "production_activation": "BLOCKED_D_GUARD_RETAINED",
+    "real_data_used": false,
+    "next_phase_authorized": false,
+    "general": {
+      "total": 2074,
+      "passed": 2072,
+      "skipped": 2,
+      "failures": 0,
+      "errors": 0,
+      "seconds": 1751.766,
+      "skip_cases": [
+        [
+          "test_pg_direct_sql_busy_fails_closed_no_gate_inversion (test_financial_history_cutoff.HistoryCutoffSQLite.test_pg_direct_sql_busy_fails_closed_no_gate_inversion)",
+          "PG gate try-lock; SQLite BEGIN IMMEDIATE probado en carrera común."
+        ],
+        [
+          "test_pg_repeatable_snapshot_direct_sql_rejected (test_financial_history_cutoff.HistoryCutoffSQLite.test_pg_repeatable_snapshot_direct_sql_rejected)",
+          "Aislamiento PostgreSQL."
+        ]
+      ],
+      "failed_cases": [],
+      "execution": "one_fresh_invocation_all_modules_4_isolated_processes",
+      "modules": 90,
+      "discovery_completeness": "EXACT_MULTISET_EQUAL"
+    },
+    "postgres": {
+      "total": 687,
+      "matrices": [
+        {
+          "name": "Core",
+          "cases": 6,
+          "seconds": 0.121
+        },
+        {
+          "name": "Operations",
+          "cases": 37,
+          "seconds": 9.412
+        },
+        {
+          "name": "Economic Events",
+          "cases": 28,
+          "seconds": 21.862
+        },
+        {
+          "name": "Borrowed writers",
+          "cases": 18,
+          "seconds": 13.26
+        },
+        {
+          "name": "Invoice",
+          "cases": 27,
+          "seconds": 32.356
+        },
+        {
+          "name": "Payment Bank",
+          "cases": 41,
+          "seconds": 42.796
+        },
+        {
+          "name": "Purchasing",
+          "cases": 44,
+          "seconds": 31.299
+        },
+        {
+          "name": "Channels",
+          "cases": 50,
+          "seconds": 28.166
+        },
+        {
+          "name": "History Inventory",
+          "cases": 37,
+          "seconds": 30.743
+        },
+        {
+          "name": "History Cutoff",
+          "cases": 50,
+          "seconds": 41.878
+        },
+        {
+          "name": "History Import",
+          "cases": 25,
+          "seconds": 41.789
+        },
+        {
+          "name": "History Reconciliation",
+          "cases": 31,
+          "seconds": 148.317
+        },
+        {
+          "name": "A",
+          "cases": 29,
+          "seconds": 21.13
+        },
+        {
+          "name": "B",
+          "cases": 52,
+          "seconds": 30.941
+        },
+        {
+          "name": "C",
+          "cases": 46,
+          "seconds": 59.403
+        },
+        {
+          "name": "D",
+          "cases": 35,
+          "seconds": 65.065
+        },
+        {
+          "name": "E",
+          "cases": 62,
+          "seconds": 38.437
+        },
+        {
+          "name": "F",
+          "cases": 69,
+          "seconds": 146.727
+        }
+      ]
+    },
+    "sqlite_f": 63,
+    "postgres_f": 69,
+    "javascript_pass": 9,
+    "security_gates": "PASS",
+    "remote_ci": {
+      "run_id": 37743993745,
+      "attempt": 1,
+      "url": "https://github.com/noesisstudio/noesis/actions/runs/37743993745",
+      "status": "PASS",
+      "general_total": 2074,
+      "passed": 2072,
+      "skipped": 2,
+      "failures": 0,
+      "errors": 0,
+      "seconds": 2353.757,
+      "postgres_pass": 687,
+      "javascript_pass": 9,
+      "code_reference": "docs/architecture/FASE-1.10G-prep-orden.md"
+    },
+    "real_world_blockers": "docs/architecture/FASE-1.10F-cierre.md",
+    "closure": "docs/architecture/FASE-1.10F-cierre.md"
+  },
+  "phase_1_10g_prep": {
+    "status": "CODE_VERIFIED_PASS_PREPARATION_ONLY_PILOT_BLOCKED",
+    "pilot_result": "PILOT_BLOCKED_EXTERNAL_PREREQUISITES_PENDING",
+    "branch": "codex/phase-1-10g-prep",
+    "base_reference": "docs/architecture/FASE-1.10G-prep-orden.md",
+    "schema_version": 79,
+    "new_migration": false,
+    "flags": "ALL_FIVE_OFF",
+    "real_policy": "PROVISIONAL_PROFESSIONAL_APPROVAL_PENDING",
+    "real_access": false,
+    "provider_io": false,
+    "g_live_authorized": false,
+    "h_started": false,
+    "main_integration": "PENDING_NOT_PERFORMED",
+    "new_test_count": 34,
+    "suite_discovered_expected": 2108,
+    "report": "docs/architecture/FASE-1.10G-prep-report.json",
+    "contract": "docs/architecture/FINANCIAL-PILOT-READINESS-v1.md",
+    "closure": "docs/architecture/FASE-1.10G-prep-cierre.md",
+    "local_selection": {
+      "total": 98,
+      "passed": 98,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "seconds": 225.323,
+      "new_pilot": 34,
+      "core": 16,
+      "economic_events": 21,
+      "readiness": 27,
+      "execution": "one_fresh_invocation_final_selected_suite"
+    },
+    "postgres": "NOT_APPLICABLE_PURE_CODE_NO_DB_REPOSITORY_OR_MIGRATION",
+    "postgres_metadata_queries": "PREPARED_NOT_EXECUTED",
+    "general_g_prep": "NOT_EXECUTED_BASE_F_GENERAL_IS_SEPARATE_EVIDENCE",
+    "security": "PASS_RUFF_BANDIT_CREDENTIAL_SCAN_DEPENDENCY_AUDIT",
+    "links": "PASS",
+    "migration_ast": "UNCHANGED_ALL_79",
+    "real_business_selected": false,
+    "real_profile_selected": false,
+    "credential_exceptions": "THREE_EXACT_REVIEWED_NONSECRET_SHA_VALUES_ONLY"
+  },
+  "phase_1_10g_verify": {
+    "status": "CODE_VERIFIED_PASS_LOCAL",
+    "branch": "codex/phase-1-10g-verify",
+    "schema_version": 79,
+    "new_migration": false,
+    "base_reference": "docs/architecture/FASE-1.10G-verify-orden.md",
+    "real_policy": "PROVISIONAL_PROFESSIONAL_APPROVAL_PENDING",
+    "flags": "ALL_FIVE_OFF",
+    "real_access": false,
+    "provider_io": false,
+    "real_business_selected": false,
+    "real_profile_selected": false,
+    "g_live_authorized": false,
+    "h_started": false,
+    "production_guard": "PRESERVED_BLOCKED",
+    "verifier_count": 20,
+    "evidence_type_count": 6,
+    "activation_authorized": false,
+    "synthetic_is_real": false,
+    "recovery_contract": "docs/architecture/FINANCIAL-RECOVERY-READINESS-v1.md",
+    "contract": "docs/architecture/FINANCIAL-PILOT-VERIFICATION-v1.md",
+    "closure": "docs/architecture/FASE-1.10G-verify-cierre.md",
+    "validation": {
+      "version": 1,
+      "scope": "LOCAL_SYNTHETIC_ONLY",
+      "technical_status": "CODE_VERIFIED_PASS",
+      "real_status": "PILOT_BLOCKED_EXTERNAL_PREREQUISITES_PENDING",
+      "general": {
+        "total": 2144,
+        "passed": 2142,
+        "skips": 2,
+        "failures": 0,
+        "errors": 0,
+        "seconds": 2073.016,
+        "execution": "fresh_full_discovery_exact_multiset_four_isolated_processes",
+        "modules": 94,
+        "source_frozen": true,
+        "known_skips": [
+          {
+            "test": "test_financial_history_cutoff.HistoryCutoffSQLite.test_pg_direct_sql_busy_fails_closed_no_gate_inversion",
+            "reason": "PG gate try-lock; SQLite BEGIN IMMEDIATE probado en carrera común."
+          },
+          {
+            "test": "test_financial_history_cutoff.HistoryCutoffSQLite.test_pg_repeatable_snapshot_direct_sql_rejected",
+            "reason": "Aislamiento PostgreSQL."
+          }
+        ]
+      },
+      "new_sqlite": {
+        "pilot_verification": 24,
+        "recovery_readiness": 12,
+        "total": 36,
+        "result": "PASS"
+      },
+      "javascript": {
+        "total": 9,
+        "passed": 9,
+        "failed": 0
+      },
+      "postgres": {
+        "version": "16.15",
+        "matrices": [
+          {
+            "name": "Core",
+            "cases": 6,
+            "result": "PASS"
+          },
+          {
+            "name": "Operations_Auth",
+            "cases": 37,
+            "result": "PASS"
+          },
+          {
+            "name": "EconomicEvents",
+            "cases": 28,
+            "result": "PASS"
+          },
+          {
+            "name": "Borrowed_writers",
+            "cases": 18,
+            "result": "PASS"
+          },
+          {
+            "name": "Invoice_Capture",
+            "cases": 27,
+            "result": "PASS"
+          },
+          {
+            "name": "Payment_Bank",
+            "cases": 41,
+            "result": "PASS"
+          },
+          {
+            "name": "Supplier_Expense",
+            "cases": 44,
+            "result": "PASS"
+          },
+          {
+            "name": "Channels",
+            "cases": 50,
+            "result": "PASS"
+          },
+          {
+            "name": "History_inventory",
+            "cases": 37,
+            "result": "PASS"
+          },
+          {
+            "name": "History_cutoff",
+            "cases": 50,
+            "result": "PASS"
+          },
+          {
+            "name": "History_import",
+            "cases": 25,
+            "result": "PASS"
+          },
+          {
+            "name": "History_reconciliation",
+            "cases": 31,
+            "result": "PASS"
+          },
+          {
+            "name": "A",
+            "cases": 29,
+            "result": "PASS"
+          },
+          {
+            "name": "B",
+            "cases": 52,
+            "result": "PASS"
+          },
+          {
+            "name": "C",
+            "cases": 46,
+            "result": "PASS"
+          },
+          {
+            "name": "D",
+            "cases": 35,
+            "result": "PASS"
+          },
+          {
+            "name": "E",
+            "cases": 62,
+            "result": "PASS"
+          },
+          {
+            "name": "F",
+            "cases": 69,
+            "result": "PASS"
+          },
+          {
+            "name": "G_VERIFY",
+            "cases": 37,
+            "result": "PASS"
+          }
+        ],
+        "unique_cases": 724,
+        "failed": 0,
+        "errors": 0,
+        "final_affected_rerun": {
+          "cases": 170,
+          "seconds": 486.178,
+          "result": "PASS",
+          "matrices": [
+            "A",
+            "D",
+            "F",
+            "G_VERIFY"
+          ],
+          "additional_unique_cases": false
+        }
+      },
+      "migration": {
+        "schema": 79,
+        "new_migration": false,
+        "ast_previous": "UNCHANGED_ALL_79",
+        "sqlite_roundtrip": [
+          79,
+          0,
+          79
+        ],
+        "postgres_upgrade": [
+          32,
+          79
+        ],
+        "synthetic_restore": "PASS",
+        "legacy_schema53_code_on_schema79": "PASS"
+      },
+      "http_smoke": {
+        "routes": 36,
+        "result": "PASS"
+      },
+      "integration_history_B_D_E": {
+        "sqlite": "PASS",
+        "postgres": "PASS"
+      },
+      "gates": {
+        "ruff": "PASS",
+        "bandit": "PASS",
+        "credential_scan": "PASS",
+        "dependency_audit": "PASS",
+        "documentation_truth": "PASS",
+        "links": "PASS",
+        "migration_ast": "PASS"
+      },
+      "remote_ci_started": false,
+      "push": false,
+      "merge": false,
+      "deploy": false,
+      "real_access": false,
+      "provider_io": false,
+      "real_flags": "OFF",
+      "real_policy": "PROVISIONAL_PENDING_PROFESSIONAL_APPROVAL",
+      "G_LIVE": false,
+      "H": false
+    },
+    "validation_report": "docs/architecture/FASE-1.10G-verify-evidencia.json"
   }
 }

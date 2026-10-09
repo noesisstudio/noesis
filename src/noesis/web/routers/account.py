@@ -291,28 +291,39 @@ def google_callback(request: Request, code: str = "", state: str = "",
 def _json_download(data: dict, filename: str) -> Response:
     return Response(content=json.dumps(data, ensure_ascii=False, indent=2, default=str),
                     media_type="application/json",
-                    headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+                    headers={"Content-Disposition": f'attachment; filename="{filename}"', "Cache-Control": "no-store"})
 
 
 @router.get("/api/{business_id}/export")
-def api_export_account(business_id: int):
-    """Portabilidad RGPD: descarga TODOS los datos de la cuenta en JSON."""
-    return _json_download(db.export_business_data(business_id),
+def api_export_account(request: Request, business_id: int):
+    """Portabilidad: snapshot autorizado de datos y evidencia financiera."""
+    from ...financial_operations.contracts import Principal
+    user = auth.current_user(request)
+    principal = Principal(user["id"], user["session_version"])
+    return _json_download(db.export_business_data(business_id, principal=principal),
                           "noesis_datos_cuenta.json")
 
 
 @router.get("/api/{business_id}/clients/{client_id}/export")
-def api_export_client(business_id: int, client_id: int):
-    data = db.export_client_data(client_id, business_id)
+def api_export_client(request: Request, business_id: int, client_id: int):
+    from ...financial_operations.contracts import Principal
+    user = auth.current_user(request)
+    principal = Principal(user["id"], user["session_version"])
+    data = db.export_client_data(client_id, business_id, principal=principal)
     if data is None:
         return JSONResponse({"error": "Cliente no encontrado."}, status_code=404)
     return _json_download(data, f"noesis_cliente_{client_id}.json")
 
 
 @router.delete("/api/{business_id}/clients/{client_id}/erase")
-def api_erase_client(business_id: int, client_id: int):
+def api_erase_client(request: Request, business_id: int, client_id: int):
     """Borra datos prescindibles y conserva lo sujeto a obligación fiscal."""
-    ok = db.delete_client_cascade(client_id, business_id)
+    try:
+        from ...financial_operations.contracts import Principal
+        user = auth.current_user(request)
+        ok = db.delete_client_cascade(client_id, business_id, principal=Principal(user["id"], user["session_version"]))
+    except ValueError:
+        return JSONResponse({"error": "Cliente con evidencia financiera: requiere revisión de privacidad.", "retention_required": True}, status_code=409)
     if not ok:
         return JSONResponse({"error": "Cliente no encontrado."}, status_code=404)
     return {"ok": True}

@@ -19,6 +19,7 @@ from tests.postgres_financial_operations import FinancialOperationsPostgres
 
 
 class BorrowedWritersPostgres(BorrowedWritersContract, unittest.TestCase):
+    schema_target = 75
     setUpClass = classmethod(FinancialOperationsPostgres.setUpClass.__func__)
     tearDownClass = classmethod(FinancialOperationsPostgres.tearDownClass.__func__)
 

@@ -30,8 +30,8 @@ class OperationsContract:
         self.service = FinancialOperations(self.business["id"])
         self.other_service = FinancialOperations(self.other_business["id"])
         self.identity = EntryIdentity.web_api(uuid4())
-        # Comando todavía sin productor: estos efectos son exclusivamente tablas sintéticas.
-        # ExpenseCapture exige ahora cobertura real al commit de expense.confirm.
+        # Esquema75 aislado: prueba infraestructura con efectos ficticios pre-C.
+        # El esquema76 exige coverage fiscal real; aquí nunca se retiran sus guards.
         self.request = FinancialRequest(CommandType.INVOICE_FISCAL_CANCEL, None, Decimal("10.00"),
             date(2026, 10, 2), None, "Prueba explícita", {"category": "material", "vat_amount": Decimal("0.00")})
         with db.get_conn() as conn:
@@ -455,9 +455,10 @@ class OperationsContract:
 
     def test_downgrade_refuses_loss_and_excluded_tables_absent(self):
         self.reserve()
+        version_before = migrations.current_version()
         with self.assertRaises(ValueError):
             migrations.downgrade(61)
-        self.assertEqual(migrations.current_version(), migrations.LATEST_VERSION)
+        self.assertEqual(migrations.current_version(), version_before)
         with db.get_conn() as conn:
             if conn.dialect == "sqlite":
                 names = [r["name"] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()]

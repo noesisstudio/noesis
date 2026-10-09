@@ -163,6 +163,7 @@ def send_payment_reminders(now: datetime | None = None) -> int:
                     portal_url,
                     business_id=business["id"],
                     idempotency_key=idempotency_key,
+                    financial_invoice_id=invoice["id"],
                 )
             except (db.DatabaseError, ValueError):
                 log.exception(
@@ -571,7 +572,8 @@ def process_email_outbox(limit: int = 25) -> int:
     """Entrega SMTP desde la cola durable con backoff e idempotencia."""
     from ..adapters import email as email_adapter
 
-    processed = 0
+    from ..financial_providers.dispatch import process_bound
+    processed = len(process_bound('email_outbox', limit=limit))
     for _ in range(max(1, min(int(limit), 500))):
         now = datetime.now()
         item = db.claim_next_email_message(
@@ -673,8 +675,10 @@ def process_verifactu_outbox(limit: int = 25) -> int:
 
     if not verifactu_client.is_enabled():
         return 0
+    from ..financial_providers.dispatch import process_bound
+    processed = len(process_bound('verifactu_outbox', limit=limit))
+    processed += len(process_bound('verifactu_cancellation_outbox', limit=limit))
     db.enqueue_missing_verifactu_records()
-    processed = 0
     control_flow_until = None
     for _ in range(max(1, min(int(limit), 1000))):
         now = datetime.now()

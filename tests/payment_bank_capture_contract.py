@@ -84,6 +84,9 @@ class PaymentBankCaptureContract:
 
     def test_migration_69_repairs_existing_68_without_changing_evidence(self):
         with self.migration_scope():
+            # Esta regresión reproduce evidencia 68→69; no compara columnas
+            # futuras eliminadas legítimamente por un downgrade vacío de D.
+            migrations.downgrade(69)
             done = self.payment(self.invoice())
             before = self.state()
             migrations.downgrade(68)

@@ -1,5 +1,18 @@
 # Conexión de servicios externos
 
+> Financial Core F: las indicaciones operativas inferiores describen las
+> integraciones existentes y no autorizan su activación financiera. Leer
+> [contrato F](../architecture/FINANCIAL-PROVIDERS-PREFLIGHT-v1.md),
+> [runbook](../architecture/FINANCIAL-PROVIDERS-runbook.md) y
+> [límites](../architecture/FINANCIAL-OPERATIONAL-LIMITS-v1.md).
+> local_verified ≠ sandbox_verified ≠ production_config_verified ≠
+> production_observed. Los checks externos inocuos no implementados quedan
+> BLOCKED; enviar una factura/mensaje para comprobar configuración está prohibido.
+> Sin attestation productiva real suficiente no hay piloto provider-dependent.
+> Rotation requiere nueva UUID y nueva evaluación. Nunca pegar credenciales ni
+> paths privados en evidencia/export/logs. F conserva flags OFF y guard D de
+> producción; ninguna llamada real ha sido autorizada en esta fase.
+
 > Guía operativa única para conectar producción. Describe lo que acepta el código
 > actual; no convierte una integración en «publicada» hasta completar su prueba real.
 > Los secretos se guardan en Railway o en el gestor del proveedor, nunca en Git.

@@ -358,13 +358,14 @@ class InvoiceCaptureContract:
         self.assertEqual(self.counts(), {"invoice_records": 0, "invoice_events": 1, "verifactu_outbox": 0, "economic_events": 1, "invoice_economic_coverage": 1})
 
     def test_other_command_replay_rejected_and_wrong_result_rolls_back(self):
-        from noesis.financial_operations.contracts import FinancialRequest
-        from noesis.financial_operations.service import FinancialOperations
-        service = FinancialOperations(self.bid)
-        request = FinancialRequest("invoice.fiscal_cancel", None, "10.00", date.today(), None, None, {})
+        from noesis.payment_capture.service import PaymentCapture
+        # Otro comando realmente COMMITTED, sin inventar un efecto fiscal sin cobertura.
+        invoice = self.captured()
+        service = PaymentCapture(self.bid)
+        request = service.review(self.principal, invoice.result["invoice_id"], amount="10.00")
         op = service.prepare(self.principal, EntryIdentity.web_api(uuid4()), request)
-        service.authorize(self.principal, op.operation_uuid, channel="web_api", approved_hash=request.request_hash, approved_revision=None)
-        service.execute(self.principal, op.operation_uuid, lambda *_: {"fixture": True})
+        service.authorize(self.principal, op.operation_uuid, channel="web_api", approved_hash=request.request_hash, approved_revision=request.expected_revision)
+        service.execute(self.principal, op.operation_uuid)
         with self.assertRaises(StateError):
             self.capture.execute(self.principal, op.operation_uuid)
         op = self.approve(self.draft()["id"])

@@ -20,9 +20,9 @@ jobs:
   tests-and-migrations:
     name: Tests i migracions
     runs-on: ubuntu-latest
-    # La suite completa ya roza 15 min en runners compartidos y después valida
-    # upgrade/downgrade/upgrade. El límite debe detectar bloqueos, no cancelar QA sano.
-    timeout-minutes: 35
+    # M77 añade guards a las regresiones completas y después se valida el ciclo
+    # de migraciones. Dar margen a runners compartidos sin omitir ninguna prueba.
+    timeout-minutes: 60
 
     steps:
       - name: Descarregar el repositori
@@ -107,10 +107,16 @@ jobs:
           )
           PY
 
+      - name: Validar conservación E de history y handoff D en SQLite
+        env:
+          NOESIS_SECRET: noesis-ci-secret-fixed-32-characters-minimum
+        run: uv run python -m tests.financial_privacy_history_integration
+
   postgres-smoke:
     name: Humo contra Postgres
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Incluye todas las matrices financieras, las carreras y los crashes D.
+    timeout-minutes: 35
 
     services:
       postgres:
@@ -191,6 +197,29 @@ jobs:
 
       - name: Validar reconciliación durable, corrupción y carreras de procesos
         run: uv run python -m unittest tests.postgres_financial_history_reconciliation.HistoryReconciliationPostgres
+
+      - name: Validar readiness por perfil sin activación ni efectos financieros
+        run: uv run python -m unittest tests.postgres_financial_readiness.ReadinessPostgres
+
+      - name: Validar antecedentes por propósito, revalidación y concurrencia sin efectos
+        run: uv run python -m unittest tests.postgres_financial_antecedents.AntecedentsPostgres
+
+      - name: Validar capabilities y captura fiscal local, SQL guards y crash de procesos
+        run: uv run python -m unittest tests.postgres_fiscal_cancellation_capture.FiscalCancellationPostgres
+
+      - name: Validar handoff atómico, generaciones, pausa, SQL y procesos aislados
+        run: uv run python -m unittest tests.postgres_financial_activation_handoff.HandoffPostgres
+
+      - name: Validar export, retención y cierre financiero sin providers
+        run: |
+          uv run python -m unittest tests.postgres_financial_privacy.PrivacyPostgres
+          uv run python -m tests.financial_privacy_history_integration postgres
+
+      - name: Validar providers F, preflight, dispatch, procesos y rehearsal sin red
+        run: uv run python -m unittest tests.postgres_financial_providers.ProviderPostgres
+
+      - name: Validar G-VERIFY, evidencia tipada y continuidad D79 con A caducada
+        run: uv run python -m unittest tests.postgres_financial_pilot_verification
 
       - name: Obtener código base para rollback seguro
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

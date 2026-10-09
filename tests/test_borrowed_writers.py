@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from noesis import config, db
+from noesis import config, db, migrations
 from tests.borrowed_writers_contract import BorrowedWritersContract
 
 
@@ -16,7 +16,8 @@ class BorrowedWritersSQLite(BorrowedWritersContract, unittest.TestCase):
         settings = patch.multiple(config, DATABASE_URL="", DB_PATH=Path(self.temp.name) / "test.db")
         settings.start()
         self.addCleanup(settings.stop)
-        db.init_db()
+        # Composición de infraestructura previa a coverage76; C prueba writer en76.
+        migrations.upgrade(75)
         self.seed()
 
     def test_fiscal_output_equals_previous_main_golden(self):

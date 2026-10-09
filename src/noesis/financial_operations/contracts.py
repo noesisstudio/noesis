@@ -313,12 +313,23 @@ class Operation:
     authorization_uuid: str | None
     result_version: int | None
     result: Mapping[str, object] | None
+    activation_generation: int | None = None
+    activation_capability: str | None = None
 
     @classmethod
     def from_row(cls, row):
+        generation, capability = row.get('activation_generation'), row.get('activation_capability')
+        if (generation is None) != (capability is None):
+            raise StateError("Binding de generación incompleto.")
+        if generation is not None and (type(generation) is not int or generation <= 0):
+            raise StateError("Generación live inválida.")
         if row.get("entry_namespace") == EntryNamespace.HISTORICAL.value and row["state"] in ("approved", "committed"):
             raise StateError("Registro histórico no admite estado ejecutable.")
         request = FinancialRequest.from_canonical(row["request_canonical"])
+        if generation is not None:
+            from noesis.financial_activation.capabilities import capability_for_command
+            if capability != capability_for_command(request.command_type).value or row['entry_namespace'] == EntryNamespace.HISTORICAL.value:
+                raise StateError('Binding live command/capability inválido.')
         if request.request_hash != row["request_hash"]:
             raise ValueError("Huella del request persistido incoherente.")
         result = row["result_canonical"]
@@ -328,4 +339,4 @@ class Operation:
             result = _freeze(strict_json(result))
         return cls(uuid_text(row["operation_uuid"]), row["business_id"], OperationState(row["state"]),
                    request, None if row["authorization_uuid"] is None else uuid_text(row["authorization_uuid"]),
-                   row["result_version"], result)
+                   row["result_version"], result, generation, capability)

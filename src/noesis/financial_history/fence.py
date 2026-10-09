@@ -35,6 +35,8 @@ def assert_writable(connection, business_id):
     if raw.dialect == 'sqlite' and not raw.raw.in_transaction:
         raw.execute('BEGIN IMMEDIATE')
     lock_business(connection, business_id)
+    from noesis.financial_privacy.repository import assert_open
+    assert_open(FinancialSession(raw), business_id)
     row = raw.execute_exact('SELECT fence_enabled FROM financial_history_control WHERE business_id=?', (business_id,)).fetchone()
     if row and row['fence_enabled']:
         log.warning('historical blocked writer business=%s', business_id)
@@ -62,13 +64,23 @@ def external_guard(business_id):
     from noesis import db
     with db.get_conn() as conn:
         assert_writable(conn, business_id)
+        from noesis.financial_activation.runtime import control, ActivationUnavailable
+        row = control(conn, business_id)
+        if row and row['ever_enabled']:
+            raise ActivationUnavailable('Dispatch externo post-handoff requiere la política F; D no concede acceso a providers.')
         yield
 
 
 def available_predicate(connection, tenant_expression):
     """SQL cerrado para los workers auditados; nunca una tabla del cliente."""
-    if tenant_expression not in ('verifactu_outbox.business_id', 'verifactu_cancellation_outbox.business_id', 'r.business_id'):
+    if tenant_expression not in ('verifactu_outbox.business_id', 'verifactu_cancellation_outbox.business_id', 'email_outbox.business_id', 'whatsapp_outbox.business_id', 'r.business_id'):
         raise ValueError('Scope de worker desconocido.')
     if not installed(connection):
         return 'TRUE'
-    return f'NOT EXISTS(SELECT 1 FROM financial_history_control hc WHERE hc.business_id={tenant_expression} AND hc.fence_enabled=TRUE)'
+    from noesis.financial_privacy.repository import installed as privacy_installed
+    session = connection if isinstance(connection, FinancialSession) else FinancialSession(connection)
+    privacy = f" AND NOT EXISTS(SELECT 1 FROM financial_closure_authorizations ca WHERE ca.business_id={tenant_expression}) AND NOT EXISTS(SELECT 1 FROM financial_restore_suppressions rs WHERE rs.business_id={tenant_expression} AND rs.scope='account_local_access')" if privacy_installed(session) else ''
+    if tenant_expression != 'r.business_id':
+        from noesis.financial_providers.dispatch import legacy_predicate
+        privacy += ' AND ' + legacy_predicate(session, tenant_expression)
+    return f'NOT EXISTS(SELECT 1 FROM financial_history_control hc WHERE hc.business_id={tenant_expression} AND hc.fence_enabled=TRUE)' + privacy

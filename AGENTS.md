@@ -1,5 +1,129 @@
 # AGENTS.md - Manual del proyecto Bynoesis
 
+> Orden vigente: exclusivamente G-VERIFY LOCAL, sin push/main/G-LIVE/H.
+> Leer orden/ADR025/contratos G y RecoveryReadiness/cierre en arquitectura.
+> G-PREP assess sigue anti-READY. Gate sólo acepta objetos sellados de verifiers;
+> sources/trust bootstrap privado, no hashes/claims/JSON como autoridad.
+> Synthetic nunca REAL; READY no activa. D79 resume revalida continuidad actual
+> y conserva A aunque caduque, perfil/grants/history/receipts intactos.
+> Primera activación conserva TTL A; drift/stale/privacy/UNKNOWN bloquean.
+> Sin migration80; D producción bloqueada, cinco flags reales OFF y E provisional.
+> Sólo fixtures sintéticos; no producción/QA/backups/providers ni colectores reales.
+> TX prestada consistente, SELECT; ninguna conexión/commit propio.
+> Encabezados inferiores conservan historia y no amplían esta orden.
+
+> Orden vigente: exclusivamente G-PREP local desde F, sin push ni G-LIVE/H.
+> Leer orden/contrato/checklist/runbook/cierre G-PREP en docs/architecture/README.md.
+> Report puro sin DB/red/writers/authority; Profile A/spec C/OperationalPolicy F únicos.
+> Policy real provisional + PRIVACY_NOT_READY; cinco flags OFF, D producción guard
+> intacto. No real data/QA/backups/Railway/provider calls; no selección automática.
+> Documentación/refs/synthetic nunca production proof ni READY. Integración main
+> y recuperación D79 con A caducada pendientes de autorización. No nueva migration.
+> Encabezados F y anteriores conservan historia y no amplían esta orden.
+
+> Orden vigente: exclusivamente F local. Leer orden, ADR024, contrato y cierre F
+> en docs/architecture/README.md. No push ni G–H. F evidence no es autoridad,
+> credencial ni provider result. Registry C único; fingerprints HMAC, sin secretos
+> en evidencia/export. Readiness/D sólo verifican recibos: nunca checks de red.
+> Post-handoff requiere binding/attempt durable, I/O fuera de TX y resultado
+> atómico. UNKNOWN nunca autoriza retry. Pausa HOLD email/Meta, drain AEAT sólo
+> committed exacto; cierre E domina. Producción D bloqueada, cinco flags OFF,
+> policy REAL provisional. Validación sólo sintética y outbound bloqueado.
+
+> Financial Privacy: leer el contrato/ADR/cierre vigentes en arquitectura antes
+> de tocar export, retención, bajas o restore. Nunca aprobar policy por migración
+> ni atribuir autoridad a IA. Provisional mantiene hold; las fechas sin revisión
+> no autorizan purga. Export por snapshot único/catálogo cerrado, Decimal exacto,
+> sin secretos ni chat completo. Conservar EE/Operations/coverage/history/A–E.
+> Cierre formal requiere plan/hash humano exacto, pausa D previa si ever_enabled
+> y recibo/tombstone atómicos; no fallback/resume ni nuevos efectos después.
+> Antes de servir restore, aplicar registro vigente de supresiones; un backup
+> antiguo no acredita actualidad. E no borra bytes documentales ni copias QA reales.
+
+> Para continuar el control plane financiero, leer la orden, contrato, ADR y cierre
+> vigentes en `docs/architecture/README.md` y el estado JSON antes de ejecutar.
+> La activación requiere permiso específico y confirmación humana durable exacta.
+> Nunca inferir autoridad de IA, readiness, grants, flags o administrador global.
+> Tras ever_enabled, OFF global o pausa debe bloquear nuevos efectos sin fallback.
+> Todo writer final conserva guard de aplicación y guard SQL ligado a operación,
+> generación, capability y conexión/TX. No abrir conexiones ni confirmar dentro
+> de executors. Conservar histórico/certificado, EE, outboxes y resultados committed.
+> Las órdenes específicas de ramas/local/no push prevalecen sobre la regla de main.
+
+
+## 2026-10-06 — Fase 1.10C: capabilities y captura fiscal exclusivamente local
+
+[Orden](docs/architecture/FASE-1.10C-orden.md), [contrato](docs/architecture/FINANCIAL-CAPABILITIES-FISCAL-CANCELLATION-v1.md), [ADR021](docs/architecture/ADR-021-capabilities-fiscal-cancellation.md), [cierre](docs/architecture/FASE-1.10C-cierre.md).
+
+A y B CODE-VERIFIED PASS, validadas por el titular. Solo C autorizada en
+codex/phase-1-10c desde la base exacta de la orden. No push, merge, main ni deploy.
+Encabezados inferiores históricos; D no iniciada y requiere autorización posterior.
+
+Monolito modular y repositorios especializados sobre FinancialSession/gate/TX
+compartidos. Registry único de A con spec v1 y once mappings cerrados, sin
+enforcement/routing. FiscalCancellationCapture interno reutiliza writer fiscal:
+resolución B durable live/verified/resolved, revalidación every_use, autoridad
+humana exacta, registro/outbox pendiente/coverage/EE evidence-only/result atómicos.
+Decimal/EUR, total contextual del EE verificado, amount=None, snapshot real.
+No nueva lógica grande en db.py ni autoridad IA. Migration76 aditiva protegida;
+tuplas explícitas A/B/history. No provider I/O, activación, generation, handoff,
+fence release o cambios de cinco flags OFF. Historical v2, observed_state,
+mandates y rectificativas negativas bloqueadas por B se conservan.
+No routing público ni 1.10D–H. Solo fixtures sintéticos, no producción/QA real/backups.
+Antes de cerrar: matrices C SQLite/PG, carreras/crashes reales, migración,
+regresiones A/B/history/captures/Veri*Factu/Operations, suite completa, JS,
+Ruff/Bandit/credential_scan/dependencias/verdad/enlaces/AST y veinte autoauditorías.
+
+## 2026-10-06 — Fase 1.10B: antecedentes, exclusivamente evidencia
+
+[Orden](docs/architecture/FASE-1.10B-orden.md), [ADR020](docs/architecture/ADR-020-financial-antecedents.md), [contrato](docs/architecture/FINANCIAL-ANTECEDENTS-v1.md), [cierre](docs/architecture/FASE-1.10B-cierre.md).
+
+A validada; B es la única implementación autorizada en `codex/phase-1-10b`,
+desde la base exacta indicada en la orden. Los encabezados inferiores son
+históricos. No merge/push main, despliegue, producción, QA real ni 1.10C–H.
+Validación de B solo sobre fixtures SQLite/PostgreSQL sintéticos.
+
+`financial_antecedents/` separa contratos, proof checker, resolver y repository.
+Monolito modular, repositorios por dominio y FinancialSession/gate/TX prestados;
+sin conexión/commit propios ni lógica grande en db.py. `resolve` solo lee;
+persistir escribe exclusivamente resoluciones B inmutables. Toda referencia/FK
+filtra business. Revalidar cada uso con `verify_resolution` en la futura TX.
+Antecedente/evidencia no concede autorización, readiness, activación ni ejecución.
+Historical conserva proof original y historical_unknown; observed_state nunca
+promueve, factura histórica v2 sigue bloqueada. Decimal/NUMERIC y JSON decimal
+string; binary legacy es solo identidad opaca, jamás certeza monetaria. Unknown
+se conserva. IA sin autoridad. Cinco flags OFF, fence/control/generation intactos.
+No routing, productores, EE/Operations, Open Items, provider I/O ni efectos fiscales.
+Antes de cerrar: matriz B/PG/carreras/migración, A–E/readiness, suite general,
+seguridad, verdad documental, enlaces y autoauditoría de veinte preguntas.
+
+## 2026-10-05 — Fase 1.10A: evaluación sin activación
+
+[Orden](docs/architecture/FASE-1.10A-orden.md), [contrato](docs/architecture/FINANCIAL-READINESS-v1.md), [ADR019](docs/architecture/ADR-019-financial-readiness.md), [cierre](docs/architecture/FASE-1.10A-cierre.md), [plan](docs/architecture/FASE-1.10-plan.md).
+
+Alcance vigente: únicamente contratos y evaluación durable de readiness en rama
+dedicada; no merge/push a main ni producción sin autorización posterior. Leer
+orden, contrato, ADR019 y cierre antes de continuar. 1.9 está cerrada técnicamente
+con limitaciones; 1.9F conserva PASS WITH LIMITATIONS. Encabezados inferiores
+son históricos. No iniciar 1.10B–H.
+
+`financial_activation/` contiene contratos, evaluator y repositorio tenant-scoped
+sobre FinancialSession prestada/gate/TX compartidos. Evaluación ≠ autorización
+humana ≠ activación ≠ ejecución. Perfil exacto versionado y cierre transitivo;
+PARTIAL solo permite proponer otro perfil y reevaluarlo. Solo off/validating,
+generation0 y ever_enabled=false por SQL; no ready/enabled, handoff ni release.
+Cinco flags OFF. Nueva lógica financiera grande fuera de db.py; allí solo se
+registran las tablas para conservación. Decimal/NUMERIC; IA sin autoridad.
+Vacío exige scope completo y relacionados. C/D o E BLOCKED bloquean todo perfil;
+E PASS vacío no habilita comandos. No provider I/O, EE/Operations ni routing.
+Antes de cerrar: SQLite/PG, migraciones, suite, seguridad y verdad documental.
+
+## 2026-10-05 — Fase1.9F: PASS WITH LIMITATIONS, solo QA
+
+[Orden](docs/architecture/FASE-1.9F-orden.md), [cierre](docs/architecture/FASE-1.9F-cierre.md) y [runbook](docs/architecture/FASE-1.9F-runbook.md).
+
+Fase1.9F ejecutada en copia real aislada. Solo orquestación/documentación; ninguna funcionalidad nueva. Producción no consultada ni modificada. Leer cierre/runbook antes de retomar; las órdenes inferiores son históricas y no amplían el alcance.
+
 ## 2026-10-05 — Fase1.9E: reconciliación histórica implementada y validada
 
 [Orden](docs/architecture/FASE-1.9E-orden.md), [ADR018](docs/architecture/ADR-018-financial-history-reconciliation.md),

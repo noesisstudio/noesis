@@ -605,9 +605,10 @@ class EconomicPersistenceContract:
                 conn.execute(
                     "DELETE FROM expenses WHERE business_id=? AND id=?", (self.bid, event.source_id)
                 )
+        version_before = migrations.current_version()
         with self.assertRaises(ValueError):
             migrations.downgrade(62)
-        self.assertEqual(migrations.current_version(), migrations.LATEST_VERSION)
+        self.assertEqual(migrations.current_version(), version_before)
         with self.assertRaises(ValueError):
             db.delete_business_cascade(self.bid)
         self.assertEqual(self.rows(), (1, 0, 1))

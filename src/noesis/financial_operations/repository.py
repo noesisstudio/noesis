@@ -1,6 +1,7 @@
 """Repositorio interno: conexión prestada, sin commit, pools ni permisos implícitos."""
 
 from uuid import uuid4
+from contextlib import nullcontext
 
 from .contracts import AccessDenied, ConflictError, Operation, StateError, uuid_text
 from .historical import ensure_historical_authorization, ensure_not_historical_execution
@@ -24,17 +25,31 @@ class OperationsRepository:
             raise AccessDenied("Operación no disponible.")
         return row
 
-    def prepare(self, principal, identity, request, now):
+    def prepare(self, principal, identity, request, now, *, activation=None):
+        # Capturadores especializados también prestan este repositorio. La
+        # misma frontera impide crear filas sin generation desde un override.
+        from noesis.financial_activation.runtime import binding
+        actual = binding(self.session, self.business_id, request)
+        if activation is not None and activation != actual:
+            raise StateError("Binding distinto del control/grant vigente.")
+        activation = actual
         canonical = request.canonical()
+        operation_uuid = str(uuid4())
+        from noesis.financial_activation.execution_context import execution_context
+        context = nullcontext() if activation is None else execution_context(self.session, dict(activation, kind='prepare', operation_uuid=operation_uuid))
+        binding_columns = '' if activation is None else ', activation_generation, activation_capability'
+        binding_values = '' if activation is None else ', ?, ?'
+        binding_params = () if activation is None else (activation['generation'], activation['capability'])
         # El índice único arbitra también procesos/conexiones concurrentes.
-        self.session.execute(
+        with context:
+            self.session.execute(
             "INSERT INTO financial_operations (business_id, operation_uuid, entry_namespace, entry_key, "
             "created_by, command_type, command_version, request_canonical, request_hash, expected_revision, "
-            "state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'prepared', ?, ?) "
+            "state, created_at, updated_at" + binding_columns + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'prepared', ?, ?" + binding_values + ") "
             "ON CONFLICT(business_id, entry_namespace, entry_key) DO NOTHING",
-            (self.business_id, str(uuid4()), identity.namespace.value, identity.key, principal.user_id,
+            (self.business_id, operation_uuid, identity.namespace.value, identity.key, principal.user_id,
              request.command_type.value, request.command_version, canonical, request.request_hash,
-             request.expected_revision, now, now),
+             request.expected_revision, now, now, *binding_params),
         )
         row = self.session.execute(
             "SELECT * FROM financial_operations WHERE business_id=? AND entry_namespace=? AND entry_key=?"
@@ -56,20 +71,23 @@ class OperationsRepository:
         return row
 
     def add_authorization(self, *, operation_uuid, kind, actor, recorded_by, session_version,
-                          request, channel, permission, now, mandate_uuid=None, expires_at=None):
+                          request, channel, permission, now, mandate_uuid=None, expires_at=None, activation=None):
         if operation_uuid is not None:
             row = self.load(operation_uuid, recorded_by)
             ensure_historical_authorization(row["entry_namespace"], kind, channel,
                                             has_history=self.has_historical_receipt(operation_uuid))
         authorization_uuid = str(uuid4())
+        binding_columns = '' if activation is None else ', activation_generation, activation_capability'
+        binding_values = '' if activation is None else ', ?, ?'
+        binding_params = () if activation is None else (activation['generation'], activation['capability'])
         self.session.execute(
             "INSERT INTO financial_authorizations (business_id, authorization_uuid, operation_uuid, kind, "
             "actor_user_id, recorded_by, actor_session_version, validated_permission, approved_request_hash, "
-            "approved_revision, channel, mandate_uuid, authorized_at, expires_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "approved_revision, channel, mandate_uuid, authorized_at, expires_at" + binding_columns + ") "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?" + binding_values + ")",
             (self.business_id, authorization_uuid, operation_uuid, kind.value, actor, recorded_by,
              session_version, permission, request.request_hash, request.expected_revision,
-             channel.value, mandate_uuid, now, expires_at),
+             channel.value, mandate_uuid, now, expires_at, *binding_params),
         )
         return authorization_uuid
 

@@ -8,6 +8,7 @@ noesis.db
 noesis-demo.db
 /uploads/
 /uploads-demo/
+/backups/
 .db_reset_done
 *.egg-info/
 build/
