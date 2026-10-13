@@ -1,5 +1,19 @@
 # AGENTS.md - Manual del proyecto Bynoesis
 
+> Orden vigente: únicamente RECOVERY BACKUP V2 PORT CRM74 local.
+> Leer [orden](docs/architecture/RECOVERY-BACKUP-V2-CRM74-orden.md),
+> [adenda/cierre](docs/architecture/RECOVERY-BACKUP-V2-CRM74-port.md) y arquitectura.
+> Base current main CRM74, LATEST_VERSION74 y migration74 CRM intactos.
+> Manifest contract2: registry completo version/name + fingerprint sin applied_at;
+> restore V2 nativo sin migraciones, sólo destino propio aislado/sin outbound.
+> V1 exige catálogo/registry CRM74 exactos; legacy Financial74–79 nunca CRM74.
+> E por identidad instalada, siempre sin serving ni evidence G REAL.
+> Historia V2 y diseño75–80 inmutables. No nueva DDL, A75–F80, bridge ni collision
+> guard runtime completo. Tests sólo sintéticos; no producción/Railway/QA real/
+> backups reales/providers/business15/push/PR/main/merge/deploy/G-LIVE/H.
+> Cinco flags OFF y policy E provisional/PRIVACY_NOT_READY intactos.
+> Encabezados inferiores son históricos y no amplían esta orden.
+
 ## 2026-10-05 — Fase1.9E: reconciliación histórica implementada y validada
 
 [Orden](docs/architecture/FASE-1.9E-orden.md), [ADR018](docs/architecture/ADR-018-financial-history-reconciliation.md),

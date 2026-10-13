@@ -1,5 +1,18 @@
 # Registro de cambios
 
+## 2026-10-13 — Recovery Backup V2 port local sobre current main CRM74
+
+Objetivo: archive PostgreSQL18 nativo autocontenido sin sustituir CRM/producto.
+Áreas: backups/admin, módulos postgres_backup*, native_backup, Mise/Railpack/CI,
+tests V2/identity y gobernanza. Sin nueva migration ni cambio de dependencias Python.
+Manifest2 añade registry/fingerprint; restore compara identidad exacta; V1 cerrado
+CRM74; legacy79 preservado sin serving, E por nombre. Historia V2/diseño intactos.
+Pruebas y recuentos finales en [informe](architecture/RECOVERY-BACKUP-V2-CRM74-port.md)
+y Registro-QA. Límites: local sintético, ninguna CI remota ni datos reales.
+Riesgo: coste O(n), worker aislado y toolchain/extensiones/locale requeridos.
+Diagnóstico: códigos BackupError e inventarios/hashes, nunca stderr/secretos.
+Rollback de código: base678bd3f; no rollback de schema ni operación sobre producción.
+
 ## 2026-10-13 — Esquema 74 admitido en el historial y formularios que avisan
 
 Objetivo: resolver el bloqueo del CRM con autorización del founder y repasar, desde el

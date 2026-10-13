@@ -1,6 +1,11 @@
 {
   "$schema": "https://schema.railpack.com",
   "provider": "python",
+  "steps": {
+    "build": {
+      "commands": ["...", "python scripts/check_postgres_toolchain.py"]
+    }
+  },
   "deploy": {
     "aptPackages": [
       "tesseract-ocr",

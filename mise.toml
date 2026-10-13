@@ -1,0 +1,6 @@
+# Railpack detecta este archivo; backend explícito y versión exacta.
+[tools]
+"conda:postgresql" = "18.6"
+
+[settings]
+lockfile = true

@@ -108,103 +108,41 @@ jobs:
           PY
 
   postgres-smoke:
-    name: Humo contra Postgres
+    name: PostgreSQL18 y POSTGRES_BACKUP_V2 sin outbound
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: noesis
-          POSTGRES_PASSWORD: noesis
-          POSTGRES_DB: noesis_ci
-        ports:
-          - "5432:5432"
-        options: >-
-          --health-cmd "pg_isready -U noesis"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-
-    env:
-      DATABASE_URL: postgresql://noesis:noesis@localhost:5432/noesis_ci
-      NOESIS_SECRET: noesis-ci-secret-fixed-32-characters-minimum
-
+    timeout-minutes: 25
     steps:
       - name: Descargar el repositorio
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
       - name: Configurar Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
-
       - name: Configurar uv
         uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
-        with:
-          enable-cache: true
-
       - name: Instalar el proyecto
         run: uv sync --locked
-
-      - name: Aplicar migraciones en Postgres con datos históricos
+      - name: Instalar Mise versionado y PostgreSQL18 con lockfile
+        shell: bash
         run: |
-          uv run python -m noesis.migrations upgrade 32
-          uv run python tests/postgres_migration_smoke.py
-
-      - name: Ejecutar humo Postgres
-        run: uv run python tests/postgres_smoke.py
-
-      - name: Validar precisión y transacciones del Financial Core
-        run: uv run python -m tests.postgres_financial_core
-
-      - name: Validar operaciones, autorización y concurrencia PostgreSQL
-        run: uv run python -m tests.postgres_financial_operations
-
-      - name: Validar persistencia inmutable y concurrencia de Economic Events
-        run: uv run python -m unittest tests.postgres_economic_persistence.EconomicPersistencePostgres
-
-      - name: Validar escritores prestados, rollback y concurrencia financiera
-        run: uv run python -m unittest tests.postgres_borrowed_writers.BorrowedWritersPostgres
-
-      - name: Validar emisión capturada, atomicidad y concurrencia PostgreSQL
-        run: uv run python -m unittest tests.postgres_invoice_capture.InvoiceCapturePostgres
-
-      - name: Validar cobros e identidad bancaria capturados y carreras de procesos
-        run: uv run python -m unittest tests.postgres_payment_bank_capture.PaymentBankCapturePostgres
-
-      - name: Validar recibidas y gastos capturados, continuidad y carreras reales
-        run: uv run python -m unittest tests.postgres_purchasing_capture.PurchasingCapturePostgres
-
-      - name: Validar bridges, autorizaciones, procesos y retries de canales
-        run: uv run python -m unittest tests.postgres_financial_channels.FinancialChannelsPostgres
-
-      - name: Validar inventario histórico diagnóstico sin efectos financieros
-        run: uv run python -m unittest tests.postgres_financial_history_inventory.HistoryInventoryPostgres
-
-      - name: Validar epoch, T0 y fence transaccional PostgreSQL
-        run: uv run python -m unittest tests.postgres_financial_history_cutoff.HistoryCutoffPostgres
-
-      - name: Validar importer histórico, guards SQL y carreras de procesos
-        run: uv run python -m unittest tests.postgres_financial_history_import.HistoryImportPostgres
-
-      - name: Validar reconciliación durable, corrupción y carreras de procesos
-        run: uv run python -m unittest tests.postgres_financial_history_reconciliation.HistoryReconciliationPostgres
-
+          curl -fsSL https://github.com/jdx/mise/releases/download/v2026.10.8/mise-v2026.10.8-linux-x64.tar.gz -o "$RUNNER_TEMP/mise.tar.gz"
+          (cd "$RUNNER_TEMP" && sha256sum -c "$GITHUB_WORKSPACE/scripts/mise-linux-x64.sha256")
+          tar -xzf "$RUNNER_TEMP/mise.tar.gz" -C "$RUNNER_TEMP"
+          "$RUNNER_TEMP/mise/bin/mise" trust
+          "$RUNNER_TEMP/mise/bin/mise" install --locked
+          "$RUNNER_TEMP/mise/bin/mise" exec -- python scripts/check_postgres_toolchain.py
       - name: Obtener código base para rollback seguro
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: d3740a052432a29c9306bf16629a711384df9352 # pragma: allowlist secret
           path: .legacy-baseline
-
-      - name: Validar código anterior sobre esquema nuevo
-        env:
-          PYTHONPATH: ${{ github.workspace }}/.legacy-baseline/src
-        run: uv run python tests/postgres_legacy_smoke.py
-
-      - name: Validar privacidad y rollback del candidato aislado
-        env:
-          NOESIS_VALUE_LEDGER_ENABLED: "false"
-          NOESIS_VALUE_LEDGER_ADMIN_ENABLED: "false"
-        run: uv run python tests/postgres_release_smoke.py
+      - name: Obtener cadena financiera histórica sólo para fixture sintético legacy79
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: 87055215bcbacf6fefa9f6473a87a7d208885f0c # pragma: allowlist secret; public frozen fixture SHA
+          path: .legacy-financial-fixture
+      - name: Todas las matrices del release y V2 en instancia nueva aislada
+        shell: bash
+        run: |
+          tool_bin="$($RUNNER_TEMP/mise/bin/mise where conda:postgresql)/bin"
+          sudo unshare --net bash -c 'ip link set lo up; runuser -u "$1" -- env PYTHONPATH="$2/src" NOESIS_POSTGRES_BIN="$3" "$2/.venv/bin/python" "$2/scripts/run_postgres_backup_lab.py"' _ "$(id -un)" "$PWD" "$tool_bin"

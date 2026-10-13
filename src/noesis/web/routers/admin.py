@@ -11,6 +11,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import (
     FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response,
 )
+from starlette.background import BackgroundTask
 
 from ... import (
     config, db, economics, economics_docs, readiness, security_center,
@@ -967,4 +968,9 @@ def admin_download_latest_backup(request: Request):
         if path.name.endswith((".gz", ".dump"))
         else "application/vnd.sqlite3"
     )
-    return FileResponse(path, media_type=media_type, filename=path.name)
+    download, temporary = backups.download_file(path)
+    return FileResponse(
+        download, media_type="application/zip" if temporary else media_type,
+        filename=path.with_suffix(".backup-set.zip").name if temporary else path.name,
+        background=BackgroundTask(download.unlink, missing_ok=True) if temporary else None,
+    )

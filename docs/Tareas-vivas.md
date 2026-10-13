@@ -1,5 +1,14 @@
 # Tareas vivas
 
+## 2026-10-13 — Después del port Backup V2 CRM74
+
+[Informe y límites](architecture/RECOVERY-BACKUP-V2-CRM74-port.md).
+Publicación/CI remota requieren orden posterior; sin PR/main/deploy ahora.
+Después, sólo con autorización específica: build y worker aislado de recovery,
+lineage runtime75–80/bridge, drill real, revisión humana/legal y activación.
+No hay backup/restore real ni evidencia G generada por este port. Policy E REAL
+provisional y PRIVACY_NOT_READY pendientes. Business15 permanece reservado.
+
 ## 2026-10-12 — Revisión de errores: dos decisiones pendientes
 
 - [x] Pin de esquema del Financial Core frente a la migración 74 del CRM: resuelto el

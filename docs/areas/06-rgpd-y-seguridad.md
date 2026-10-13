@@ -1,5 +1,14 @@
 # 06 · RGPD y seguridad
 
+## Recovery V2 CRM74 (2026-10-13)
+
+El manifest sólo contiene metadatos/hashes, no valores de filas, secretos ni DSN.
+El dump/ZIP contiene datos y requiere custodia privada; no está firmado ni cifrado.
+Restore técnico siempre serving_authorized=false/g_real_evidence=false. E se
+detecta por nombre de migración instalado: legacy78/79 conserva hold/replay
+pendiente; CRM74 carece de E. Policy REAL provisional/PRIVACY_NOT_READY intacta.
+No scripts de purga ni replay remoto. [Contrato actual](../architecture/RECOVERY-BACKUP-V2-CRM74-port.md).
+
 ## 2026-10-05 — Fase1.9E: reconciliación histórica implementada y validada
 
 [Orden](../architecture/FASE-1.9E-orden.md), [ADR018](../architecture/ADR-018-financial-history-reconciliation.md),

@@ -1,5 +1,16 @@
 # 07 · Lo automático: reloj, colas y copias
 
+## Backup V2 CRM74 local (2026-10-13)
+
+PostgreSQL crea set nativo pgdump/docs.zip/manifest2, snapshot READ ONLY e
+inventario íntegro; SQLite conserva su flujo. V1 exige catálogo/registry CRM74
+exactos. La verificación crea exclusivamente un destino propio sin TCP y exige
+namespace sin outbound, no root y herramientas18: falla cerrado en worker normal.
+No migrations V2 ni serving; rotación/subida V2 trata los tres archivos como set.
+Admin descarga ZIP con los tres y elimina únicamente ese temporal.
+[Adenda vigente](../architecture/RECOVERY-BACKUP-V2-CRM74-port.md).
+No se ejecutó backup, cleanup, upload o restore real. Scheduler intacto.
+
 ## 2026-10-05 — Fase1.9E: reconciliación histórica implementada y validada
 
 [Orden](../architecture/FASE-1.9E-orden.md), [ADR018](../architecture/ADR-018-financial-history-reconciliation.md),

@@ -1,5 +1,17 @@
 # Mapa de código
 
+## 2026-10-13 — Backup V2 CRM74
+
+`web/postgres_native_backup.py`: archive/manifest2/restore físico sin migrations.
+`postgres_backup_inventory.py`: counts/hash raw de filas, objetos y secuencias.
+`postgres_backup_identity.py`: registry cerrado CRM74/legacy, fingerprint, E por nombre.
+`postgres_backup_tools.py`: toolchain, libpq y destino propio sin outbound.
+`web/backups.py`: V2 default PostgreSQL; V1 exacto CRM74; SQLite conserva su camino.
+`web/routers/admin.py`: ZIP completo V2 con limpieza del temporal, sin rutas CRM.
+Mise/lock/check_toolchain/Railpack y runner PostgreSQL sintético integrados en CI.
+[Contrato y límites del port](architecture/RECOVERY-BACKUP-V2-CRM74-port.md).
+No DDL nueva ni runtime Financial A75–F80/bridge.
+
 ## 2026-10-05 — Fase1.9E: reconciliación histórica implementada y validada
 
 [Orden](architecture/FASE-1.9E-orden.md), [ADR018](architecture/ADR-018-financial-history-reconciliation.md),

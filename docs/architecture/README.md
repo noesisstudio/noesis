@@ -1,5 +1,29 @@
 # Financial Core: punto de entrada y continuidad
 
+## 2026-10-13 — Recovery Backup V2 port CRM74, exclusivamente local
+
+[Orden](RECOVERY-BACKUP-V2-CRM74-orden.md),
+[adenda y cierre del port](RECOVERY-BACKUP-V2-CRM74-port.md),
+[ADR V2 histórico](ADR-RECOVERY-001-postgres-native-backup.md).
+Catálogo runtime1–74, CRM74 reservada y preservada. Manifest contract2 incorpora
+registry completo y fingerprint version/name; V1 catálogo exacto; restore nativo
+sin migraciones y sin servir. Legacy Financial74–79 conserva su identidad y
+privacy hold según E instalada. Sólo fixtures PostgreSQL18 nuevos sin outbound.
+V2 histórico y sus ensayos reales no acreditan este port ni amplían su permiso.
+
+[Diseño SCHEMA-LINEAGE](SCHEMA-LINEAGE-75-80-contract.md),
+[ADR](ADR-SCHEMA-LINEAGE-001-crm74-financial75-80.md),
+[mapping](SCHEMA-LINEAGE-75-80-mapping.md),
+[hashes](SCHEMA-LINEAGE-75-80-hash-impact.md),
+[goldens](SCHEMA-LINEAGE-75-80-fingerprints.md),
+[matriz futura](SCHEMA-LINEAGE-75-80-test-matrix.md),
+[secuencia](SCHEMA-LINEAGE-75-80-implementation-order.md),
+[cierre diseño](SCHEMA-LINEAGE-75-80-cierre.md).
+A75–F80/bridge/runtime binding completo siguen siendo diseño, sin implementación.
+No producción, QA, copias reales, providers, business15, push/PR/main/deploy/G-LIVE/H.
+Cinco flags OFF, policy E provisional/PRIVACY_NOT_READY. Encabezados inferiores
+históricos, sin autorización adicional.
+
 ## 2026-10-05 — Fase1.9E: reconciliación histórica implementada y validada
 
 [Orden](FASE-1.9E-orden.md), [ADR018](ADR-018-financial-history-reconciliation.md),

@@ -1,5 +1,17 @@
 # 08 · Financial Core
 
+## 2026-10-13 — Recovery V2 CRM74, exclusivamente local
+
+[Orden](../architecture/RECOVERY-BACKUP-V2-CRM74-orden.md),
+[port/contrato/cierre](../architecture/RECOVERY-BACKUP-V2-CRM74-port.md).
+Runtime catálogo1–74, CRM74 intacta; A75–F80 es diseño y no se implementa.
+Identidad version/name completa/fingerprint en manifest2; ninguna normalización
+legacy para hashes raw Decimal/NUMERIC. Restore sin migrations ni efectos
+financieros, sólo instancia propia aislada. Legacy Financial74–79 preservado y
+etiquetado, nunca canonical80/CRM74. E por identidad, no umbral numérico.
+IA sin autoridad; cinco flags OFF; sin producción/QA/copias reales/providers/
+business15/evidence REAL/EMPTY/push/main/deploy/G-LIVE/H ni bridge.
+
 ## 2026-10-05 — Fase1.9E: reconciliación histórica implementada y validada
 
 [Orden](../architecture/FASE-1.9E-orden.md), [ADR018](../architecture/ADR-018-financial-history-reconciliation.md),

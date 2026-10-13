@@ -1,5 +1,16 @@
 # Estado actual del producto
 
+## 2026-10-13 — Candidato local Backup V2 CRM74
+
+[Port y validación](architecture/RECOVERY-BACKUP-V2-CRM74-port.md) sobre current
+main678bd3f, sin cambiar main. Schema74/captacion_hoja_y_tipo y producto actual
+se conservan. Manifest2 incluye identidad completa; restore nativo sin migrations
+ni serving. Sólo laboratorio sintético PostgreSQL18 sin outbound. No push, deploy,
+producción, QA real, providers ni cambios de flags. A75–F80/bridge no implementados.
+Cierre local CODE-VERIFIED PASS:1925 tests frescos,0 FAIL/ERROR; PostgreSQL464,
+Node11. Tres skips cubiertos en PostgreSQL/Linux. Las pruebas de este candidato
+no son CI remota ni evidencia G REAL.
+
 ## 2026-10-12 — Precios por segmento con tarifa tachada (local, sin desplegar)
 
 `/precios` enseña una escalera con cuatro pestañas (Autónomos, Pymes, Empresas,

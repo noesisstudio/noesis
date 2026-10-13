@@ -1,5 +1,17 @@
 # Decisiones
 
+## Backup V2 se porta sobre CRM74, sin reescribir historia (2026-10-13)
+
+Se conserva el delta funcional de V2 histórico, adaptando sólo admin/CI y la
+identidad del manifest al catálogo real de current main. CRM74 es durable.
+Contrato manifest2 usa todos los pares version/name y golden aprobado; applied_at
+queda fuera del fingerprint, dentro del hash raw. Revisión1 se lee sin mutarla.
+V1 requiere catálogo74 exacto; legacy Financial74–79 no se promociona y E se
+identifica por nombre instalado. Restore íntegro no concede serving ni evidencia.
+No migrations nuevas ni validator runtime completo; aprobación futura para
+lineage75–80, bridge, CI remota, recovery real o deploy.
+[Adenda y límites](architecture/RECOVERY-BACKUP-V2-CRM74-port.md).
+
 ## El historial financiero admite el esquema 74 del CRM (2026-10-13)
 
 El founder autoriza resolver el bloqueo del CRM de captación. Las cuatro guardas de

@@ -1,23 +1,24 @@
 """Copias verificadas de SQLite y Postgres.
 
-SQLite conserva su copia consistente ``.db``. Postgres se vuelca mediante psycopg
-a un formato lógico comprimido y portable dentro de Bynoesis. Cada copia se restaura
-en una base o esquema desechable antes de rotarla o enviarla fuera del servidor.
+SQLite conserva su copia consistente ``.db``. PostgreSQL usa un set nativo V2,
+independiente del catálogo de migraciones. V1 sigue siendo legible cuando su
+catálogo es reconstruible. Cada copia se verifica antes de rotar o subirla.
 """
 
 from __future__ import annotations
 
 import base64
+import argparse
 import gzip
 import hashlib
 import hmac
 import http.client
 import json
 import logging
+import os
 import sqlite3
 import time as monotonic_time
 import tempfile
-import uuid
 import zipfile
 from contextlib import closing
 from datetime import date, datetime, time, timezone
@@ -26,6 +27,8 @@ from pathlib import Path
 from urllib.parse import quote, urlsplit
 
 from .. import config, db, migrations
+from . import postgres_native_backup as native
+from .postgres_backup_tools import BackupError, _DisposableTarget, database_identity, disposable_target
 
 try:
     import psycopg
@@ -51,7 +54,7 @@ POSTGRES_DUMP_FORMAT = "noesis-postgres-logical-v1"
 
 def _backup_dir() -> Path:
     directory = Path(config.BACKUP_DIR)
-    directory.mkdir(parents=True, exist_ok=True)
+    directory.mkdir(parents=True, exist_ok=True, mode=0o700)
     # Normalizada en el origen: en macOS /var es un enlace a /private/var, así
     # que comparar una ruta normalizada con otra que no lo está daba falsos
     # negativos al localizar la última copia verificada.
@@ -208,6 +211,15 @@ def _postgres_primary_key(conn, table: str) -> list[str]:
 
 
 def _create_postgres_backup() -> tuple[Path, dict[str, int]]:
+    destination = _destination(".pgdump")
+    manifest = native.create(
+        config.DATABASE_URL, destination, _create_documents_backup, _verify_documents_backup,
+        code_sha=os.environ.get("RAILWAY_GIT_COMMIT_SHA") or os.environ.get("GITHUB_SHA"),
+    )
+    return destination, manifest["table_counts"]
+
+
+def _create_postgres_backup_v1() -> tuple[Path, dict[str, int]]:
     if psycopg is None:
         raise RuntimeError("psycopg no está instalado.")
     destination = _destination(".dump.gz")
@@ -336,7 +348,76 @@ def _reset_postgres_sequences(raw) -> None:
             )
 
 
-def _restore_postgres_dump(raw, path: Path) -> tuple[dict, list[str]]:
+def _legacy_preflight(path: Path) -> dict:
+    from .postgres_backup_identity import describe
+    # Antes de cualquier DDL, siquiera de migraciones. No reconstruir el futuro.
+    with gzip.open(path, "rt", encoding="utf-8") as source:
+        header = json.loads(source.readline())
+    if header.get("format") != POSTGRES_DUMP_FORMAT:
+        raise BackupError("UNSUPPORTED_LEGACY_BACKUP_FORMAT")
+    if type(header.get("schema_version")) is not int or header["schema_version"] < 1:
+        raise BackupError("INVALID_LEGACY_BACKUP_INVENTORY")
+    if header["schema_version"] > migrations.LATEST_VERSION:
+        raise BackupError("LEGACY_BACKUP_REQUIRES_NEWER_SCHEMA_CATALOG")
+    if int(header.get("schema_version", 0)) != migrations.LATEST_VERSION:
+        raise BackupError("LEGACY_BACKUP_REQUIRES_MATCHING_SCHEMA_CATALOG")
+    # El catálogo legacy sólo puede reconstruir tablas/columnas conocidas. La
+    # inspección offline precede al DDL PostgreSQL y evita un restore parcial.
+    with closing(sqlite3.connect(":memory:")) as catalog:
+        catalog.row_factory = sqlite3.Row
+        migrations.upgrade_connection(db.Connection(catalog, "sqlite"))
+        known = {row[0]: {column[1] for column in catalog.execute(
+            'PRAGMA table_info("' + row[0].replace('"', '""') + '")')}
+            for row in catalog.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    if set(header.get("tables", [])) != set(header.get("counts", {})) or not header.get("tables"):
+        raise BackupError("INVALID_LEGACY_BACKUP_INVENTORY")
+    if set(header["tables"]) - set(known):
+        raise BackupError("LEGACY_BACKUP_REQUIRES_NEWER_SCHEMA_CATALOG")
+    if set(header["tables"]) != set(known) - {"sqlite_sequence"}:
+        raise BackupError("LEGACY_BACKUP_INCOMPLETE_SCHEMA_CATALOG")
+    with gzip.open(path, "rt", encoding="utf-8") as source:
+        source.readline()
+        declared = []
+        registry = []
+        current_table, current_columns = None, None
+        for line in source:
+            record = json.loads(line)
+            if record.get("type") == "table":
+                name, columns = record.get("name"), record.get("columns")
+                if name not in known or set(columns or []) != known[name]:
+                    raise BackupError("LEGACY_BACKUP_REQUIRES_NEWER_SCHEMA_CATALOG")
+                declared.append(name)
+                current_table, current_columns = name, columns
+            elif record.get("type") == "row" and current_table == "schema_migrations":
+                values = record.get("values")
+                if (type(values) is not list or len(values) != len(current_columns)
+                        or set(current_columns) != {"version", "name", "applied_at"}):
+                    raise BackupError("SCHEMA_METADATA_INCOMPLETE")
+                row = dict(zip(current_columns, values))
+                if row["applied_at"] is None:
+                    raise BackupError("SCHEMA_METADATA_INCOMPLETE")
+                registry.append([row["version"], row["name"]])
+            elif record.get("type") != "row":
+                raise BackupError("INVALID_LEGACY_BACKUP_INVENTORY")
+        if declared != header["tables"] or len(declared) != len(set(declared)):
+            raise BackupError("INVALID_LEGACY_BACKUP_INVENTORY")
+        # V1 no fija el orden de filas; la identidad se ordena por versión numérica.
+        if any(type(row[0]) is not int for row in registry):
+            raise BackupError("SCHEMA_METADATA_INCOMPLETE")
+        identity = describe(sorted(registry, key=lambda row: row[0]), require_current=True)
+        if identity["schema_version"] != header["schema_version"]:
+            raise BackupError("MANIFEST_LINEAGE_IDENTITY_MISMATCH")
+    return header
+
+
+def _restore_postgres_dump(raw, path: Path, *, target=None) -> tuple[dict, list[str]]:
+    _legacy_preflight(path)
+    if not isinstance(target, _DisposableTarget):
+        raise BackupError("DISPOSABLE_TARGET_REQUIRED")
+    target.assert_empty("0" * 64)
+    if database_identity(raw) != target.identity:
+        raise BackupError("RESTORE_IDENTITY_MISMATCH")
+    target.consume()
     wrapped = db.Connection(raw, "postgres")
     migrations.upgrade_connection(wrapped)
     tables: list[str] = []
@@ -378,21 +459,19 @@ def _restore_postgres_dump(raw, path: Path) -> tuple[dict, list[str]]:
     return header, tables
 
 
-def _verify_postgres_backup(path: Path, origin_counts: dict[str, int]) -> None:
-    """Restaura en un esquema desechable de la misma instancia y luego lo elimina."""
+def _verify_postgres_backup(path: Path, origin_counts: dict[str, int]) -> dict | None:
+    """V2 nativo o V1 acotado; ambos en instancia nueva, nunca en el origen."""
+    if path.suffix == ".pgdump":
+        manifest = native.load_set(path, _verify_documents_backup)
+        if manifest["table_counts"] != origin_counts:
+            raise BackupError("BACKUP_COUNTS_MISMATCH")
+        return native.verify(path, _verify_documents_backup)
     if psycopg is None:
         raise RuntimeError("psycopg no está instalado.")
-    schema = f"noesis_backup_verify_{uuid.uuid4().hex}"
-    with psycopg.connect(config.DATABASE_URL, autocommit=True) as control:
-        control.execute(
-            sql.SQL("CREATE SCHEMA {}").format(sql.Identifier(schema))
-        )
-    try:
-        with psycopg.connect(config.DATABASE_URL, row_factory=dict_row) as raw:
-            raw.execute(
-                sql.SQL("SET search_path TO {}").format(sql.Identifier(schema))
-            )
-            header, tables = _restore_postgres_dump(raw, path)
+    _legacy_preflight(path)
+    with disposable_target() as target:
+        with psycopg.connect(target.dsn, row_factory=dict_row) as raw:
+            header, tables = _restore_postgres_dump(raw, path, target=target)
             if int(header.get("schema_version", 0)) != migrations.LATEST_VERSION:
                 raise RuntimeError(
                     f"El backup declara el esquema "
@@ -427,13 +506,6 @@ def _verify_postgres_backup(path: Path, origin_counts: dict[str, int]) -> None:
                     f"Los recuentos restaurados no cuadran: "
                     f"{restored_counts} != {origin_counts}"
                 )
-    finally:
-        with psycopg.connect(config.DATABASE_URL, autocommit=True) as control:
-            control.execute(
-                sql.SQL("DROP SCHEMA IF EXISTS {} CASCADE").format(
-                    sql.Identifier(schema)
-                )
-            )
 
 
 def _record_result(
@@ -451,7 +523,7 @@ def _record_result(
             error,
         )
     except Exception as exc:  # noqa: BLE001
-        log.error("No se pudo registrar el resultado del backup: %s", exc)
+        log.error("No se pudo registrar el resultado del backup: %s", type(exc).__name__)
 
 
 def _file_sha256(path: Path) -> str:
@@ -463,7 +535,7 @@ def _file_sha256(path: Path) -> str:
 
 
 def _documents_pair(database_path: Path) -> Path:
-    for suffix in (".dump.gz", ".sql.gz", ".db"):
+    for suffix in (".dump.gz", ".sql.gz", ".db", ".pgdump"):
         if database_path.name.endswith(suffix):
             return database_path.with_name(database_path.name[:-len(suffix)] + ".docs.zip")
     raise RuntimeError("Formato de copia no reconocido para asociar documentos.")
@@ -645,7 +717,7 @@ def _upload_offsite(path: Path) -> bool | None:
         log.info("Backup subido fuera del servidor: %s", path.name)
         return True
     except Exception as exc:  # noqa: BLE001
-        log.error("Fallo subiendo el backup fuera del servidor: %s", exc)
+        log.error("Fallo subiendo el backup fuera del servidor: %s", type(exc).__name__)
         return False
     finally:
         connection.close()
@@ -672,14 +744,17 @@ def _upload_backup_set(database_path: Path, documents_path: Path) -> None:
     try:
         database_ok = _upload_offsite(database_path) is True
         documents_ok = _upload_offsite(documents_path) is True
+        manifest_ok = (database_path.suffix != ".pgdump" or
+                       _upload_offsite(native.pair(database_path, ".manifest.json")) is True)
     except Exception as exc:  # noqa: BLE001 - la copia local sigue siendo válida
         log.error("Subida externa interrumpida: %s", type(exc).__name__)
-        database_ok = documents_ok = False
-    passed = database_ok and documents_ok
+        database_ok = documents_ok = manifest_ok = False
+    passed = database_ok and documents_ok and manifest_ok
     db.record_security_event(
         "backup.offsite_passed" if passed else "backup.offsite_failed",
         severity="info" if passed else "critical", area="backups",
-        metadata={**metadata, "database_ok": database_ok, "archive_ok": documents_ok},
+        metadata={**metadata, "database_ok": database_ok, "archive_ok": documents_ok,
+                  "manifest_ok": manifest_ok},
     )
 
 
@@ -698,11 +773,16 @@ def run_backup() -> Path | None:
                 return None
             destination, origin_counts = created
             _verify_sqlite_backup(destination, origin_counts)
-        documents_backup = _create_documents_backup(destination)
+        documents_backup = (_documents_pair(destination) if destination.suffix == ".pgdump"
+                            else _create_documents_backup(destination))
         _verify_documents_backup(documents_backup)
     except Exception as exc:  # noqa: BLE001
-        log.error("Fallo creando o verificando el backup %s: %s", storage, exc)
-        _record_result(destination, "error", storage, str(exc))
+        error = str(exc) if isinstance(exc, BackupError) or storage == "sqlite" else "POSTGRES_BACKUP_FAILED"
+        log.error("Fallo creando o verificando el backup %s: %s", storage, error)
+        if destination is not None and destination.suffix == ".pgdump":
+            for suffix in (".pgdump", ".docs.zip", ".manifest.json"):
+                native.pair(destination, suffix).unlink(missing_ok=True)
+        _record_result(destination, "error", storage, error)
         # No se rota: una verificación fallida jamás elimina la última copia buena.
         return destination
 
@@ -720,6 +800,20 @@ def run_backup() -> Path | None:
 
 def _rotate() -> None:
     paths = [path for path in _backup_dir().glob("noesis-*") if path.is_file()]
+    # V2 rota el set completo. No contar archives incompletos como copias buenas.
+    native_sets = []
+    for archive in paths:
+        if archive.suffix == ".pgdump":
+            try:
+                native.load_set(archive, _verify_documents_backup)
+            except BackupError:
+                continue
+            native_sets.append(archive)
+    for old in sorted(native_sets, key=lambda path: path.name)[:-KEEP]:
+        for suffix in (".pgdump", ".docs.zip", ".manifest.json"):
+            native.pair(old, suffix).unlink(missing_ok=True)
+    native_docs = {native.pair(path, ".docs.zip") for path in paths if path.suffix == ".pgdump"}
+    paths = [path for path in paths if path not in native_docs]
     groups = (
         [
             path for path in paths
@@ -743,7 +837,31 @@ def latest_verified_backup() -> Path | None:
     candidate = (directory / record["filename"]).resolve()
     if candidate.parent != directory or not candidate.is_file():
         return None
+    if candidate.suffix == ".pgdump":
+        try:
+            native.load_set(candidate, _verify_documents_backup)
+        except BackupError:
+            return None
     return candidate
+
+
+def download_file(path: Path) -> tuple[Path, bool]:
+    """V2 se descarga completo. El llamador elimina sólo el ZIP temporal devuelto."""
+    if path.suffix != ".pgdump":
+        return path, False
+    native.load_set(path, _verify_documents_backup)
+    descriptor, name = tempfile.mkstemp(prefix="noesis-backup-set-", suffix=".zip")
+    os.close(descriptor)
+    bundle = Path(name)
+    try:
+        with zipfile.ZipFile(bundle, "w", compression=zipfile.ZIP_STORED) as archive:
+            for suffix in (".pgdump", ".docs.zip", ".manifest.json"):
+                part = native.pair(path, suffix)
+                archive.write(part, part.name)
+        return bundle, True
+    except Exception:
+        bundle.unlink(missing_ok=True)
+        raise BackupError("BACKUP_DOWNLOAD_SET_FAILED") from None
 
 
 def verify_latest_backup_set() -> dict:
@@ -756,19 +874,20 @@ def verify_latest_backup_set() -> dict:
     database_path = latest_verified_backup()
     documents_path = _documents_pair(database_path) if database_path else None
     storage = "postgres" if config.DATABASE_URL else "sqlite"
+    native_result = None
     try:
         if database_path is None:
             raise RuntimeError("No hay una copia de base de datos verificada.")
         if storage == "postgres":
-            with gzip.open(database_path, "rt", encoding="utf-8") as source:
-                header = json.loads(source.readline())
-            expected = {
-                str(table): int(total)
-                for table, total in (header.get("counts") or {}).items()
-            }
+            if database_path.suffix == ".pgdump":
+                expected = native.load_set(database_path, _verify_documents_backup)["table_counts"]
+            else:
+                with gzip.open(database_path, "rt", encoding="utf-8") as source:
+                    header = json.loads(source.readline())
+                expected = {str(table): int(total) for table, total in (header.get("counts") or {}).items()}
             if not expected:
                 raise RuntimeError("La copia PostgreSQL no declara sus recuentos.")
-            _verify_postgres_backup(database_path, expected)
+            native_result = _verify_postgres_backup(database_path, expected)
         else:
             with closing(sqlite3.connect(database_path)) as source:
                 expected = _sqlite_counts(source)
@@ -795,11 +914,12 @@ def verify_latest_backup_set() -> dict:
             "ok": False,
             "storage": storage,
             "duration_seconds": duration,
-            "error": str(exc)[:300],
+            "error": (str(exc)[:300] if isinstance(exc, BackupError) or storage == "sqlite"
+                      else "POSTGRES_RESTORE_CHECK_FAILED"),
         }
     duration = round(monotonic_time.monotonic() - started, 3)
     db.record_security_event(
-        "backup.restore_drill_passed",
+        "backup.restore_drill_technical_passed" if native_result else "backup.restore_drill_passed",
         severity="info",
         area="backups",
         metadata={"storage": storage, "duration_seconds": duration},
@@ -809,11 +929,25 @@ def verify_latest_backup_set() -> dict:
         "storage": storage,
         "duration_seconds": duration,
         "error": None,
+        **(native_result or {}),
     }
 
 
 def restore_check_main() -> int:
     """Entrada CLI para el simulacro; devuelve codigo no cero si falla."""
+    parser = argparse.ArgumentParser(description="Verificación técnica de copias aisladas")
+    parser.add_argument("--native-archive", type=Path)
+    args = parser.parse_args()
+    if args.native_archive:
+        # Herramienta de recovery, no arranque de app73 sobre DB79 ni reconciliación E.
+        try:
+            result = native.verify(args.native_archive, _verify_documents_backup)
+        except Exception as exc:  # noqa: BLE001 - nunca publicar SQL/DSN del driver
+            print(json.dumps({"technical_integrity": "FAIL",
+                              "error": str(exc) if isinstance(exc, BackupError) else "NATIVE_RESTORE_FAILED"}))
+            return 2
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0
     db.init_db(auto_migrate=not bool(config.DATABASE_URL))
     result = verify_latest_backup_set()
     print(json.dumps(result, ensure_ascii=False, indent=2))

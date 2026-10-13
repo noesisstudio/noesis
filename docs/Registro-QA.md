@@ -1,5 +1,23 @@
 # Registro de QA
 
+## 2026-10-13 — Backup V2 CRM74: validación local fresca
+
+**BACKUP_V2_CRM74 LOCAL CODE-VERIFIED PASS**. Pasada general completa fresca:
+1925 tests,1922 PASS,3 skips previstos,0 FAIL,0 ERROR,2274.488s (Python3.12.3 Windows).
+Dos skips de PG y uno POSIX cubiertos en Linux/PG. CRM:88 del paquete nuevo y40
+legacy PASS; Node/local_dates:11 PASS. PostgreSQL18:394 base +39 nativeV2 +31
+contratos=464 PASS,0 skips,18 pasos correctos,1355.563s suma de pasos.
+Grupo V2/identidad70 en46.444s; migration0/32/73→74 ambos motores y ciclo SQLite
+0→74→0→74 PASS. Ruff, Bandit HIGH/HIGH, secretos sin cambiar baseline,
+dependencias, verdad,550 enlaces locales del delta, AST/preservación y diff PASS.
+Los intentos WSL interrumpidos no cuentan ni se agregan. No se reutilizan1820
+históricos ni1894 agregados de main; estos últimos quedan como historia abajo.
+Autoauditoría:27 PASS,0 FAIL. Registry/fingerprint exactos, unknown objects y
+legacy79 sintéticos, sin migrations V2 ni serving/evidence. SHA en commit del informe.
+Sólo fixtures nuevos en NoesisBackupV2CRM74Synthetic con namespace sin outbound.
+No producción, QA real, backups reales, providers, push ni deploy.
+[Informe actualizado del port](architecture/RECOVERY-BACKUP-V2-CRM74-port.md).
+
 ## 2026-10-13 — Suite completa en verde con el CRM y flujos de alta desde el navegador
 
 - **Suite completa por bloques en paralelo: 1.894 pruebas, 0 fallos, 2 skips

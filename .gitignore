@@ -25,3 +25,7 @@ Automatizacion Facturas - archivo adjuntado/
 
 # Archivos temporales de bloqueo de Office
 ~$*
+
+# Código congelado usado únicamente por fixtures de CI, fuera del paquete runtime.
+.legacy-baseline/
+.legacy-financial-fixture/
