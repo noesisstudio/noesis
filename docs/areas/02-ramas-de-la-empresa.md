@@ -94,6 +94,8 @@ JavaScript `tests/*.test.cjs` (`node --test`).
 - [ ] ¿La CSP de `web/server.py` necesita un origen nuevo? Solo por página y con
       permiso explícito (como Cal.com en `/contacto`).
 - [ ] ¿Los textos siguen `docs/design/UX_COPY.md`, sin jerga interna?
+- [ ] ¿Un formulario nuevo usa `formModal` con `required` en lo obligatorio y deja que el
+      error del servidor suba (sin `alert`), para que se vea dentro del formulario?
 - [ ] ¿Un día de calendario calculado en el navegador usa `localDate()` de `app.js`?
       `toISOString()` pasa a UTC y en España devuelve el día anterior.
 

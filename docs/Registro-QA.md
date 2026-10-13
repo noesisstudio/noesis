@@ -1,5 +1,30 @@
 # Registro de QA
 
+## 2026-10-13 — Suite completa en verde con el CRM y flujos de alta desde el navegador
+
+- **Suite completa por bloques en paralelo: 1.894 pruebas, 0 fallos, 2 skips
+  existentes.** Incluye las 169 de `test_financial_history*`, que fallaban desde la
+  migración 74, y las 88 de `tests/crm`. Es la primera pasada completa con el CRM en
+  el árbol; `verified_test_count` pasa a 1894 (local, SQLite).
+- `node --test tests/*.test.cjs`: 11 de 11. `ruff check src tests`, verdad del
+  proyecto y secretos: correctos.
+- **Altas desde el navegador** (Chrome sin ventana, cuenta de prueba en período de
+  prueba, 1280 px): cliente, gasto, producto, posible cliente, presupuesto, persona
+  del equipo y factura, cada una con datos válidos, con el formulario vacío y con
+  datos que el servidor rechaza. Emisión de factura sin datos fiscales del negocio:
+  se frena con su motivo. Seis mensajes al asistente (agenda, factura, lectura del
+  mes, gasto, cita para mañana y texto sin sentido): todos con respuesta correcta; la
+  cita cae en el día siguiente del calendario.
+- **Tras los arreglos:** el formulario avisa de lo que falta y del rechazo del
+  servidor; el parte pasa de 2 a 3 y de 3 a 4 clientes sin recargar; el aviso de
+  seguridad sale con un rechazo no recogido. Recorrido de las 20 pantallas de esa
+  cuenta ya con datos, a 1280 y 390 px: sin errores ni desbordamiento.
+
+Sin probar: PostgreSQL y la CI (las matrices del historial con el esquema 74 solo
+corren allí), subida de documentos, importación de clientes, cobro de una factura
+emitida (hacen falta los datos fiscales del negocio), portal del trabajador, Safari y
+Firefox.
+
 ## 2026-10-12 — Revisión general de errores y arreglo del calendario de Trabajos
 
 Qué se pasó, todo en local (macOS, SQLite, hora de Madrid):

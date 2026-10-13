@@ -19,43 +19,17 @@ const apiResponse = async r => {
   }
   return data;
 };
-// Red de seguridad: si el servidor rechaza una acción y la pantalla no recoge el
-// motivo, se enseña aquí. Antes el botón parecía no hacer nada.
-function noesisToast(text) {
-  document.querySelectorAll('.app-toast').forEach(t => t.remove());
-  const toast = document.createElement('div');
-  toast.className = 'app-toast';
-  toast.setAttribute('role', 'alert');
-  toast.textContent = text;
-  document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), 6000);
-}
-window.addEventListener('unhandledrejection', event => {
-  if (event.reason && event.reason.api) noesisToast(event.reason.message);
-});
 const api = (path) => fetch(`/api/${BIZ}${path}`).then(apiResponse);
 const rawPost = (path, body) => fetch(`/api/${BIZ}${path}`, {
   method: 'POST', headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify(body || {})
 }).then(apiResponse);
-// El parte de arriba viene pintado del servidor. Tras crear, cambiar o borrar algo se
-// vuelve a pedir, para que no contradiga a la lista que hay debajo.
-let pageNoteTimer;
-function refreshPageNote() {
-  if (!document.querySelector('.page-note')) return;
-  clearTimeout(pageNoteTimer);
-  pageNoteTimer = setTimeout(async () => {
-    try {
-      const response = await fetch(location.pathname + location.search);
-      if (!response.ok) return;
-      const fresh = new DOMParser()
-        .parseFromString(await response.text(), 'text/html').querySelector('.page-note');
-      const current = document.querySelector('.page-note');
-      if (fresh && current) current.replaceWith(fresh);
-    } catch (error) { /* se pondrá al día en la siguiente visita */ }
-  }, 600);
-}
-const afterChange = data => { refreshPageNote(); return data; };
+// Tras crear, cambiar o borrar algo se refresca el parte de la pantalla (más abajo,
+// con el resto de la interfaz).
+const afterChange = data => {
+  if (typeof refreshPageNote === 'function') refreshPageNote();
+  return data;
+};
 const apiPost = (path, body) => (window.NOESIS_FINANCIAL_CORE
   ? financialRequest(path, body || {}, 'POST') : rawPost(path, body)).then(afterChange);
 const rawPatch = (path, body) => fetch(`/api/${BIZ}${path}`, {
@@ -156,6 +130,40 @@ async function financialRequest(path, body, method) {
 const TRASH = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
 
 const el = (id) => document.getElementById(id);
+
+// Red de seguridad: si el servidor rechaza una acción y la pantalla no recoge el
+// motivo, se enseña aquí. Antes el botón parecía no hacer nada.
+function noesisToast(text) {
+  document.querySelectorAll('.app-toast').forEach(t => t.remove());
+  const toast = document.createElement('div');
+  toast.className = 'app-toast';
+  toast.setAttribute('role', 'alert');
+  toast.textContent = text;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 6000);
+}
+window.addEventListener('unhandledrejection', event => {
+  if (event.reason && event.reason.api) noesisToast(event.reason.message);
+});
+
+// El parte de arriba viene pintado del servidor. Tras crear, cambiar o borrar algo se
+// vuelve a pedir, para que no contradiga a la lista que hay debajo.
+let pageNoteTimer;
+function refreshPageNote() {
+  if (!document.querySelector('.page-note')) return;
+  clearTimeout(pageNoteTimer);
+  pageNoteTimer = setTimeout(async () => {
+    try {
+      const response = await fetch(location.pathname + location.search);
+      if (!response.ok) return;
+      const fresh = new DOMParser()
+        .parseFromString(await response.text(), 'text/html').querySelector('.page-note');
+      const current = document.querySelector('.page-note');
+      if (fresh && current) current.replaceWith(fresh);
+    } catch (error) { /* se pondrá al día en la siguiente visita */ }
+  }, 600);
+}
+
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, c => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
 })[c]);

@@ -1,5 +1,42 @@
 # Registro de cambios
 
+## 2026-10-13 — Esquema 74 admitido en el historial y formularios que avisan
+
+Objetivo: resolver el bloqueo del CRM con autorización del founder y repasar, desde el
+navegador y con una cuenta real de prueba, los flujos que crean datos.
+
+**Financial Core (decisión en [Decisiones](Decisiones.md)).** Las guardas de
+`financial_history/service.py`, `cutoff.py`, `importer.py` y `reconciliation.py`
+admiten el esquema 74 además de los suyos. Prueba nueva en
+`tests/test_financial_history.py`: la 74 solo nombra tablas `sales_*`. Guía 08 y
+contrato de reconciliación actualizados.
+
+**Panel (`static/app.js`, `static/app.css` y plantillas):**
+- `formModal` ya no se cierra en silencio: los campos con `required` o con tipo que el
+  navegador valida dicen qué falta, y si el servidor rechaza el envío el motivo sale
+  dentro del formulario sin perder lo escrito. El botón se bloquea mientras guarda.
+  Clientes y presupuestos marcan sus campos obligatorios; equipo y presupuestos dejan
+  de usar `alert`.
+- El parte de arriba de cada pantalla se vuelve a pedir tras crear, cambiar o borrar
+  (`refreshPageNote`): antes decía «Aún no hay clientes» con la lista ya llena.
+- Red de seguridad: un rechazo del servidor que la pantalla no recoge se enseña en un
+  aviso (`noesisToast`) en vez de dejar el botón sin respuesta. Costes recoge el suyo.
+- Inicio: «Añadir trabajo» del día vacío llevaba a `/agenda?nuevo=1`, que no abre
+  nada; ahora va al asistente, como el resto de altas de trabajo.
+- Emitir factura desde la web: el motivo ya no lleva delante «Parámetros inválidos
+  para enviar_factura» (`_tool_error` en `routers/invoicing.py`); el aviso dice
+  «emitir», no «enviar».
+
+Las tres piezas nuevas de `app.js` van después de la marca «Icono de papelera»: las
+pruebas de `financial_channels.test.cjs` cargan solo lo anterior, sin `document`.
+
+Pruebas: ver [Registro-QA](Registro-QA.md). Sin desplegar ni confirmar.
+
+Riesgo: `refreshPageNote` pide de nuevo la página tras cada cambio (una lectura más,
+con 600 ms de espera para agrupar). Diagnóstico: si un parte no se actualiza, mirar
+que la acción pase por `apiPost`/`apiPatch`/`apiDelete`. Rollback: revertir; no hay
+migración ni datos nuevos.
+
 ## 2026-10-12 — Trabajos: el calendario pintaba las citas un día tarde
 
 Objetivo: revisión general en busca de errores (suite, linter, recorrido de pantallas).

@@ -1693,6 +1693,33 @@ class BackendTestCase(unittest.TestCase):
             db.get_invoice(invoice["id"], business["id"])["status"], "borrador"
         )
 
+    def test_issue_button_without_tax_data_explains_itself_without_jargon(self):
+        from starlette.testclient import TestClient
+        from noesis.web import server
+
+        business, _ = self.make_business()
+        db.create_user(
+            "emitir-web@example.com", auth.hash_password(TEST_PASSWORD), business["id"],
+        )
+        chat.handle(business["id"], "factura a Juan por reparación 100 euros")
+        invoice = db.list_invoices(business["id"])[0]
+
+        with patch.object(server, "start_scheduler", lambda: None):
+            with TestClient(server.app) as client:
+                client.post("/login", data={
+                    "email": "emitir-web@example.com", "password": TEST_PASSWORD,
+                })
+                response = client.post(
+                    f"/api/{business['id']}/invoices/{invoice['id']}/send"
+                )
+
+        # El botón «Emitir» enseña el mismo motivo que el chat, sin el nombre
+        # interno de la herramienta delante.
+        self.assertEqual(response.status_code, 400)
+        error = response.json()["error"]
+        self.assertTrue(error.startswith("Antes de emitir completa"), error)
+        self.assertNotIn("enviar_factura", error)
+
     def test_missing_client_data_offers_the_simplified_invoice_when_it_fits(self):
         # Sin NIF del cliente no se puede emitir una factura completa, pero si
         # el importe cabe en una simplificada el autónomo tiene salida legal.
