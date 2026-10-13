@@ -241,7 +241,8 @@ let SERIES = [];
 async function newRecurring(){
   const clients = await api('/clients');
   if(!clients.length){ alert('Crea primero el cliente al que vas a facturar.'); return; }
-  const tomorrow = new Date(Date.now()+86400000).toISOString().slice(0,10);
+  const next = new Date(); next.setDate(next.getDate()+1);
+  const tomorrow = localDate(next);
   formModal({
     title:'Programar factura', submitLabel:'Guardar programación', fields:[
       {name:'client_id',label:'Cliente',options:clients.map(c=>({value:c.id,label:c.name}))},
@@ -403,7 +404,7 @@ function render(f) {
 async function send(id){
   if(!confirm('¿Emitir esta factura? Se le asignará número y fecha definitivos. Después podrás entregarla por el canal habitual del cliente.')) return;
   try { await apiPost('/invoices/'+id+'/send', {}); load(); }
-  catch(e){ alert('No se pudo enviar: ' + e.message); }
+  catch(e){ alert('No se pudo emitir. ' + e.message); }
 }
 async function pay(id){ await apiPost('/invoices/'+id+'/pay', {}); load(); }
 async function deliver(id){

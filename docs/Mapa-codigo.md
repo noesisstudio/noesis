@@ -49,7 +49,25 @@ Los encabezados inferiores conservan historia y no amplían autorización.
 | readers.py | Lookup tenant+PK; referencias fiscales frozen sin regeneración |
 | classifier.py | Nuevo inventario reconoce evidencia D existente sin promover B |
 
+## 2026-10-05 — CRM de captación visual y unido a la hoja de Google
 
+| Ruta | Responsabilidad |
+|---|---|
+| `src/noesis/crm/zonas.py` | Provincias, código postal, lengua del guion y correo comprobado; sin dependencias |
+| `src/noesis/crm/hoja.py` | CSV de una pestaña → filas limpias; estado escrito a mano → peldaño; `CAMPOS_DE_HOJA` |
+| `src/noesis/crm/google.py` | Adaptador: enlace → `export?format=csv&gid=`; solo `docs.google.com` y redirecciones de Google |
+| `src/noesis/crm/sincronizar.py` | `sales_sheets`, `aplicar_filas` en una transacción, supresiones por huella, dirección y CSV para `IMPORTDATA` |
+| `src/noesis/crm/panel.py` | Embudo por alcance, provincias, semanas, tablero, filtro, páginas y tanda; lógica pura |
+| `src/noesis/crm/rutas.py` | Todas las rutas `/admin/crm*` (antes en `routers/admin.py`) y `/admin/crm/feed/{clave}.csv` sin sesión |
+| `src/noesis/crm/esquema.py` | Migración 74; `migrations.py` solo la registra |
+| `src/noesis/crm/demo.py` | Datos inventados (`sembrar`) y demo autónoma (`construir`): pide la página a la app sobre una base temporal y la guarda con estilos y script dentro |
+| `web/static/crm/demo.js` | Hace de servidor solo en la demo; la app nunca lo carga |
+| `web/templates/crm/`, `web/static/crm/` | `pagina.html` (siete apartados con ancla) y sus trozos `_panel`, `_tablero`, `_tanda`, `_hoja`; `crm.css`, `crm.js` (apartados, guiones, tablero, gráficos) |
+| `tests/crm/` | `test_hoja`, `test_panel`, `test_pagina`, `test_demo` y `base` |
+
+`sales.py` conserva estados, guiones y la lista pegada; `db.py`, las fichas
+(`sales_prospects`, `sales_touches`). `crm/__init__.py` no importa nada: `sales.py` usa
+`crm.zonas` y cargar el resto crearía un círculo.
 
 ## 2026-10-04 — Fase1.9C: epoch/T0/fence (implementada y validada)
 

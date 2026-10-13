@@ -86,7 +86,7 @@ async function load() {
   const filter = el('l-filter').value;
   const all = await api('/leads');
   const items = filter ? all.filter(l => l.status === filter) : all;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDate();
   const open = all.filter(l => !['ganado', 'perdido'].includes(l.status));
   el('l-open').textContent = open.length;
   const due = open.filter(l => l.next_action_on && l.next_action_on <= today);

@@ -236,7 +236,8 @@ def _try_worker_link(from_phone: str, text: str) -> dict | None:
             "business_id": business_id,
             "subscription_required": True,
             "reply": (
-                "El canal de equipo forma parte del plan Negocio. "
+                "El canal de equipo forma parte del plan "
+                f"{billing_adapter.PLANS['pro']['name']}. "
                 "El titular puede activarlo desde Suscripción."
             ),
         }
@@ -861,9 +862,13 @@ def _audio_to_text(audio_id: str,
     except Exception as exc:  # noqa: BLE001
         log.warning("Fallo transcribiendo audio: %s", exc)
         return (None, _VOZ_MAL_CONFIGURADA)
-    if not (texto or "").strip():
+    dicho = transcription.sin_texto_fantasma(texto or "")
+    if not dicho:
+        if (texto or "").strip():
+            # Sin el texto: una nota puede traer datos de un cliente.
+            log.info("Nota de voz sin habla: el transcriptor devolvió una frase inventada.")
         return (None, _VOZ_NO_ENTENDIDA)
-    return (texto, None)
+    return (dicho, None)
 
 
 # ------------------------------------- Confirmaciones y mèdia entrante --

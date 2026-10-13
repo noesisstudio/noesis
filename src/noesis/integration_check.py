@@ -290,11 +290,11 @@ def _check_brevo(*, network: bool) -> IntegrationCheck:
 
 _STRIPE_PRICES = (
     ("Autónomo mensual", "STRIPE_PRICE_AUTONOMO", 2_900, "month"),
-    ("Negocio mensual", "STRIPE_PRICE_PRO", 4_900, "month"),
-    ("Premium mensual", "STRIPE_PRICE_PREMIUM", 9_900, "month"),
+    ("Pyme mensual", "STRIPE_PRICE_PRO", 4_900, "month"),
+    ("Avanzado mensual", "STRIPE_PRICE_PREMIUM", 9_900, "month"),
     ("Autónomo anual", "STRIPE_PRICE_AUTONOMO_ANNUAL", 31_900, "year"),
-    ("Negocio anual", "STRIPE_PRICE_PRO_ANNUAL", 53_900, "year"),
-    ("Premium anual", "STRIPE_PRICE_PREMIUM_ANNUAL", 108_900, "year"),
+    ("Pyme anual", "STRIPE_PRICE_PRO_ANNUAL", 53_900, "year"),
+    ("Avanzado anual", "STRIPE_PRICE_PREMIUM_ANNUAL", 108_900, "year"),
 )
 
 

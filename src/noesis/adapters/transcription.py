@@ -12,6 +12,7 @@ el resto. Carga perezosa: si faster-whisper no está instalado, no rompe la app.
 from __future__ import annotations
 
 import os
+import re
 import tempfile
 import threading
 import urllib.request
@@ -46,6 +47,44 @@ def _comprobar_texto(text: str) -> None:
 
     if len(text) > config.MAX_CHAT_CHARS:
         raise NotaNoValida("larga", "La transcripción es demasiado larga.")
+
+
+# Lo que Whisper «oye» donde no hay voz. Con silencio, ruido de obra o música de
+# fondo no devuelve un texto vacío: devuelve frases de los vídeos subtitulados con
+# los que se entrenó. Son siempre las mismas y ninguna es una orden de un autónomo.
+_TEXTO_FANTASMA = re.compile(
+    r"[\[(*]\s*(?:m[uú]sica|music|aplausos|risas|ruido|silencio|inaudible|sonido\w*|"
+    r"blank_audio)[^\])*\n]{0,30}[\])*]|[♪♫]+"
+    r"|subt[ií]t[uo]l\w*\s[^.!?\n]*?amara\s?\.?\s?org"
+    r"|subt[ií]t[uo]l\w*\s+(?:realizados|creados|hechos|proporcionados|por|per|en|de)\s[^.!?\n]*"
+    r"|subtitulado\s+por[^.!?\n]*"
+    r"|m[aá]s\s+informaci[oó]n\s+(?:en\s+)?www\.[\w.-]+"
+    r"|(?:muchas\s+)?gracias\s+por\s+ver(?:\s+(?:el|este)\s+v[ií]deo)?"
+    r"|gr[aà]cies\s+per\s+veure(?:\s+(?:el|aquest)\s+v[ií]deo)?"
+    r"|(?:no\s+(?:te\s+)?olvides\s+(?:de\s+)?)?suscr[ií]b\w+(?:\s+al?\s+(?:mi\s+)?canal)?"
+    r"|subscriu-te(?:\s+al\s+canal)?"
+    r"|thanks?(?:\s+you)?\s+for\s+watching",
+    re.I)
+
+
+def sin_texto_fantasma(text: str) -> str:
+    """Quita lo que el transcriptor se inventa cuando no hay voz.
+
+    «Subtítulos realizados por la comunidad de Amara.org» o «Gracias por ver el
+    vídeo» llegaban al cerebro como si el autónomo lo hubiera dicho y contestaba
+    con el parte del día (ronda de voz del 8-oct). Si tras quitarlo no queda
+    ninguna palabra, devuelve cadena vacía: la nota no decía nada. Si la frase
+    inventada va pegada a una orden de verdad, se conserva la orden.
+    """
+    original = (text or "").strip()
+    limpio = _TEXTO_FANTASMA.sub(" ", original)
+    if limpio == original:
+        return original if re.search(r"[^\W_]", original) else ""
+    limpio = re.sub(r"\s+([.,;!?])", r"\1", re.sub(r"\s{2,}", " ", limpio))
+    limpio = limpio.strip(" .,;:!¡?¿-")
+    if not re.search(r"[^\W_]", limpio):
+        return ""
+    return limpio + ("." if original.endswith(".") else "")
 
 
 class Transcriber(Protocol):

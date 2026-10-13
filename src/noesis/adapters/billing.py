@@ -30,19 +30,93 @@ _PORTAL_CONFIGURATION_VERSION = "noesis-v1"
 
 # Catálogo de planes: fuente única de verdad. El precio se comunica siempre + IVA;
 # el modelo reproducible y sus márgenes están en docs/Unit-economics-y-cerebro-interno.md.
+# `price` es lo que se cobra (precio de lanzamiento) y `list_price` la tarifa que la
+# web enseña tachada al lado. Las claves `pro` y `premium` se conservan: solo cambió
+# el nombre visible (antes Negocio y Premium).
 PLANS = {
-    "autonomo": {"name": "Autónomo", "price": 29, "credits": 75},
-    "pro": {"name": "Negocio", "price": 49, "credits": 300},
-    "premium": {"name": "Premium", "price": 99, "credits": 1500},
+    "autonomo": {"name": "Autónomo", "price": 29, "list_price": 60, "credits": 75},
+    "pro": {"name": "Pyme", "price": 49, "list_price": 100, "credits": 300},
+    "premium": {"name": "Avanzado", "price": 99, "list_price": 200, "credits": 1500},
+}
+# Plan anunciado en la pestaña Empresas que todavía no se puede contratar: necesita
+# roles y varios accesos por negocio. No entra en PLANS para que ni Stripe ni el alta
+# lo ofrezcan.
+UPCOMING_PLANS = {
+    "empresa": {"name": "Empresa", "price": 199, "list_price": 400, "credits": 3000},
 }
 PLAN_PRICES = {key: plan["price"] for key, plan in PLANS.items()}
+PLAN_LIST_PRICES = {key: plan["list_price"] for key, plan in PLANS.items()}
 ANNUAL_MONTHS_CHARGED = 11
 PLAN_ANNUAL_PRICES = {
     key: price * ANNUAL_MONTHS_CHARGED for key, price in PLAN_PRICES.items()
 }
+PLAN_ANNUAL_LIST_PRICES = {
+    key: price * ANNUAL_MONTHS_CHARGED for key, price in PLAN_LIST_PRICES.items()
+}
 PLAN_ANNUAL_SAVINGS = {
     key: price * (12 - ANNUAL_MONTHS_CHARGED) for key, price in PLAN_PRICES.items()
 }
+# Oferta de lanzamiento que acompaña a la tarifa tachada: descuento anunciado y meses
+# que se mantiene desde el alta. La web y la pantalla de suscripción leen de aquí.
+LAUNCH_DISCOUNT_PERCENT = 50
+LAUNCH_OFFER_MONTHS = 12
+
+
+# Puertas de /precios: cada pestaña enseña tres peldaños seguidos de la misma
+# escalera y destaca uno. Las gestorías no tienen precio público.
+PRICING_SEGMENTS = {
+    "autonomos": {
+        "label": "Autónomos", "hint": "Trabajas por tu cuenta",
+        "plans": ("autonomo", "pro", "premium"), "featured": "autonomo",
+    },
+    "pymes": {
+        "label": "Pymes", "hint": "De 2 a 10 personas",
+        "plans": ("autonomo", "pro", "premium"), "featured": "pro",
+    },
+    "empresas": {
+        "label": "Empresas", "hint": "Más de 10 personas",
+        "plans": ("pro", "premium", "empresa"), "featured": "premium",
+    },
+    "gestorias": {
+        "label": "Gestorías", "hint": "Despachos con cartera",
+        "plans": (), "featured": "",
+    },
+}
+
+
+def _plan_card(plan: dict, *, upcoming: bool) -> dict:
+    return {
+        "name": plan["name"],
+        "monthly": plan["price"],
+        "list": plan["list_price"],
+        "annual": plan["price"] * ANNUAL_MONTHS_CHARGED,
+        "annual_list": plan["list_price"] * ANNUAL_MONTHS_CHARGED,
+        "saving": plan["price"] * (12 - ANNUAL_MONTHS_CHARGED),
+        "credits": plan["credits"],
+        "upcoming": upcoming,
+    }
+
+
+def pricing_context() -> dict:
+    """Cifras del catálogo para las plantillas que enseñan planes."""
+    return {
+        "prices": PLAN_PRICES,
+        "list_prices": PLAN_LIST_PRICES,
+        "annual_prices": PLAN_ANNUAL_PRICES,
+        "annual_list_prices": PLAN_ANNUAL_LIST_PRICES,
+        "annual_savings": PLAN_ANNUAL_SAVINGS,
+        "plan_cards": {
+            **{key: _plan_card(plan, upcoming=False) for key, plan in PLANS.items()},
+            **{
+                key: _plan_card(plan, upcoming=True)
+                for key, plan in UPCOMING_PLANS.items()
+            },
+        },
+        "pricing_segments": PRICING_SEGMENTS,
+        "launch_discount": LAUNCH_DISCOUNT_PERCENT,
+        "launch_months": LAUNCH_OFFER_MONTHS,
+    }
+
 
 # Capacidades vendidas por plan. La prueba y la demo muestran el producto completo;
 # una cuenta de pago recibe solo lo contratado. Mantener este catálogo en servidor

@@ -4414,6 +4414,16 @@ def _downgrade_financial_history_reconciliation(conn):
     downgrade(conn)
 
 
+def _upgrade_sales_sheet_and_kind(conn) -> None:
+    from .crm.esquema import upgrade
+    upgrade(conn)
+
+
+def _downgrade_sales_sheet_and_kind(conn) -> None:
+    from .crm.esquema import downgrade
+    downgrade(conn)
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
     (2, "integridad_multiempresa", _upgrade_tenant_integrity, _downgrade_tenant_integrity),
@@ -4527,6 +4537,8 @@ MIGRATIONS: tuple[Migration, ...] = (
     (71, "corte_historico_epoch_fence", _upgrade_financial_history_cutoff, _downgrade_financial_history_cutoff),
     (72, "incorporacion_historica_durable", _upgrade_financial_history_import, _downgrade_financial_history_import),
     (73, "reconciliacion_historica_durable", _upgrade_financial_history_reconciliation, _downgrade_financial_history_reconciliation),
+    (74, "captacion_hoja_y_tipo",
+     _upgrade_sales_sheet_and_kind, _downgrade_sales_sheet_and_kind),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 

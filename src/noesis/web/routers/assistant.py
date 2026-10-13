@@ -196,6 +196,8 @@ async def api_chat_audio(business_id: int, request: Request, audio: UploadFile =
             "No he podido entender el audio. Se ha descartado la propuesta anterior; escribe de nuevo la orden.",
             422,
         )
+    # Con silencio o ruido el transcriptor devuelve frases inventadas, no vacío.
+    text = transcription.sin_texto_fantasma(text or "")
     if not text:
         return audio_error("El audio estaba vacío o no se entendió.", 422)
     result = await run_in_threadpool(

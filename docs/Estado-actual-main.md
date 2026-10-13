@@ -1,5 +1,16 @@
 # Estado actual del producto
 
+## 2026-10-12 — Precios por segmento con tarifa tachada (local, sin desplegar)
+
+`/precios` enseña una escalera con cuatro pestañas (Autónomos, Pymes, Empresas,
+Gestorías) y, en cada plan, la tarifa tachada junto al precio de lanzamiento con
+−50 %: Autónomo 60 → 29 €, Pyme 100 → 49 €, Avanzado 200 → 99 €. Empresa
+(400 → 199 €) aparece como «Próximamente» y lleva a contacto. La portada y la
+pantalla de suscripción enseñan el mismo tachado. Negocio se llama ahora Pyme y
+Premium, Avanzado; lo que se cobra, las claves, Stripe y los derechos por plan no
+cambian. Las secciones inferiores que dicen Negocio o Premium son históricas.
+Detalle en [Decisiones](Decisiones.md).
+
 ## 2026-10-05 — Fase1.9E: reconciliación histórica implementada y validada
 
 [Orden](architecture/FASE-1.9E-orden.md), [ADR018](architecture/ADR-018-financial-history-reconciliation.md),
@@ -25,6 +36,19 @@ durables cerrados; factura histórica v2 bloqueada. Nuevos inventarios reconocen
 evidencia histórica existente sin promover B a A ni modificar batches anteriores.
 Los encabezados inferiores conservan historia y no amplían autorización.
 
+## 2026-10-05 — CRM de captación visual y unido a la hoja de Google
+
+`/admin/crm` pasa de lista y embudo a una página visual: vista por tipo (autónomos,
+gestorías…), cifras, tres gráficos con su tabla, tablero arrastrable, tanda de correos
+por provincia y lista con buscador. La hoja de Google «Leads» se conecta por su enlace
+y se lee sola cada mañana; la hoja puede enseñar el estado del CRM con `IMPORTDATA`.
+La página es un dashboard por apartados (Resumen, Tablero, Hoy y tanda, Lista, Ficha,
+Hoja, Añadir) y hay una demo autónoma con datos inventados generada desde la app.
+Todo el código nuevo está en `src/noesis/crm/` y la guía en
+[`crm/README.md`](crm/README.md). **Local, sin commit y bloqueado:** necesita la
+migración 74 y el Financial Core fija el esquema en 73 (100 pruebas suyas fallan con
+ella). Actualizado sobre `main` acff183. **Resuelto en local el 13/10:** el historial financiero admite el esquema 74 (ver Decisiones); falta que la CI lo valide en PostgreSQL. La hoja
+real tampoco está conectada.
 
 ## 2026-10-04 — Fase1.9C: epoch/T0/fence (implementada y validada)
 

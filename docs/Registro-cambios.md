@@ -1,5 +1,63 @@
 # Registro de cambios
 
+## 2026-10-12 — Trabajos: el calendario pintaba las citas un día tarde
+
+Objetivo: revisión general en busca de errores (suite, linter, recorrido de pantallas).
+Dos fallos reales, los dos en `/b/{id}/agenda`:
+
+- **Citas un día tarde.** El calendario sacaba la clave de cada celda con
+  `toISOString()`, que convierte a UTC: en España la medianoche local cae en el día
+  anterior, así que la celda «13» llevaba las citas del 12, «hoy» se marcaba en la
+  celda equivocada y al tocar un día se abría el anterior. Ahora usa `localDate()`,
+  nueva en `static/app.js`. Mismo cambio en `crm.html` (seguimientos vencidos) y
+  `facturas.html` (fecha por defecto al programar), que fallaban solo de 00:00 a 02:00.
+- **La página se desbordaba a lo ancho en escritorio.** La fila de cada cita (proyecto,
+  trabajador, importe, papelera) ensanchaba la tarjeta más que el panel del día y el
+  importe quedaba cortado. Ahora va en dos líneas (`.agenda-job-actions` en `app.css`).
+
+Pruebas: `tests/local_dates.test.cjs` (nueva, añadida a la CI en `ci.yml`). Detalle en
+[Registro-QA](Registro-QA.md).
+
+Límites: no se toca el servidor. Queda apuntado en [Tareas-vivas](Tareas-vivas.md)
+comprobar la zona horaria del proceso en Railway.
+
+Riesgo: bajo; solo cambia cómo el navegador calcula el día. Diagnóstico: si una cita
+vuelve a salir en otro día, mirar que nadie haya reintroducido `toISOString()` para
+fechas de calendario (la prueba nueva lo impide en las plantillas). Rollback: revertir.
+
+## 2026-10-12 — Precios por segmento con tarifa tachada y −50 % de lanzamiento
+
+Objetivo: enseñar los planes como una escalera con pestañas (Autónomos, Pymes,
+Empresas, Gestorías) y la tarifa tachada junto al precio que se paga. Decisión en
+[Decisiones](Decisiones.md).
+
+Áreas y archivos:
+- Catálogo: `adapters/billing.py` (`list_price`, `UPCOMING_PLANS`,
+  `PRICING_SEGMENTS`, `pricing_context()`, constantes de lanzamiento). Negocio pasa
+  a llamarse Pyme y Premium, Avanzado; las claves no cambian.
+- Web pública: `templates/site_precios.html` (pestañas, tachado, tarjeta Empresa
+  «Próximamente», panel de gestorías, comparativa plegada, pregunta sobre el
+  lanzamiento), `templates/landing.html` (franja con los tres planes),
+  `static/public-site.js` (pestañas y tarifa anual), `static/app.css`,
+  `static/public-marketing.css`, `routers/pages.py` (`?para=`, `llms.txt`).
+- Panel: `templates/suscripcion.html` (tachado y nombres), `ajustes.html`,
+  `site_bienvenida.html`, plantillas de `/admin`, `web/deps.py` (global
+  `plan_names`), `tools.py`, `web/whatsapp.py`, `integration_check.py` (nombres).
+- Pruebas: tres aserciones de `tests/test_backend.py` con los nombres nuevos.
+
+Pruebas y límites: ver [Registro-QA](Registro-QA.md). Sin desplegar ni confirmar:
+el árbol local lleva además el CRM bloqueado por la migración 74.
+
+Límites externos: Stripe sigue apagado; no existe todavía en Stripe ni en la cuenta
+el fin de la oferta (cupón o precio propio, fecha de fin, aviso de 30 días).
+
+Riesgo: la condición «12 meses y después tarifa» es un compromiso público. Si el
+founder decide otra cosa hay que cambiarla antes de publicar.
+
+Diagnóstico y rollback: todo sale de `PLANS` y de las dos constantes
+`LAUNCH_*`. Para volver a la web anterior basta revertir este cambio; no hay
+migración ni datos nuevos.
+
 ## 2026-10-05 — Cierre técnico1.9E: CI final PASS
 
 Objetivo: cerrar exclusivamente reconciliación histórica durable. Archivos de esta
@@ -111,6 +169,76 @@ ambiguo bloqueado. Diagnóstico: read_batch/blocking_code y frozen hashes; rollb
 code-first con flags OFF conservando esquema/evidencia; downgrade72 con datos bloqueado.
 
 
+
+## 2026-10-05 — CRM de captación visual y unido a la hoja de Google
+
+**BLOQUEO — no subir todavía.** El Financial Core fija el esquema en su última
+versión como criterio de cada fase: tras traer `main` el 5-oct (fases 1.9D y 1.9E)
+ese número es el **73** (`financial_history/reconciliation.py:27`, `cutoff.py:176`,
+`importer.py:31`, `service.py:127`, y `LATEST_VERSION == 73` en sus pruebas). La
+migración del CRM pasa por eso de la 72 a la **74**, y con ella fallan 100 pruebas
+suyas (`test_financial_history`, `_cutoff`, `_import`, `_inventory` y
+`_reconciliation`); las otras 1.786 pasan. No se ha tocado su código ni sus pruebas:
+aceptar el 74 es una decisión del Financial Core, no de este cambio.
+
+**Objetivo.** El founder pidió un CRM visual con las gestorías, con gráficos, unido a
+la hoja de Google «Leads» y todo dentro de una carpeta `crm`. Se amplía el CRM de
+captación de `/admin/crm` (migración 57); no se crea otro. Ajeno al Financial Core:
+no toca dinero, eventos, writers ni sus flags.
+
+**Áreas y archivos.**
+- `src/noesis/crm/` (nuevo): `zonas`, `hoja`, `google`, `sincronizar`, `panel`,
+  `rutas`, `esquema`. Las rutas `/admin/crm*` salen de `web/routers/admin.py` y pasan
+  a `crm/rutas.py`, con la misma guardia `_is_admin`.
+- Migración **74** `captacion_hoja_y_tipo`: columnas `tipo`, `provincia`, `direccion`,
+  `web`, `hoja_*` y `correo_verificacion` en `sales_prospects`; tablas `sales_sheets`,
+  `sales_feeds` y `sales_suppressions`. Aditiva; quien tenía origen gestoría, gremio o
+  almacén pasa a ese `tipo`.
+- `sales.py`: `TIPOS`, origen «Su web pública», asunto aprobado del primer correo,
+  guion por tipo, plazo por tipo (gestoría 7 días) y objetivo de la Ruta solo con
+  autónomos. `db.py`: campos nuevos en `_prospecto_campos`, `list_all_sales_touches`,
+  `tipo` al importar y plazo contado desde la fecha del contacto.
+- `web/scheduler.py`: `read_sales_sheets` a las 07:30. `web/server.py`: router.
+- Plantillas `web/templates/crm/` (la antigua `admin_crm.html` es `crm/pagina.html`),
+  estáticos `web/static/crm/`, `pyproject.toml` (package-data de ambas carpetas).
+- Guía de uso: `docs/crm/README.md`.
+
+**Qué hace.** Vista por tipo; cuatro cifras; embudo, ritmo semanal y provincias con
+tabla equivalente; tablero arrastrable; tanda de diez por zona con marcado en bloque;
+lista con buscador, filtros y páginas. La hoja se lee por su enlace (solo lectura,
+`export?format=csv&gid=`) al conectar, a mano y cada mañana; la hoja lee el estado del
+CRM con `IMPORTDATA` por una dirección con clave de la que solo se guarda la huella.
+
+**Segunda parte, mismo día: dashboard y demo.** A petición del founder la página deja
+de ser una tira larga: `crm/pagina.html` se parte en siete apartados (Resumen,
+Tablero, Hoy y tanda, La lista, Ficha, Hoja de Google, Añadir gente) que `crm.js`
+enseña de uno en uno según el ancla de la dirección; sin script se lee seguida.
+`crm.js` pasa a escuchar en el documento. `crm/demo.py` genera una demo autónoma con
+datos inventados a partir de la propia app, y `static/crm/demo.js` simula el servidor
+solo ahí. Publicada como página privada para el founder. 10 pruebas más
+(`tests/crm/test_demo.py`) y comprobación de apartados en `test_pagina`.
+
+**Pruebas.** 78 nuevas en `tests/crm/` (hoja 43, panel 21, página 14) y las 40 de
+`test_crm_captacion` sin cambios. Lectura real contra Google con una hoja pública de
+ejemplo y con una inexistente. Página revisada en local a 1440 y 500 px con 1.021
+gestorías inventadas. Suite completa, Ruff, Bandit, secretos y Node: ver Registro-QA.
+
+**Límites externos.** No se ha leído la hoja real «Leads» (no está conectada: hay que
+compartirla por enlace y pegar su dirección). No probado contra una hoja privada real
+(sí con la respuesta simulada de Google) ni `IMPORTDATA` desde una hoja real. Sin
+PostgreSQL local: lo valida la CI. No desplegado.
+
+**Riesgo.** Compartir la hoja por enlace la deja legible para quien lo tenga. La
+dirección para la hoja es un secreto en una celda: anulable y regenerable. Una hoja
+grande se lee dentro de la petición del administrador (1.000 filas, pocos segundos).
+La migración 74 es incompatible con el pin de esquema 71 del Financial Core (ver el
+bloqueo de arriba): hasta que se resuelva, este cambio no puede entrar en `main`.
+
+**Diagnóstico y vuelta atrás.** Estado de cada lectura en `sales_sheets`
+(`ultimo_estado`, `ultimo_error`); turno diario `crm-hojas:AAAA-MM-DD`; eventos
+`admin.crm_sheet_*`, `admin.crm_feed_*` y `admin.crm_batch_marked` en la bitácora.
+Para apagarlo sin tocar código: desconectar la hoja y anular la dirección desde la
+página. La bajada de la 74 se niega si hay supresiones registradas.
 
 ## 2026-10-04 — Fase1.9C: epoch/T0/fence (implementada y validada)
 

@@ -1,11 +1,12 @@
 {
-  "state_date": "2026-10-05",
+  "state_date": "2026-10-13",
   "recovery_candidate_2026_09_25": "Rama codex/conversation-recovery-validation, codigo 9357a39. Recuperacion explicita de routing_changed con administrador, auditoria previa y orden conservado. processing_failed/interrupted siguen bloqueados. CI PostgreSQL 36131891167 verde: 36 rutas, migraciones, codigo anterior, rollback, concurrencia y recuperacion. Suite general aun ejecutandose al registrar; main/Meta/produccion intactos.",
   "ingress_diagnostics_candidate_2026_09_24": "CLI por negocio, solo lectura sin payload/telefonos. Saturacion cuenta eventos nuevos, no duplicados. 25 pruebas dirigidas correctas (14.243 s), Ruff correcto. Sin publicar. Resolucion segura, retencion, PostgreSQL y Meta pendientes antes de activar.",
   "conversation_corrections_candidate_2026_09_24": "Local, no publicado: campos compuestos sobre propuestas existentes, consultas fiscales sin coincidencias parciales, concepto e IVA por linea. 70 regresiones dirigidas y suite completa local de 1197 tests correctas (1012.404 s); ultimo ajuste de interrogacion revalidado con 6 casos. Ruff, secretos y verdad documental correctos. Sin migracion, dependencias, proveedores ni cambios de flags. Meta real y memoria por actor pendientes.",
   "reliability_hotfix_2026_09_24": "df113b1: fechas compatibles PostgreSQL, correcciones multilínea sin pérdida de detalle y rollback 58 aditivo bloqueado ante borradores incompletos. CI 36012914685 verde: 1189 tests en 352.518 s, 36 rutas PostgreSQL, rollback y seguridad. Sin cambios de flags ni proveedores.",
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
-  "schema_version": 73,
+  "schema_version": 74,
+  "crm_captacion_2026_10_05": "Local, sin desplegar: /admin/crm visual (vista por tipo, cifras, embudo, ritmo semanal, provincias, tablero arrastrable, tanda por zonas, lista con filtros) y unido a la hoja de Google por enlace de solo lectura con lectura diaria 07:30; la hoja lee el estado con IMPORTDATA por direccion con clave (solo huella en base). Codigo en src/noesis/crm/, esquema 74 aditivo (tipo, datos de hoja, sales_sheets, sales_feeds, sales_suppressions). Pagina organizada como dashboard por apartados con ancla; demo autonoma con datos inventados generada desde la propia app (noesis.crm.demo) y publicada en privado para el founder. 88 pruebas nuevas en tests/crm. Hoja real Leads sin conectar; PostgreSQL pendiente de CI. BLOQUEADO: el Financial Core fija el esquema en 73 y con la migracion 74 del CRM fallan 100 pruebas de test_financial_history*; el resto (1786) pasa. Actualizado sobre main acff183. No subir a main hasta resolverlo; verified_test_count sin tocar. ACTUALIZACION 2026-10-13: bloqueo resuelto en local con autorizacion del founder; las cuatro guardas de financial_history admiten el esquema 74 porque la migracion solo toca tablas sales_*; test_financial_history* vuelve a pasar entero (169 pruebas, 2 skips existentes). Falta la validacion de PostgreSQL en la CI antes de subir.",
   "conversation_transport_candidate_2026_09_24": "Local no publicado: esquemas 59/60, memoria por actor y transporte previo a vinculacion. NOESIS_CONVERSATION_ISOLATION_ENABLED y NOESIS_WHATSAPP_INBOX_ENABLED false por defecto. FIFO, acuse tras commit, incidencias sin replay automatico. 96 pruebas dirigidas correctas (71.801 s) y 460 backend/webhook correctas (397.517 s); Ruff, secretos y verdad documental correctos. Suite completa 1197 corresponde al bloque previo. Requiere CI PostgreSQL, procedimiento de revision/retencion y Meta real antes de activar.",
   "verified_test_count": 1800,
   "whatsapp_rounds_2026_10_01": "Producción hasta c52d3e2: presupuestos, citas (cancelar/mover), facturas de varias líneas, gasto a obra, abrir obra, ranking de clientes, pendientes, resumen semanal y abreviaturas de móvil por WhatsApp, todo con tarjeta de SÍ. Probado en real por WhatsApp Web (descartado con NO) y en simulador local. cryptography 50. Voz real sin probar.",
@@ -38,6 +39,18 @@
     "pro": 539,
     "premium": 1089
   },
+  "list_pricing_eur_ex_vat": {
+    "autonomo": 60,
+    "pro": 100,
+    "premium": 200
+  },
+  "plan_names": {
+    "autonomo": "Autónomo",
+    "pro": "Pyme",
+    "premium": "Avanzado"
+  },
+  "pricing_ladder_2026_10_12": "Local, sin desplegar ni confirmar. /precios enseña una escalera con pestañas (Autonomos, Pymes, Empresas, Gestorias) y la tarifa tachada 60/100/200 junto al precio que se cobra, 29/49/99, como lanzamiento -50 % durante 12 meses desde el alta. Negocio pasa a llamarse Pyme y Premium, Avanzado; claves, Stripe y derechos por plan sin cambios. Empresa (199, tachado 400) se anuncia como Proximamente y no esta en PLANS. Pendiente del founder y del abogado: confirmar la condicion de 12 meses y el paso a tarifa; pendiente de construir: fin de oferta en Stripe y en la cuenta. No se ha tocado gestoria gratis en Autonomo, voz como extra ni limite de trabajadores.",
+  "error_sweep_2026_10_12": "Local, sin desplegar. Revision general: fuera del historial financiero pasan 1720 pruebas; los 100 fallos de test_financial_history* por la migracion 74 del CRM quedaron resueltos el 13/10. Recorrido de 23 paginas publicas, panel con demo y con cuenta vacia, admin y portales a 1280 y 390 px: sin errores de servidor ni de consola. Corregido en /agenda: el calendario pintaba las citas un dia tarde por usar toISOString (UTC) y la fila de cada cita desbordaba la pagina; nuevo localDate() en app.js y prueba tests/local_dates.test.cjs en la CI. Pendiente: comprobar TZ del proceso en Railway.",
   "annual_discount_months": 1,
   "subscription_policy": {
     "trial_days": 14,

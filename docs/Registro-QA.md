@@ -1,5 +1,57 @@
 # Registro de QA
 
+## 2026-10-12 — Revisión general de errores y arreglo del calendario de Trabajos
+
+Qué se pasó, todo en local (macOS, SQLite, hora de Madrid):
+
+- **Suite completa por bloques en paralelo.** Fuera del historial financiero, 1.720
+  pruebas correctas (718 + 241 + 220 + 273 + 180 + 88 de `tests/crm`). En
+  `test_financial_history*`, 168 pruebas con 2 fallos y 98 errores: los 100 ya
+  conocidos por la migración 74 del CRM («Schema71 requerido…», «Esquema70/71
+  requerido…» y `LATEST_VERSION == 73`). No se han tocado: son guardas del Financial
+  Core y la decisión está pendiente en Tareas-vivas.
+- **Linter de la CI** (`ruff check src tests`) y `bandit -lll -iii`: sin avisos. Una
+  pasada extra con reglas de fallos probables (`B`, `PLE`) no dio nada accionable.
+- **Recorrido con Chrome sin ventana**, a 1280 y 390 px, anotando estado HTTP, recursos
+  fallidos, errores de consola, excepciones y desbordamiento: 23 páginas públicas, las
+  20 pantallas del panel con la demo y con una cuenta recién creada y vacía, `/admin`
+  (inicio, CRM, economía, ficha de cuenta), el portal de gestoría y el portal de
+  cliente. Único hallazgo: `/b/{id}/agenda` (dos fallos, corregidos).
+- **Enlaces internos:** 55 enlaces distintos desde 34 páginas, ninguno roto.
+- **Tras el arreglo:** calendario comprobado con la demo (hoy = 12, la celda marcada
+  y la que lleva las citas es la 12; antes era la 13) y sin desbordamiento a 1280,
+  1024 y 390 px. `node --test tests/*.test.cjs`: 11 de 11.
+
+Sin probar: PostgreSQL, la CI y producción; flujos que escriben datos desde el
+navegador (la demo es de solo lectura; los cubre la suite por API); Safari y Firefox.
+
+## 2026-10-12 — Precios por segmento con tarifa tachada y −50 % de lanzamiento
+
+Probado en local (macOS, SQLite), sin desplegar:
+
+- 718 pruebas de los módulos que cubren lo tocado, todas correctas (402 s):
+  `test_backend`, `test_seo`, `test_public_marketing`, `test_page_views`,
+  `test_access_requests`, `test_admin_workspace`, `test_admin_usage`,
+  `test_economia_panel`, `test_integration_check`, `test_security_hardening`,
+  `test_showcase_and_pdf_ocr`, `test_charla_whatsapp`, `test_value_ledger`,
+  `test_cost_totals`, `test_reliability_guards`, `test_intent_safety`.
+- Prueba nueva `test_pricing_shows_list_price_next_to_the_launch_price_by_segment`:
+  tarifa y precio salen del catálogo, el descuento anunciado no supera el real,
+  cada pestaña enseña sus tres planes, Empresa no se puede contratar y Gestorías no
+  enseña precios. Correcta junto al resto de `test_public_marketing` y `test_seo`
+  (34 pruebas).
+- JavaScript: `node --test tests/*.test.cjs`, 9 de 9. Ruff sin avisos en los
+  archivos Python cambiados. `scripts/check_project_truth.py` correcto.
+- A mano, con Chrome sin ventana a 1280 y 390 px: las cuatro pestañas con clic real,
+  cambio a pago anual (la tarifa tachada también pasa a anual), comparativa
+  desplegada, franja de la portada y pantalla de suscripción con sesión de la demo.
+  Sin desbordamiento horizontal en móvil.
+
+Sin probar: la suite completa (unos 23 minutos; en este árbol ya fallan 100 pruebas
+de `test_financial_history*` por la migración 74 del CRM, ajenas a este cambio, y
+por eso `verified_test_count` no se toca), PostgreSQL, la CI y producción. Stripe
+sigue apagado: no hay cobro que comprobar y el fin de la oferta no existe todavía.
+
 ## 2026-10-05 — Cierre técnico1.9E: CI final PASS
 
 Objetivo: cerrar exclusivamente reconciliación histórica durable. Archivos de esta
@@ -111,6 +163,37 @@ No contar las ejecuciones interrumpidas por pérdida de instancia QA como PASS.
 Suite general/CI final PASS; evidencia de cierre al inicio. Comandos y criterio detallado en el cierre D.
 
 
+
+## 2026-10-05 — CRM de captación visual y unido a la hoja de Google
+
+- **Dirigidas:** `tests/crm/` 78 PASS (hoja 43, panel 21, página 14) y
+  `test_crm_captacion` 40 PASS. Cubren columnas y pestaña equivocada, doble lectura
+  sin duplicar, la hoja corrige contacto sin tocar estado ni nota, bajas y borrados
+  que no vuelven, solo enlaces de Google y redirección fuera rechazada, hoja sin
+  compartir explicada, dirección para la hoja con y sin clave, tanda idempotente,
+  mover tarjeta con apunte, embudo que no se vacía y bajas fuera de los gráficos.
+- **Suite completa local: FALLA.** Tercera pasada, tras traer `main` (acff183) y
+  renumerar la migración a la 74: 1.888 ejecutadas en 1.000 s, 1.786 PASS, 2 FAIL y
+  98 ERROR, 2 omitidas. Los 100 fallos están todos en `test_financial_history`,
+  `_cutoff`, `_import`, `_inventory` y `_reconciliation`, por una sola causa: el
+  Financial Core exige que el esquema sea el 73 y este cambio añade el 74. Ninguna
+  prueba ajena a esos archivos falla. `verified_test_count` no se toca.
+- **Migraciones SQLite:** subir a 74, bajar a 0 y subir: correcto.
+- **Gates:** Ruff `src tests`, Bandit `-lll -iii`, `check_secrets.py`, Node 9 y
+  `check_project_truth.py` PASS.
+- **Real:** `crm/google.descargar` contra Google: hoja pública de ejemplo leída
+  (1.408 bytes) y rechazada por no ser la lista; hoja inexistente → «ya no existe».
+- **Visual:** servidor local con 1.021 gestorías y 4 autónomos inventados; capturas a
+  1440 y 500 px de panel, tablero, tanda, ficha y lista; mover, tanda, dirección para
+  la hoja (200 con clave, 404 sin ella, `no-store`, `noindex`) probados con `curl`.
+- **Dashboard y demo (segunda parte):** `tests/crm/` 88 PASS (10 nuevas de la demo:
+  no se mezcla con contactos reales, no se siembra en PostgreSQL, los archivos se abren
+  solos y solo enlazan a las tipografías, es la página de verdad). Capturas de los
+  apartados a 1440 px y de la portada a 500 px. Sin comprobar en un navegador real:
+  abrir una ficha, filtrar la lista y arrastrar dentro de la demo publicada.
+- **No probado:** la hoja real «Leads»; una hoja privada real; `IMPORTDATA` desde
+  Google; PostgreSQL (queda para la CI); arrastrar con ratón en un navegador real
+  (la ruta sí); producción.
 
 ## 2026-10-04 — Fase1.9C: epoch/T0/fence (implementada y validada)
 

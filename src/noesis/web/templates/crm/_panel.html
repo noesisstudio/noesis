@@ -1,0 +1,133 @@
+{# ---------- De un vistazo: cifras y gráficos ----------
+   Los números llegan calculados de `crm/panel.py`. Cada gráfico tiene debajo su
+   tabla con los mismos datos: nada se lee solo por el color ni solo al pasar
+   el ratón. #}
+<section class="card" id="panel">
+  <div class="card-h">
+    <div><div class="kicker">De un vistazo</div><h2>Cómo va la captación</h2></div>
+    <span class="meta">{% if tipo %}Solo {{ tipos[tipo].plural | lower }}{% else %}Todos los contactos{% endif %} · sin contar las bajas</span>
+  </div>
+  <div class="card-b">
+    {% if not panel.total %}
+    <p class="meta">Aún no hay nada que dibujar. En cuanto entre gente en la lista —desde la hoja de Google o pegándola abajo— aquí verás el embudo, las zonas y tu ritmo semanal.</p>
+    {% else %}
+    <div class="crm-cifras">
+      {% for cifra in panel.cifras %}
+      {% set destino = {'lista': '#lista', 'hoy': '#hoy'}.get(cifra.clave) %}
+      <{{ 'a href="' ~ destino ~ '"' if destino else 'div' }} class="stat">
+        <div class="lbl">{{ cifra.etiqueta }}</div>
+        <div class="val">{{ "{:,}".format(cifra.valor).replace(",", ".") }}</div>
+        <p>{{ cifra.nota }}</p>
+      </{{ 'a' if destino else 'div' }}>
+      {% endfor %}
+    </div>
+
+    <div class="crm-graficos">
+      {# ----- Embudo: cinco peldaños, un solo tono de claro a oscuro ----- #}
+      <figure class="crm-grafico">
+        <figcaption><b>El embudo</b><span>Hasta dónde ha llegado cada contacto, aunque después se durmiera.</span></figcaption>
+        <div class="crm-barras" role="img" aria-label="Embudo: {% for paso in panel.embudo %}{{ paso.etiqueta }} {{ paso.hay }}{% if not loop.last %}, {% endif %}{% endfor %}">
+          {% for paso in panel.embudo %}
+          <div class="crm-barra-fila">
+            <span class="crm-barra-nombre">{{ paso.etiqueta }}</span>
+            <span class="crm-barra-pista">
+              {% if paso.hay %}<i class="crm-marca crm-tono-{{ loop.index }}" style="width: {{ paso.ancho }}%" tabindex="0"
+                 data-crm-tip="{{ paso.etiqueta }}"
+                 data-crm-tip-valor="{{ paso.hay }} · {{ paso.del_total or 'menos del 1' }} % de la lista{% if paso.del_anterior is not none %} · {{ paso.del_anterior }} % del paso anterior{% endif %}"></i>{% endif %}
+              <span class="crm-barra-valor">{{ "{:,}".format(paso.hay).replace(",", ".") }}{% if not loop.first and paso.hay %} <small>{{ paso.del_total or '<1' }} %</small>{% endif %}</span>
+            </span>
+          </div>
+          {% endfor %}
+        </div>
+        {% if panel.cerrados.dormido or panel.cerrados.descartado or panel.cerrados.bajas %}
+        <p class="crm-grafico-nota">Fuera del embudo: {{ panel.cerrados.dormido }} dormido(s) · {{ panel.cerrados.descartado }} descartado(s){% if panel.cerrados.bajas %} · {{ panel.cerrados.bajas }} baja(s), que no cuentan en ningún gráfico{% endif %}.</p>
+        {% endif %}
+        <details class="crm-tabla">
+          <summary>Ver como tabla</summary>
+          <table>
+            <thead><tr><th>Peldaño</th><th>Contactos</th><th>De la lista</th><th>Del paso anterior</th></tr></thead>
+            <tbody>
+              {% for paso in panel.embudo %}
+              <tr><td>{{ paso.etiqueta }}</td><td class="crm-num">{{ paso.hay }}</td><td class="crm-num">{{ paso.del_total if paso.del_total or not paso.hay else '<1' }} %</td><td class="crm-num">{% if paso.del_anterior is not none %}{{ paso.del_anterior }} %{% else %}—{% endif %}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </details>
+      </figure>
+
+      {# ----- Ritmo: contactos anotados por semana ----- #}
+      <figure class="crm-grafico">
+        <figcaption><b>Tu ritmo</b><span>Contactos anotados cada semana, de lunes a domingo. Esta semana: {{ panel.contactos_semana_actual }}.</span></figcaption>
+        {% if panel.contactos_semanas %}
+        <div class="crm-columnas" role="img" aria-label="Contactos por semana en las últimas {{ panel.semanas | length }} semanas: {{ panel.contactos_semanas }} en total">
+          {% for semana in panel.semanas %}
+          <div class="crm-columna-semana">
+            <span class="crm-columna-hueco">
+              {% if semana.hay and (semana.actual or semana.alto == 100) %}<span class="crm-columna-valor">{{ semana.hay }}</span>{% endif %}
+              <i class="crm-marca crm-tono-3" style="height: {{ semana.alto }}%" tabindex="0"
+                 data-crm-tip="Semana del {{ semana.etiqueta }}{% if semana.actual %} (en curso){% endif %}"
+                 data-crm-tip-valor="{{ semana.hay }} contacto(s)"></i>
+            </span>
+            <span class="crm-columna-pie{% if semana.actual %} actual{% endif %}">{% if loop.index0 % 2 == (panel.semanas | length - 1) % 2 %}{{ semana.etiqueta }}{% endif %}</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="meta crm-grafico-vacio">Todavía no has anotado ningún contacto en estas {{ panel.semanas | length }} semanas. Cada llamada o correo que apuntes aparece aquí.</p>
+        {% endif %}
+        <details class="crm-tabla">
+          <summary>Ver como tabla</summary>
+          <table>
+            <thead><tr><th>Semana del</th><th>Contactos</th></tr></thead>
+            <tbody>
+              {% for semana in panel.semanas %}
+              <tr><td>{{ semana.etiqueta }}{% if semana.actual %} (en curso){% endif %}</td><td class="crm-num">{{ semana.hay }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </details>
+      </figure>
+
+      {# ----- Zonas: dónde está la lista y cuánto se ha avanzado en cada una ----- #}
+      {% if panel.con_provincia %}
+      <figure class="crm-grafico ancho">
+        <figcaption><b>Por provincia</b><span>Dónde está la lista y cuánto llevas hecho en cada zona.</span></figcaption>
+        <ul class="crm-leyenda">
+          {% for clave, etiqueta in tramos_zona %}
+          <li><i class="crm-tramo-{{ clave }}"></i>{{ etiqueta }}</li>
+          {% endfor %}
+        </ul>
+        <div class="crm-barras zonas" role="img" aria-label="Contactos por provincia: {% for zona in panel.provincias %}{{ zona.nombre }} {{ zona.total }}{% if not loop.last %}, {% endif %}{% endfor %}">
+          {% for zona in panel.provincias %}
+          <div class="crm-barra-fila">
+            <span class="crm-barra-nombre">{{ zona.nombre }}</span>
+            <span class="crm-barra-pista">
+              <span class="crm-apilada" style="width: {{ zona.ancho }}%">
+                {% for tramo in zona.tramos %}
+                <i class="crm-marca crm-tramo-{{ tramo.clave }}" style="flex-grow: {{ tramo.hay }}" tabindex="0"
+                   data-crm-tip="{{ zona.nombre }} · {{ tramo.etiqueta }}"
+                   data-crm-tip-valor="{{ tramo.hay }} de {{ zona.total }}"></i>
+                {% endfor %}
+              </span>
+              <span class="crm-barra-valor">{{ "{:,}".format(zona.total).replace(",", ".") }}</span>
+            </span>
+          </div>
+          {% endfor %}
+        </div>
+        <details class="crm-tabla">
+          <summary>Ver como tabla</summary>
+          <table>
+            <thead><tr><th>Provincia</th><th>Total</th><th>Sin contactar</th><th>Contactados</th><th>Han respondido</th><th>Dormidos o descartados</th></tr></thead>
+            <tbody>
+              {% for zona in panel.provincias %}
+              <tr><td>{{ zona.nombre }}</td><td class="crm-num">{{ zona.total }}</td><td class="crm-num">{{ zona.sin }}</td><td class="crm-num">{{ zona.contactados }}</td><td class="crm-num">{{ zona.respuesta }}</td><td class="crm-num">{{ zona.cerrados }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </details>
+      </figure>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</section>

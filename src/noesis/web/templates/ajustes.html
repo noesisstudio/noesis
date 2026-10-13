@@ -363,10 +363,10 @@
   </div>
   {% else %}
   <div class="card" id="gestoria">
-    <div class="card-h"><h2>Tu gestoría</h2><span class="badge b-gray">plan Negocio</span></div>
+    <div class="card-h"><h2>Tu gestoría</h2><span class="badge b-gray">plan {{ plan_names.pro }}</span></div>
     <div class="card-b">
-      <p class="muted">Con el plan Negocio conectas el despacho, preparas los períodos y compartes documentos sin perseguir correos.</p>
-      <a class="btn primary" href="/b/{{ business.id }}/suscripcion?plan=pro&status=upgrade&feature=gestoria">Ver plan Negocio</a>
+      <p class="muted">Con el plan {{ plan_names.pro }} conectas el despacho, preparas los períodos y compartes documentos sin perseguir correos.</p>
+      <a class="btn primary" href="/b/{{ business.id }}/suscripcion?plan=pro&status=upgrade&feature=gestoria">Ver plan {{ plan_names.pro }}</a>
     </div>
   </div>
   {% endif %}

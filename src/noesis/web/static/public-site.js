@@ -197,6 +197,13 @@
       const value = card.querySelector('[data-price-value]');
       const suffix = card.querySelector('[data-price-suffix]');
       const note = card.querySelector('[data-annual-note]');
+      // La tarifa tachada acompaña a la periodicidad elegida.
+      const list = card.querySelector('[data-list-value]');
+      if (list) {
+        list.textContent = number(Number(
+          annual ? card.dataset.listAnnual : card.dataset.listMonthly
+        ));
+      }
       if (value) value.textContent = number(annual ? annualPrice : monthly);
       if (suffix) suffix.textContent = annual ? ' + IVA/año' : ' + IVA/mes';
       if (note) {
@@ -238,6 +245,48 @@
     setBillingPeriod(parent?.dataset.initialBilling === 'annual' ? 'annual' : 'monthly');
   }
 
+  // Pestañas de /precios (autónomos, pymes, empresas, gestorías). Cada pestaña
+  // es un enlace que el servidor también sabe pintar; aquí solo se evita recargar.
+  function initPricingSegments() {
+    const nav = document.querySelector('[data-segment-tabs]');
+    if (!nav) return;
+    const tabs = Array.from(nav.querySelectorAll('[data-segment]'));
+    const select = tab => {
+      const plans = (tab.dataset.plans || '').split(' ').filter(Boolean);
+      const featured = tab.dataset.featured || '';
+      tabs.forEach(item => {
+        const active = item === tab;
+        item.classList.toggle('active', active);
+        if (active) item.setAttribute('aria-current', 'true');
+        else item.removeAttribute('aria-current');
+      });
+      document.querySelectorAll('[data-plan-card]').forEach(card => {
+        const key = card.dataset.planCard;
+        const recommended = key === featured;
+        card.hidden = !plans.includes(key);
+        card.classList.toggle('recommended', recommended);
+        const label = card.querySelector('.recommendation-label');
+        if (label) label.hidden = !recommended;
+        const start = card.querySelector('.plan-start-link');
+        if (start) start.classList.toggle('primary', recommended);
+      });
+      document.querySelectorAll('[data-segment-pricing]').forEach(block => {
+        block.hidden = !plans.length;
+      });
+      document.querySelectorAll('[data-segment-panel]').forEach(panel => {
+        panel.hidden = panel.dataset.segmentPanel !== tab.dataset.segment;
+      });
+    };
+    tabs.forEach(tab => {
+      tab.addEventListener('click', event => {
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        event.preventDefault();
+        select(tab);
+        window.history.replaceState(null, '', `/precios?para=${tab.dataset.segment}#planes`);
+      });
+    });
+  }
+
   function initStripePortalForms() {
     document.querySelectorAll('[data-stripe-portal-form]').forEach(form => {
       form.addEventListener('submit', () => {
@@ -266,6 +315,7 @@
     initProductDemo();
     initDemoChart();
     initBillingToggle();
+    initPricingSegments();
     initStripePortalForms();
   });
 }());

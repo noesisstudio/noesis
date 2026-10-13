@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from datetime import date
 
 from fastapi import APIRouter, File, Query, Request, UploadFile
@@ -14,6 +15,17 @@ from ...tools import run_tool
 from ..deps import _read_json
 
 router = APIRouter()
+
+
+def _tool_error(result: dict, fallback: str) -> str:
+    """Motivo pensado para quien pulsa el botón.
+
+    `run_tool` antepone el nombre interno de la herramienta («Parámetros inválidos
+    para enviar_factura: …»). Al modelo le sirve; a una persona, no.
+    """
+    text = str(result.get("error") or fallback)
+    return re.sub(r"^Parámetros inválidos para \w+: ", "", text)
+
 
 @router.get("/api/{business_id}/invoices")
 def api_invoices(business_id: int, status: str | None = None,
@@ -487,7 +499,7 @@ def api_send_invoice(business_id: int, invoice_id: int):
     result = json.loads(run_tool("enviar_factura",
                                  {"factura_id": invoice_id}, business_id))
     if not result.get("ok"):
-        return JSONResponse({"error": result.get("error", "No se pudo enviar.")},
+        return JSONResponse({"error": _tool_error(result, "No se pudo emitir.")},
                             status_code=400)
     return result["factura"]
 
@@ -600,7 +612,7 @@ async def api_add_quote(business_id: int, request: Request):
         args["notas"] = body["notas"]
     result = json.loads(run_tool("crear_presupuesto", args, business_id))
     if not result.get("ok"):
-        return JSONResponse({"error": result.get("error", "No se pudo crear.")},
+        return JSONResponse({"error": _tool_error(result, "No se pudo crear.")},
                             status_code=400)
     return result["presupuesto"]
 

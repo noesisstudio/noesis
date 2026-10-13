@@ -24,7 +24,8 @@ class HistoryReconciliation:
         """Instrumentación interna de pruebas; nunca callback de canal."""
 
     def _context(self, session, epoch_uuid, manifest_uuid, batch_uuid):
-        if migrations.current_version_connection(session.borrowed_connection) != 73:
+        # 74 es la migración del CRM de captación: solo toca tablas sales_*.
+        if migrations.current_version_connection(session.borrowed_connection) not in (73, 74):
             raise StateError("Schema73 requerido.")
         batch, cut, base = self._reader._batch(session,batch_uuid)
         if str(cut["epoch_uuid"]) != epoch_uuid or str(batch["manifest_uuid"]) != manifest_uuid:

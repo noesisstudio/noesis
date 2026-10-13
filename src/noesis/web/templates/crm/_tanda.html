@@ -1,0 +1,60 @@
+{# ---------- Siguiente tanda: a quién escribir ahora, por zonas ----------
+   Gestorías, gremios y almacenes se escriben por correo y de diez en diez. Aquí
+   salen los siguientes de una zona y se apuntan de una vez al terminar. #}
+{% if zonas %}
+<section class="card" id="tanda">
+  <div class="card-h">
+    <div><div class="kicker">Por correo, de diez en diez</div><h2>Siguiente tanda</h2></div>
+    <form class="crm-zona" method="get" action="/admin/crm#tanda">
+      {% if tipo %}<input type="hidden" name="tipo" value="{{ tipo }}">{% endif %}
+      <label for="crm-zona">Zona</label>
+      <select id="crm-zona" name="zona" data-crm-enviar-al-cambiar>
+        {% for z in zonas %}<option value="{{ z.nombre }}" {{ 'selected' if z.nombre == zona else '' }}>{{ z.nombre }} ({{ z.hay }} sin escribir)</option>{% endfor %}
+      </select>
+      <button class="btn sm" type="submit">Ver</button>
+    </form>
+  </div>
+  <div class="card-b table-pad">
+    <p class="meta">Los {{ tanda | length }} siguientes de {{ zona }} sin escribir, primero los que tienen el correo comprobado. Cuando les hayas escrito, marca a quién y pulsa el botón: pasan a «Contactado» y te los vuelvo a enseñar a la semana si no contestan.</p>
+    {% set asunto = guiones['gestoria_pregunta'].asunto %}
+    <p class="crm-asuntos">Asunto:
+      <span class="crm-copiable"><span data-crm-copia>{{ asunto.ca }}</span> <button class="btn sm" type="button" data-crm-copiar-texto>Copiar (català)</button></span>
+      <span class="crm-copiable"><span data-crm-copia>{{ asunto.es }}</span> <button class="btn sm" type="button" data-crm-copiar-texto>Copiar (castellano)</button></span>
+    </p>
+    <form method="post" action="/admin/crm/tanda">
+      <input type="hidden" name="vista" value="{{ tipo }}">
+      <input type="hidden" name="zona" value="{{ zona }}">
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th><label class="crm-todos"><input type="checkbox" data-crm-marcar-todos> Todos</label></th>
+            <th>Quién</th><th>Correo</th><th>Lengua</th><th></th>
+          </tr></thead>
+          <tbody>
+            {% for p in tanda %}
+            <tr>
+              <td><input type="checkbox" name="ids" value="{{ p.id }}" aria-label="He escrito a {{ p.nombre }}"></td>
+              <td><b>{{ p.nombre }}</b>
+                <small>{{ p.lugar }}{% if p.web %}{{ ' · ' if p.lugar else '' }}{{ p.web | replace('https://', '') | replace('http://', '') | replace('www.', '') }}{% endif %}</small>
+              </td>
+              <td><span class="crm-copiable"><span data-crm-copia>{{ p.email }}</span> <button class="btn sm" type="button" data-crm-copiar-texto>Copiar</button></span>
+                <small>{% if p.correo_verificado %}Correo comprobado{% elif p.correo_verificacion %}{{ p.correo_verificacion }}{% else %}Correo sin comprobar{% endif %}</small>
+              </td>
+              <td>{{ 'Català' if p.lengua == 'ca' else 'Castellano' }}</td>
+              <td class="crm-acciones"><a class="btn sm" href="/admin/crm?{% if tipo %}tipo={{ tipo }}&amp;{% endif %}contacto={{ p.id }}#ficha">Ver guion</a></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="crm-campos crm-tanda-fecha">
+        <label>Cuándo los enviaste
+          <input class="input" type="date" name="fecha" value="{{ hoy }}" max="{{ hoy }}">
+        </label>
+      </div>
+      <label class="crm-check"><input type="checkbox" name="informado" value="si"> En el correo les digo quién soy y de dónde he sacado su dirección</label>
+      <button class="btn primary" type="submit">Apuntar como escritos</button>
+    </form>
+  </div>
+</section>
+{% endif %}

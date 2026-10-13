@@ -1,0 +1,101 @@
+{# ---------- La hoja de Google ----------
+   Dos sentidos y ninguno escribe en la hoja: el CRM la lee por su enlace, y la
+   hoja lee el estado del CRM con IMPORTDATA. Ver `crm/sincronizar.py`. #}
+<section class="card" id="hoja">
+  <div class="card-h">
+    <div><div class="kicker">La lista vive en Google</div><h2>Hoja de Google</h2></div>
+    <span class="meta">Se lee sola cada mañana a las 7:30. Aquí nunca se escribe en tu hoja.</span>
+  </div>
+  <div class="card-b">
+    {% if hojas %}
+    <ul class="crm-hojas">
+      {% for hoja in hojas %}
+      <li>
+        <div>
+          <b>{{ hoja.nombre }}</b> <span class="badge">{{ tipos[hoja.tipo].plural if hoja.tipo in tipos else hoja.tipo }}</span>
+          <a class="crm-enlace" href="{{ hoja.url }}" target="_blank" rel="noopener noreferrer">Abrir la hoja ↗</a>
+          {% if hoja.ultimo_estado == 'ok' %}
+          <small>Última lectura: {{ (hoja.ultima_lectura | string)[:16] | replace('T', ' ') }} · {{ hoja.filas }} filas · {{ hoja.nuevas }} nuevas y {{ hoja.actualizadas }} puestas al día esa vez.</small>
+          {% elif hoja.ultimo_estado == 'error' %}
+          <small class="crm-aviso">No pude leerla ({{ (hoja.ultima_lectura | string)[:16] | replace('T', ' ') }}): {{ hoja.ultimo_error }}</small>
+          {% else %}
+          <small>Todavía no se ha leído.</small>
+          {% endif %}
+        </div>
+        <div class="crm-hoja-acciones">
+          <form method="post" action="/admin/crm/hoja/{{ hoja.id }}/leer">
+            <input type="hidden" name="vista" value="{{ tipo }}">
+            <button class="btn sm" type="submit">Leer ahora</button>
+          </form>
+          <details>
+            <summary>Desconectar</summary>
+            <form method="post" action="/admin/crm/hoja/{{ hoja.id }}/desconectar">
+              <input type="hidden" name="vista" value="{{ tipo }}">
+              <label class="crm-check"><input type="checkbox" name="quitar" value="si"> Quitar también los contactos que trajo y con los que no he hecho nada</label>
+              <button class="btn sm danger" type="submit">Desconectar esta hoja</button>
+            </form>
+          </details>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="meta">Aún no hay ninguna hoja conectada. Conecta la pestaña donde tienes la lista y los contactos entran solos; si mañana añades filas o corriges un correo, aquí se pone al día.</p>
+    {% endif %}
+
+    <div class="crm-cols">
+      <details class="crm-conectar" {{ 'open' if not hojas else '' }}>
+        <summary>Conectar una pestaña</summary>
+        <ol class="crm-pasos">
+          <li>Abre la hoja y ponte en la pestaña de la lista (por ejemplo, «Gestorias»).</li>
+          <li>Pulsa <b>Compartir</b> y, en «Acceso general», elige <b>Cualquier persona con el enlace</b>, como <b>lector</b>.</li>
+          <li>Copia la dirección de la barra del navegador y pégala aquí.</li>
+        </ol>
+        <form method="post" action="/admin/crm/hoja/conectar">
+          <input type="hidden" name="vista" value="{{ tipo }}">
+          <label>Dirección de la hoja
+            <input class="input" type="url" name="url" required placeholder="https://docs.google.com/spreadsheets/d/…/edit#gid=…">
+          </label>
+          <div class="crm-campos">
+            <label>Cómo la llamas
+              <input class="input" name="nombre" maxlength="80" placeholder="Gestorías">
+            </label>
+            <label>Qué hay en esa pestaña
+              <select name="tipo">{% for clave, meta in tipos.items() %}<option value="{{ clave }}" {{ 'selected' if clave == 'gestoria' else '' }}>{{ meta.plural }}</option>{% endfor %}</select>
+            </label>
+          </div>
+          <p class="meta">Leo las columnas EMPRESA, DIRECCION, ESTADO, TELEFONO, EMAIL, PAGINA WEB, PROVINCIA y VERIFICACION CORREO, estén en el orden que estén. Quien tenga ese enlace puede ver la hoja: no lo pegues en ningún otro sitio.</p>
+          <button class="btn primary" type="submit">Conectar y leer</button>
+        </form>
+      </details>
+
+      <div class="crm-vuelta">
+        <h3>Ver el estado del CRM dentro de la hoja</h3>
+        {% if enlace_nuevo %}
+        <div class="admin-note success" role="status">
+          <b>Copia esta fórmula ahora: no la vuelvo a enseñar.</b>
+          Crea una pestaña nueva en la hoja, llámala «CRM» y pégala en la celda A1.
+          <p class="crm-formula"><code data-crm-copia>=IMPORTDATA("{{ enlace_nuevo }}")</code> <button class="btn sm" type="button" data-crm-copiar-texto>Copiar</button></p>
+        </div>
+        {% endif %}
+        <p class="meta">Tu hoja puede enseñar en una pestaña por dónde va cada contacto —estado, último contacto y siguiente paso— y Google la refresca sola cada hora. Va con una dirección con clave: quien la tenga puede leer esa tabla, así que solo se pega en tu hoja.</p>
+        {% if enlace %}
+        <p class="meta">Hay una dirección activa desde el {{ (enlace.created_at | string)[:10] }}. {% if enlace.leido_el %}La hoja la leyó por última vez el {{ (enlace.leido_el | string)[:16] | replace('T', ' ') }}.{% else %}La hoja todavía no la ha leído.{% endif %}</p>
+        {% endif %}
+        <div class="crm-hoja-acciones">
+          <form method="post" action="/admin/crm/hoja/enlace">
+            <input type="hidden" name="vista" value="{{ tipo }}">
+            <button class="btn sm" type="submit">{{ 'Crear otra (anula la anterior)' if enlace else 'Crear la dirección' }}</button>
+          </form>
+          {% if enlace %}
+          <form method="post" action="/admin/crm/hoja/enlace/anular">
+            <input type="hidden" name="vista" value="{{ tipo }}">
+            <button class="btn sm danger" type="submit">Anular</button>
+          </form>
+          {% endif %}
+        </div>
+        <p class="meta">Para verlo en la propia lista, añade una columna en «Gestorias» con <code>=SI.ERROR(BUSCARV(E2;CRM!B:F;5;FALSO);"")</code>, donde E es la columna del correo.</p>
+      </div>
+    </div>
+  </div>
+</section>

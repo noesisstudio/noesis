@@ -13,7 +13,7 @@ reconciliation_uuid, after="")` devuelve resultado y findings paginados por hash
 La lectura exige permiso y sesión actuales incluso después de revocar el epoch.
 Ningún resultado concede permisos ni cambia elegibilidad.
 
-Schema73; operador actual con historical.record, sesión/suscripción/tenant vigentes,
+Schema73 (o 74: migración ajena del CRM, solo tablas `sales_*`; ver Decisiones 2026-10-13); operador actual con historical.record, sesión/suscripción/tenant vigentes,
 cinco flags OFF, epoch fenced/control generation actual, boundary_current,
 C frozen/certifiable/eligible_for_import=false y scope/hash/comparison/plan
 coherentes. Batch completed/partial/blocked; prepared/running o recording rechaza

@@ -1,0 +1,563 @@
+<title>Escalado de Bynoesis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  /* Una columna de lectura de 900px, misma familia visual que «Ruta a 5.000 autónomos»:
+     serif para la voz, sans para el texto, mono para las cifras. */
+  :root{
+    --paper:#f2f5f4; --surface:#ffffff; --surface-2:#e9efed;
+    --ink:#0d1b1d; --ink-2:#3a4f4d; --muted:#667b79;
+    --line:#d7e0dd; --line-strong:#b9c8c4;
+    --teal:#0d6560; --teal-soft:#e0eeeb;
+    --money:#1c6b4c; --loss:#a3412a; --loss-soft:#f6e6e0;
+    --gold:#836411; --gold-soft:#f5eedb;
+    --radius:10px;
+    --serif:"Newsreader",Georgia,serif;
+    --sans:"IBM Plex Sans","Helvetica Neue",Arial,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#0a1415; --surface:#111e1f; --surface-2:#172828;
+      --ink:#e7efec; --ink-2:#b0c2be; --muted:#829794;
+      --line:#213335; --line-strong:#2f4548;
+      --teal:#4fcbbd; --teal-soft:#132e2d;
+      --money:#5cc08c; --loss:#e07a5f; --loss-soft:#2e1a15;
+      --gold:#d3b263; --gold-soft:#2a2415;
+      color-scheme:dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#0a1415; --surface:#111e1f; --surface-2:#172828;
+    --ink:#e7efec; --ink-2:#b0c2be; --muted:#829794;
+    --line:#213335; --line-strong:#2f4548;
+    --teal:#4fcbbd; --teal-soft:#132e2d;
+    --money:#5cc08c; --loss:#e07a5f; --loss-soft:#2e1a15;
+    --gold:#d3b263; --gold-soft:#2a2415;
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box}
+  body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.6}
+  .wrap{max-width:900px;margin:0 auto;padding-left:20px;padding-right:20px;padding-block:40px 80px}
+  h1,h2,h3{font-family:var(--serif);font-weight:600;text-wrap:balance;margin:0}
+  h1{font-size:clamp(2.1rem,5vw,3rem);line-height:1.08;letter-spacing:-.01em}
+  h2{font-size:clamp(1.55rem,3.4vw,2rem);line-height:1.15}
+  h3{font-size:1.15rem;line-height:1.3}
+  p{margin:0}
+  .eyebrow{font-size:.74rem;text-transform:uppercase;letter-spacing:.14em;color:var(--teal);font-weight:600}
+  .lede{color:var(--ink-2);font-size:1.1rem;max-width:62ch}
+  .num,td.n,th.n{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  a{color:var(--teal)}
+  :focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+
+  header.top{display:flex;flex-direction:column;gap:14px;margin-bottom:26px}
+  .stamp{display:flex;flex-wrap:wrap;gap:6px 18px;color:var(--muted);font-size:.84rem;border-top:1px solid var(--line);padding-top:12px}
+
+  nav.toc{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:34px}
+  nav.toc a{font-size:.86rem;text-decoration:none;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:5px 12px}
+  nav.toc a:hover{border-color:var(--teal)}
+  nav.toc .k{font-family:var(--mono);color:var(--teal);margin-right:6px}
+
+  .today{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;display:flex;flex-direction:column;gap:12px}
+  .today ul{margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(2,1fr);gap:8px 22px}
+  @media (max-width:640px){.today ul{grid-template-columns:1fr}}
+  .today li{font-size:.92rem;color:var(--ink-2);display:flex;gap:8px;align-items:baseline}
+  .dot{width:8px;height:8px;border-radius:50%;flex:none;position:relative;top:-1px}
+  .dot.ok{background:var(--money)} .dot.no{background:var(--loss)} .dot.wait{background:var(--gold)}
+  .today .punch{font-family:var(--serif);font-size:1.2rem;color:var(--ink)}
+
+  section.part{margin-top:64px;display:flex;flex-direction:column;gap:18px}
+  .part-head{display:flex;flex-direction:column;gap:8px;padding-bottom:6px;border-bottom:2px solid var(--ink)}
+  .part-head .eyebrow{color:var(--muted)}
+  .dek{color:var(--ink-2);max-width:66ch}
+  .prose{display:flex;flex-direction:column;gap:10px}
+  .prose p{max-width:68ch;color:var(--ink-2)}
+  .prose strong{color:var(--ink)}
+
+  /* Los cuatro límites: una secuencia real, por eso van numerados */
+  ol.limits{list-style:none;margin:8px 0 0;padding:0;counter-reset:lim;display:flex;flex-direction:column;gap:26px}
+  ol.limits > li{counter-increment:lim;display:grid;grid-template-columns:48px 1fr;gap:14px}
+  ol.limits > li::before{content:counter(lim);font-family:var(--serif);font-size:1.9rem;line-height:1;color:var(--teal);font-weight:600}
+  .limit{display:flex;flex-direction:column;gap:9px;min-width:0}
+  .limit-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 16px}
+  .ceiling{font-family:var(--mono);font-size:.84rem;font-weight:600;color:var(--loss);font-variant-numeric:tabular-nums}
+  .limit p{color:var(--ink-2);max-width:68ch}
+  .limit p strong{color:var(--ink)}
+  .lift{padding:10px 12px;border-radius:8px;background:var(--teal-soft);font-size:.9rem;color:var(--ink)}
+  .lift b,.gate b{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--teal);margin-right:6px}
+
+  .note{background:var(--gold-soft);border-left:3px solid var(--gold);border-radius:0 var(--radius) var(--radius) 0;padding:13px 16px;font-size:.92rem;color:var(--ink-2)}
+  .note strong{color:var(--ink)}
+  .note.calm{background:var(--teal-soft);border-left-color:var(--teal)}
+
+  .tablewrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius)}
+  table{border-collapse:collapse;width:100%;font-size:.88rem;min-width:680px}
+  th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+  td.n,th.n{text-align:right;white-space:nowrap}
+  thead th{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;border-bottom:1px solid var(--line-strong);vertical-align:bottom}
+  tbody tr:last-child td{border-bottom:none}
+  tr.group th{background:var(--surface-2);font-family:var(--serif);font-size:1rem;font-weight:600;color:var(--ink);border-bottom:1px solid var(--line-strong)}
+  td strong{color:var(--ink)}
+  td{color:var(--ink-2)}
+  td:first-child{color:var(--ink);font-weight:500}
+  .pos{color:var(--money)} .neg{color:var(--loss)}
+  .tag{display:inline-block;font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;font-weight:600;color:var(--gold);background:var(--gold-soft);border-radius:4px;padding:1px 6px;margin-left:4px;white-space:nowrap}
+
+  .stages{display:flex;flex-direction:column;gap:18px}
+  .stage{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .stage-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:6px 16px;padding:14px 18px;background:var(--surface-2);border-bottom:1px solid var(--line)}
+  .stage-head h3{font-size:1.25rem}
+  .stage-head .range{font-family:var(--mono);font-size:.84rem;color:var(--teal);font-weight:600}
+  .stage-body{margin:0;padding:14px 18px 16px;display:grid;grid-template-columns:150px 1fr;gap:9px 16px}
+  @media (max-width:640px){.stage-body{grid-template-columns:1fr;gap:2px 0}.stage-body dd{margin-bottom:10px}}
+  .stage-body dt{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;padding-top:3px}
+  .stage-body dd{margin:0;font-size:.93rem;color:var(--ink-2);min-width:0}
+  .stage-body dd strong{color:var(--ink)}
+  .stage-body dd.breaks{color:var(--ink)}
+  .stage-body dd.gate{grid-column:1/-1;margin-top:6px;margin-bottom:0;padding:10px 12px;border-radius:8px;background:var(--teal-soft);font-size:.9rem;color:var(--ink)}
+
+  /* Calculadora */
+  .calc{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;display:flex;flex-direction:column;gap:18px}
+  .presets{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .presets span{font-size:.78rem;color:var(--muted)}
+  .presets button{font:inherit;font-family:var(--mono);font-size:.84rem;color:var(--ink);background:var(--paper);border:1px solid var(--line-strong);border-radius:99px;padding:4px 12px;cursor:pointer}
+  .presets button:hover{border-color:var(--teal);color:var(--teal)}
+  .presets button[aria-pressed="true"]{background:var(--teal);border-color:var(--teal);color:var(--surface)}
+  .controls{display:grid;grid-template-columns:repeat(2,1fr);gap:14px 26px}
+  @media (max-width:640px){.controls{grid-template-columns:1fr}}
+  .ctl{display:flex;flex-direction:column;gap:4px;min-width:0}
+  .ctl label{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:.88rem;color:var(--ink-2)}
+  .ctl output{font-family:var(--mono);font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .ctl input[type="range"]{width:100%;accent-color:var(--teal);margin:0}
+  .ctl small{font-size:.76rem;color:var(--muted)}
+  .results{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  @media (max-width:700px){.results{grid-template-columns:repeat(2,1fr)}}
+  @media (max-width:420px){.results{grid-template-columns:1fr}}
+  .res{border-top:2px solid var(--line-strong);padding-top:8px;display:flex;flex-direction:column;gap:2px;min-width:0}
+  .res .lab{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+  .res .val{font-family:var(--mono);font-size:1.45rem;font-weight:600;color:var(--ink);line-height:1.2;font-variant-numeric:tabular-nums}
+  .res .sub{font-size:.8rem;color:var(--ink-2)}
+  .split{display:flex;flex-direction:column;gap:6px}
+  .split-bar{display:flex;height:14px;border-radius:4px;overflow:hidden;background:var(--surface-2)}
+  .split-bar i{display:block;height:100%}
+  .split-bar .rep{background:var(--loss)}
+  .split-bar .grow{background:var(--teal)}
+  .split-key{display:flex;flex-wrap:wrap;gap:4px 18px;font-size:.84rem;color:var(--ink-2)}
+  .split-key span::before{content:"";display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px}
+  .split-key .rep::before{background:var(--loss)}
+  .split-key .grow::before{background:var(--teal)}
+  .verdict{font-family:var(--serif);font-size:1.2rem;line-height:1.4;color:var(--ink);border-top:1px solid var(--line);padding-top:14px}
+  .verdict.over{color:var(--loss)}
+  .calc-foot{font-size:.82rem;color:var(--muted);max-width:76ch}
+
+  ul.stops{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px}
+  ul.stops li{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:11px 14px;font-size:.94rem;color:var(--ink-2);display:grid;grid-template-columns:1fr 1fr;gap:4px 18px}
+  @media (max-width:640px){ul.stops li{grid-template-columns:1fr}}
+  ul.stops li strong{color:var(--ink)}
+  ul.stops .then{color:var(--ink)}
+  ul.stops .then::before{content:"Entonces: ";font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--loss);font-weight:600}
+
+  .twocol{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media (max-width:700px){.twocol{grid-template-columns:1fr}}
+  .box{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;display:flex;flex-direction:column;gap:8px;min-width:0}
+  .box h3{font-size:1.05rem}
+  .box ul,.box ol{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:.92rem;color:var(--ink-2)}
+  .box li strong{color:var(--ink)}
+
+  .week{background:var(--ink);color:var(--paper);border-radius:var(--radius);padding:22px 22px;margin-top:64px;display:flex;flex-direction:column;gap:12px}
+  .week h2{color:var(--paper)}
+  .week .eyebrow{color:var(--teal-soft)}
+  .week ol{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:8px}
+  .week li{color:var(--paper)}
+  .foot{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:.84rem;max-width:80ch;display:flex;flex-direction:column;gap:8px}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <span class="eyebrow">Bynoesis · plan de escalado</span>
+    <h1>Qué se rompe en cada escalón y qué hay que tener hecho antes</h1>
+    <p class="lede">La Ruta a 5.000 autónomos explica cómo captar en cada etapa. Este documento mira lo otro: qué te frena primero cuando creces, cuántas cuentas aguanta cada pieza de la empresa y qué debe estar resuelto antes de subir al siguiente escalón.</p>
+    <div class="stamp">
+      <span>6 de octubre de 2026</span>
+      <span>Precios 29 / 49 / 99 € + IVA · cuota media 43 €</span>
+      <span>Cifras del modelo de fábrica de /admin/economia: son supuestos, no datos medidos</span>
+    </div>
+  </header>
+
+  <nav class="toc" aria-label="Partes del documento">
+    <a href="#limites"><span class="k">1</span>Los cuatro límites</a>
+    <a href="#escalones"><span class="k">2</span>Los cinco escalones</a>
+    <a href="#calculadora"><span class="k">3</span>Calculadora</a>
+    <a href="#sistemas"><span class="k">4</span>Pieza por pieza</a>
+    <a href="#frenar"><span class="k">5</span>Señales para frenar</a>
+    <a href="#decisiones"><span class="k">6</span>Decisiones abiertas</a>
+  </nav>
+
+  <div class="today">
+    <span class="eyebrow">Punto de partida</span>
+    <ul>
+      <li><span class="dot ok"></span>Producto desplegado, con 1.800 pruebas verificadas a 5 de octubre.</li>
+      <li><span class="dot ok"></span>La economía y la captación ya viven dentro del producto: /admin/economia y /admin/crm.</li>
+      <li><span class="dot no"></span>Sin identidad legal: Stripe y Veri*Factu siguen apagados.</li>
+      <li><span class="dot no"></span>Verificación de empresa en Meta rechazada.</li>
+      <li><span class="dot wait"></span>Ningún cliente de pago. El piloto está pendiente.</li>
+      <li><span class="dot wait"></span>Los cinco números que deciden el plan están sin medir.</li>
+    </ul>
+    <p class="punch">Crecer aquí es quitar, por orden, lo que te impide atender a una cuenta más.</p>
+  </div>
+
+  <!-- ============ PARTE 1 ============ -->
+  <section class="part" id="limites">
+    <div class="part-head">
+      <span class="eyebrow">Parte 1</span>
+      <h2>Los cuatro límites, en el orden en que aparecen</h2>
+      <p class="dek">El mercado no es uno de ellos. En España hay unos 3,3 millones de autónomos y 5.000 cuentas son el 0,15 %. Lo que limita a Bynoesis es interno, y cada límite tiene un número de cuentas a partir del cual manda.</p>
+    </div>
+
+    <ol class="limits">
+      <li>
+        <div class="limit">
+          <div class="limit-head"><h3>La identidad legal</h3><span class="ceiling">techo: 0 cuentas de pago</span></div>
+          <p>Stripe exige un titular verificado, Meta contrasta el NIF con registros públicos y Veri*Factu pide el NIF del productor del sistema. Sin entidad legal puedes pilotar gratis con la facturación fiscal apagada, pero no puedes cobrar.</p>
+          <p class="lift"><b>Se levanta con</b>Una S.L. (1.800–2.700 € el primer año, 20–30 días de constitución), montada cuando tres pilotos hayan firmado la carta de intención.</p>
+        </div>
+      </li>
+      <li>
+        <div class="limit">
+          <div class="limit-head"><h3>Tus horas</h3><span class="ceiling">techo: 139–198 cuentas</span></div>
+          <p>El modelo te da 60 horas al mes para clientes. Cada cuenta pide 18,1 minutos de soporte al mes y cada alta, 3 horas. Solo con soporte caben 198 cuentas. Contando las altas, 139.</p>
+          <p>El equilibrio con tu retirada de 1.200 € llega a las <strong>44 cuentas</strong>. Entre 44 y 139 el negocio te paga y todavía cabe en tu mes: esa es la ventana para bajar el soporte por cuenta antes de contratar a nadie.</p>
+          <p class="lift"><b>Se levanta con</b>Un alta que funcione sin ti y un producto que se explique solo. Después, media jornada de soporte.</p>
+        </div>
+      </li>
+      <li>
+        <div class="limit">
+          <div class="limit-head"><h3>Las bajas</h3><span class="ceiling">200 altas al mes solo para no encoger</span></div>
+          <p>Con un 4 % de bajas mensuales, 250 cuentas piden 10 altas al mes para quedarse igual. Con 1.000 son 40 y con 5.000 son 200. Al coste actual de 3 horas por alta, esas 200 serían 600 horas al mes dedicadas a no crecer.</p>
+          <p>Bajar las bajas del 4 % al 3 % en 5.000 cuentas ahorra 50 altas al mes. Ningún canal de captación te da eso tan barato.</p>
+          <p class="lift"><b>Se levanta con</b>Retención medida por cohorte y canal desde el primer cliente de pago, y alta automática antes del escalón de 1.000.</p>
+        </div>
+      </li>
+      <li>
+        <div class="limit">
+          <div class="limit-head"><h3>El soporte por cuenta</h3><span class="ceiling">8 personas a 5.000 cuentas</span></div>
+          <p>A 12 minutos por cuenta, 5.000 cuentas son 1.000 horas de soporte al mes, unas 8 personas. A 4 minutos son 333 horas. La plantilla de la última etapa depende más de este número que de cualquier otro.</p>
+          <p>En el plan Autónomo el coste técnico es de 1,48 € y el tiempo de soporte y alta, de 5,00 €. Los servidores no son el problema.</p>
+          <p class="lift"><b>Se levanta con</b>Invertir en el cerebro interno y en que cada pantalla diga qué hacer. Objetivo: 7 minutos o menos al llegar a 250 cuentas.</p>
+        </div>
+      </li>
+    </ol>
+
+    <p class="note"><strong>La caja acompaña a los cuatro.</strong> Con los supuestos de fábrica, el primer mes con resultado positivo es el 10 y la caja baja hasta −3.390 € antes de recuperarse. Con 4.000 € iniciales sobrevive el escenario base y no el prudente. Activar la cuota de implantación de 99 € adelanta el equilibrio al mes 7 y la caja no llega a ser negativa.</p>
+  </section>
+
+  <!-- ============ PARTE 2 ============ -->
+  <section class="part" id="escalones">
+    <div class="part-head">
+      <span class="eyebrow">Parte 2</span>
+      <h2>Los cinco escalones</h2>
+      <p class="dek">Son las mismas etapas de la Ruta a 5.000, leídas desde lo que las frena. No se sube por fecha: se sube cuando se cumple la puerta. Las cifras de ingresos y gasto son mensuales, al final de cada escalón.</p>
+    </div>
+
+    <div class="stages">
+      <article class="stage">
+        <div class="stage-head"><h3>1 · Pilotos</h3><span class="range">0 → 5 cuentas · meses 0–2</span></div>
+        <dl class="stage-body">
+          <dt>Lo que frena</dt><dd class="breaks">Nadie ha usado Bynoesis sin ti al lado. Todo el plan descansa en cinco números sin medir.</dd>
+          <dt>Hecho antes</dt><dd>40 nombres en /admin/crm. La pregunta escrita a la asesoría sobre el piloto gratuito y el RD 1007/2023. La hoja del piloto con fecha de fin y permiso para usar sus cifras.</dd>
+          <dt>Equipo</dt><dd>Tú.</dd>
+          <dt>Caja previa</dt><dd>500–1.000 €.</dd>
+          <dt>Al final</dt><dd><span class="num">0 €</span> de ingresos y <span class="num">169 €</span> de gasto.</dd>
+          <dd class="gate"><b>Puerta</b>3 pilotos lo usan solos dos semanas seguidas y 2 firman la carta de intención.</dd>
+        </dl>
+      </article>
+
+      <article class="stage">
+        <div class="stage-head"><h3>2 · Primeros de pago</h3><span class="range">5 → 50 cuentas · meses 2–9</span></div>
+        <dl class="stage-body">
+          <dt>Lo que frena</dt><dd class="breaks">Primero la identidad legal. Después, las 3 horas tuyas que cuesta cada alta.</dd>
+          <dt>Hecho antes</dt><dd>S.L. constituida. Meta verificada con el NIF escrito igual que en la escritura. Stripe en real con los seis precios. Declaración responsable de Veri*Factu y textos legales revisados. Copia independiente fuera de Railway, restaurada de verdad y no solo configurada.</dd>
+          <dt>Equipo</dt><dd>Tú, con tu retirada dentro del modelo en cuanto la caja lo permita.</dd>
+          <dt>Caja previa</dt><dd>5.000–8.000 €.</dd>
+          <dt>Al final</dt><dd><span class="num">2.150 €</span> de ingresos y <span class="num">2.156 €</span> de gasto, con tu retirada incluida.</dd>
+          <dd class="gate"><b>Puerta</b>50 cuentas de pago, bajas por debajo del 5 % desde el cuarto mes, al menos un 30 % de altas por recomendación y resultado a cero o positivo.</dd>
+        </dl>
+      </article>
+
+      <article class="stage">
+        <div class="stage-head"><h3>3 · La provincia</h3><span class="range">50 → 250 cuentas · meses 9–18</span></div>
+        <dl class="stage-body">
+          <dt>Lo que frena</dt><dd class="breaks">Tus horas. El techo de 139–198 cuentas cae en mitad de este escalón.</dd>
+          <dt>Hecho antes</dt><dd>Alta y primer mes sin acompañamiento. Soporte bajando hacia 7 minutos por cuenta. Origen de cada alta guardado en la cuenta, que hoy no existe en el código. Colas, IA, latencia y coste visibles por negocio.</dd>
+          <dt>Equipo</dt><dd>Tú y una persona de soporte a media jornada (1.300 € al mes).</dd>
+          <dt>Caja previa</dt><dd>Unos 6.000 €: tres meses de la media jornada y del contenido.</dd>
+          <dt>Al final</dt><dd><span class="num">10.750 €</span> de ingresos y <span class="num">5.981 €</span> de gasto. Resultado <span class="num pos">+4.769 €</span>.</dd>
+          <dd class="gate"><b>Puerta</b>250 cuentas, soporte de 7 minutos o menos, sabes de dónde viene el 60 % de las altas y cuánto cuesta cada una.</dd>
+        </dl>
+      </article>
+
+      <article class="stage">
+        <div class="stage-head"><h3>4 · Cataluña</h3><span class="range">250 → 1.000 cuentas · meses 18–36</span></div>
+        <dl class="stage-body">
+          <dt>Lo que frena</dt><dd class="breaks">El canal: ya no vendes tú solo. Y la caja, porque aquí se contrata antes de tener los ingresos.</dd>
+          <dt>Hecho antes</dt><dd>Bajas medidas y estructura de comisión aprobada. Liquidación de comisiones construida. La duda del contrato de agencia resuelta con el abogado. Acceso avanzado de Meta para el número propio por cliente. Panel para gestorías con muchos clientes.</dd>
+          <dt>Equipo</dt><dd>Tú, 2 de soporte, 1 de desarrollo y 1 de ventas y gestorías (12.700 € al mes).</dd>
+          <dt>Caja previa</dt><dd>40.000–50.000 €.</dd>
+          <dt>Al final</dt><dd><span class="num">43.000 €</span> de ingresos y <span class="num">27.985 €</span> de gasto. Resultado <span class="num pos">+15.015 €</span>.</dd>
+          <dd class="gate"><b>Puerta</b>1.000 cuentas, bajas por debajo del 3 %, cada cliente deja el triple de lo que cuesta conseguirlo en el canal de pago y el equipo funciona un mes sin ti.</dd>
+        </dl>
+      </article>
+
+      <article class="stage">
+        <div class="stage-head"><h3>5 · España</h3><span class="range">1.000 → 5.000 cuentas · meses 36–60</span></div>
+        <dl class="stage-body">
+          <dt>Lo que frena</dt><dd class="breaks">Reponer bajas a escala y la confianza que piden las gestorías grandes y las asociaciones.</dd>
+          <dt>Hecho antes</dt><dd>Alta completamente automática. Soporte por debajo de 9 minutos por cuenta, que es lo que permite atender con 6 personas. Seguridad certificada y auditorías externas.</dd>
+          <dt>Equipo</dt><dd>Unas 14 personas (44.600 € al mes): 6 de soporte, 3 de desarrollo, 2 de ventas, 2 de operaciones y 1 de producto.</dd>
+          <dt>Caja previa</dt><dd>Autofinanciada o una ronda.</dd>
+          <dt>Al final</dt><dd><span class="num">215.000 €</span> de ingresos y <span class="num">111.339 €</span> de gasto. Resultado <span class="num pos">+103.661 €</span>.</dd>
+          <dd class="gate"><b>Decisión</b>Sin inversión es un plan de unos cinco años. Con inversión puede ser de tres. Es el único escalón donde tiene sentido plantearla.</dd>
+        </dl>
+      </article>
+    </div>
+
+    <p class="note calm"><strong>La regla de los gastos fijos.</strong> Un gasto fijo nuevo entra cuando el escalón anterior ya lo paga dos meses seguidos, o cuando la caja cubre tres meses de ese gasto. Nunca por la fecha del calendario.</p>
+  </section>
+
+  <!-- ============ PARTE 3 ============ -->
+  <section class="part" id="calculadora">
+    <div class="part-head">
+      <span class="eyebrow">Parte 3</span>
+      <h2>Qué pide un tamaño dado</h2>
+      <p class="dek">Mueve las cuentas, las bajas y el soporte y mira cuántas altas y cuántas horas hacen falta cada mes. Sirve para ver qué palanca pesa más antes de decidir en cuál trabajar.</p>
+    </div>
+
+    <div class="calc">
+      <div class="presets" role="group" aria-label="Tamaño de cada escalón">
+        <span>Escalón:</span>
+        <button type="button" data-n="5" aria-pressed="false">5</button>
+        <button type="button" data-n="50" aria-pressed="false">50</button>
+        <button type="button" data-n="250" aria-pressed="true">250</button>
+        <button type="button" data-n="1000" aria-pressed="false">1.000</button>
+        <button type="button" data-n="5000" aria-pressed="false">5.000</button>
+      </div>
+
+      <div class="controls">
+        <div class="ctl">
+          <label for="c-cuentas">Cuentas activas <output id="o-cuentas" for="c-cuentas">250</output></label>
+          <input type="range" id="c-cuentas" min="5" max="5000" step="5" value="250">
+        </div>
+        <div class="ctl">
+          <label for="c-bajas">Bajas al mes <output id="o-bajas" for="c-bajas">4 %</output></label>
+          <input type="range" id="c-bajas" min="0.5" max="10" step="0.5" value="4">
+          <small>Fábrica: 8 % los tres primeros meses, 4 % después.</small>
+        </div>
+        <div class="ctl">
+          <label for="c-soporte">Soporte por cuenta y mes <output id="o-soporte" for="c-soporte">18 min</output></label>
+          <input type="range" id="c-soporte" min="2" max="30" step="1" value="18">
+          <small>Fábrica: 18,1 de media (12 / 20 / 45 por plan).</small>
+        </div>
+        <div class="ctl">
+          <label for="c-alta">Horas por alta <output id="o-alta" for="c-alta">3 h</output></label>
+          <input type="range" id="c-alta" min="0" max="4" step="0.25" value="3">
+          <small>Fábrica: 3 horas. Cero es el alta automática.</small>
+        </div>
+        <div class="ctl">
+          <label for="c-crece">Crecimiento neto al mes <output id="o-crece" for="c-crece">5 %</output></label>
+          <input type="range" id="c-crece" min="0" max="15" step="1" value="5">
+          <small>Fábrica: 5 %.</small>
+        </div>
+      </div>
+
+      <div class="results" aria-live="polite">
+        <div class="res"><span class="lab">Ingresos al mes</span><span class="val" id="r-ingresos">10.750 €</span><span class="sub">a 43 € de cuota media</span></div>
+        <div class="res"><span class="lab">Altas al mes</span><span class="val" id="r-altas">22,5</span><span class="sub" id="r-altas-sub">10 reponen bajas, 12,5 hacen crecer</span></div>
+        <div class="res"><span class="lab">Horas de soporte</span><span class="val" id="r-hsop">75 h</span><span class="sub">cuentas × minutos</span></div>
+        <div class="res"><span class="lab">Horas de dar altas</span><span class="val" id="r-halt">67,5 h</span><span class="sub">altas × horas por alta</span></div>
+        <div class="res"><span class="lab">Horas en total</span><span class="val" id="r-htot">142,5 h</span><span class="sub">tú dispones de 60</span></div>
+        <div class="res"><span class="lab">Personas</span><span class="val" id="r-pers">1,1</span><span class="sub">a 125 horas útiles al mes</span></div>
+      </div>
+
+      <div class="split">
+        <div class="split-bar" role="img" id="split-bar" aria-label="Reparto de las altas: 44 % reponen bajas y 56 % hacen crecer">
+          <i class="rep" id="bar-rep" style="width:44.4%"></i><i class="grow" id="bar-grow" style="width:55.6%"></i>
+        </div>
+        <div class="split-key">
+          <span class="rep" id="key-rep">44 % de las altas solo reponen bajas</span>
+          <span class="grow" id="key-grow">56 % hacen crecer</span>
+        </div>
+      </div>
+
+      <p class="verdict over" id="verdict">No cabe en tus 60 horas. Son 142,5 horas al mes: el trabajo de 1,1 personas a jornada completa.</p>
+      <p class="calc-foot">Aproximación con los valores de fábrica. Las 125 horas útiles por persona salen de la misma proporción que usa la Ruta (5.000 cuentas a 12 minutos son 8 personas). La cifra buena, con tus costes reales, es la de /admin/economia.</p>
+    </div>
+  </section>
+
+  <!-- ============ PARTE 4 ============ -->
+  <section class="part" id="sistemas">
+    <div class="part-head">
+      <span class="eyebrow">Parte 4</span>
+      <h2>Pieza por pieza: hasta dónde aguanta cada una</h2>
+      <p class="dek">Para cada pieza de la empresa: cómo está hoy, cuándo se queda corta y qué se hace entonces. Lo marcado como propuesta no está decidido.</p>
+    </div>
+
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th style="width:19%">Pieza</th><th style="width:27%">Hoy</th><th style="width:25%">Se queda corta cuando</th><th>Entonces</th></tr>
+        </thead>
+        <tbody>
+          <tr class="group"><th colspan="4" scope="colgroup">Captación</th></tr>
+          <tr><td>Tus llamadas</td><td>10 al día, en lotes desde /admin/crm. Es el único canal.</td><td>Pasas de 50 cuentas. La puerta pide un 30 % de altas por recomendación.</td><td>Referidos con un mes gratis para los dos y 3–5 gestorías de la zona.</td></tr>
+          <tr><td>Gestorías</td><td>Ninguna firmada. El portal y el paquete trimestral existen.</td><td>Escalón 3: hacen falta 10–20 recomendando.</td><td>Sin contrato hasta el escalón 4. Allí, programa por tramos de volumen, negociado una vez por despacho.</td></tr>
+          <tr><td>Comerciales</td><td>Ninguno. A sueldo no salen: 2.400 € al mes exigen 280 cuentas activas suyas.</td><td>Hay bajas medidas y 250 cuentas.</td><td>Comisión pura: una mensualidad al alta más un 10 % durante 12 meses, con devolución si la baja llega antes del cuarto mes.<span class="tag">propuesta</span></td></tr>
+          <tr><td>Publicidad</td><td>0 €.</td><td>Hay más de 50 clientes y sabes qué decir y a quién.</td><td>Búsquedas locales primero, siempre con el coste por alta medido. A escala, solo en el escalón 5.</td></tr>
+
+          <tr class="group"><th colspan="4" scope="colgroup">Altas y soporte</th></tr>
+          <tr><td>El alta</td><td>3 horas, contigo delante.</td><td>Cierras más de 6–7 altas al mes: ya son 20 horas de las 60.</td><td>Alta guiada que funcione sin ti en el escalón 2. Completamente automática antes del 5.</td></tr>
+          <tr><td>El soporte</td><td>18,1 minutos por cuenta y mes en el modelo. Lo atiendes tú.</td><td>Entre 139 y 198 cuentas.</td><td>Bajar a 7 minutos con el cerebro interno y la autoexplicación. Media jornada en el escalón 3.</td></tr>
+          <tr><td>Atribución</td><td>No hay código de referido, origen de la cuenta ni liquidación por comercial.</td><td>Pagas a alguien por traer clientes.</td><td>Tres piezas pequeñas: código en el alta, origen guardado e informe mensual. No se construyen hasta aprobar la comisión.</td></tr>
+
+          <tr class="group"><th colspan="4" scope="colgroup">Producto y tecnología</th></tr>
+          <tr><td>La aplicación</td><td>Un proceso web en Railway con Postgres y despliegue automático desde main. El planificador y las colas ya bloquean entre réplicas.</td><td>La latencia p95 o las colas suben de forma sostenida. Hoy no se mide por negocio.</td><td>Primero medir (escalón 3). Después, más réplicas: el diseño ya lo permite.</td></tr>
+          <tr><td>Lectura de documentos</td><td>El OCR se instala en la misma imagen que la web.</td><td>Leer documentos empieza a competir con servir páginas.</td><td>Sacarla a un proceso aparte que consuma de la cola.<span class="tag">propuesta</span></td></tr>
+          <tr><td>La IA de texto</td><td>Reglas primero, Qwen para el resto y Haiku de respaldo. Unos 0,17 € por cuenta y mes de media.</td><td>No antes de unas 2.100 cuentas: ahí una GPU propia de 371 € al mes iguala al pago por uso.</td><td>Seguir en pago por uso. A 5.000 cuentas son unos 860 € al mes: no es lo que limita.</td></tr>
+          <tr><td>WhatsApp</td><td>Número central con límite de conversaciones. Verificación de empresa rechazada.</td><td>Escalón 2 para el límite. Escalón 4 para el número propio por cliente.</td><td>Verificación con la S.L. y, más adelante, acceso avanzado sobre whatsapp_business_management.</td></tr>
+          <tr><td>La voz de Premium</td><td>Prometida en el plan (100 minutos) y no construida.</td><td>Ya: es el primer riesgo comercial.</td><td>Decidir entre quitarla, marcarla como beta o venderla como complemento de 15 €.</td></tr>
+          <tr><td>Copias y seguridad</td><td>Aislamiento por negocio en toda lectura y escritura. Copias en Railway con restauración comprobada. La copia independiente fuera de Railway sigue pendiente.</td><td>Antes del primer cobro. Y otra vez ante gestorías grandes.</td><td>Restauración medida y auditoría externa en el escalón 2. Certificación en el 5.</td></tr>
+
+          <tr class="group"><th colspan="4" scope="colgroup">Dinero</th></tr>
+          <tr><td>Estructura</td><td>137 € al mes: plataforma, herramientas, gestoría y seguro. Se cubre con 4 cuentas.</td><td>Sumas tu cuota de autónomos (12 cuentas) y tu retirada (44 cuentas).</td><td>Meter tus facturas reales en /admin/economia: hasta entonces los equilibrios son un escenario.</td></tr>
+          <tr><td>Cada cliente</td><td>Deja 28,72 € al mes con el soporte pagado y dura 22,2 meses: unos 640 € frente a un coste de captación supuesto de 150 €.</td><td>Las bajas reales pasan del 8 %: la vida media cae a 12,5 meses.</td><td>Medir bajas a 30, 60 y 90 días por canal antes de gastar en captación.</td></tr>
+          <tr><td>La caja de las altas</td><td>La cuota de implantación de 99 € está en el modelo al 0 %.</td><td>Pagas comisiones: sin ella, cada alta es caja negativa el primer mes.</td><td>Activarla, bonificada en el plan anual. Cubre la comisión (43 €) y deja unos 53 €.<span class="tag">propuesta</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ PARTE 5 ============ -->
+  <section class="part" id="frenar">
+    <div class="part-head">
+      <span class="eyebrow">Parte 5</span>
+      <h2>Señales para frenar</h2>
+      <p class="dek">Escalar con una de estas señales encendida multiplica el problema. Los umbrales salen de las puertas de cada escalón y del modelo de fábrica. Son una propuesta para que la ajustes con los datos del piloto.</p>
+    </div>
+    <ul class="stops">
+      <li><span><strong>Las bajas siguen por encima del 5 %</strong> pasado el cuarto mes de una cohorte.</span><span class="then">no abras canal nuevo. Cada alta que entra sale por el otro lado.</span></li>
+      <li><span><strong>El soporte por cuenta no baja</strong> de un trimestre al siguiente.</span><span class="then">para la captación de pago y arregla las tres preguntas que más se repiten.</span></li>
+      <li><span><strong>El alta sigue costando 3 horas tuyas</strong> cuando llegas a 50 cuentas.</span><span class="then">no firmes comerciales. Uno que cierre 10 altas al mes te pide 30 horas, la mitad de tu mes.</span></li>
+      <li><span><strong>No sabes de dónde viene una alta.</strong></span><span class="then">no pagues por captar. Ni comisiones ni anuncios sin atribución.</span></li>
+      <li><span><strong>La caja cubre menos de tres meses</strong> de gastos fijos.</span><span class="then">no entra ningún gasto fijo nuevo, aunque el escalón lo pida.</span></li>
+      <li><span><strong>Un dato cruza de un negocio a otro</strong> o Bynoesis se equivoca con dinero.</span><span class="then">se detiene todo crecimiento hasta cerrar el incidente y su causa.</span></li>
+    </ul>
+  </section>
+
+  <!-- ============ PARTE 6 ============ -->
+  <section class="part" id="decisiones">
+    <div class="part-head">
+      <span class="eyebrow">Parte 6</span>
+      <h2>Lo que queda por decidir y por medir</h2>
+      <p class="dek">Cinco decisiones tuyas cambian el plan de escalado. Cinco números lo confirman o lo tiran. Ninguno necesita código nuevo.</p>
+    </div>
+    <div class="twocol">
+      <div class="box">
+        <h3>Decisiones abiertas</h3>
+        <ul>
+          <li><strong>Forma jurídica</strong> y con qué entidad se verifica Meta. Cambiarla después obliga a repetir la verificación.</li>
+          <li><strong>Cuota de implantación:</strong> seguir al 0 % o activarla. Mueve el equilibrio de caja del mes 10 al 7.</li>
+          <li><strong>Voz en Premium:</strong> quitar, beta o complemento.</li>
+          <li><strong>Comisión de canal</strong> y la consulta al abogado sobre el contrato de agencia.</li>
+          <li><strong>Alcance de Veri*Factu en el piloto:</strong> validar y declarar, o decir que no se ofrece todavía.</li>
+        </ul>
+      </div>
+      <div class="box">
+        <h3>Los cinco números sin medir</h3>
+        <ol>
+          <li><strong>Bajas mensuales.</strong> Supuesto: 8 % al principio, 4 % después.</li>
+          <li><strong>Minutos de soporte por cuenta.</strong> Supuesto: 18,1. Es el que más mueve el plan.</li>
+          <li><strong>Horas por alta.</strong> Supuesto: 3.</li>
+          <li><strong>Conversión de cada fuente.</strong> El CRM la guarda sola.</li>
+          <li><strong>Lo que pagas de verdad cada mes.</strong></li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <div class="week">
+    <span class="eyebrow">Lo siguiente, en orden</span>
+    <h2>Cinco pasos antes de pensar en el segundo escalón</h2>
+    <ol>
+      <li>Cuarenta nombres en el CRM y diez llamadas al día.</li>
+      <li>La pregunta escrita a la asesoría sobre el piloto gratuito y el RD 1007/2023.</li>
+      <li>Cinco pilotos con fecha de fin y contrapartidas por escrito.</li>
+      <li>Tus facturas reales en /admin/economia.</li>
+      <li>Cuando tres firmen la carta de intención: montar la S.L. y abrir Meta, Stripe y Veri*Factu en ese orden.</li>
+    </ol>
+  </div>
+
+  <div class="foot">
+    <p>Se apoya en «Cómo funciona Bynoesis» (21 de septiembre), la Ruta a 5.000 autónomos (17 de septiembre), el canal comercial (16 de septiembre), el análisis de unit economics (15 de julio), los valores de fábrica del modelo económico y el estado del proyecto a 5 de octubre. El estado legal y el de Meta son los del 21 de septiembre.</p>
+    <p>Son cálculos de este documento, hechos con esos mismos supuestos: la ventana entre 44 y 139 cuentas, las 600 horas de altas a 5.000 cuentas, el coste medio de IA por cuenta y el cruce con la GPU, el valor de cada cliente frente al coste de captación y las señales para frenar. El piloto y las primeras 50 cuentas los sustituyen por datos.</p>
+    <p>Esto no es asesoramiento legal ni fiscal. Las cuestiones sobre forma jurídica, contrato de agencia y Veri*Factu las confirman tu asesoría y tu abogado.</p>
+  </div>
+</div>
+
+<script>
+(function(){
+  var ARPU = 43, HORAS_TUYAS = 60, HORAS_PERSONA = 125;
+  var $ = function(id){ return document.getElementById(id); };
+  var inp = { n:$('c-cuentas'), bajas:$('c-bajas'), sop:$('c-soporte'), alta:$('c-alta'), crece:$('c-crece') };
+  var presets = document.querySelectorAll('.presets button');
+
+  function fmt(x, dec){
+    return x.toLocaleString('es-ES', { minimumFractionDigits:0, maximumFractionDigits: dec === undefined ? 1 : dec, useGrouping:'always' });
+  }
+  function altas(x){ return x >= 100 ? fmt(x, 0) : fmt(x, 1); }
+  function horas(x){ return x >= 1000 ? fmt(x, 0) : fmt(x, 1); }
+
+  function render(){
+    var n = +inp.n.value, bajas = +inp.bajas.value, sop = +inp.sop.value, hAlta = +inp.alta.value, crece = +inp.crece.value;
+    var reponer = n * bajas / 100, crecer = n * crece / 100, total = reponer + crecer;
+    var hSop = n * sop / 60, hAlt = total * hAlta, hTot = hSop + hAlt, pers = hTot / HORAS_PERSONA;
+    var pRep = total > 0 ? reponer / total * 100 : 0;
+
+    $('o-cuentas').textContent = fmt(n, 0);
+    $('o-bajas').textContent = fmt(bajas) + ' %';
+    $('o-soporte').textContent = fmt(sop, 0) + ' min';
+    $('o-alta').textContent = fmt(hAlta, 2) + ' h';
+    $('o-crece').textContent = fmt(crece, 0) + ' %';
+
+    $('r-ingresos').textContent = fmt(n * ARPU, 0) + ' €';
+    $('r-altas').textContent = altas(total);
+    $('r-altas-sub').textContent = altas(reponer) + ' reponen bajas, ' + altas(crecer) + ' hacen crecer';
+    $('r-hsop').textContent = horas(hSop) + ' h';
+    $('r-halt').textContent = horas(hAlt) + ' h';
+    $('r-htot').textContent = horas(hTot) + ' h';
+    $('r-pers').textContent = fmt(pers, 1);
+
+    $('bar-rep').style.width = pRep + '%';
+    $('bar-grow').style.width = (100 - pRep) + '%';
+    $('key-rep').textContent = fmt(pRep, 0) + ' % de las altas solo reponen bajas';
+    $('key-grow').textContent = fmt(100 - pRep, 0) + ' % hacen crecer';
+    $('split-bar').setAttribute('aria-label', 'Reparto de las altas: ' + fmt(pRep, 0) + ' % reponen bajas y ' + fmt(100 - pRep, 0) + ' % hacen crecer');
+
+    var v = $('verdict'), tot = horas(hTot);
+    if (hTot <= HORAS_TUYAS){
+      v.className = 'verdict';
+      v.textContent = 'Cabe en tus 60 horas. Son ' + tot + ' horas al mes y te sobran ' + fmt(HORAS_TUYAS - hTot, 1) + '.';
+    } else {
+      v.className = 'verdict over';
+      v.textContent = 'No cabe en tus 60 horas. Son ' + tot + ' horas al mes: el trabajo de ' + fmt(pers, 1) + ' personas a jornada completa.';
+    }
+
+    presets.forEach(function(b){ b.setAttribute('aria-pressed', String(+b.dataset.n === n)); });
+  }
+
+  Object.keys(inp).forEach(function(k){ inp[k].addEventListener('input', render); });
+  presets.forEach(function(b){
+    b.addEventListener('click', function(){ inp.n.value = b.dataset.n; render(); });
+  });
+  render();
+})();
+</script>

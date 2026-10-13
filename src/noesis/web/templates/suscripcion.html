@@ -32,7 +32,7 @@
 </div>
 {% elif status == 'upgrade' %}
 <div class="subscription-notice" style="margin-bottom:16px">
-  <b>{{ upgrade_feature_label or 'Esta función' }} forma parte del plan Negocio.</b>
+  <b>{{ upgrade_feature_label or 'Esta función' }} forma parte del plan {{ plan_names.pro }}.</b>
   <span>Tu información no cambia: al ampliar el plan se habilita en el mismo panel.</span>
 </div>
 {% elif status == 'ready' %}
@@ -90,10 +90,12 @@
 </div>
 
 <div class="plan-grid">
-  <div class="plan {{ 'selected-plan' if preferred_plan == 'autonomo' }}" data-plan-price data-monthly="{{ prices.autonomo }}" data-annual="{{ annual_prices.autonomo }}" data-saving="{{ annual_savings.autonomo }}">
+  <div class="plan {{ 'selected-plan' if preferred_plan == 'autonomo' }}" data-plan-price data-monthly="{{ prices.autonomo }}" data-annual="{{ annual_prices.autonomo }}" data-saving="{{ annual_savings.autonomo }}" data-list-monthly="{{ list_prices.autonomo }}" data-list-annual="{{ annual_list_prices.autonomo }}">
     {% if current_plan == 'autonomo' %}<span class="plan-choice-badge">Plan actual</span>{% elif not is_active_subscription and preferred_plan == 'autonomo' %}<span class="plan-choice-badge">Tu elección</span>{% endif %}
-    <h3>Autónomo</h3>
+    <h3>{{ plan_names.autonomo }}</h3>
+    <p class="price-was"><span class="sr-only">Tarifa: </span><s><span data-list-value>{{ list_prices.autonomo }}</span> €</s> <b>−{{ launch_discount }} %</b></p>
     <p class="price"><span data-price-value>{{ prices.autonomo }}</span> €<small data-price-suffix> + IVA/mes</small></p>
+    <small class="launch-price-note">Precio de lanzamiento · {{ launch_months }} meses desde tu alta</small>
     <small class="annual-price-note" data-annual-note hidden></small>
     <ul>
       <li>Agenda, clientes y presupuestos</li>
@@ -116,23 +118,25 @@
       <input type="hidden" name="action" value="change">
       <input type="hidden" name="plan" value="autonomo">
       <input type="hidden" name="billing_period" value="monthly" data-billing-field>
-      <button class="btn primary full" type="submit">Mejorar a Autónomo</button>
+      <button class="btn primary full" type="submit">Mejorar a {{ plan_names.autonomo }}</button>
     </form>
     {% else %}
     <form method="post" action="/b/{{ business.id }}/suscripcion/checkout">
       <input type="hidden" name="plan" value="autonomo">
       <input type="hidden" name="billing_period" value="monthly" data-billing-field>
-      <button class="btn primary full" type="submit">Activar plan Autónomo</button>
+      <button class="btn primary full" type="submit">Activar plan {{ plan_names.autonomo }}</button>
     </form>
     {% endif %}
   </div>
-  <div class="plan featured {{ 'selected-plan' if preferred_plan == 'pro' }}" data-plan-price data-monthly="{{ prices.pro }}" data-annual="{{ annual_prices.pro }}" data-saving="{{ annual_savings.pro }}">
+  <div class="plan featured {{ 'selected-plan' if preferred_plan == 'pro' }}" data-plan-price data-monthly="{{ prices.pro }}" data-annual="{{ annual_prices.pro }}" data-saving="{{ annual_savings.pro }}" data-list-monthly="{{ list_prices.pro }}" data-list-annual="{{ annual_list_prices.pro }}">
     {% if current_plan == 'pro' %}<span class="plan-choice-badge">Plan actual</span>{% elif not is_active_subscription and preferred_plan == 'pro' %}<span class="plan-choice-badge">Tu elección</span>{% endif %}
-    <h3>Negocio</h3>
+    <h3>{{ plan_names.pro }}</h3>
+    <p class="price-was"><span class="sr-only">Tarifa: </span><s><span data-list-value>{{ list_prices.pro }}</span> €</s> <b>−{{ launch_discount }} %</b></p>
     <p class="price"><span data-price-value>{{ prices.pro }}</span> €<small data-price-suffix> + IVA/mes</small></p>
+    <small class="launch-price-note">Precio de lanzamiento · {{ launch_months }} meses desde tu alta</small>
     <small class="annual-price-note" data-annual-note hidden></small>
     <ul>
-      <li>Todo lo del plan Autónomo</li>
+      <li>Todo lo del plan {{ plan_names.autonomo }}</li>
       <li>Equipo: trabajos, planning y productividad</li>
       <li>Fichaje con registro inalterable (art. 34.9 ET)</li>
       <li>Gestoría conectada: portal y paquete automático</li>
@@ -152,23 +156,25 @@
       <input type="hidden" name="action" value="change">
       <input type="hidden" name="plan" value="pro">
       <input type="hidden" name="billing_period" value="monthly" data-billing-field>
-      <button class="btn primary full" type="submit">Mejorar a Negocio</button>
+      <button class="btn primary full" type="submit">Mejorar a {{ plan_names.pro }}</button>
     </form>
     {% else %}
     <form method="post" action="/b/{{ business.id }}/suscripcion/checkout">
       <input type="hidden" name="plan" value="pro">
       <input type="hidden" name="billing_period" value="monthly" data-billing-field>
-      <button class="btn primary full" type="submit">Activar plan Negocio</button>
+      <button class="btn primary full" type="submit">Activar plan {{ plan_names.pro }}</button>
     </form>
     {% endif %}
   </div>
-  <div class="plan {{ 'selected-plan' if preferred_plan == 'premium' }}" data-plan-price data-monthly="{{ prices.premium }}" data-annual="{{ annual_prices.premium }}" data-saving="{{ annual_savings.premium }}">
+  <div class="plan {{ 'selected-plan' if preferred_plan == 'premium' }}" data-plan-price data-monthly="{{ prices.premium }}" data-annual="{{ annual_prices.premium }}" data-saving="{{ annual_savings.premium }}" data-list-monthly="{{ list_prices.premium }}" data-list-annual="{{ annual_list_prices.premium }}">
     {% if current_plan == 'premium' %}<span class="plan-choice-badge">Plan actual</span>{% elif not is_active_subscription and preferred_plan == 'premium' %}<span class="plan-choice-badge">Tu elección</span>{% endif %}
-    <h3>Premium</h3>
+    <h3>{{ plan_names.premium }}</h3>
+    <p class="price-was"><span class="sr-only">Tarifa: </span><s><span data-list-value>{{ list_prices.premium }}</span> €</s> <b>−{{ launch_discount }} %</b></p>
     <p class="price"><span data-price-value>{{ prices.premium }}</span> €<small data-price-suffix> + IVA/mes</small></p>
+    <small class="launch-price-note">Precio de lanzamiento · {{ launch_months }} meses desde tu alta</small>
     <small class="annual-price-note" data-annual-note hidden></small>
     <ul>
-      <li>Todo lo del plan Negocio</li>
+      <li>Todo lo del plan {{ plan_names.pro }}</li>
       <li>Recepcionista 24/7 (beta, aún no activa): contestará llamadas y agendará citas, con 100 minutos al mes incluidos cuando se active</li>
       <li>~1.500 acciones de IA al mes</li>
       <li>Puesta en marcha acompañada</li>
@@ -184,13 +190,13 @@
       <input type="hidden" name="action" value="change">
       <input type="hidden" name="plan" value="premium">
       <input type="hidden" name="billing_period" value="monthly" data-billing-field>
-      <button class="btn primary full" type="submit">Mejorar a Premium</button>
+      <button class="btn primary full" type="submit">Mejorar a {{ plan_names.premium }}</button>
     </form>
     {% else %}
     <form method="post" action="/b/{{ business.id }}/suscripcion/checkout">
       <input type="hidden" name="plan" value="premium">
       <input type="hidden" name="billing_period" value="monthly" data-billing-field>
-      <button class="btn primary full" type="submit">Activar plan Premium</button>
+      <button class="btn primary full" type="submit">Activar plan {{ plan_names.premium }}</button>
     </form>
     {% endif %}
   </div>
@@ -206,6 +212,6 @@
 </section>
 {% endif %}
 
-<p class="subscription-payment-note">Pago seguro · Cancela cuando quieras · Tus datos siempre son exportables.</p>
+<p class="subscription-payment-note">Pago seguro · Cancela cuando quieras · Tus datos siempre son exportables.<br>El precio tachado es la tarifa de cada plan: durante el lanzamiento pagas un {{ launch_discount }} % menos tus {{ launch_months }} primeros meses y avisamos 30 días antes de pasar a la tarifa.</p>
 {% endblock %}
 {% block scripts %}<script src="/static/public-site.js?v={{ asset_v }}"></script>{% endblock %}

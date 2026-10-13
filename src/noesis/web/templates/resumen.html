@@ -116,7 +116,7 @@ async function loadHome(){
 function renderToday(rows){
   const target = el('today');
   if (!rows.length){
-    target.innerHTML = `<div class="home-empty"><strong>Día despejado</strong><p>No tienes trabajos registrados para hoy.</p><a class="btn sm" href="/b/{{ business.id }}/agenda?nuevo=1">Añadir trabajo</a></div>`;
+    target.innerHTML = `<div class="home-empty"><strong>Día despejado</strong><p>No tienes trabajos registrados para hoy.</p><a class="btn sm" href="/b/{{ business.id }}/asistente">Añadir trabajo</a></div>`;
     return;
   }
   target.innerHTML = rows.slice(0,4).map((j,i)=>`<a class="home-list-row" href="/b/{{ business.id }}/agenda">

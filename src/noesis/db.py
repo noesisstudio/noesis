@@ -12512,10 +12512,24 @@ def _prospecto_campos(datos: dict) -> dict:
             raise ValueError("El nombre es obligatorio (máx. 200 caracteres).")
         limpio["nombre"] = nombre
     for campo, largo in (("poblacion", 120), ("presentado_por", 120),
-                         ("siguiente_accion", 200), ("baja_motivo", 200)):
+                         ("siguiente_accion", 200), ("baja_motivo", 200),
+                         ("provincia", 60), ("direccion", 200), ("web", 200),
+                         ("hoja_clave", 260), ("hoja_estado", 120),
+                         ("correo_verificacion", 120), ("hoja_vista_el", 40)):
         if campo in datos:
             valor = (datos.get(campo) or "").strip()[:largo]
             limpio[campo] = valor or None
+    if "provincia" in limpio:
+        from .crm import zonas
+
+        limpio["provincia"] = zonas.normalizar_provincia(limpio["provincia"])
+    if "tipo" in datos:
+        tipo = (datos.get("tipo") or "autonomo").strip() or "autonomo"
+        if tipo not in sales.TIPOS:
+            raise ValueError("Tipo de contacto desconocido.")
+        limpio["tipo"] = tipo
+    if "hoja_id" in datos:
+        limpio["hoja_id"] = int(datos["hoja_id"]) if datos.get("hoja_id") else None
     if "nota" in datos:
         nota = (datos.get("nota") or "").strip()[:2000]
         limpio["nota"] = nota or None
@@ -12634,8 +12648,13 @@ def add_sales_touch(prospect_id, *, canal: str, resumen: str = "",
         toque = dict(conn.execute("SELECT * FROM sales_touches WHERE id=?",
                                   (fila["id"],)).fetchone())
     if estado_despues:
+        # El plazo cuenta desde el día del contacto, no desde hoy: apuntar con
+        # retraso un correo de hace una semana no debe regalar otra semana.
+        ficha = get_prospect(prospect_id)
         update_prospect(prospect_id, estado=estado_despues,
-                        siguiente_el=sales.siguiente_fecha(estado_despues),
+                        siguiente_el=sales.siguiente_fecha(
+                            estado_despues, date.fromisoformat(cuando),
+                            ficha.get("tipo")),
                         siguiente_accion=sales.ESTADOS[estado_despues]["siguiente"])
     return toque
 
@@ -12647,8 +12666,17 @@ def list_sales_touches(prospect_id) -> list[dict]:
             "ORDER BY fecha DESC, id DESC", (prospect_id,)).fetchall()]
 
 
+def list_all_sales_touches() -> list[dict]:
+    """Todo el historial sin el texto: lo que necesitan los gráficos del embudo."""
+    with get_conn() as conn:
+        return [dict(f) for f in conn.execute(
+            "SELECT prospect_id, fecha, canal, estado_despues FROM sales_touches "
+            "ORDER BY fecha, id").fetchall()]
+
+
 def import_prospects(filas: list[dict], *, origen: str = "otro",
-                     presentado_por: str | None = None) -> dict:
+                     presentado_por: str | None = None,
+                     tipo: str = "autonomo") -> dict:
     """Carga la lista pegada. No duplica a quien ya está por teléfono o nombre.
 
     Volver a pegar la lista con tres nombres nuevos tiene que añadir tres, no
@@ -12673,7 +12701,7 @@ def import_prospects(filas: list[dict], *, origen: str = "otro",
             poblacion=fila.get("poblacion"), telefono=telefono,
             email=fila.get("email"), origen=origen,
             presentado_por=presentado_por or fila.get("presentado_por"),
-            nota=fila.get("nota"), estado="lista",
+            nota=fila.get("nota"), estado="lista", tipo=tipo,
             siguiente_el=date.today().isoformat(),
             siguiente_accion=sales.ESTADOS["lista"]["siguiente"],
         )

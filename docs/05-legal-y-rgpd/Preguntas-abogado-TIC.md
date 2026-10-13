@@ -237,6 +237,10 @@ publican como contacto profesional, y guardarlo en nuestro CRM?** *(clave)*
   (mapas, directorios de gremios) y de presentaciones de terceros. Guardamos nombre,
   teléfono, oficio, población y el origen del dato en `sales_prospects`
   (`/admin/crm`), con fecha del aviso del art. 14 y baja anotada.
+  Desde el 5-oct-2026 también una lista de unas mil gestorías con el correo que
+  publican en su web, guardada en una hoja de Google y leída por el CRM; a ellas se
+  les escribe por correo pidiendo opinión, no ofreciendo el producto. Quien pide ser
+  borrado deja solo una huella (hash) para no volver a entrar desde la hoja.
 - Nuestra lectura, a confirmar: art. 19 LOPDGDD (datos de contacto de empresarios
   individuales) más interés legítimo del art. 6.1.f RGPD, informando en el primer
   contacto y con baja inmediata.

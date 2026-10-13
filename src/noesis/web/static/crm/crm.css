@@ -1,0 +1,333 @@
+/* CRM de captación. Se apoya en app.css y admin-workspace.css: aquí solo está lo
+   que esas dos no tienen. Sin colores nuevos: todo sale de las variables de marca
+   (docs/design/STYLE_TOKENS.json). */
+
+.crm .card { margin-bottom: 20px; }
+.crm .crm-num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.crm td small { display: block; color: var(--faint); font-size: .76rem; }
+
+/* --- El parte: la voz de Bynoesis en serif, como en el panel de economía --- */
+.crm-parte { border-left: 3px solid var(--brand-2); }
+.crm-verdict {
+  font-family: var(--serif);
+  font-size: 1.22rem;
+  line-height: 1.45;
+  color: var(--text);
+  margin: 0 0 8px;
+  max-width: 62ch;
+  text-wrap: pretty;
+}
+
+/* --- Embudo --- */
+.crm-embudo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+  margin: 14px 0 6px;
+}
+.crm-paso-cifra {
+  font-size: 1.5rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  line-height: 1.1;
+}
+.crm-paso-cifra span { font-size: .9rem; color: var(--faint); }
+.crm-paso-que { font-size: .8rem; color: var(--muted); margin: 2px 0 6px; }
+.crm-barra {
+  height: 6px;
+  border-radius: 99px;
+  background: var(--surface-2, #e9efed);
+  overflow: hidden;
+}
+.crm-barra i { display: block; height: 100%; background: var(--brand-2); }
+.crm-paso.ok .crm-barra i { background: var(--green, var(--brand-2)); }
+.crm-paso-falta { font-size: .72rem; color: var(--faint); margin-top: 4px; }
+.crm-estados { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+
+/* --- Hoy --- */
+.crm-acciones { white-space: nowrap; display: flex; gap: 6px; }
+.crm-aviso { color: var(--amber, var(--muted)); }
+.crm-frios { margin-top: 10px; }
+.crm-frios a { margin-right: 2px; }
+tr.crm-vencido td:first-child { box-shadow: inset 3px 0 0 var(--brand-2); }
+tr.crm-baja { opacity: .5; }
+
+/* --- Dos columnas que se apilan en el móvil --- */
+.crm-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 24px;
+}
+.crm-campos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px 14px;
+  margin: 10px 0;
+}
+.crm label { display: block; font-size: .8rem; color: var(--muted); }
+.crm label .input, .crm label select, .crm label textarea { margin-top: 4px; width: 100%; }
+.crm-check { display: flex; align-items: center; gap: 8px; margin: 10px 0; }
+.crm-check input { width: auto; }
+.crm h3 { font-size: 1rem; margin: 0 0 4px; }
+
+/* --- Guiones --- */
+.crm-firma { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.crm-firma .input { width: auto; margin-top: 0; }
+.crm-guion {
+  border: 1px solid var(--border, #e2ddd0);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  background: var(--surface-2, transparent);
+}
+.crm-guion header { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.crm-guion header span { font-size: .72rem; color: var(--faint); text-transform: uppercase; letter-spacing: .08em; }
+.crm-guion-cuando { font-size: .78rem; color: var(--muted); margin: 4px 0 8px; }
+.crm-lenguas { display: flex; gap: 6px; margin-bottom: 8px; }
+.crm-lenguas .btn[aria-pressed="true"] { border-color: var(--brand-2); color: var(--brand); }
+.crm-texto {
+  font-size: .92rem;
+  line-height: 1.5;
+  color: var(--text);
+  white-space: pre-wrap;
+  margin: 0;
+}
+.crm-preguntas { margin-top: 14px; }
+.crm-preguntas ol { margin: 6px 0 0; padding-left: 20px; font-size: .88rem; color: var(--muted); }
+.crm-preguntas li { margin-bottom: 4px; }
+
+/* --- Historial --- */
+.crm-historial { margin-top: 20px; }
+.crm-historial ul { list-style: none; margin: 8px 0 0; padding: 0; }
+.crm-historial li {
+  border-left: 2px solid var(--border, #e2ddd0);
+  padding: 0 0 12px 14px;
+  font-size: .88rem;
+}
+.crm-historial li p { margin: 4px 0 0; color: var(--muted); }
+.crm-historial .crm-num { color: var(--faint); margin-right: 6px; }
+
+/* --- Editar y acciones peligrosas --- */
+.crm-editar { margin-top: 18px; }
+.crm-editar summary { cursor: pointer; font-size: .88rem; color: var(--muted); }
+.crm-peligro {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border, #e2ddd0);
+}
+.crm-peligro form { display: flex; gap: 8px; align-items: center; }
+
+/* --- Fuentes --- */
+.crm-fuentes { margin: 10px 0 16px; padding-left: 20px; font-size: .9rem; color: var(--muted); }
+.crm-fuentes li { margin-bottom: 6px; }
+.crm-fuentes b { color: var(--text); }
+
+/* ======================================================================
+   Vista visual: a quién miras, cifras, gráficos, tablero, tanda y hoja.
+   Los gráficos usan una sola rampa de verde de marca, de claro a oscuro,
+   porque lo que enseñan es un orden (cuánto se ha avanzado), no categorías.
+   Rampa validada (un tono, pasos visibles, el claro se distingue del fondo):
+   #84bfac · #55a68f · #2e8b74 · #1c6a58 · #14463b
+   ====================================================================== */
+.crm {
+  --crm-tono-1: #84bfac;
+  --crm-tono-2: #55a68f;
+  --crm-tono-3: #2e8b74;
+  --crm-tono-4: #1c6a58;
+  --crm-tono-5: #14463b;
+  --crm-neutro: #b5afa0;      /* dormidos y descartados: fuera del orden */
+  --crm-rejilla: #ece8dc;
+}
+
+/* --- A quién miras --- */
+.crm-vistas { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 10px; }
+.crm-vistas a {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 14px; border: 1px solid var(--border); border-radius: 99px;
+  background: var(--surface); font-size: .86rem; font-weight: 600; color: var(--text);
+}
+.crm-vistas a span { font-weight: 500; color: var(--muted); font-variant-numeric: tabular-nums; }
+.crm-vistas a:hover { border-color: var(--brand-2); }
+.crm-vistas a[aria-current="page"] { background: var(--brand); border-color: var(--brand); color: #fff; }
+.crm-vistas a[aria-current="page"] span { color: rgba(255, 255, 255, .78); }
+
+/* --- Apartados del panel --- */
+.crm-pestanas {
+  display: flex; gap: 2px; overflow-x: auto; margin: 6px 0 20px;
+  border-bottom: 1px solid var(--border);
+}
+.crm-pestanas a {
+  display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
+  padding: 10px 14px; margin-bottom: -1px; border-bottom: 2px solid transparent;
+  font-size: .88rem; font-weight: 600; color: var(--muted);
+}
+.crm-pestanas a:hover { color: var(--text); }
+.crm-pestanas a span {
+  font-size: .72rem; font-weight: 600; font-variant-numeric: tabular-nums;
+  padding: 1px 7px; border-radius: 99px; background: var(--surface-2);
+  border: 1px solid var(--border); color: var(--muted);
+}
+.crm-pestanas a[aria-current="page"] { color: var(--brand); border-bottom-color: var(--brand); }
+/* Sin script no hay apartados: la barra sirve de índice y todo se ve seguido. */
+.crm:not(.con-pestanas) .crm-pestanas a[hidden] { display: none; }
+
+/* --- Qué toca ahora, bajo el parte --- */
+.crm-toca { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.crm-toca a {
+  display: inline-flex; align-items: baseline; gap: 6px; padding: 7px 12px;
+  border: 1px solid var(--border); border-radius: 99px; background: var(--surface-2);
+  font-size: .84rem; color: var(--text);
+}
+.crm-toca a:hover { border-color: var(--brand-2); }
+.crm-toca a b { font-variant-numeric: tabular-nums; }
+.crm-toca a span { color: var(--brand-2); }
+
+/* --- Cifras --- */
+.crm-cifras {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 14px; margin-bottom: 22px;
+}
+.crm .crm-cifras .stat { background: var(--surface-2); border-color: var(--border); }
+.crm .crm-cifras a.stat { display: block; color: inherit; }
+.crm .crm-cifras a.stat:hover { border-color: var(--brand-2); }
+
+/* --- Gráficos --- */
+.crm-graficos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.crm-grafico {
+  margin: 0; min-width: 0; padding: 18px 20px;
+  border: 1px solid var(--border); border-radius: var(--radius);
+}
+.crm-grafico.ancho { grid-column: 1 / -1; }
+.crm-grafico figcaption { margin-bottom: 16px; }
+.crm-grafico figcaption b { display: block; font-size: .95rem; }
+.crm-grafico figcaption span { font-size: .78rem; color: var(--muted); }
+.crm-grafico-nota, .crm-grafico-vacio { font-size: .78rem; color: var(--muted); margin: 12px 0 0; }
+.crm-marca { display: block; transition: filter .12s ease; }
+.crm-marca:hover, .crm-marca:focus-visible { filter: brightness(1.12); }
+.crm-tono-1 { background: var(--crm-tono-1); }
+.crm-tono-2 { background: var(--crm-tono-2); }
+.crm-tono-3 { background: var(--crm-tono-3); }
+.crm-tono-4 { background: var(--crm-tono-4); }
+.crm-tono-5 { background: var(--crm-tono-5); }
+.crm-tramo-respuesta { background: var(--crm-tono-5); }
+.crm-tramo-contactados { background: var(--crm-tono-3); }
+.crm-tramo-sin { background: var(--crm-tono-1); }
+.crm-tramo-cerrados { background: var(--crm-neutro); }
+
+/* Barras horizontales: nombre, pista y valor en la punta */
+.crm-barras { display: grid; gap: 10px; }
+.crm-barra-fila { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 12px; align-items: center; }
+.crm-barra-nombre { font-size: .8rem; color: var(--text); overflow-wrap: anywhere; }
+/* El hueco de la derecha es donde cabe el valor de la barra más larga: el ancho
+   de la barra se mide sobre lo que queda, así el número nunca se sale. */
+.crm-barra-pista { display: flex; align-items: center; gap: 8px; min-width: 0; padding-right: 92px; }
+.crm-barra-pista > .crm-marca { height: 20px; min-width: 2px; border-radius: 0 4px 4px 0; flex: 0 0 auto; }
+.crm-barra-valor { font-size: .8rem; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.crm-barra-valor small { font-weight: 400; color: var(--muted); }
+.crm-apilada { display: flex; gap: 2px; height: 20px; min-width: 4px; flex: 0 0 auto; }
+.crm-apilada .crm-marca { flex-basis: 0; min-width: 3px; height: 100%; }
+.crm-apilada .crm-marca:last-child { border-radius: 0 4px 4px 0; }
+.crm-barras.zonas .crm-barra-pista { padding-right: 56px; }
+.crm-tanda-fecha { grid-template-columns: minmax(0, 220px); }
+
+/* Columnas por semana */
+.crm-columnas {
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr);
+  gap: 6px; align-items: end;
+}
+.crm-columna-semana { display: grid; gap: 6px; justify-items: center; min-width: 0; }
+.crm-columna-hueco {
+  position: relative; display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
+  height: 140px; width: 100%; border-bottom: 1px solid var(--crm-rejilla);
+}
+.crm-columna-hueco .crm-marca { width: min(24px, 70%); min-height: 0; border-radius: 4px 4px 0 0; }
+.crm-columna-valor { font-size: .74rem; font-weight: 600; font-variant-numeric: tabular-nums; margin-bottom: 3px; }
+.crm-columna-pie { font-size: .68rem; color: var(--faint); white-space: nowrap; min-height: 1em; }
+.crm-columna-pie.actual { color: var(--text); font-weight: 600; }
+
+/* Leyenda y tabla equivalente */
+.crm-leyenda { list-style: none; display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0 0 14px; padding: 0; font-size: .76rem; color: var(--muted); }
+.crm-leyenda li { display: inline-flex; align-items: center; gap: 6px; }
+.crm-leyenda i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.crm-tabla { margin-top: 14px; }
+.crm-tabla summary { cursor: pointer; font-size: .76rem; color: var(--muted); }
+.crm-tabla table { margin-top: 8px; }
+
+/* Lo que sale al pasar por una marca o al llegar con el teclado */
+.crm-tip {
+  position: fixed; z-index: 50; pointer-events: none; max-width: 260px;
+  padding: 8px 10px; border-radius: 8px; background: var(--text); color: #fff;
+  font-size: .76rem; line-height: 1.4; box-shadow: var(--shadow);
+}
+.crm-tip b { display: block; font-size: .86rem; }
+.crm-tip span { opacity: .82; }
+
+/* --- Tablero --- */
+.crm-tablero { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; align-items: flex-start; }
+.crm-columna {
+  flex: 0 0 216px; min-width: 0; padding: 10px;
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm);
+}
+.crm-columna.cerrada { background: transparent; border-style: dashed; }
+.crm-columna.encima { border-color: var(--brand-2); background: var(--brand-soft); }
+.crm-columna header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+.crm-columna header b { font-size: .82rem; }
+.crm-columna header span { font-size: .78rem; color: var(--muted); }
+.crm-columna ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; min-height: 8px; }
+.crm-tarjeta {
+  padding: 10px 11px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 9px; cursor: grab; font-size: .82rem; line-height: 1.35;
+}
+.crm-tarjeta.vencida { box-shadow: inset 3px 0 0 var(--brand-2); }
+.crm-tarjeta.arrastrando { opacity: .45; }
+.crm-tarjeta a b { overflow-wrap: anywhere; }
+.crm-tarjeta small { display: block; color: var(--muted); font-size: .72rem; margin-top: 2px; }
+.crm-tarjeta .crm-tarjeta-cuando { color: var(--faint); font-variant-numeric: tabular-nums; }
+.crm-columna-vacia { font-size: .74rem; color: var(--faint); margin: 4px 0; }
+.crm-columna-mas { display: block; margin-top: 8px; font-size: .76rem; color: var(--brand); }
+.crm-tablero-aviso { font-size: .82rem; color: var(--red); margin: 0 0 10px; }
+
+/* --- Tanda, filtros y páginas --- */
+.crm-zona { display: flex; align-items: center; gap: 8px; margin: 0; }
+.crm-zona label { margin: 0; }
+.crm-asuntos { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; font-size: .84rem; margin: 10px 0 14px; }
+.crm-copiable { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.crm .crm-todos { display: inline-flex; align-items: center; gap: 6px; font-size: inherit; color: inherit; }
+.crm-todos input, .crm td input[type="checkbox"] { width: auto; }
+.crm-filtros { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-end; margin-bottom: 14px; }
+.crm-filtros label { flex: 0 1 190px; }
+.crm-filtros label:first-of-type { flex: 1 1 240px; }
+.crm-paginas { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 14px; }
+
+/* --- Ficha --- */
+.crm-contacto { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; font-size: .86rem; margin: 8px 0 4px; }
+.crm-asunto { font-size: .84rem; margin: 0 0 8px; color: var(--muted); }
+.crm-asunto b { color: var(--text); }
+
+/* --- Hoja de Google --- */
+.crm-hojas { list-style: none; margin: 0 0 20px; padding: 0; }
+.crm-hojas li {
+  display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  padding: 14px 0; border-bottom: 1px solid var(--border);
+}
+.crm-hojas small { display: block; color: var(--muted); font-size: .78rem; margin-top: 4px; max-width: 70ch; }
+.crm-hojas small.crm-aviso { color: var(--amber); }
+.crm-enlace { color: var(--brand); font-size: .82rem; margin-left: 8px; }
+.crm-hoja-acciones { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; }
+.crm-hoja-acciones form { margin: 0; }
+.crm-hoja-acciones summary, .crm-conectar > summary { cursor: pointer; font-size: .86rem; color: var(--brand); font-weight: 600; }
+.crm-pasos { margin: 10px 0 14px; padding-left: 20px; font-size: .88rem; color: var(--muted); }
+.crm-pasos li { margin-bottom: 4px; }
+.crm-pasos b { color: var(--text); }
+.crm-formula { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0 0; }
+.crm-formula code { overflow-wrap: anywhere; font-size: .78rem; }
+
+@media (max-width: 900px) {
+  .crm-graficos { grid-template-columns: 1fr; }
+  .crm-barra-fila { grid-template-columns: 104px minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) { .crm-marca { transition: none; } }

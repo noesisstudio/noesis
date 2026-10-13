@@ -31,6 +31,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from .. import config, db
+from ..crm import rutas as crm_rutas
 from ..adapters import billing as billing_adapter  # noqa: F401 -- compatibilidad de tests/integraciones
 from .deps import HERE, TEMPLATES, auth_guard
 from .routers import (
@@ -428,6 +429,7 @@ app.include_router(gestoria_portal.router)
 
 
 # ========================================================= ADMIN (fundador) = #
+app.include_router(crm_rutas.router)
 app.include_router(admin.router)
 
 

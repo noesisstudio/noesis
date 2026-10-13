@@ -69,7 +69,7 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 # La distribución debe servir las mismas páginas que el checkout editable.
-"noesis.web" = ["templates/*.html", "templates/partials/*.html", "static/*", "static/fonts/*", "static/vendor/*"]
+"noesis.web" = ["templates/*.html", "templates/partials/*.html", "templates/crm/*.html", "static/*", "static/crm/*", "static/fonts/*", "static/vendor/*"]
 
 [tool.ruff]
 target-version = "py311"

@@ -7,7 +7,7 @@
   <link rel="icon" href="/static/noesis-mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
   <link rel="stylesheet" href="/static/admin-workspace.css?v={{ asset_v }}">
-  <link rel="stylesheet" href="/static/admin-crm.css?v={{ asset_v }}">
+  <link rel="stylesheet" href="/static/crm/crm.css?v={{ asset_v }}">
 </head>
 <body class="admin-workspace">
 {% set admin_scope = 'company' %}
@@ -28,31 +28,64 @@
   <header class="admin-view-head" id="admin-content" tabindex="-1">
     <div class="kicker">Centro de mando</div>
     <h1>Captación</h1>
-    <p>A quién persigues, en qué punto está cada uno y qué toca decirle hoy. El CRM de <code>/b/…/crm</code> es el del autónomo; este es el tuyo.</p>
-    <p class="admin-freshness">Lectura del sistema: <time>{{ admin_as_of }}</time> · el método completo está en <code>docs/06-negocio-y-finanzas/Ruta-a-5000-autonomos.html</code>.</p>
+    <p>A quién persigues, en qué punto está cada uno y qué toca decirle hoy.</p>
+    <p class="admin-freshness">Lectura del sistema: <time>{{ admin_as_of }}</time> · guía de esta página en <code>docs/crm/README.md</code>.</p>
   </header>
+
+  {# ---------- A quién miras: todo lo de abajo se calcula sobre esta vista ---------- #}
+  {% if hay_alguien %}
+  <nav class="crm-vistas" aria-label="A quién miras">
+    <a href="/admin/crm" {{ 'aria-current="page"' if not tipo else '' }}>Todos <span>{{ por_tipo.values() | sum }}</span></a>
+    {% for clave, meta in tipos.items() %}{% if por_tipo[clave] or clave == tipo %}
+    <a href="/admin/crm?tipo={{ clave }}" {{ 'aria-current="page"' if tipo == clave else '' }}>{{ meta.plural }} <span>{{ por_tipo[clave] }}</span></a>
+    {% endif %}{% endfor %}
+  </nav>
+  {# ---------- Apartados del panel ----------
+     Cada enlace apunta a una sección real: sin script la página se lee entera, de
+     arriba abajo; con él, `crm.js` enseña un apartado cada vez. #}
+  <nav class="crm-pestanas" data-crm-pestanas aria-label="Apartados">
+    <a href="#resumen" data-crm-ir="resumen">Resumen</a>
+    <a href="#tablero" data-crm-ir="tablero">Tablero</a>
+    <a href="#hoy" data-crm-ir="hoy">Hoy y tanda{% if resumen.hoy %} <span>{{ resumen.hoy | length }}</span>{% endif %}</a>
+    <a href="#lista" data-crm-ir="lista">La lista <span>{{ "{:,}".format(resumen.total).replace(",", ".") }}</span></a>
+    <a href="#ficha" data-crm-ir="ficha" {{ '' if detalle else 'hidden' }}>Ficha</a>
+    <a href="#hoja" data-crm-ir="hoja">Hoja de Google</a>
+    <a href="#importar" data-crm-ir="anadir">Añadir gente</a>
+  </nav>
+  {% endif %}
 
   {% if admin_error %}<div class="admin-note error" role="alert">{{ admin_error }}</div>{% endif %}
   {% if admin_success %}<div class="admin-note success" role="status">{{ admin_success }}</div>{% endif %}
 
+  <div data-crm-pestana="resumen" id="resumen">
   {# ---------- El parte: una frase ---------- #}
   <section class="card crm-parte">
     <div class="card-b">
       <p class="crm-verdict">{{ resumen.parte }}</p>
       {% if resumen.sin_informar %}
-      <p class="meta">{{ resumen.sin_informar | length }} contacto(s) salen de una ficha pública o de un tercero y todavía no saben de dónde tienes su teléfono. Hay que decírselo en el primer contacto y marcarlo aquí.</p>
+      <p class="meta">{{ resumen.sin_informar | length }} contacto(s) salen de una ficha pública, de su web o de un tercero y todavía no saben de dónde tienes su contacto. Hay que decírselo la primera vez que les escribas o les llames, y marcarlo aquí.</p>
+      {% endif %}
+      {% if hay_alguien %}
+      <div class="crm-toca">
+        {% if resumen.hoy %}<a href="#hoy"><b>{{ resumen.hoy | length }}</b> seguimiento(s) para hoy <span aria-hidden="true">→</span></a>{% endif %}
+        {% if zonas %}<a href="#tanda"><b>{{ tanda | length }}</b> siguientes de {{ zona }} sin escribir <span aria-hidden="true">→</span></a>{% endif %}
+        <a href="#hoja">{% if hojas %}Hoja «{{ hojas[0].nombre }}»{% if hojas[0].ultimo_estado == 'error' %}: no se pudo leer{% elif hojas[0].ultima_lectura %}: leída el {{ (hojas[0].ultima_lectura | string)[:10] }}{% endif %}{% else %}Hoja de Google sin conectar{% endif %} <span aria-hidden="true">→</span></a>
+      </div>
       {% endif %}
     </div>
   </section>
 
-  {# ---------- El embudo contra el objetivo de la parte 1 ---------- #}
+  {% include 'crm/_panel.html' %}
+
+  {# ---------- El embudo contra el objetivo de la parte 1 (solo autónomos) ---------- #}
+  {% if resumen.hay_autonomos or not hay_alguien %}
   <section class="card" id="embudo">
     <div class="card-h">
-      <div><div class="kicker">Dónde estás</div><h2>El embudo</h2></div>
-      <span class="meta">{{ resumen.total }} en total · {{ resumen.abiertos }} abiertos{% if resumen.bajas %} · {{ resumen.bajas }} baja(s){% endif %}</span>
+      <div><div class="kicker">Dónde estás</div><h2>El objetivo con autónomos</h2></div>
+      <span class="meta">{{ resumen.total }} en esta vista · {{ resumen.abiertos }} abiertos{% if resumen.bajas %} · {{ resumen.bajas }} baja(s){% endif %}</span>
     </div>
     <div class="card-b">
-      <p class="meta">El objetivo de cada peldaño sale de la parte 1 de la Ruta a 5.000. Son órdenes de magnitud, no datos medidos: están para saber si 40 nombres es exagerar o quedarse corto.</p>
+      <p class="meta">El objetivo de cada peldaño sale de la parte 1 de la Ruta a 5.000 y cuenta solo autónomos: las gestorías son un canal, no los cuarenta nombres. Son órdenes de magnitud, no datos medidos.</p>
       <div class="crm-embudo">
         {% for paso in resumen.embudo %}
         <div class="crm-paso {{ 'ok' if paso.falta == 0 else '' }}">
@@ -72,7 +105,14 @@
       </div>
     </div>
   </section>
+  {% endif %}
+  </div>
 
+  <div data-crm-pestana="tablero">
+  {% include 'crm/_tablero.html' %}
+  </div>
+
+  <div data-crm-pestana="hoy">
   {# ---------- Lo que toca hoy ---------- #}
   <section class="card" id="hoy">
     <div class="card-h">
@@ -87,7 +127,7 @@
             {% for p in resumen.hoy_lote %}
             <tr>
               <td><b>{{ p.nombre }}</b>
-                <small>{{ p.oficio_etiqueta }}{% if p.poblacion %} · {{ p.poblacion }}{% endif %}</small>
+                <small>{{ p.oficio_etiqueta or p.tipo_etiqueta }}{% if p.lugar %} · {{ p.lugar }}{% endif %}</small>
                 {% if p.presentado_por %}<small>te lo presenta {{ p.presentado_por }}</small>{% endif %}
               </td>
               <td><span class="badge">{{ p.estado_etiqueta }}</span>{% if p.debe_informar %}<small class="crm-aviso">dile de dónde sacaste su contacto</small>{% endif %}</td>
@@ -95,7 +135,7 @@
               <td class="crm-num">{{ p.siguiente_el or '—' }}</td>
               <td class="crm-acciones">
                 {% if p.telefono %}<a class="btn sm" href="tel:{{ p.telefono }}">Llamar</a>{% endif %}
-                <a class="btn sm" href="/admin/crm?contacto={{ p.id }}#ficha">Abrir</a>
+                <a class="btn sm" href="/admin/crm?{% if tipo %}tipo={{ tipo }}&amp;{% endif %}contacto={{ p.id }}#ficha">Abrir</a>
               </td>
             </tr>
             {% endfor %}
@@ -106,41 +146,53 @@
       <p class="meta">Y {{ resumen.hoy_mas }} más esperando. Caben diez llamadas en un día —cinco entre las 7:30 y las 8:30, tres a mediodía y dos por la tarde—; el resto sale mañana solo.</p>
       {% endif %}
       {% else %}
-      <p class="meta">Hoy no hay nada vencido. Si el embudo aún no llega a 40 nombres, lo que toca no es esperar: es añadir nombres abajo.</p>
+      <p class="meta">Hoy no hay nada vencido.{% if zonas %} Lo que toca es la siguiente tanda de correos, justo debajo.{% else %} Si el embudo aún no llega a 40 nombres, lo que toca no es esperar: es añadir nombres abajo.{% endif %}</p>
       {% endif %}
       {% if resumen.frios %}
       <p class="meta crm-frios"><b>{{ resumen.frios | length }} llevan más de dos semanas sin que les digas nada:</b>
-        {% for p in resumen.frios[:8] %}<a href="/admin/crm?contacto={{ p.id }}#ficha">{{ p.nombre }}</a>{% if not loop.last %} · {% endif %}{% endfor %}
+        {% for p in resumen.frios[:8] %}<a href="/admin/crm?{% if tipo %}tipo={{ tipo }}&amp;{% endif %}contacto={{ p.id }}#ficha">{{ p.nombre }}</a>{% if not loop.last %} · {% endif %}{% endfor %}
       </p>
       {% endif %}
     </div>
   </section>
 
+  {% include 'crm/_tanda.html' %}
+  </div>
+
+  <div data-crm-pestana="ficha" data-crm-hueco-ficha>
   {# ---------- Ficha abierta ---------- #}
   {% if detalle %}
   <section class="card crm-ficha" id="ficha">
     <div class="card-h">
       <div>
-        <div class="kicker">{{ detalle.origen_etiqueta }}{% if detalle.presentado_por %} · te lo presenta {{ detalle.presentado_por }}{% endif %}</div>
+        <div class="kicker">{{ detalle.tipo_etiqueta }} · {{ detalle.origen_etiqueta }}{% if detalle.presentado_por %} · te lo presenta {{ detalle.presentado_por }}{% endif %}</div>
         <h2>{{ detalle.nombre }}</h2>
         <p class="meta">{{ detalle.estado_etiqueta }} · {{ detalle.estado_significa }}</p>
+        <p class="crm-contacto">
+          {% if detalle.email %}<span class="crm-copiable"><span data-crm-copia>{{ detalle.email }}</span> <button class="btn sm" type="button" data-crm-copiar-texto>Copiar</button></span>{% endif %}
+          {% if detalle.telefono %}<a class="btn sm" href="tel:{{ detalle.telefono }}">{{ detalle.telefono }}</a>{% endif %}
+          {% if detalle.web %}<span>{{ detalle.web }}</span>{% endif %}
+          {% if detalle.direccion or detalle.lugar %}<span>{{ detalle.direccion or detalle.lugar }}</span>{% endif %}
+        </p>
+        {% if detalle.hoja_id %}<p class="meta">Viene de la hoja de Google{% if detalle.hoja_estado %} · allí pone «{{ detalle.hoja_estado }}»{% endif %}{% if detalle.email %} · {{ 'correo comprobado' if detalle.correo_verificado else (detalle.correo_verificacion or 'correo sin comprobar') }}{% endif %}. Sus datos de contacto se corrigen en la hoja.</p>{% endif %}
       </div>
-      <a class="btn sm" href="/admin/crm">Cerrar</a>
+      <a class="btn sm" data-crm-cerrar-ficha href="/admin/crm{% if tipo %}?tipo={{ tipo }}{% endif %}#lista">Cerrar</a>
     </div>
     <div class="card-b">
       {% if detalle.baja %}
       <div class="admin-note error"><b>Pidió no ser contactado.</b> {{ detalle.baja_motivo }} · No se le vuelve a escribir ni a llamar.</div>
       {% elif detalle.debe_informar %}
-      <div class="admin-note"><b>Su contacto no te lo dio él.</b> En la primera llamada dile quién eres y de dónde has sacado su número, y márcalo abajo. Es el artículo 14 del RGPD y además es lo que hace que la llamada no suene a spam.</div>
+      <div class="admin-note"><b>Su contacto no te lo dio él.</b> La primera vez que le escribas o le llames, dile quién eres y de dónde has sacado su contacto, y márcalo abajo. Es el artículo 14 del RGPD y además es lo que hace que la llamada no suene a spam.</div>
       {% endif %}
 
       <div class="crm-cols">
         {# ----- Anotar el contacto ----- #}
         <form class="crm-toque" method="post" action="/admin/crm/{{ detalle.id }}/toque">
+          <input type="hidden" name="vista" value="{{ tipo }}">
           <h3>Anotar lo que ha pasado</h3>
           <div class="crm-campos">
             <label>Canal
-              <select name="canal">{% for clave, etiqueta in canales.items() %}<option value="{{ clave }}">{{ etiqueta }}</option>{% endfor %}</select>
+              <select name="canal">{% for clave, etiqueta in canales.items() %}<option value="{{ clave }}" {{ 'selected' if detalle.tipo != 'autonomo' and clave == 'email' else '' }}>{{ etiqueta }}</option>{% endfor %}</select>
             </label>
             <label>Cuándo
               <input class="input" type="date" name="fecha" value="{{ hoy }}">
@@ -172,7 +224,7 @@
           {% if detalle.guiones %}
           {% for clave in detalle.guiones %}
           {% set g = guiones[clave] %}
-          <article class="crm-guion" data-crm-guion data-nombre="{{ detalle.nombre.split(' ')[0] }}" data-quien="{{ detalle.presentado_por or '…' }}" data-oficio="{{ detalle.oficio_etiqueta | lower or 'tu oficio' }}" data-zona="{{ detalle.poblacion or 'la zona' }}">
+          <article class="crm-guion" data-crm-guion data-lengua="{{ detalle.lengua }}" data-nombre="{{ detalle.nombre.split(' ')[0] }}" data-quien="{{ detalle.presentado_por or '…' }}" data-oficio="{{ detalle.oficio_etiqueta | lower or 'tu oficio' }}" data-zona="{{ detalle.poblacion or 'la zona' }}">
             <header><b>{{ g.titulo }}</b><span>{{ canales[g.canal] }}</span></header>
             <p class="crm-guion-cuando">{{ g.cuando }}</p>
             <div class="crm-lenguas">
@@ -180,6 +232,7 @@
               <button class="btn sm" type="button" data-crm-lengua="ca">Català</button>
               <button class="btn sm" type="button" data-crm-copiar>Copiar</button>
             </div>
+            {% if g.asunto %}<p class="crm-asunto">Asunto: <b data-crm-asunto data-es="{{ g.asunto.es }}" data-ca="{{ g.asunto.ca }}"></b></p>{% endif %}
             <p class="crm-texto" data-crm-texto data-es="{{ g.es }}" data-ca="{{ g.ca }}"></p>
           </article>
           {% endfor %}
@@ -215,12 +268,16 @@
       <details class="crm-editar">
         <summary>Editar la ficha</summary>
         <form method="post" action="/admin/crm/{{ detalle.id }}">
+          <input type="hidden" name="vista" value="{{ tipo }}">
           <div class="crm-campos">
             <label>Nombre<input class="input" name="nombre" value="{{ detalle.nombre }}" required></label>
+            <label>Qué es<select name="tipo">{% for clave, meta in tipos.items() %}<option value="{{ clave }}" {{ 'selected' if clave == detalle.tipo else '' }}>{{ meta.etiqueta }}</option>{% endfor %}</select></label>
             <label>Oficio<select name="oficio"><option value="">—</option>{% for clave, etiqueta in oficios.items() %}<option value="{{ clave }}" {{ 'selected' if clave == detalle.oficio else '' }}>{{ etiqueta }}</option>{% endfor %}</select></label>
             <label>Población<input class="input" name="poblacion" value="{{ detalle.poblacion or '' }}"></label>
+            <label>Provincia<input class="input" name="provincia" value="{{ detalle.provincia or '' }}"></label>
             <label>Teléfono<input class="input" name="telefono" value="{{ detalle.telefono or '' }}"></label>
             <label>Correo<input class="input" name="email" value="{{ detalle.email or '' }}"></label>
+            <label>Web<input class="input" name="web" value="{{ detalle.web or '' }}"></label>
             <label>De dónde sale<select name="origen">{% for clave, meta in origenes.items() %}<option value="{{ clave }}" {{ 'selected' if clave == detalle.origen else '' }}>{{ meta.etiqueta }}</option>{% endfor %}</select></label>
             <label>Quién os presenta<input class="input" name="presentado_por" value="{{ detalle.presentado_por or '' }}"></label>
             <label>Qué toca<input class="input" name="siguiente_accion" value="{{ detalle.siguiente_accion or '' }}"></label>
@@ -230,10 +287,12 @@
         </form>
         <div class="crm-peligro">
           <form method="post" action="/admin/crm/{{ detalle.id }}/baja" onsubmit="return confirm('¿Marcar que no quiere que le contactes? Dejará de aparecer y la lista no lo readmitirá.')">
+            <input type="hidden" name="vista" value="{{ tipo }}">
             <input class="input" name="motivo" placeholder="Qué dijo exactamente">
             <button class="btn sm danger" type="submit">No quiere que le contacte</button>
           </form>
           <form method="post" action="/admin/crm/{{ detalle.id }}/eliminar" onsubmit="return confirm('¿Borrar la ficha y todo su historial? No se puede deshacer.')">
+            <input type="hidden" name="vista" value="{{ tipo }}">
             <button class="btn sm danger" type="submit">Borrar del todo</button>
           </form>
         </div>
@@ -241,28 +300,52 @@
     </div>
   </section>
   {% endif %}
+  </div>
 
+  <div data-crm-pestana="lista">
   {# ---------- La lista entera ---------- #}
   <section class="card" id="lista">
     <div class="card-h">
       <div><div class="kicker">Todo el embudo</div><h2>La lista</h2></div>
-      <select id="crm-filtro" data-crm-filtro style="max-width:220px">
-        <option value="">Todos ({{ resumen.total }})</option>
-        {% for clave, meta in estados.items() %}{% if resumen.por_estado[clave] %}<option value="{{ clave }}">{{ meta.etiqueta }} ({{ resumen.por_estado[clave] }})</option>{% endif %}{% endfor %}
-      </select>
+      <span class="meta">{% if lista.total %}{{ lista.desde }}–{{ lista.hasta }} de {{ lista.total }}{% else %}0 contactos{% endif %}</span>
     </div>
     <div class="card-b table-pad">
-      {% if prospectos %}
+      {% if resumen.total or resumen.bajas %}
+      <form class="crm-filtros" method="get" action="/admin/crm#lista">
+        {% if tipo %}<input type="hidden" name="tipo" value="{{ tipo }}">{% endif %}
+        <label>Buscar
+          <input class="input" type="search" name="q" value="{{ filtro.q }}" placeholder="Nombre, correo, teléfono o población">
+        </label>
+        <label>Estado
+          <select name="estado">
+            <option value="">Todos</option>
+            {% for clave, meta in estados.items() %}{% if resumen.por_estado[clave] or filtro.estado == clave %}<option value="{{ clave }}" {{ 'selected' if filtro.estado == clave else '' }}>{{ meta.etiqueta }} ({{ resumen.por_estado[clave] }})</option>{% endif %}{% endfor %}
+          </select>
+        </label>
+        {% if provincias %}
+        <label>Provincia
+          <select name="provincia">
+            <option value="">Todas</option>
+            {% for nombre in provincias %}<option value="{{ nombre }}" {{ 'selected' if filtro.provincia == nombre else '' }}>{{ nombre }}</option>{% endfor %}
+          </select>
+        </label>
+        {% endif %}
+        <button class="btn sm" type="submit">Filtrar</button>
+        {% if filtro.q or filtro.estado or filtro.provincia %}<a class="btn sm" href="/admin/crm{% if tipo %}?tipo={{ tipo }}{% endif %}#lista">Quitar filtros</a>{% endif %}
+      </form>
+      {% endif %}
+      {% if lista.filas %}
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Quién</th><th>Oficio y zona</th><th>Estado</th><th>De dónde sale</th><th>Siguiente</th><th>Sin tocar</th></tr></thead>
+          <thead><tr><th>Quién</th><th>Qué es y dónde</th><th>Estado</th><th>De dónde sale</th><th>Siguiente</th><th>Sin tocar</th></tr></thead>
           <tbody>
-            {% for p in prospectos %}
+            {% for p in lista.filas %}
             <tr data-crm-fila data-estado="{{ p.estado }}" class="{{ 'crm-baja' if p.baja else ('crm-vencido' if p.vencido else '') }}">
-              <td><a href="/admin/crm?contacto={{ p.id }}#ficha"><b>{{ p.nombre }}</b></a>
+              <td><a href="/admin/crm?{% if tipo %}tipo={{ tipo }}&amp;{% endif %}contacto={{ p.id }}#ficha"><b>{{ p.nombre }}</b></a>
+                {% if p.email %}<small>{{ p.email }}</small>{% endif %}
                 {% if p.telefono %}<small>{{ p.telefono }}</small>{% endif %}</td>
-              <td>{{ p.oficio_etiqueta or '—' }}<small>{{ p.poblacion or '' }}</small></td>
-              <td><span class="badge">{{ p.estado_etiqueta }}</span></td>
+              <td>{{ p.oficio_etiqueta or p.tipo_etiqueta }}<small>{{ p.lugar }}</small></td>
+              <td><span class="badge">{{ p.estado_etiqueta }}</span>{% if p.baja %}<small>No contactar</small>{% endif %}</td>
               <td>{{ p.origen_etiqueta }}{% if p.presentado_por %}<small>{{ p.presentado_por }}</small>{% endif %}</td>
               <td class="crm-num">{{ p.siguiente_el or '—' }}<small>{{ p.siguiente_accion or '' }}</small></td>
               <td class="crm-num">{{ p.dias_sin_tocar if p.dias_sin_tocar is not none else '—' }}{% if p.dias_sin_tocar is not none %} d{% endif %}</td>
@@ -271,12 +354,28 @@
           </tbody>
         </table>
       </div>
+      {% if lista.paginas > 1 %}
+      <nav class="crm-paginas" aria-label="Páginas de la lista">
+        {% if lista.pagina > 1 %}<a class="btn sm" href="/admin/crm?{{ consulta_filtros }}{% if consulta_filtros %}&amp;{% endif %}pagina={{ lista.pagina - 1 }}#lista">← Anterior</a>{% endif %}
+        <span class="meta">Página {{ lista.pagina }} de {{ lista.paginas }}</span>
+        {% if lista.pagina < lista.paginas %}<a class="btn sm" href="/admin/crm?{{ consulta_filtros }}{% if consulta_filtros %}&amp;{% endif %}pagina={{ lista.pagina + 1 }}#lista">Siguiente →</a>{% endif %}
+      </nav>
+      {% endif %}
+      {% elif resumen.total or resumen.bajas %}
+      <p class="meta">Nadie coincide con ese filtro.</p>
       {% else %}
-      <p class="meta">La lista está vacía. Empieza por tu círculo: todo el que haya trabajado en tu casa, en la de tus padres o en la de un amigo. Busca en tus correos y en WhatsApp los presupuestos de los últimos tres años.</p>
+      <p class="meta">La lista está vacía. Empieza por tu círculo: todo el que haya trabajado en tu casa, en la de tus padres o en la de un amigo. Busca en tus correos y en WhatsApp los presupuestos de los últimos tres años. Si lo que tienes es la hoja de gestorías, conéctala justo debajo.</p>
       {% endif %}
     </div>
   </section>
 
+  </div>
+
+  <div data-crm-pestana="hoja">
+  {% include 'crm/_hoja.html' %}
+  </div>
+
+  <div data-crm-pestana="anadir">
   {# ---------- Meter gente ---------- #}
   <section class="card" id="importar">
     <div class="card-h">
@@ -284,10 +383,14 @@
     </div>
     <div class="card-b crm-cols">
       <form method="post" action="/admin/crm/importar">
+        <input type="hidden" name="vista" value="{{ tipo }}">
         <label>Una persona por línea, o una tabla entera con su cabecera (un Excel, un CSV). El teléfono puede ir donde sea.
           <textarea class="input" name="lista" rows="7" placeholder="Jordi Mas; fontanero; Palafrugell; 600 11 22 33&#10;Anna Soler - electricista - Begur - 611 22 33 44&#10;Germans Roca (clima) Palamós 972 11 22 33"></textarea>
         </label>
         <div class="crm-campos">
+          <label>Qué son
+            <select name="tipo">{% for clave, meta in tipos.items() %}<option value="{{ clave }}" {{ 'selected' if clave == (tipo or 'autonomo') else '' }}>{{ meta.plural }}</option>{% endfor %}</select>
+          </label>
           <label>De dónde sale esta tanda
             <select name="origen">{% for clave, meta in origenes.items() %}<option value="{{ clave }}" {{ 'selected' if clave == 'maps' else '' }}>{{ meta.etiqueta }}</option>{% endfor %}</select>
           </label>
@@ -300,12 +403,16 @@
       </form>
 
       <form method="post" action="/admin/crm/nuevo" id="nuevo">
+        <input type="hidden" name="vista" value="{{ tipo }}">
         <h3>O uno suelto</h3>
         <div class="crm-campos">
           <label>Nombre<input class="input" name="nombre" required></label>
+          <label>Qué es<select name="tipo">{% for clave, meta in tipos.items() %}<option value="{{ clave }}" {{ 'selected' if clave == (tipo or 'autonomo') else '' }}>{{ meta.etiqueta }}</option>{% endfor %}</select></label>
           <label>Oficio<select name="oficio"><option value="">—</option>{% for clave, etiqueta in oficios.items() %}<option value="{{ clave }}">{{ etiqueta }}</option>{% endfor %}</select></label>
           <label>Población<input class="input" name="poblacion"></label>
+          <label>Provincia<input class="input" name="provincia"></label>
           <label>Teléfono<input class="input" name="telefono"></label>
+          <label>Correo<input class="input" type="email" name="email"></label>
           <label>De dónde sale<select name="origen">{% for clave, meta in origenes.items() %}<option value="{{ clave }}">{{ meta.etiqueta }}</option>{% endfor %}</select></label>
           <label>Quién os presenta<input class="input" name="presentado_por"></label>
         </div>
@@ -335,7 +442,8 @@
       </div>
     </div>
   </section>
+  </div>
 </main>
-<script src="/static/admin-crm.js?v={{ asset_v }}" defer></script>
+<script src="/static/crm/crm.js?v={{ asset_v }}" defer></script>
 </body>
 </html>

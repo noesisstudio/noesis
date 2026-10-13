@@ -121,9 +121,7 @@ def home(request: Request):
         **marketing_context("inicio", signup_available=TEMPLATES.env.globals["public_signup_available"]),
         "business_id": bid,
         "site_active": "inicio",
-        "prices": billing_adapter.PLAN_PRICES,
-        "annual_prices": billing_adapter.PLAN_ANNUAL_PRICES,
-        "annual_savings": billing_adapter.PLAN_ANNUAL_SAVINGS,
+        **billing_adapter.pricing_context(),
         "google_oauth_available": config.google_oauth_available(),
     })
 
@@ -249,6 +247,12 @@ def llms_txt():
         f"{billing_adapter.PLAN_ANNUAL_PRICES[clave]} € al año + IVA."
         for clave, plan in billing_adapter.PLANS.items()
     )
+    tarifas = ", ".join(
+        str(precio) for precio in billing_adapter.PLAN_LIST_PRICES.values()
+    )
+    planes_equipo = " y ".join(
+        billing_adapter.PLANS[clave]["name"] for clave in ("pro", "premium")
+    )
     if TEMPLATES.env.globals["public_signup_available"]:
         acceso = f"Prueba de {config.TRIAL_DAYS} días desde {base}/precios."
     else:
@@ -273,7 +277,7 @@ Bynoesis es un producto independiente: no pertenece a WhatsApp ni a Meta. Funcio
 - Documentos: tickets, facturas recibidas y PDF ordenados por empresa, año y trimestre.
 - Cobros y agenda: facturas pendientes, recordatorios que el titular confirma y trabajos del día.
 - Gestoría: espacio profesional para revisar varias empresas por período, pedir lo que falta y consultar borradores fiscales orientativos.
-- Equipo y proyectos (planes Negocio y Premium): fichaje, costes y margen por proyecto.
+- Equipo y proyectos (planes {planes_equipo}): fichaje, costes y margen por proyecto.
 
 ## Qué no hace
 
@@ -284,7 +288,7 @@ Bynoesis es un producto independiente: no pertenece a WhatsApp ni a Meta. Funcio
 
 {planes}
 
-El pago anual da 12 meses de acceso por el precio de 11. {acceso}
+Son precios de lanzamiento: un {billing_adapter.LAUNCH_DISCOUNT_PERCENT} % menos que la tarifa ({tarifas} € al mes) durante los {billing_adapter.LAUNCH_OFFER_MONTHS} primeros meses desde el alta. El pago anual da 12 meses de acceso por el precio de 11. {acceso}
 
 ## Páginas
 
@@ -356,6 +360,7 @@ def showcase_client_redirect():
 @router.get("/contacto", response_class=HTMLResponse)
 def site_page(request: Request):
     section = request.url.path.strip("/") or "precios"
+    segment = request.query_params.get("para", "")
     return TEMPLATES.TemplateResponse(request, _SITE_PAGES[section], {
         **marketing_context(
             section,
@@ -365,9 +370,11 @@ def site_page(request: Request):
         ),
         "site_active": section,
         "business_id": request.session.get("bid"),
-        "prices": billing_adapter.PLAN_PRICES,
-        "annual_prices": billing_adapter.PLAN_ANNUAL_PRICES,
-        "annual_savings": billing_adapter.PLAN_ANNUAL_SAVINGS,
+        **billing_adapter.pricing_context(),
+        # Pestaña de /precios; sin JavaScript cada pestaña es un enlace normal.
+        "pricing_segment": (
+            segment if segment in billing_adapter.PRICING_SEGMENTS else "autonomos"
+        ),
     })
 
 
@@ -476,17 +483,15 @@ def subscription_page(
     return TEMPLATES.TemplateResponse(request, "suscripcion.html", {
         "business": biz, "active": "ajustes", "page_title": "Suscripción",
         "status": status, "billing_on": billing_adapter.get_provider().available(),
-        "prices": billing_adapter.PLAN_PRICES,
-        "annual_prices": billing_adapter.PLAN_ANNUAL_PRICES,
-        "annual_savings": billing_adapter.PLAN_ANNUAL_SAVINGS,
+        **billing_adapter.pricing_context(),
         "preferred_plan": preferred_plan,
         "preferred_billing": preferred_billing,
         "is_active_subscription": is_active_subscription,
         "trial_expired": trial_expired,
         "current_plan": active_plan if is_active_subscription else "",
-        "current_plan_label": {
-            "autonomo": "Autónomo", "pro": "Negocio", "premium": "Premium",
-        }.get(active_plan, "Plan activo"),
+        "current_plan_label": billing_adapter.PLANS.get(
+            active_plan, {},
+        ).get("name", "Plan activo"),
         "current_plan_rank": {
             "autonomo": 0, "pro": 1, "premium": 2,
         }.get(active_plan, -1),

@@ -1,0 +1,34 @@
+{# ---------- Tablero: una columna por estado ----------
+   Arrastrar una tarjeta cambia su estado y deja un apunte en su historial
+   (`/admin/crm/{id}/mover`). Sin ratón se hace igual desde la ficha. #}
+{% if panel.total %}
+<section class="card" id="tablero">
+  <div class="card-h">
+    <div><div class="kicker">Quién está en cada punto</div><h2>Tablero</h2></div>
+    <span class="meta">Arrastra una tarjeta a otra columna para cambiar su estado. También se cambia desde la ficha.</span>
+  </div>
+  <div class="card-b">
+    <p class="crm-tablero-aviso" data-crm-tablero-aviso role="status" aria-live="polite" hidden></p>
+    <div class="crm-tablero" data-crm-tablero>
+      {% for columna in tablero %}
+      <div class="crm-columna{{ '' if columna.abierto else ' cerrada' }}" data-crm-columna="{{ columna.clave }}">
+        <header title="{{ columna.significa }}">
+          <b>{{ columna.etiqueta }}</b><span class="crm-num">{{ "{:,}".format(columna.hay).replace(",", ".") }}</span>
+        </header>
+        <ul>
+          {% for p in columna.tarjetas %}
+          <li class="crm-tarjeta{{ ' vencida' if p.vencido else '' }}" draggable="true" data-crm-tarjeta="{{ p.id }}" data-crm-estado="{{ columna.clave }}">
+            <a href="/admin/crm?{% if tipo %}tipo={{ tipo }}&amp;{% endif %}contacto={{ p.id }}#ficha"><b>{{ p.nombre }}</b></a>
+            <small>{{ p.tipo_etiqueta }}{% if p.lugar %} · {{ p.lugar }}{% endif %}</small>
+            {% if p.siguiente_el %}<small class="crm-tarjeta-cuando">{{ 'Toca desde el' if p.vencido else 'Toca el' }} {{ p.siguiente_el }}</small>{% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+        {% if not columna.hay %}<p class="crm-columna-vacia">Nadie aquí</p>{% endif %}
+        {% if columna.mas %}<a class="crm-columna-mas" href="/admin/crm?{% if tipo %}tipo={{ tipo }}&amp;{% endif %}estado={{ columna.clave }}#lista">y {{ "{:,}".format(columna.mas).replace(",", ".") }} más →</a>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}

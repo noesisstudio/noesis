@@ -178,9 +178,9 @@ function edit(id, name, phone, zone, nif, address, email){
     title: 'Editar cliente',
     submitLabel: 'Guardar cambios',
     fields: [
-      { name:'name', label:'Nombre', value:name, placeholder:'Nombre del cliente' },
+      { name:'name', label:'Nombre', value:name, placeholder:'Nombre del cliente', required:true },
       { name:'phone', label:'Teléfono', value:phone, placeholder:'600 000 000' },
-      { name:'email', label:'Email', value:email, placeholder:'cliente@empresa.es' },
+      { name:'email', label:'Email', type:'email', value:email, placeholder:'cliente@empresa.es' },
       { name:'nif', label:'NIF / CIF', value:nif, placeholder:'12345678Z' },
       { name:'address', label:'Domicilio fiscal', value:address, placeholder:'Calle, número y localidad' },
       { name:'zone', label:'Zona', value:zone, placeholder:'Badalona' },
@@ -227,9 +227,9 @@ function addClient(){
     title: 'Nuevo cliente',
     submitLabel: 'Crear cliente',
     fields: [
-      { name:'name', label:'Nombre', value:'', placeholder:'Nombre o razón social' },
+      { name:'name', label:'Nombre', value:'', placeholder:'Nombre o razón social', required:true },
       { name:'phone', label:'Teléfono', value:'', placeholder:'600 000 000' },
-      { name:'email', label:'Email', value:'', placeholder:'cliente@empresa.es' },
+      { name:'email', label:'Email', type:'email', value:'', placeholder:'cliente@empresa.es' },
       { name:'nif', label:'NIF / CIF', value:'', placeholder:'12345678Z' },
       { name:'address', label:'Domicilio fiscal', value:'', placeholder:'Calle, nº, CP, ciudad' },
       { name:'zone', label:'Zona', value:'', placeholder:'Badalona' },

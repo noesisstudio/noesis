@@ -1,5 +1,29 @@
 # Tareas vivas
 
+## 2026-10-12 — Revisión de errores: dos decisiones pendientes
+
+- [x] Pin de esquema del Financial Core frente a la migración 74 del CRM: resuelto el
+  13/10 (ver Decisiones). Queda que la CI pase las matrices de PostgreSQL con el
+  esquema 74 antes de subir el CRM.
+- [ ] Comprobar en Railway si el servicio tiene `TZ=Europe/Madrid`. El reloj de tareas
+  ya usa hora de Madrid, pero el código llama 126 veces a `date.today()` y 72 a
+  `datetime.now()`, que siguen la hora del proceso. Si el contenedor va en UTC, de
+  00:00 a 02:00 «hoy» es ayer (fecha por defecto de una factura, vencidos, parte).
+
+## 2026-10-12 — Precios por segmento: pendientes antes de publicar
+
+- [ ] Founder: confirmar la condición del lanzamiento que hoy dice la web («−50 %
+  los 12 primeros meses desde el alta; después tarifa, con aviso de 30 días») o
+  decidir otra. Son las constantes `LAUNCH_*` de `adapters/billing.py`.
+- [ ] Abogado: redacción del precio tachado y si hay que limitarlo por fecha o por
+  número de clientes ([propuesta, §9](06-negocio-y-finanzas/Propuesta-planes-autonomo-pyme-empresa.md)).
+- [ ] Construir el fin de la oferta antes de cobrar: precio o cupón de 12 meses en
+  Stripe, fecha de fin guardada en la cuenta y aviso 30 días antes.
+- [ ] Founder: decidir lo que sigue abierto en la propuesta (gestoría gratis en
+  Autónomo, voz como extra, límite de trabajadores por plan, extras de pago).
+- [ ] Publicar: el árbol local lleva también el CRM bloqueado por la migración 74,
+  así que este cambio hay que confirmarlo aparte.
+
 ## 2026-10-05 — Fase1.9E: reconciliación histórica implementada y validada
 
 [Orden](architecture/FASE-1.9E-orden.md), [ADR018](architecture/ADR-018-financial-history-reconciliation.md),
@@ -30,7 +54,28 @@ Pendiente: 1.9E necesita autorización expresa y cierre de reconciliación separ
 flags OFF y cualquier fence abierto; no confundir batch completed con cobertura total.
 EvidenceReference futuras y otros candidatos sin soporte requieren nuevo contrato.
 
+## 2026-10-05 — CRM de captación visual y unido a la hoja de Google
 
+- [x] CRM visual en `/admin/crm`: gráficos, tablero, tanda por zonas, filtros.
+- [x] Lectura de la hoja de Google por enlace y tabla de vuelta con `IMPORTDATA`.
+- [ ] **Bloqueo, founder y socio:** la migración 74 del CRM choca con el pin de
+      esquema 73 del Financial Core (`financial_history/reconciliation.py:27`,
+      `cutoff.py:176`, `importer.py:31`, `service.py:127` y `LATEST_VERSION == 73` en
+      sus pruebas). Decidir: (a) el Financial Core acepta el 74 —es aditiva y no toca
+      ninguna tabla financiera—, o (b) el CRM espera en una rama. Cada fase nueva
+      suya mueve el número: si entra otra migración antes, renumerar. Hasta entonces,
+      **no subir a `main`**.
+- [x] Página convertida en dashboard por apartados y demo con datos inventados
+      publicada para el founder (`python -m noesis.crm.demo`).
+- [ ] Founder: revisar la demo y decir qué cambiar antes de conectar la hoja real.
+- [ ] Founder, tras subir: compartir «Leads» por enlace (lector), pegar la dirección
+      de la pestaña «Gestorias» en *Hoja de Google* y comprobar las cifras.
+- [ ] Founder: apuntar con la tanda (fecha 2-oct) las diez de Girona ya escritas.
+- [ ] Founder: decidir si el guion del primer correo a gestorías se sustituye por su
+      plantilla (la de la campaña no está en el repo; el CRM enseña la anterior).
+- [ ] Probar con la hoja real: una hoja privada, `IMPORTDATA` y arrastre con ratón.
+- [ ] Abogado: la pregunta 25 de `Preguntas-abogado-TIC.md` cubre ahora también el
+      correo a gestorías y la lista de supresión por huella.
 
 ## 2026-10-04 — Fase1.9C: epoch/T0/fence (implementada y validada)
 

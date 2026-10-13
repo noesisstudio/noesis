@@ -239,6 +239,53 @@ class PublicMarketingTests(unittest.TestCase):
                 if target.fragment:
                     self.assertIn(f'id="{target.fragment}"', cache[path], raw)
 
+    def test_pricing_shows_list_price_next_to_the_launch_price_by_segment(self):
+        from noesis.adapters import billing
+
+        def card(page, key):
+            return re.search(
+                rf'<article[^>]*data-plan-card="{key}"[^>]*>', page
+            ).group(0)
+
+        default = self.http.get("/precios").text
+        empresas = self.http.get("/precios?para=empresas").text
+        gestorias = self.http.get("/precios?para=gestorias").text
+        unknown = self.http.get("/precios?para=otra").text
+        home = self.http.get("/").text
+
+        # La tarifa tachada sale del catálogo y el descuento anunciado nunca
+        # promete más de lo que hay entre la tarifa y lo que se cobra.
+        for key, plan in billing.PLANS.items():
+            self.assertIn(f'data-list-monthly="{plan["list_price"]}"', card(default, key))
+            self.assertIn(f'data-monthly="{plan["price"]}"', card(default, key))
+            self.assertIn(f'<s>{plan["list_price"]} €</s>', home)
+            self.assertLessEqual(
+                plan["price"] * 100,
+                plan["list_price"] * (100 - billing.LAUNCH_DISCOUNT_PERCENT),
+            )
+        self.assertIn(f"−{billing.LAUNCH_DISCOUNT_PERCENT} %", default)
+        self.assertIn(f"{billing.LAUNCH_OFFER_MONTHS} primeros meses", default)
+
+        # Cada pestaña enseña tres peldaños de la misma escalera y destaca uno.
+        self.assertNotIn(" hidden", card(default, "autonomo"))
+        self.assertIn("recommended", card(default, "autonomo"))
+        self.assertIn(" hidden", card(default, "empresa"))
+        self.assertIn(" hidden", card(empresas, "autonomo"))
+        self.assertIn("recommended", card(empresas, "premium"))
+        self.assertNotIn(" hidden", card(empresas, "empresa"))
+        self.assertIn('class="active" aria-current="true" data-segment="autonomos"', unknown)
+
+        # Empresa se anuncia pero todavía no se puede contratar ni solicitar.
+        self.assertNotIn("empresa", billing.PLANS)
+        self.assertNotIn("plan=empresa", empresas)
+        self.assertIn("Próximamente", empresas)
+
+        # Las gestorías no tienen precio público: ven su panel y ningún plan.
+        panel = re.search(r'<div[^>]*data-segment-panel="gestorias"[^>]*>', gestorias)
+        self.assertNotIn(" hidden", panel.group(0))
+        for key in billing.PLANS:
+            self.assertIn(" hidden", card(gestorias, key))
+
     def test_rejects_personal_data_unbounded_payloads_and_foreign_origins(self):
         for data in ({"event": "hero_demo_started", "page": "/", "email": "someone@example.com"},
                      {"event": "unknown", "page": "/"}, {"event": "final_cta", "page": "/b/5"},

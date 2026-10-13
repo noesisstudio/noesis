@@ -12,26 +12,62 @@ const apiResponse = async r => {
     location.href = data.subscription_url + '?status=readonly';
     throw new Error(data.error || 'Necesitas una suscripción activa.');
   }
-  if (!r.ok) throw new Error(data.error || 'Error de API');
+  if (!r.ok) {
+    const error = new Error(data.error || 'No se ha podido completar la acción.');
+    error.api = true;
+    throw error;
+  }
   return data;
 };
+// Red de seguridad: si el servidor rechaza una acción y la pantalla no recoge el
+// motivo, se enseña aquí. Antes el botón parecía no hacer nada.
+function noesisToast(text) {
+  document.querySelectorAll('.app-toast').forEach(t => t.remove());
+  const toast = document.createElement('div');
+  toast.className = 'app-toast';
+  toast.setAttribute('role', 'alert');
+  toast.textContent = text;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 6000);
+}
+window.addEventListener('unhandledrejection', event => {
+  if (event.reason && event.reason.api) noesisToast(event.reason.message);
+});
 const api = (path) => fetch(`/api/${BIZ}${path}`).then(apiResponse);
 const rawPost = (path, body) => fetch(`/api/${BIZ}${path}`, {
   method: 'POST', headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify(body || {})
 }).then(apiResponse);
-const apiPost = (path, body) => window.NOESIS_FINANCIAL_CORE
-  ? financialRequest(path, body || {}, 'POST') : rawPost(path, body);
+// El parte de arriba viene pintado del servidor. Tras crear, cambiar o borrar algo se
+// vuelve a pedir, para que no contradiga a la lista que hay debajo.
+let pageNoteTimer;
+function refreshPageNote() {
+  if (!document.querySelector('.page-note')) return;
+  clearTimeout(pageNoteTimer);
+  pageNoteTimer = setTimeout(async () => {
+    try {
+      const response = await fetch(location.pathname + location.search);
+      if (!response.ok) return;
+      const fresh = new DOMParser()
+        .parseFromString(await response.text(), 'text/html').querySelector('.page-note');
+      const current = document.querySelector('.page-note');
+      if (fresh && current) current.replaceWith(fresh);
+    } catch (error) { /* se pondrá al día en la siguiente visita */ }
+  }, 600);
+}
+const afterChange = data => { refreshPageNote(); return data; };
+const apiPost = (path, body) => (window.NOESIS_FINANCIAL_CORE
+  ? financialRequest(path, body || {}, 'POST') : rawPost(path, body)).then(afterChange);
 const rawPatch = (path, body) => fetch(`/api/${BIZ}${path}`, {
   method: 'PATCH', headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify(body || {})
 }).then(apiResponse);
-const apiPatch = (path, body) => window.NOESIS_FINANCIAL_CORE
-  ? financialRequest(path, body || {}, 'PATCH') : rawPatch(path, body);
+const apiPatch = (path, body) => (window.NOESIS_FINANCIAL_CORE
+  ? financialRequest(path, body || {}, 'PATCH') : rawPatch(path, body)).then(afterChange);
 const rawDelete = (path) => fetch(`/api/${BIZ}${path}`, { method: 'DELETE' })
   .then(apiResponse);
-const apiDelete = (path) => window.NOESIS_FINANCIAL_CORE
-  ? financialRequest(path, {}, 'DELETE') : rawDelete(path);
+const apiDelete = (path) => (window.NOESIS_FINANCIAL_CORE
+  ? financialRequest(path, {}, 'DELETE') : rawDelete(path)).then(afterChange);
 
 // Conserva el recibo hasta obtener respuesta; doble clic comparte la promesa.
 const financialFlights = new Map();
@@ -126,6 +162,10 @@ const esc = (value) => String(value ?? '').replace(/[&<>"']/g, c => ({
 const dateShort = (value) => value ? new Date(value).toLocaleDateString('es-ES',
   { day: '2-digit', month: 'short' }) : '—';
 const dateIso = (value) => value ? String(value).slice(0, 10) : '—';
+// Día local en AAAA-MM-DD. toISOString() convierte a UTC y, en España, cualquier
+// medianoche local sale con la fecha del día anterior.
+const localDate = (d = new Date()) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const timeShort = (value) => value && String(value).includes('T')
   ? String(value).split('T')[1].slice(0, 5) : '';
 const daysText = (days) => days == null ? 'sin fecha' : `${days} día${days === 1 ? '' : 's'}`;
@@ -238,7 +278,7 @@ function formModal(opts) {
   ov.innerHTML = `<div class="modal" role="dialog" aria-modal="true">
     <div class="modal-h"><h2>${esc(opts.title)}</h2>
       <button class="iconbtn modal-x" aria-label="Cerrar">✕</button></div>
-    <div class="modal-b">${fields}</div>
+    <div class="modal-b">${fields}<p class="modal-error" role="alert" hidden></p></div>
     <div class="modal-f"><button class="btn modal-cancel">Cancelar</button>
       <button class="btn primary modal-save">${esc(opts.submitLabel || 'Guardar')}</button></div>
   </div>`;
@@ -246,10 +286,43 @@ function formModal(opts) {
   ov.addEventListener('click', e => { if (e.target === ov) closeModal(); });
   ov.querySelector('.modal-x').onclick = closeModal;
   ov.querySelector('.modal-cancel').onclick = closeModal;
-  ov.querySelector('.modal-save').onclick = async () => {
+  const save = ov.querySelector('.modal-save');
+  const problem = ov.querySelector('.modal-error');
+  // Un campo con `required` o con un tipo que el navegador valida (email, number)
+  // detiene el envío y dice qué falta; antes el formulario se cerraba sin más.
+  const invalid = () => {
+    for (const f of opts.fields || []) {
+      const input = ov.querySelector(`[data-name="${f.name}"]`);
+      const missing = f.required && !input.value.trim();
+      if (missing || !input.checkValidity()) {
+        return { input, text: missing ? `Falta: ${f.label}.` : `${f.label}: ${input.validationMessage}` };
+      }
+    }
+    return null;
+  };
+  save.onclick = async () => {
+    ov.querySelectorAll('[aria-invalid]').forEach(i => i.removeAttribute('aria-invalid'));
+    const stop = invalid();
+    if (stop) {
+      stop.input.setAttribute('aria-invalid', 'true');
+      problem.textContent = stop.text;
+      problem.hidden = false;
+      stop.input.focus();
+      return;
+    }
     const values = {};
     ov.querySelectorAll('[data-name]').forEach(i => values[i.dataset.name] = i.value.trim());
-    await opts.onSubmit(values);
+    problem.hidden = true;
+    save.disabled = true;
+    try {
+      await opts.onSubmit(values);
+    } catch (error) {
+      // El servidor ha dicho que no: se enseña el motivo y no se pierde lo escrito.
+      problem.textContent = error.message || 'No se ha podido guardar.';
+      problem.hidden = false;
+      save.disabled = false;
+      return;
+    }
     closeModal();
   };
   const onEsc = e => { if (e.key === 'Escape') { closeModal(); document.removeEventListener('keydown', onEsc); } };

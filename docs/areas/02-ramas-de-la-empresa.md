@@ -45,7 +45,7 @@ Bynoesis
 | **Clientes finales** | `routers/portal.py` (`/p/{token}`): aceptar presupuestos, descargar facturas |
 | **Gestoría** | `routers/gestoria_portal.py` (`/gestoria`: acceso, MFA, recuperación, cartera), `routers/gestoria.py` (lo que el autónomo comparte), `web/gestoria.py` (paquetes), `gestoria_workspace.py`, enlace `/g/{token}` en `portal.py` |
 | **Captación** | `routers/pages.py` (web pública, `sitemap.xml`, `robots.txt`, `llms.txt`), `web/public_marketing.py`, `templates/site_*.html` y `landing.html`, formulario en `routers/account.py` (`/solicitar-acceso`), `facebook/` (automatización aparte, no se despliega) |
-| **Dirección interna** | `routers/admin.py` (`/admin`, `/admin/cuentas`, `/admin/crm`, `/admin/economia`, `/admin/costes`, `/admin/backups`, `/admin/privacidad`, `/admin/solicitudes`), `sales.py`, `economics.py`, `economics_docs.py`, `security_center.py`, `value_ledger.py` |
+| **Dirección interna** | `routers/admin.py` (`/admin`, `/admin/cuentas`, `/admin/crm`, `/admin/economia`, `/admin/costes`, `/admin/backups`, `/admin/privacidad`, `/admin/solicitudes`), `sales.py`, `economics.py`, `economics_docs.py`, `security_center.py`, `value_ledger.py`. **CRM de captación:** carpeta `crm/` (rutas `/admin/crm*`, hoja de Google, gráficos, tablero y tanda), plantillas `templates/crm/` y estáticos `static/crm/`; guía en [`docs/crm`](../crm/README.md) |
 | **Legal y fiscal** | Plantillas `privacidad`, `terminos`, `aviso-legal`, `cookies`, `encargado-tratamiento`, `cumplimiento`; `verifactu.py`, `verifactu_client.py`; `adapters/billing.py` y `/webhook/stripe` en `routers/webhooks.py` |
 | **Ingeniería** | `.github/workflows/ci.yml`, `production-smoke.yml`, `production_check.py`, `readiness.py` (`noesis-doctor`), `integration_check.py`, `scripts/check_project_truth.py`, `scripts/check_secrets.py` |
 
@@ -81,7 +81,7 @@ Bynoesis
 `test_public_marketing`, `test_seo`, `test_page_views`, `test_access_requests`,
 `test_gestoria_mfa`, `test_gestoria_password_recovery`, `test_field_workflow`,
 `test_admin_workspace`, `test_admin_usage`, `test_economia_panel`,
-`test_crm_captacion`, `test_showcase_and_pdf_ocr`, `test_facebook`, y las pruebas de
+`test_crm_captacion`, `tests/crm/` (`test_hoja`, `test_panel`, `test_pagina`, `test_demo`), `test_showcase_and_pdf_ocr`, `test_facebook`, y las pruebas de
 JavaScript `tests/*.test.cjs` (`node --test`).
 
 ## Al revisar código de esta zona
@@ -94,11 +94,16 @@ JavaScript `tests/*.test.cjs` (`node --test`).
 - [ ] ¿La CSP de `web/server.py` necesita un origen nuevo? Solo por página y con
       permiso explícito (como Cal.com en `/contacto`).
 - [ ] ¿Los textos siguen `docs/design/UX_COPY.md`, sin jerga interna?
+- [ ] ¿Un día de calendario calculado en el navegador usa `localDate()` de `app.js`?
+      `toISOString()` pasa a UTC y en España devuelve el día anterior.
 
 ## Dudas frecuentes
 
 - **¿El CRM del founder y el del autónomo son el mismo?** No: `/admin/crm` es el embudo
   de la empresa (`sales.py`, sin `business_id`); `/b/{id}/crm` es el del autónomo.
+- **¿Hay alguna ruta bajo `/admin` sin sesión?** Una: `/admin/crm/feed/{clave}.csv`,
+  que lee la hoja de Google con `IMPORTDATA`. La clave es el permiso; en base solo
+  está su huella y sin ella responde 404.
 - **¿Hay demo pública?** Sí, con `NOESIS_SEED_DEMO`: cuentas reales de solo lectura
   (`demo.py`, [`Demo-comercial`](../01-producto/Demo-comercial.md)).
 

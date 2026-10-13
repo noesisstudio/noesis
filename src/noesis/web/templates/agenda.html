@@ -92,7 +92,7 @@
 const WD = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
 const MES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto',
              'septiembre','octubre','noviembre','diciembre'];
-const TODAY = new Date().toISOString().slice(0,10);
+const TODAY = localDate();
 let view = new Date(); view.setDate(1);
 let selected = TODAY;
 let byDay = {};
@@ -101,7 +101,7 @@ let projects = [];
 
 el('cal-wd').innerHTML = WD.map(d => `<div class="cal-wd">${d}</div>`).join('');
 
-function iso(d){ return d.toISOString().slice(0,10); }
+function iso(d){ return localDate(d); }
 function isCancelled(j){ return ['cancelado','cancelada','anulado','anulada'].includes(j.status); }
 function monIndex(d){ return (d.getDay()+6)%7; }  // lunes = 0
 
@@ -155,7 +155,7 @@ function renderDay() {
       <span><strong ${isCancelled(j) ? 'style="text-decoration:line-through"' : ''}>${esc(timeShort(j.scheduled_for)||'Sin hora')} · ${esc(j.client_name||'Cliente')}</strong>${isCancelled(j) ? ' <span class="badge b-red">Cancelada</span>' : ''}
       <small>${esc(j.description||'Servicio')}${j.zone?' — '+esc(j.zone):''}</small>
       <small>${j.worker_name ? `Asignado a ${esc(j.worker_name)}` : 'Sin asignar'}</small></span>
-      <span style="display:flex;align-items:center;gap:8px">
+      <span class="agenda-job-actions">
         <select class="job-worker-select" aria-label="Vincular proyecto"
           onchange="assignProject(${j.id}, this.value)">
           <option value="">Sin proyecto</option>

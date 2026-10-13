@@ -137,6 +137,12 @@ autoridad financiera determinista. Estado, alcance y órdenes futuras en
 
 ## Esquema
 
+Las guardas de `financial_history/` solo admiten esquemas conocidos: 70–73 son del
+Financial Core y 74 es la migración del CRM de captación, admitida porque solo toca
+tablas `sales_*`. Una migración nueva ajena al Core exige ampliar esas cuatro listas
+y la prueba `test_migration_after_core_schema_only_touches_sales_tables`, y dejarlo
+en [Decisiones](../Decisiones.md).
+
 ```text
 Servicio propietario de la transacción
   → db.get_conn() (pool y commit/rollback existentes)

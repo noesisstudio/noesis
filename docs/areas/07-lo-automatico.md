@@ -78,6 +78,7 @@ veces y las colas se reparten con bloqueo de filas.
 Hora de Madrid   Tarea (función en web/scheduler.py)
 03:30            run_daily_backup            copia verificada de base y archivos
 04:30 domingo    run_weekly_restore_drill    vuelve a restaurar la última copia
+07:30            read_sales_sheets           lee las hojas de Google del CRM de captación
 08:00            send_daily_summaries        parte del día al titular
 09:00            send_payment_reminders      recordatorios de cobro (modo «rules»)
 09:00 lunes      send_founder_digest         salud agregada para el founder
@@ -99,6 +100,7 @@ cada 2 s         process_whatsapp_inbox      entrada durable de WhatsApp (apagad
 | `web/scheduler.py` | Registro de todas las tareas (`add_job`), envíos proactivos y procesado de colas |
 | `db.py` | `claim_scheduled_run` (una ejecución por tarea y periodo), reclamación de filas de cola con `FOR UPDATE SKIP LOCKED` en Postgres, marcas de reintento |
 | `web/whatsapp.py` | `process_outbox()`: backoff exponencial, `connection_id` para conservar el número emisor, cancelación inmediata ante un 4xx permanente de Meta |
+| `crm/sincronizar.py` | `leer_todas()`: lectura diaria de las hojas conectadas; una hoja que falla no impide leer las demás y deja su motivo en `sales_sheets` |
 | `web/backups.py` | `run_backup()`, `verify_latest_backup_set()`, `admin_backup_status()`, subida S3 opcional; CLI `noesis-restore-check` |
 | `security_center.py` | Avisa en `/admin` si la última copia falló o tiene más de 48 h |
 | `production_check.py` + `.github/workflows/production-smoke.yml` | Comprobación externa de producción cada 6 h (`/health`, `/ready`, esquema, cabeceras, sitemap) |

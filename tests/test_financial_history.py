@@ -555,7 +555,27 @@ class FinancialHistoryContractsTest(unittest.TestCase):
         for name in ("FINANCIAL_CORE_ENABLED", "LEDGER_REPORTING_ENABLED", "OPEN_ITEMS_ENABLED",
                      "NEW_TAX_ENGINE_ENABLED", "NEW_BANK_RECONCILIATION_ENABLED"):
             self.assertFalse(getattr(config, name))
-        self.assertEqual(migrations.LATEST_VERSION, 73)
+        # 73 es el último esquema del Financial Core. La 74 es del CRM de captación
+        # y se admite porque no toca ninguna tabla financiera (prueba siguiente).
+        self.assertEqual(migrations.LATEST_VERSION, 74)
+
+    def test_migration_after_core_schema_only_touches_sales_tables(self):
+        import re
+        from pathlib import Path
+        from noesis import migrations
+        from noesis.crm import esquema
+
+        self.assertEqual(
+            [version for version, *_ in migrations.MIGRATIONS if version > 73], [74]
+        )
+        source = Path(esquema.__file__).read_text(encoding="utf-8")
+        tables = set(re.findall(
+            r"(?:CREATE TABLE IF NOT EXISTS|DROP TABLE IF EXISTS|ALTER TABLE|"
+            r"UPDATE|FROM|\bON) (\w+)", source,
+        ))
+        self.assertTrue(tables)
+        for table in tables:
+            self.assertTrue(table.startswith("sales_"), table)
 
 
 if __name__ == "__main__":

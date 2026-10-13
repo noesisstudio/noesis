@@ -73,10 +73,32 @@ _EUROS = r"\s*(?:€|euros?|eur)"
 _POR_UNIDAD = r"(?:\s+(?:cada|la|el|por|per|al)\s+[a-záéíóúñç]{1,15})?"
 
 
+def _cantidad_en_cifras(trozo: str) -> str:
+    """«tres horas a 40 euros» → «3 horas a 40 euros»; «un grifo de 80 euros» → «grifo de…».
+
+    Por voz la cantidad llega en letra. Solo se convierte la que abre la línea y
+    va seguida de lo que se cuenta; «un» y «una» delante de un precio suelto son
+    el artículo, no una cantidad por precio.
+    """
+    from . import nlu
+
+    palabras = trozo.split()
+    for corte in range(min(4, len(palabras) - 1), 0, -1):
+        valor = nlu._numero_en_letra([nlu._norm(p) for p in palabras[:corte]])
+        if valor and 0 < valor < 10000:
+            resto = " ".join(palabras[corte:])
+            if re.search(rf"\s+a\s+{NUMBER}{_EUROS}", resto, re.I):
+                return f"{valor} {resto}"
+            if corte == 1 and valor == 1:
+                return resto
+            break
+    return trozo
+
+
 def _linea_dictada(trozo: str) -> InvoiceLine | None:
     """Una línea dicha como se habla: «3 horas a 40 euros la hora», «material 45 euros»
     o «120 euros de mano de obra». Lo que no encaje entero no se interpreta."""
-    trozo = trozo.strip(" .")
+    trozo = _cantidad_en_cifras(trozo.strip(" ."))
     con_cantidad = re.fullmatch(
         rf"({NUMBER})\s+(.{{1,100}}?)\s+a\s+({NUMBER}){_EUROS}{_POR_UNIDAD}", trozo, re.I)
     if con_cantidad:
@@ -93,7 +115,8 @@ def _linea_dictada(trozo: str) -> InvoiceLine | None:
         # «2 grifos 30 euros» no dice si son 30 cada uno o en total: no se adivina.
         if re.match(r"\d", descripcion):
             return None
-    descripcion = descripcion.strip(" ,:")
+    # «un grifo de 80 euros»: el «de» que presenta el precio no es del concepto.
+    descripcion = re.sub(r"\s+(?:de|por|a|per)$", "", descripcion.strip(" ,:"), flags=re.I)
     if (not re.search(r"[a-záéíóúñç]", descripcion, re.I) or re.search(r"\d", descripcion)
             or any(c in descripcion for c in "<>={}[]")
             or re.search(r"\biva\b", normalized(descripcion))):
@@ -114,19 +137,32 @@ def _parse_dictada(message: str) -> LocalInvoicePlan | None:
     entra con dos líneas o con una cantidad por precio: una factura de un importe
     sigue el camino de siempre.
     """
-    text = message.strip().rstrip(".")
+    from . import nlu
+
+    # Por voz los precios llegan en letra: «a cuarenta euros la hora».
+    text = nlu._cifras_dictadas(message.strip().rstrip("."))
     plano = normalized(text)
     if re.search(r"\b(?:no|sin|sense|menos|menys|irpf|incluido|incluida|inclos|inclosa|"
                  r"descuento|dto|retencion)\b|%\s*(?!$)", plano):
         return None
-    match = re.fullmatch(
-        r"(?:(?:crea(?:me)?|créame|hazme|haz|prepara(?:me)?|prepárame|fes(?:-me)?)\s+"
-        r"(?:una?\s+)?)?(factura|ticket|tiquet)(?:\s+de\s+(?:venta|venda))?\s+"
-        r"(?:para|a|per\s+a)\s+(.{1,160}?)(?:\s+(?:con|amb|por|per)\s+|\s*:\s*)(.+)",
-        text, re.I)
-    if not match:
-        return None
-    kind, client, body = match.groups()
+    # Hablando no siempre se dice «por» o «con» detrás del cliente: «factura a Juan
+    # García, tres horas a…» o «…a Juan García 3 horas a…». Esa lectura solo se
+    # prueba si la de siempre no da una factura entera, para que un nombre con
+    # número («Comunidad Balmes 12 por…») siga siendo el de siempre.
+    for separador in (r"(?:\s+(?:con|amb|por|per)\s+|\s*:\s*)",
+                      r"(?:\s*,\s+(?:(?:con|amb|por|per)\s+)?|\s+(?=\d))"):
+        match = re.fullmatch(
+            r"(?:(?:crea(?:me)?|créame|hazme|haz|prepara(?:me)?|prepárame|fes(?:-me)?)\s+"
+            r"(?:una?\s+)?)?(factura|ticket|tiquet)(?:\s+de\s+(?:venta|venda))?\s+"
+            r"(?:para|a|per\s+a)\s+(.{1,160}?)" + separador + r"(.+)",
+            text, re.I)
+        plan = _plan_dictado(*match.groups()) if match else None
+        if plan:
+            return plan
+    return None
+
+
+def _plan_dictado(kind: str, client: str, body: str) -> LocalInvoicePlan | None:
     vat = None
     tax = re.search(r"[,;]?\s+(?:más|mas|més|mes|\+)\s+(?:el\s+)?IVA"
                     r"(?:\s*(?:del|al)?\s*(0|4|10|21)\s*%)?$", body, re.I)

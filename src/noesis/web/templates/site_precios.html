@@ -1,6 +1,29 @@
 {% extends "site_base.html" %}
-{% block page_title %}Precios del software para autónomos{% endblock %}
-{% block meta_description %}Planes de Bynoesis: Autónomo 29 €, Negocio 49 € y Premium 99 € al mes más IVA. {% if public_signup_available %}Prueba 14 días sin tarjeta.{% else %}Acceso piloto acompañado.{% endif %}{% endblock %}
+{% block page_title %}Precios del software para autónomos y pymes{% endblock %}
+{% block meta_description %}Planes de Bynoesis con precio de lanzamiento: {{ plan_cards.autonomo.name }} {{ prices.autonomo }} €, {{ plan_cards.pro.name }} {{ prices.pro }} € y {{ plan_cards.premium.name }} {{ prices.premium }} € al mes más IVA, un {{ launch_discount }} % menos que la tarifa. {% if public_signup_available %}Prueba 14 días sin tarjeta.{% else %}Acceso piloto acompañado.{% endif %}{% endblock %}
+{% set seg = pricing_segments[pricing_segment] %}
+
+{# Cabecera de una tarjeta: tarifa tachada, descuento y precio de lanzamiento. #}
+{% macro card_open(key) %}
+{% set card = plan_cards[key] %}
+      <article class="public-price-card{{ ' recommended' if seg.featured == key }}{{ ' upcoming' if card.upcoming }}" data-plan-card="{{ key }}" data-plan-price data-monthly="{{ card.monthly }}" data-annual="{{ card.annual }}" data-saving="{{ card.saving }}" data-list-monthly="{{ card.list }}" data-list-annual="{{ card.annual_list }}"{{ ' hidden' if key not in seg.plans }}>
+        <div class="recommendation-label"{{ ' hidden' if seg.featured != key }}>Recomendado</div>
+        <div class="plan-label">{{ card.name }}{% if card.upcoming %} <span class="plan-soon">Próximamente</span>{% endif %}</div>
+        <p class="public-price-was"><span class="visually-hidden">Tarifa: </span><s><span data-list-value>{{ card.list }}</span> €</s> <b>−{{ launch_discount }} %</b></p>
+        <p class="public-price"><span class="visually-hidden">Precio de lanzamiento: </span><span data-price-value>{{ card.monthly }}</span> €<small data-price-suffix> + IVA/mes</small></p>
+        <small class="launch-price-note">{% if card.upcoming %}Precio de lanzamiento previsto{% else %}Precio de lanzamiento · {{ launch_months }} meses desde tu alta{% endif %}</small>
+        <small class="annual-price-note" data-annual-note hidden></small>
+{% endmacro %}
+
+{% macro plan_cta(key) %}
+        {% if public_signup_available %}
+        <a class="btn{{ ' primary' if seg.featured == key }} full plan-start-link" data-plan="{{ key }}" href="/onboarding?intent=trial&plan={{ key }}&billing=monthly">Probar 14 días <span aria-hidden="true">→</span></a>
+        <a class="plan-buy-link" data-plan="{{ key }}" href="/onboarding?intent=subscribe&plan={{ key }}&billing=monthly">Contratar ahora</a>
+        {% else %}
+        <a class="btn{{ ' primary' if seg.featured == key }} full plan-start-link" data-plan="{{ key }}" href="/solicitar-acceso?plan={{ key }}">Solicitar acceso <span aria-hidden="true">→</span></a>
+        {% endif %}
+{% endmacro %}
+
 {% block content %}
   <section class="public-page-hero pricing-page-hero">
     <div><span class="eyebrow">Precios</span><h1>Empieza con lo que necesitas. Crece sin cambiar de sistema.</h1></div>
@@ -9,22 +32,22 @@
   </section>
 
   <section class="public-section pricing-section" id="planes" aria-label="Planes de Bynoesis">
-    <div class="trial-banner">
-      {% if public_signup_available %}<b>La prueba es completa.</b><span>14 días · sin tarjeta · sin permanencia · datos exportables</span>
-      {% else %}<b>Acceso piloto acompañado.</b><span>Precios transparentes · configuración conjunta · datos exportables</span>{% endif %}
-    </div>
-    <div class="billing-choice">
-      <div><b>¿Cómo prefieres pagar?</b><span>El plan anual equivale a pagar 11 meses y utilizar Bynoesis durante 12.</span></div>
+    <nav class="segment-tabs" aria-label="¿Para quién es?" data-segment-tabs>
+      {% for key, item in pricing_segments.items() %}
+      <a href="/precios?para={{ key }}#planes" class="{{ 'active' if key == pricing_segment }}"{% if key == pricing_segment %} aria-current="true"{% endif %} data-segment="{{ key }}" data-plans="{{ item.plans | join(' ') }}" data-featured="{{ item.featured }}"><b>{{ item.label }}</b><span>{{ item.hint }}</span></a>
+      {% endfor %}
+    </nav>
+
+    <div class="billing-choice launch-choice" data-segment-pricing{{ ' hidden' if not seg.plans }}>
+      <div><b><span class="launch-tag">−{{ launch_discount }} %</span> Precio de lanzamiento en todos los planes</b><span>La mitad de la tarifa durante tus {{ launch_months }} primeros meses. Con el pago anual, además, pagas 11 y usas 12.</span></div>
       <div class="billing-toggle" role="group" aria-label="Periodicidad de los precios">
         <button class="active" type="button" aria-pressed="true" data-billing-toggle="monthly">Mensual</button>
         <button type="button" aria-pressed="false" data-billing-toggle="annual">Anual <span>1 mes gratis</span></button>
       </div>
     </div>
-    <div class="public-pricing-grid">
-      <article class="public-price-card" data-plan-price data-monthly="{{ prices.autonomo }}" data-annual="{{ annual_prices.autonomo }}" data-saving="{{ annual_savings.autonomo }}">
-        <div class="plan-label">Autónomo</div>
-        <p class="public-price"><span data-price-value>{{ prices.autonomo }}</span> €<small data-price-suffix> + IVA/mes</small></p>
-        <small class="annual-price-note" data-annual-note hidden></small>
+
+    <div class="public-pricing-grid" data-segment-pricing{{ ' hidden' if not seg.plans }}>
+      {{ card_open("autonomo") }}
         <p>Para profesionales que quieren dejar de llevar clientes, trabajos y cobros de memoria.</p>
         <ul class="public-price-list">
           <li>Agenda, clientes, trabajos y presupuestos</li>
@@ -34,66 +57,108 @@
           <li>Documentos e impuestos trimestrales</li>
           <li>75 acciones avanzadas de IA al mes</li>
         </ul>
-        {% if public_signup_available %}
-        <a class="btn full plan-start-link" data-plan="autonomo" href="/onboarding?intent=trial&plan=autonomo&billing=monthly">Probar 14 días <span aria-hidden="true">→</span></a>
-        <a class="plan-buy-link" data-plan="autonomo" href="/onboarding?intent=subscribe&plan=autonomo&billing=monthly">Contratar ahora</a>
-        {% else %}
-        <a class="btn full plan-start-link" data-plan="autonomo" href="/solicitar-acceso?plan=autonomo">Solicitar acceso <span aria-hidden="true">→</span></a>
-        {% endif %}
+        {{ plan_cta("autonomo") }}
         <small class="plan-footnote">Para una persona · sin permanencia</small>
       </article>
 
-      <article class="public-price-card recommended" data-plan-price data-monthly="{{ prices.pro }}" data-annual="{{ annual_prices.pro }}" data-saving="{{ annual_savings.pro }}">
-        <div class="recommendation-label">Recomendado</div>
-        <div class="plan-label">Negocio</div>
-        <p class="public-price"><span data-price-value>{{ prices.pro }}</span> €<small data-price-suffix> + IVA/mes</small></p>
-        <small class="annual-price-note" data-annual-note hidden></small>
+      {{ card_open("pro") }}
         <p>Para equipos que necesitan coordinar el trabajo y tener la jornada y la gestoría conectadas.</p>
         <ul class="public-price-list">
-          <li>Todo lo del plan Autónomo</li>
+          <li>Todo lo del plan {{ plan_cards.autonomo.name }}</li>
           <li>Asignación de trabajos y planificación</li>
           <li>Fichaje y registro de jornada inalterable</li>
           <li>Portal de gestoría y paquete trimestral</li>
           <li>Proyectos, costes y rentabilidad</li>
           <li>300 acciones avanzadas · soporte prioritario</li>
         </ul>
-        {% if public_signup_available %}
-        <a class="btn primary full plan-start-link" data-plan="pro" href="/onboarding?intent=trial&plan=pro&billing=monthly">Probar 14 días <span aria-hidden="true">→</span></a>
-        <a class="plan-buy-link" data-plan="pro" href="/onboarding?intent=subscribe&plan=pro&billing=monthly">Contratar ahora</a>
-        {% else %}
-        <a class="btn primary full plan-start-link" data-plan="pro" href="/solicitar-acceso?plan=pro">Solicitar acceso <span aria-hidden="true">→</span></a>
-        {% endif %}
+        {{ plan_cta("pro") }}
         <small class="plan-footnote">Para equipos pequeños · sin permanencia</small>
       </article>
 
-      <article class="public-price-card" data-plan-price data-monthly="{{ prices.premium }}" data-annual="{{ annual_prices.premium }}" data-saving="{{ annual_savings.premium }}">
-        <div class="plan-label">Premium</div>
-        <p class="public-price"><span data-price-value>{{ prices.premium }}</span> €<small data-price-suffix> + IVA/mes</small></p>
-        <small class="annual-price-note" data-annual-note hidden></small>
+      {{ card_open("premium") }}
         <p>Para negocios que quieren más automatización, uso intensivo y una puesta en marcha acompañada.</p>
         <ul class="public-price-list">
-          <li>Todo lo del plan Negocio</li>
+          <li>Todo lo del plan {{ plan_cards.pro.name }}</li>
           <li>1.500 acciones avanzadas de IA al mes</li>
           <li>Puesta en marcha acompañada</li>
           <li>Línea directa con el equipo</li>
         </ul>
         <div class="beta-feature"><b>Recepcionista 24/7</b><span>Beta con acceso preferente: atenderá las llamadas que no cojas, las resumirá y propondrá citas. Incluirá 100 minutos al mes cuando se active; hasta entonces no se cobra por ella.</span></div>
-        {% if public_signup_available %}
-        <a class="btn full plan-start-link" data-plan="premium" href="/onboarding?intent=trial&plan=premium&billing=monthly">Probar 14 días <span aria-hidden="true">→</span></a>
-        <a class="plan-buy-link" data-plan="premium" href="/onboarding?intent=subscribe&plan=premium&billing=monthly">Contratar ahora</a>
-        {% else %}
-        <a class="btn full plan-start-link" data-plan="premium" href="/solicitar-acceso?plan=premium">Solicitar acceso <span aria-hidden="true">→</span></a>
-        {% endif %}
+        {{ plan_cta("premium") }}
         <small class="plan-footnote">Para uso intensivo · sin permanencia</small>
       </article>
+
+      {{ card_open("empresa") }}
+        <p>Para empresas con varias personas en la oficina, más de una sede y necesidad de saber quién hace qué.</p>
+        <ul class="public-price-list">
+          <li>Todo lo del plan {{ plan_cards.premium.name }}</li>
+          <li>Varios accesos por empresa, cada uno con su permiso</li>
+          <li>Registro de quién entra y qué cambia</li>
+          <li>Varias sedes en la misma cuenta</li>
+          <li>3.000 acciones avanzadas de IA al mes</li>
+          <li>Una persona del equipo asignada a tu cuenta</li>
+        </ul>
+        <a class="btn full" href="/contacto" data-public-event="pricing_empresa_contact">Hablar con el equipo <span aria-hidden="true">→</span></a>
+        <small class="plan-footnote">Todavía no se puede contratar · te avisamos cuando abra</small>
+      </article>
     </div>
+
+    <div class="segment-gestorias" data-segment-panel="gestorias"{{ ' hidden' if pricing_segment != 'gestorias' }}>
+      <div>
+        <span class="eyebrow">Para despachos</span>
+        <h2>Tu despacho no paga por entrar.</h2>
+        <p>La cuenta profesional de la gestoría es gratuita. Quien contrata Bynoesis es tu cliente, y tú recibes su documentación ordenada por empresa y período.</p>
+      </div>
+      <ul>
+        <li><b>Una cartera, un acceso</b>Todas las empresas que te inviten, en el mismo espacio profesional.</li>
+        <li><b>Tu cliente elige su plan</b>La gestoría conectada va incluida desde el plan {{ plan_cards.pro.name }}.</li>
+        <li><b>El criterio sigue siendo tuyo</b>Bynoesis ordena y pide lo que falta. No presenta impuestos.</li>
+      </ul>
+      <div class="segment-gestorias-actions">
+        <a class="btn primary" href="/gestorias" data-public-event="pricing_gestorias_cta">Ver Bynoesis para gestorías <span aria-hidden="true">→</span></a>
+        <a class="text-link" href="/contacto">Hablar con el equipo</a>
+      </div>
+    </div>
+
+    <div class="trial-banner" data-segment-pricing{{ ' hidden' if not seg.plans }}>
+      {% if public_signup_available %}<b>La prueba es completa.</b><span>14 días · sin tarjeta · sin permanencia · datos exportables</span>
+      {% else %}<b>Acceso piloto acompañado.</b><span>Precios transparentes · configuración conjunta · datos exportables</span>{% endif %}
+    </div>
+    <p class="launch-terms" data-segment-pricing{{ ' hidden' if not seg.plans }}>El precio tachado es la tarifa de cada plan. Durante el lanzamiento, quien se da de alta paga el precio de lanzamiento sus {{ launch_months }} primeros meses; después pasa a la tarifa y avisamos 30 días antes. Importes sin IVA.</p>
+
+    <details class="plan-compare" data-segment-pricing{{ ' hidden' if not seg.plans }}>
+      <summary>Comparar los planes punto por punto ↓</summary>
+      <div class="plan-compare-scroll">
+        <table>
+          <thead>
+            <tr><th scope="col">Qué incluye</th>{% for card in plan_cards.values() %}<th scope="col">{{ card.name }}{% if card.upcoming %} <small>Próximamente</small>{% endif %}</th>{% endfor %}</tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">Precio de lanzamiento al mes</th>{% for card in plan_cards.values() %}<td><b>{{ card.monthly }} €</b></td>{% endfor %}</tr>
+            <tr><th scope="row">Tarifa al mes</th>{% for card in plan_cards.values() %}<td><s>{{ card.list }} €</s></td>{% endfor %}</tr>
+            <tr><th scope="row">Pensado para</th><td>Una persona</td><td>Equipos pequeños</td><td>Uso intensivo</td><td>Varias sedes</td></tr>
+            <tr><th scope="row">Agenda, clientes, trabajos y presupuestos</th><td>Sí</td><td>Sí</td><td>Sí</td><td>Sí</td></tr>
+            <tr><th scope="row">Facturas con IVA e IRPF, cobros y recordatorios</th><td>Sí</td><td>Sí</td><td>Sí</td><td>Sí</td></tr>
+            <tr><th scope="row">WhatsApp, documentos e impuestos trimestrales</th><td>Sí</td><td>Sí</td><td>Sí</td><td>Sí</td></tr>
+            <tr><th scope="row">Equipo: asignación de trabajos y fichaje</th><td class="no">No</td><td>Sí</td><td>Sí</td><td>Sí</td></tr>
+            <tr><th scope="row">Portal de gestoría y paquete trimestral</th><td class="no">No</td><td>Sí</td><td>Sí</td><td>Sí</td></tr>
+            <tr><th scope="row">Proyectos, costes y rentabilidad</th><td class="no">No</td><td>Sí</td><td>Sí</td><td>Sí</td></tr>
+            <tr><th scope="row">Acciones avanzadas de IA al mes</th><td>75</td><td>300</td><td>1.500</td><td>3.000</td></tr>
+            <tr><th scope="row">Soporte</th><td>Estándar</td><td>Prioritario</td><td>Línea directa</td><td>Persona asignada</td></tr>
+            <tr><th scope="row">Puesta en marcha acompañada</th><td class="no">No</td><td class="no">No</td><td>Sí</td><td>Sí</td></tr>
+            <tr><th scope="row">Recepcionista 24/7 (beta)</th><td class="no">No</td><td class="no">No</td><td>Acceso preferente</td><td>Acceso preferente</td></tr>
+            <tr><th scope="row">Varios accesos con permisos y registro de cambios</th><td class="no">No</td><td class="no">No</td><td class="no">No</td><td>Sí</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
   </section>
 
   <section class="price-included" aria-labelledby="included-title">
     <div>
       <span class="eyebrow light-eyebrow">Siempre incluido</span>
       <h2 id="included-title">No cobramos aparte por hacer lo básico bien.</h2>
-      <p>Va en los tres planes, también en el más barato. Sin módulos que aparecen en la
+      <p>Va en todos los planes, también en el más barato. Sin módulos que aparecen en la
         factura tres meses después.</p>
     </div>
     <ul>
@@ -106,11 +171,13 @@
   <section class="public-section pricing-faq" id="precios-faq" aria-labelledby="pricing-faq-title">
     <div class="section-heading"><span class="eyebrow">Sobre el pago</span><h2 id="pricing-faq-title">Claro antes de empezar.</h2><p>Sin letra pequeña, permanencias ni cargos automáticos al terminar la prueba.</p></div>
     <div class="public-accordion">
-      <details open><summary>¿Qué pasa cuando acaba la prueba?</summary><p>Nadie te cobra porque no pedimos tarjeta. Puedes seguir consultando tus datos; para crear, cambiar, enviar o automatizar, activas un plan.</p></details>
+      <details open><summary>¿Qué es el precio de lanzamiento?</summary><p>Cada plan tiene una tarifa, que es el precio tachado. Mientras dure el lanzamiento, quien se da de alta paga un {{ launch_discount }} % menos durante sus {{ launch_months }} primeros meses. Después la cuenta pasa a la tarifa, y te avisamos 30 días antes para que decidas con tiempo.</p></details>
+      <details><summary>¿Qué pasa cuando acaba la prueba?</summary><p>Nadie te cobra porque no pedimos tarjeta. Puedes seguir consultando tus datos; para crear, cambiar, enviar o automatizar, activas un plan.</p></details>
       <details><summary>¿Hay permanencia?</summary><p>No. Puedes elegir pago mensual o anual. El anual se cobra una vez y mantiene el acceso durante doce meses; el mensual se renueva cada mes. En ambos casos conservas el acceso pagado hasta el final del período contratado.</p></details>
-      <details><summary>¿Cuánto ahorro con el plan anual?</summary><p>Una mensualidad completa: pagas el equivalente a 11 meses y utilizas Bynoesis durante 12. Son 29 €, 49 € o 99 € de ahorro anual, según el plan, siempre antes de IVA.</p></details>
+      <details><summary>¿Cuánto ahorro con el plan anual?</summary><p>Una mensualidad completa: pagas el equivalente a 11 meses y utilizas Bynoesis durante 12. Se suma al precio de lanzamiento, siempre antes de IVA.</p></details>
       <details><summary>¿Qué son las acciones avanzadas de IA?</summary><p>Se usan cuando hace falta interpretar, redactar o razonar con más profundidad. Las consultas rutinarias, alertas y lecturas locales no consumen estas acciones.</p></details>
       <details><summary>¿Puedo cambiar de plan?</summary><p>Sí. El plan acompaña el tamaño y el uso real de tu negocio. Podrás subir o bajar sin mover datos ni cambiar de herramienta.</p></details>
+      <details><summary>¿Cuándo llega el plan {{ plan_cards.empresa.name }}?</summary><p>Todavía no se puede contratar. Necesita varios accesos por empresa con sus permisos, y lo estamos construyendo. Si tu empresa lo necesita ya, cuéntanoslo y te avisamos cuando abra.</p></details>
       <details><summary>¿Qué incluye la beta del recepcionista?</summary><p>El objetivo es atender llamadas, recoger lo que necesita el cliente y proponerte una cita. Mientras esté en beta, el acceso será progresivo y siempre se indicará qué parte está activa.</p></details>
     </div>
   </section>

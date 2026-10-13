@@ -4,7 +4,7 @@
 
 Se mantienen el motor del chat, las confirmaciones versionadas, webhook_events,
 la bandeja comercial `whatsapp_inbox` y la outbox. Se añade únicamente el estado
-que faltaba: atribución de historial y persistencia de transporte antes de ejecutar.
+que faltaba: atribución de historial y persisctencia de transporte antes de ejecutar.
 
 `NOESIS_CONVERSATION_ISOLATION_ENABLED=false`: escribir actor en mensajes nuevos
 no altera todavía las lecturas. Al activar, modelo, referencias e historial web

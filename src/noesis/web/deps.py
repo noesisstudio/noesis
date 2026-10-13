@@ -41,6 +41,10 @@ TEMPLATES.env.globals["asset_v"] = _asset_version()
 TEMPLATES.env.globals["base_url"] = config.BASE_URL
 TEMPLATES.env.globals['financial_core_enabled'] = lambda: config.FINANCIAL_CORE_ENABLED
 TEMPLATES.env.globals["public_signup_available"] = config.public_signup_available()
+# Nombre visible de cada plan: sale del catálogo, no se copia en las plantillas.
+TEMPLATES.env.globals["plan_names"] = {
+    key: plan["name"] for key, plan in billing_adapter.PLANS.items()
+}
 TEMPLATES.env.globals["public_contact_email"] = config.PUBLIC_CONTACT_EMAIL
 # Vacío: la web pública no pinta aviso de cookies ni carga Google Analytics.
 TEMPLATES.env.globals["ga_measurement_id"] = config.GA_MEASUREMENT_ID

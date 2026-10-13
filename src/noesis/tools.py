@@ -1270,7 +1270,8 @@ def run_tool(
             {
                 "error": (
                     f"{billing_adapter.ENTITLEMENT_LABELS[entitlement]} forma parte "
-                    "del plan Negocio. Puedes activarlo desde Suscripción."
+                    f"del plan {billing_adapter.PLANS['pro']['name']}. "
+                    "Puedes activarlo desde Suscripción."
                 ),
                 "code": "plan_upgrade_required",
                 "required_plan": billing_adapter.minimum_plan_for(entitlement),

@@ -865,6 +865,19 @@ def run_daily_backup() -> None:
         backups.run_backup()
 
 
+def read_sales_sheets() -> None:
+    """Vuelve a leer las hojas de Google conectadas al CRM de captación.
+
+    Es de Bynoesis, no de ningún negocio: no envía nada a nadie ni depende de una
+    suscripción. Solo lee, así que repetirla no duplica nada; el turno se reclama
+    igualmente para no pedirle la misma hoja a Google desde dos réplicas.
+    """
+    from ..crm import sincronizar
+
+    if db.claim_scheduled_run(f"crm-hojas:{datetime.now():%Y-%m-%d}"):
+        sincronizar.leer_todas()
+
+
 def run_weekly_restore_drill() -> None:
     """Revalida la ultima copia sin tocar nunca la base de datos activa."""
     point = datetime.now()
@@ -993,6 +1006,10 @@ def start_scheduler() -> BackgroundScheduler:
         coalesce=True,
     )
     scheduler.add_job(run_daily_backup, "cron", hour=3, minute=30, id="backup")
+    scheduler.add_job(
+        read_sales_sheets, "cron", hour=7, minute=30, id="crm-hojas",
+        max_instances=1, coalesce=True,
+    )
     scheduler.add_job(
         run_weekly_restore_drill,
         "cron",

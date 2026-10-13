@@ -64,8 +64,10 @@ _UNIDADES = {
     "quinze": 15, "setze": 16, "disset": 17, "divuit": 18, "dinou": 19,
     "vint": 20, "trenta": 30, "quaranta": 40, "cinquanta": 50, "seixanta": 60,
     "setanta": 70, "vuitanta": 80, "noranta": 90, "cent": 100, "cents": 100,
-    "centes": 100,
+    "centes": 100, "dues": 2,
 }
+# En catalán las centenas se dicen multiplicando: «dos-cents» son 200, no 2 + 100.
+_CENTENAS_CATALANAS = {"cents", "centes"}
 _MULTIPLICADOR = {"mil": 1000, "millon": 1000000, "millones": 1000000,
                   "milions": 1000000, "milio": 1000000}
 _PALABRA_NUMERO = set(_UNIDADES) | set(_MULTIPLICADOR) | {"y", "i"}
@@ -87,9 +89,27 @@ def _numero_en_letra(palabras: list[str]) -> int | None:
             continue
         if palabra not in _UNIDADES:
             return None
-        parcial += _UNIDADES[palabra]
+        if palabra in _CENTENAS_CATALANAS and 0 < parcial < 10:
+            parcial *= 100
+        else:
+            parcial += _UNIDADES[palabra]
         visto = True
     return (total + parcial) if visto else None
+
+
+def _sin_guiones_de_cifra(text: str) -> str:
+    """«trenta-cinc», «dos-cents», «vint-i-cinc» → las mismas palabras sin guion.
+
+    El catalán escribe las cifras con guion y Whisper lo respeta. Con el guion
+    puesto solo se leía el último trozo: «trenta-cinc euros amb cinquanta» apuntaba
+    5,50 € y «dos-cents cinquanta» se tomaba por un importe negativo (ronda de voz
+    del 8-oct). Solo se toca si todos los trozos son palabras de número.
+    """
+    def suelta(match: re.Match) -> str:
+        trozos = _norm(match.group(0)).split("-")
+        return " ".join(trozos) if all(t in _PALABRA_NUMERO for t in trozos) else match.group(0)
+
+    return re.sub(r"[^\W\d_]+(?:-[^\W\d_]+)+", suelta, text)
 
 
 def _sin_euros(match: re.Match) -> str:
@@ -117,6 +137,7 @@ def _cifras_dictadas(text: str) -> str:
     «por» y delante de un conector, nunca de otra palabra: así «Tres Torres» o
     «Cien Montaditos» siguen siendo nombres y no se convierten en números.
     """
+    text = _sin_guiones_de_cifra(text)
     # Whisper escribe «veintitrés» y «dieciséis» con tilde; la tabla va sin ella.
     text = re.sub(r"\b(?:dieciséis|veintidós|veintitrés|veintiséis|veintiún)\b",
                   lambda m: _strip_accents(m.group(0)), text, flags=re.I)
@@ -940,6 +961,10 @@ _IMPORTE_SUELTO = re.compile(
     r"\s+sin\s+iva)?$", re.I)
 
 
+_TROZO_DE_RELLENO = {"si", "eh", "em", "ehm", "mmm", "vale", "bueno", "a ver", "pues",
+                     "pues nada", "o sea", "esto"}
+
+
 def _documento_por_trozos(text: str, palabra: str) -> dict | None:
     """«Factura a Juan García, 120 euros, cambio de grifo»: la orden dictada a trozos.
 
@@ -959,7 +984,11 @@ def _documento_por_trozos(text: str, palabra: str) -> dict | None:
     # «Reformas Martínez, S.L., 120 euros…»: la coma de la forma societaria.
     while len(trozos) > 1 and trozos[1].replace(".", "").upper() in _SIGLAS_CON_PUNTO:
         trozos[0:2] = [f"{trozos[0]}, {trozos[1]}."]
-    if len(trozos) < 3 or re.search(r"\d|\s(?:por|de)\s+\d", trozos[0]):
+    # Una pausa dicha («sí», «eh», «a ver») no es el cliente ni el concepto.
+    trozos = trozos[:1] + [t for t in trozos[1:] if _norm(t) not in _TROZO_DE_RELLENO]
+    # «Comunidad de Propietarios Balmes 12»: el número del portal es del nombre.
+    # Cualquier otra cifra en el primer trozo es un importe y decide el lector de siempre.
+    if len(trozos) < 3 or re.search(r"\d", re.sub(r"(?<=[^\W\d_])\s\d{1,4}$", "", trozos[0])):
         return None
     importe, conceptos = None, []
     for trozo in trozos[1:]:
@@ -1066,6 +1095,9 @@ def _parse_doc_command(text: str, norm: str, verb_re: str) -> dict | None:
     text = re.sub(r"\s+(?:con|más|mas|y)\s+(?:el\s+)?\d+(?:[.,]\d+)?\s*%",
                   " ", text, flags=re.I).strip(" ,.")  # un espacio, no vacío: si no, pega
     text = re.sub(r"\s{2,}", " ", text)      # «euros mas iva concepto» → «eurosconcepto»
+    # «…por 120 euros, por cambiar el grifo»: la pausa tras el importe llega como
+    # coma y el concepto salía «euros, por cambiar el grifo» (ronda de voz, 8-oct).
+    text = re.sub(r"(\d\s*(?:€|euros?|eur))\s*[,;:]\s+(?=\S)", r"\1 ", text, flags=re.I)
     # Si se dice «concepto», eso ES el concepto y manda sobre cualquier otra
     # lectura. Sin esto, «factura a reformas martinez concepto ventana por 750»
     # metía «concepto ventana» dentro del nombre del cliente, y cuando no lo
@@ -1614,8 +1646,9 @@ _OTRO_TEMA = re.compile(
     r"impuest\w*|clientes?|proveedor\w*|document\w*|gestori\w*|proyect\w*)\b")
 
 
-_FIN_DE_TROZO = (r"(?=\s+(?:a|para)\s+[a-záéíóúñ]+(?:ar|er|ir)\b|\s+(?:hoy|mañana|manana|pasado|"
-                 r"el|este|esta|a\s+las|por\s+la|en)\b|[,.;]|$)")
+_FIN_DE_TROZO = (r"(?=\s+(?:a|para|per|per\s+a)\s+[a-záéíóúñ]+(?:ar|er|ir|re)\b|"
+                 r"\s+(?:hoy|mañana|manana|pasado|avui|demà|dema|"
+                 r"el|este|esta|a\s+las|a\s+les|por\s+la|en)\b|[,.;]|$)")
 
 
 def _visita_dicha(text: str) -> tuple[str, dict] | None:
@@ -1625,17 +1658,24 @@ def _visita_dicha(text: str) -> tuple[str, dict] | None:
     del día. Solo cuenta con un sitio al que se va (casa de, la obra de…) y una
     fecha; si falta la fecha, que la pregunte la agenda de siempre.
     """
-    m = re.search(r"\b(?:tengo que ir|he de ir|tengo que pasar|voy|ir[eé]|pasar[eé]|paso)\s+"
-                  r"(?:a\s+|por\s+)(?:casa\s+de|la\s+casa\s+de|la\s+obra\s+de|el\s+local\s+de|"
-                  r"la\s+tienda\s+de|ver\s+a|donde)\s+(.+?)" + _FIN_DE_TROZO, text, re.I)
+    # En catalán se cuenta igual («demà a les nou tinc que anar a casa de la Marta»)
+    # y el artículo delante del nombre («la Marta», «en Joan») no es parte de él.
+    m = re.search(r"\b(?:tengo que ir|he de ir|tengo que pasar|voy|ir[eé]|pasar[eé]|paso|"
+                  r"tinc que anar|he d'anar|haig d'anar|he de passar|tinc que passar|vaig|"
+                  r"anir[eé]|passar[eé]|passo)\s+"
+                  r"(?:a\s+|por\s+|per\s+)(?:casa\s+d'en|casa\s+del?|la\s+casa\s+de|"
+                  r"la\s+obra\s+de|l'obra\s+de|el\s+local\s+de|la\s+tienda\s+de|"
+                  r"la\s+botiga\s+de|ver\s+a|veure|donde)\s+(?:(?:la|el|en)\s+(?=[A-ZÀ-Ý])|l')?"
+                  r"(.+?)" + _FIN_DE_TROZO, text, re.I)
     fecha = parse_date(text) if m else None
     if not m or not fecha:
         return None
     cliente = _limpiar_cliente(m.group(1))
     if not cliente or re.match(_AGENDA_NOT_A_NAME, _norm(cliente)):
         return None
-    tarea = re.search(r"\b(?:a|para)\s+([a-záéíóúñ]+(?:ar|er|ir)\b.*?)"
-                      r"(?=\s+(?:hoy|mañana|manana|pasado|este|esta|a\s+las|por\s+la|"
+    tarea = re.search(r"\b(?:a|para|per\s+a|per)\s+([a-záéíóúñ]+(?:ar|er|ir|re)\b.*?)"
+                      r"(?=\s+(?:hoy|mañana|manana|pasado|avui|demà|dema|este|esta|a\s+las|"
+                      r"a\s+les|por\s+la|"
                       r"el\s+(?:lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo|d[ií]a)|"
                       r"en\s+[A-ZÁÉÍÓÚ])\b|[,.;]|$)",
                       text[m.end():])
@@ -2005,12 +2045,40 @@ def _numero_de_documento_dicho(text: str) -> str:
         cifra, text, flags=re.I)
 
 
+def _sin_titubeos(text: str) -> str:
+    """«Factura a... a Juan, de... doscientos»: la pausa de quien piensa mientras dicta.
+
+    Whisper la escribe con puntos suspensivos en medio y repite la palabra corta.
+    Con ellos el cliente no se reconocía y el borrador nacía a medias. Los puntos
+    del final de la frase no se tocan; una palabra repetida solo se junta si es
+    idéntica, minúscula incluida («a A Coruña» sigue entera).
+    """
+    text = re.sub(r"(?<=\w)\s*(?:\.{2,}|…)\s*(?=\w)", " ", text)
+    return re.sub(r"\b(a|al|de|del|el|la|para|por|con|en|un|una|que)\s+\1\b", r"\1", text)
+
+
+# «Apunta que he cobrado…», «anota que me he gastado…»: el «apunta que» solo
+# presenta lo que viene detrás, y con él la frase acababa pidiendo una cita.
+_APUNTA_QUE = re.compile(
+    r"^(?:apunta|apuntame|apúntame|anota|anotame|anótame|registra|ten en cuenta)\s+que\s+"
+    r"(?=(?:ya\s+)?(?:he|me\s+he|me\s+han?|hoy|ayer|hem)\b)", re.I)
+
+# Catalán: «factura al Joan», «pressupost per al Pere», «a en Jordi», «a l'Anna».
+# El artículo delante del nombre de una persona no forma parte de él.
+_A_CON_ARTICULO = re.compile(
+    r"\b(factur\w*|pressupost\w*|presupuesto\w*|tiquet|ticket)\s+"
+    r"(?:per\s+al|per\s+a\s+en|per\s+a\s+l'|pel|al|a\s+en|a\s+l')\s*(?=[A-ZÀ-Ý])")
+
+
 def _erratas(text: str) -> str:
     """Corrige faltas en las palabras clave y abreviaturas de móvil."""
     text = _numero_de_documento_dicho(text or "")
     sin_muletilla = _MULETILLA_INICIAL.sub("", text.strip())
     if sin_muletilla.strip(" ,.…!¡?¿"):
         text = sin_muletilla
+    text = _sin_titubeos(text)
+    text = _APUNTA_QUE.sub("", text)
+    text = _A_CON_ARTICULO.sub(lambda m: f"{m.group(1)} a ", text)
     # «¿Cuánto facture…?», «ya facture…»: pasado sin tilde, no una errata de factura.
     pasado = re.compile(r"\b(cu[aá]nto|qu[eé]|lo que|ya|no|si|cuando|cu[aá]ndo)\s+(facture)\b", re.I)
     text = pasado.sub(lambda m: f"{m.group(1)} factur\u00e9", text)
@@ -2023,6 +2091,14 @@ def _erratas(text: str) -> str:
 corregir_erratas = _erratas
 
 
+# «…a mirar una fuga, y pasado mañana a las cuatro a casa de Ana»: otra cita en la
+# misma nota. Se corta ahí: leída entera, la primera cita se quedaba con el día de
+# la segunda y la segunda se perdía sin avisar (ronda de voz, 8-oct).
+_OTRA_CITA = (r",?\s+y\s+(?:luego\s+|despues\s+|después\s+)?(?=(?:hoy|mañana|manana|"
+              r"pasado\s+mañana|pasado\s+manana|el\s+(?:lunes|martes|mi[eé]rcoles|jueves|"
+              r"viernes|s[aá]bado|domingo))\b[^,;]*?\ba\s+las?\s)")
+
+
 _ORDENES_DE_ACCION = {
     "crear_factura", "crear_presupuesto", "registrar_gasto", "agendar_trabajo",
     "crear_cliente", "crear_proveedor", "crear_proyecto", "crear_factura_a_medias",
@@ -2032,7 +2108,8 @@ _ORDENES_DE_ACCION = {
 _CORTE_DE_ORDEN = re.compile(
     r"[;\n]|\.\s+|,?\s+y\s+(?:luego\s+|despues\s+|después\s+|ademas\s+|además\s+|"
     r"tambien\s+|también\s+)?(?=(?:haz\w*|crea\w*|agenda\w*|apunta\w*|anota\w*|"
-    r"registra\w*|factura\w*|presupuest\w*|gast\w*|he\s+gastado|compr\w*)\b)",
+    r"registra\w*|factura\w*|presupuest\w*|gast\w*|he\s+gastado|compr\w*)\b)"
+    r"|" + _OTRA_CITA,
     re.I)
 
 
@@ -2054,6 +2131,10 @@ def ordenes_extra(text: str) -> list[str]:
         # importes), pero es una orden: también cuenta, para no perderla.
         pide_algo = re.search(r"\b(?:gast\w*|compr\w*|factur\w*|presupuest\w*|agend\w*|"
                               r"apunt\w*|anot\w*)\b", _norm(trozo))
+        # Un día con su hora y un sitio al que ir es otra cita aunque no lleve verbo.
+        if not orden and not pide_algo and re.search(r"\ba\s+las?\s", _norm(trozo)) \
+                and len(trozo.split()) > 5 and parse_date(trozo):
+            pide_algo = True
         # «…y hazle una factura de 100 por pintar» sola no dice a quién: el parser
         # pide datos, pero es una orden y hay que avisar de que no se ha preparado.
         a_medias = bool(orden and orden[0] in {NEED_INVOICE, NEED_JOB_CLIENT, NEED_DATE})
@@ -2167,6 +2248,11 @@ def parse(text: str) -> tuple[str, dict] | None:
     repetida = _repetir_factura(text or "")
     if repetida:
         return repetida
+    otra_cita = re.search(_OTRA_CITA, text or "", re.I)
+    if otra_cita:
+        primera = parse(text[:otra_cita.start()])
+        if primera and primera[0] == "agendar_trabajo":
+            return primera  # la segunda la avisa `ordenes_extra`
     con_le = _ORDEN_CON_LE.match((text or "").strip())
     if con_le:
         # «Hazle un presupuesto a Juan…» ya dice el cliente: el «le» es él. Antes
@@ -2268,12 +2354,22 @@ def _parse(text: str) -> tuple[str, dict] | None:
                      r"cobre|ya\s+he\s+cobrado)\b(.*)$", norm)
     if cobro and not re.search(r"\bfactura\s*#?\s*\d", norm):
         resto = re.sub(rf"\b(?:{_AMOUNT_RE})\s*(?:€|euros?|eur)?", " ", cobro.group(1))
-        resto = re.sub(r"\b(?:ya|hoy|ayer|la|el|factura|de|del|a|por|todo|toda)\b", " ", resto)
+        # «en efectivo», «por bizum»: cómo se cobró no es el nombre de nadie.
+        resto = re.sub(r"\b(?:ya|hoy|ayer|la|el|factura|de|del|a|por|todo|toda|en|con|efectivo|"
+                       r"metalico|mano|bizum|transferencia|tarjeta)\b", " ", resto)
         nombre = " ".join(resto.split())
         crudo = text.strip().rstrip("?¿!. ")
         cliente = crudo[len(crudo) - len(nombre):] if nombre and len(crudo) >= len(nombre) else ""
         return ("ver_cobros_pendientes", {"tras_cobro": True,
                                           **({"cliente": _limpiar_cliente(cliente)} if cliente else {})})
+    # «Juan García ya me ha pagado»: el mismo cobro, con el nombre delante.
+    cobro_de = re.match(r"^(?!(?:quien|que|cuanto|cuantos|cuando|no|si|todavia|aun)\b)(.+?)\s+"
+                        r"(?:ya\s+)?me\s+han?\s+pagado(?:\s+(?:ya|hoy|ayer|todo|por\s+fin))*$", norm)
+    if cobro_de and not re.search(r"\d", norm):
+        crudo = text.strip().rstrip("?¿!. ")
+        nombre = _limpiar_cliente(re.sub(r"^(?:el|la)\s+", "", crudo[:len(cobro_de.group(1))], flags=re.I))
+        if nombre:
+            return ("ver_cobros_pendientes", {"tras_cobro": True, "cliente": nombre})
     # «¿Qué facturas tengo pendientes?» se quedaba sin respuesta local.
     if (re.search(r"^(?:y\s+)?(?:que|cuales|cuantas|ver|mis|dime)\b.*\bfacturas?\b.*\bpendientes?\b", norm)
             and not re.search(r"\b(?:emitir|borrador\w*|sin emitir|de enviar|facturar)\b", norm)):
@@ -2305,6 +2401,27 @@ def _parse(text: str) -> tuple[str, dict] | None:
         hecho = re.search(r"\b(?:pagad[oa]s?|cobrad[oa]s?|liquidad[oa]s?|saldad[oa]s?)\b", norm)
         if paid and hecho and not re.search(r"\b(parcial|parte|euros|eur)\b|€", norm):
             return ("registrar_pago", {"factura_id": int(paid.group(1))})
+        # «La factura de Juan García ya está cobrada»: sin número se enseña lo que
+        # ese cliente tiene pendiente para que diga cuál. Antes contestaba con la
+        # explicación del cobro parcial, que nadie había pedido (ronda de voz, 8-oct).
+        de_quien = re.search(
+            r"\bfacturas?\s+(?:de|del|a|d')\s*(?:la\s+|el\s+|l')?(.+?)\s+(?:ya\s+)?"
+            r"(?:est[aá]n?|quedan?|la\s+tengo|me\s+la\s+han?)\s+",
+            text.strip().rstrip(".!"), re.I) if hecho and not paid else None
+        if not de_quien and hecho and not paid:
+            de_quien = re.search(
+                r"\b(?:pagad[oa]|cobrad[oa]|liquidad[oa]|saldad[oa])\s+(?:ya\s+)?la\s+factura\s+"
+                r"(?:de|del|a|d')\s*(?:la\s+|el\s+|l')?(.+?)\s*$",
+                text.strip().rstrip(".!"), re.I)
+        if not de_quien and hecho and not paid:
+            # «Juan García ya me ha pagado la factura».
+            de_quien = re.search(
+                r"^(?:el\s+|la\s+|l')?(.+?)\s+(?:ya\s+)?me\s+han?\s+(?:pagado|liquidado|saldado)"
+                r"\s+(?:ya\s+)?(?:la|su|una)\s+factura$", text.strip().rstrip(".!"), re.I)
+        if de_quien and not re.search(r"\b(parcial|parte|euros|eur)\b|€|\d", norm) \
+                and _limpiar_cliente(de_quien.group(1)):
+            return ("ver_cobros_pendientes", {"tras_cobro": True,
+                                              "cliente": _limpiar_cliente(de_quien.group(1))})
         return (NEED_REVIEW, {"reply": "Para registrar un cobro parcial, abre la factura e indica el importe recibido. No he cambiado su estado."})
 
     if norm in {"hola", "hey", "buenas", "ayuda", "help", "que puedes hacer"}:

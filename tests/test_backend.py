@@ -3202,8 +3202,8 @@ class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
         self.assertEqual(page.status_code, 200)
         self.assertIn("Plan actual", page.text)
         self.assertIn("Gestionar plan", page.text)
-        self.assertIn("Mejorar a Negocio", page.text)
-        self.assertIn("Mejorar a Premium", page.text)
+        self.assertIn("Mejorar a Pyme", page.text)
+        self.assertIn("Mejorar a Avanzado", page.text)
         self.assertIn("Cambiar tarjeta", page.text)
         self.assertIn("Cancelar suscripción", page.text)
         self.assertEqual(page.text.count("data-stripe-portal-form"), 6)
@@ -4146,7 +4146,7 @@ class PortalHttpTestCase(BackendTestCase):
                 whatsapp_step = client.get(preferences.headers["location"])
                 self.assertEqual(whatsapp_step.status_code, 200)
                 self.assertIn("Así queda Negocio Completo", whatsapp_step.text)
-                self.assertIn("Negocio · Anual", whatsapp_step.text)
+                self.assertIn("Pyme · Anual", whatsapp_step.text)
                 pending = client.post(
                     f"/onboarding/whatsapp/{business_id}/connect",
                     data={"action": "check"},

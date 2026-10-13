@@ -1,5 +1,64 @@
 # Decisiones
 
+## El historial financiero admite el esquema 74 del CRM (2026-10-13)
+
+El founder autoriza resolver el bloqueo del CRM de captación. Las cuatro guardas de
+`financial_history/` que solo aceptaban esquemas conocidos (70–73) aceptan también
+el 74: `service.py`, `cutoff.py`, `importer.py` y `reconciliation.py`.
+
+- **Por qué es seguro:** la migración 74 (`crm/esquema.py`) solo crea
+  `sales_sheets`, `sales_feeds` y `sales_suppressions` y amplía `sales_prospects`.
+  Ninguna es fuente del historial ni tabla financiera, y ningún módulo del Financial
+  Core lee tablas `sales_*`.
+- **Lo que no cambia:** las guardas siguen siendo listas cerradas. Un esquema
+  desconocido se sigue rechazando; el 73 sigue siendo el último del Financial Core.
+  Cinco flags OFF, fence intacto, sin 1.9F ni activación.
+- **Prueba que lo sostiene:**
+  `test_migration_after_core_schema_only_touches_sales_tables` falla si aparece otra
+  migración posterior a la 73 o si la 74 nombra una tabla que no sea `sales_*`.
+- **Regla para la próxima migración ajena al Financial Core:** comprobar que no toca
+  tablas financieras ni fuentes del historial, ampliar las cuatro listas y esa
+  prueba, y dejarlo escrito aquí. Si las toca, necesita su propia fase y su ADR.
+- **Sin validar:** las matrices de PostgreSQL de 1.9B–1.9E con el esquema 74; las
+  ejecuta la CI.
+
+## Planes por segmento y tarifa tachada con −50 % de lanzamiento (2026-10-12)
+
+El founder pide enseñar los planes como Holded: una sola escalera, pestañas por tipo
+de negocio y el precio de oferta junto a la tarifa tachada, con un 50 % de descuento
+(«si un plan cuesta 49 €, 100 € de base tachado»). Sustituye a la propuesta de
+39 / 69 / 129 € de
+[Propuesta-planes-autonomo-pyme-empresa](06-negocio-y-finanzas/Propuesta-planes-autonomo-pyme-empresa.md).
+
+| Plan (clave) | Antes se llamaba | Tarifa tachada | Se cobra |
+|---|---|---:|---:|
+| Autónomo (`autonomo`) | Autónomo | 60 € | 29 € |
+| Pyme (`pro`) | Negocio | 100 € | 49 € |
+| Avanzado (`premium`) | Premium | 200 € | 99 € |
+| Empresa (sin clave de cobro) | — | 400 € | 199 €, aún no contratable |
+
+- **Lo que se cobra no cambia:** 29 / 49 / 99 € + IVA y el anual de 11 mensualidades.
+  Las claves `pro` y `premium`, Stripe y los derechos por plan siguen igual.
+- **La tarifa vive en el catálogo** (`list_price` en `adapters/billing.py`) junto a
+  `LAUNCH_DISCOUNT_PERCENT` y `LAUNCH_OFFER_MONTHS`. Web, suscripción y `llms.txt`
+  leen de ahí; el nombre visible sale del global de plantillas `plan_names`.
+- **Pestañas de `/precios`:** Autónomos (Autónomo destacado), Pymes (Pyme), Empresas
+  (Pyme · Avanzado · Empresa) y Gestorías (sin precio público: la cuenta del
+  despacho es gratuita). Son enlaces `?para=…`, así que funcionan sin JavaScript.
+- **Empresa se anuncia como «Próximamente»** y lleva a contacto: necesita roles y
+  varios accesos por negocio, que no existen. No está en `PLANS`.
+- **Condición publicada, pendiente de confirmar por el founder y el abogado:** la
+  web dice que el precio de lanzamiento dura los 12 primeros meses desde el alta y
+  que después se pasa a la tarifa con aviso de 30 días. Se eligió porque un tachado
+  que nunca se cobra es un precio de referencia ficticio (Ley de Competencia
+  Desleal). Es una constante: cambiarla no exige tocar plantillas.
+- **No se ha hecho** lo que sigue abierto en la propuesta: gestoría gratis en
+  Autónomo, voz como extra de pago, límite de trabajadores por plan y extras.
+  Cambian permisos en servidor o prometen compras que aún no existen.
+
+Motivo: enseñar el potencial de venta sin tocar la caja del primer año ni el
+control de planes en servidor.
+
 ## 2026-10-05 — Fase1.9E: reconciliación histórica implementada y validada
 
 [Orden](architecture/FASE-1.9E-orden.md), [ADR018](architecture/ADR-018-financial-history-reconciliation.md),
@@ -25,6 +84,33 @@ durables cerrados; factura histórica v2 bloqueada. Nuevos inventarios reconocen
 evidencia histórica existente sin promover B a A ni modificar batches anteriores.
 Los encabezados inferiores conservan historia y no amplían autorización.
 
+## 2026-10-05 — CRM de captación visual y unido a la hoja de Google
+
+**La hoja se lee por enlace y nunca se escribe en ella.** Leerla con OAuth o con una
+cuenta de servicio permitiría escribir, pero exige consola de Google Cloud, un permiso
+sensible y credenciales nuevas que custodiar; y una escritura a ciegas ya pisó celdas
+una vez. Con el enlace compartido basta para leer, y el sentido contrario lo hace la
+propia hoja con `IMPORTDATA` sobre una dirección con clave. Coste aceptado: la hoja
+queda legible para quien tenga el enlace y la tabla para quien tenga la dirección.
+
+**Se pide la pestaña por `gid`, no por nombre.** La dirección `gviz` acepta el nombre,
+pero devuelve la primera pestaña si no existe y pierde celdas en columnas mixtas.
+
+**La hoja manda en el contacto; el CRM, en el estado.** Una lectura corrige nombre,
+correo, teléfono, web y provincia, y solo puede hacer avanzar el estado. Nunca toca
+nota, historial ni baja, ni devuelve a nadie atrás.
+
+**`tipo` se separa de `origen`.** Una gestoría y un fontanero pueden salir los dos de
+su web y no comparten embudo, guion ni plazo. El objetivo de 40 nombres cuenta solo
+autónomos.
+
+**Quien pide ser borrado deja una huella, no un dato.** Sin ella, la lectura de la
+mañana lo crearía otra vez desde la hoja. Se guarda el SHA-256 de su correo y de su
+teléfono en `sales_suppressions`.
+
+**Carpeta propia.** A petición del founder todo lo nuevo vive en `src/noesis/crm/`,
+incluido el adaptador de Google, que por convención iría en `adapters/`. Sigue siendo
+el único punto que habla con Google.
 
 ## 2026-10-04 — Fase1.9C: epoch/T0/fence (implementada y validada)
 

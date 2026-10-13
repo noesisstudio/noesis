@@ -226,6 +226,13 @@ con caducidad · procedimiento de brechas (72 h)
 
 ## Dudas frecuentes
 
+- **¿Y los datos de captación (gestorías y autónomos que perseguimos)?** Bynoesis es
+  responsable. Viven en `sales_prospects`, sin `business_id`, con origen del dato,
+  fecha del aviso del art. 14 y baja. La lista de gestorías se lee de una hoja de
+  Google del founder; quien pide la baja no se toca y quien pide ser borrado deja solo
+  una huella (`sales_suppressions`) para que la hoja no lo vuelva a traer. Ver
+  [`docs/crm`](../crm/README.md).
+
 - **¿Por qué no se puede borrar todo al darse de baja?** La normativa fiscal y laboral
   obliga a conservar facturas y fichajes. Se borra lo demás y se registra.
 - **¿Dónde están los datos?** Railway, región `europe-west4` (Ámsterdam). Railway

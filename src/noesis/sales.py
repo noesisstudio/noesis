@@ -15,6 +15,15 @@ Tres decisiones que explican el resto del archivo:
    te dio su dueno y uno que sacaste de una ficha publica no son lo mismo: el
    segundo obliga a decirle de donde ha salido en el primer contacto (art. 14
    RGPD). Por eso `ORIGENES` lleva ese dato y no es una etiqueta suelta.
+4. **A quién se persigue (`TIPOS`) no es de dónde sale el dato.** Un autónomo y
+   una gestoría pueden salir los dos de su web, pero no comparten embudo: de 40
+   autónomos se esperan 5 pilotos; de 1.000 gestorías, que contesten unas pocas y
+   presenten a sus clientes. Por eso la página se puede mirar por tipo y el
+   objetivo de la Ruta a 5.000 solo cuenta autónomos.
+
+La lista de gestorías vive en una hoja de Google. Leerla, cruzarla con las fichas
+y los gráficos de la página están en la carpeta `crm/`; aquí siguen el embudo, los
+guiones y la lista pegada a mano.
 """
 
 from __future__ import annotations
@@ -22,6 +31,8 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta
 import re
 import unicodedata
+
+from .crm import zonas
 
 
 # ---------------------------------------------------------------- Embudo ----
@@ -131,6 +142,9 @@ ORIGENES: dict[str, dict] = {
     "maps": {"etiqueta": "Ficha pública (Maps)", "del_interesado": False,
              "nota": "Entre 5 y 30 reseñas, un móvil y ninguna web: pequeños, y "
                      "el que contesta es el dueño."},
+    "web": {"etiqueta": "Su web pública", "del_interesado": False,
+            "nota": "El correo de contacto que publica en su propia web. Es el "
+                    "caso de las gestorías: escriben y leen su bandeja."},
     "plataforma": {"etiqueta": "Portal de encargos", "del_interesado": False,
                    "nota": "Si ya paga por conseguir clientes, invierte en su "
                            "negocio."},
@@ -151,6 +165,20 @@ OFICIOS: dict[str, str] = {
     "jardineria": "Jardinería",
     "mantenimiento": "Mantenimiento",
     "otro": "Otro oficio",
+}
+
+# A quién se persigue. `dias_contactado` es cuánto se espera antes de insistir: a
+# un autónomo se le vuelve a escribir a los tres días; a un despacho, a la semana.
+TIPOS: dict[str, dict] = {
+    "autonomo": {"etiqueta": "Autónomo", "plural": "Autónomos",
+                 "dias_contactado": 3},
+    "gestoria": {"etiqueta": "Gestoría", "plural": "Gestorías",
+                 "dias_contactado": 7},
+    "gremio": {"etiqueta": "Gremio o asociación", "plural": "Gremios",
+               "dias_contactado": 7},
+    "almacen": {"etiqueta": "Almacén de material", "plural": "Almacenes",
+                "dias_contactado": 7},
+    "otro": {"etiqueta": "Otro", "plural": "Otros", "dias_contactado": 3},
 }
 
 # Palabras que aparecen escritas en una lista hecha a mano y a que oficio van.
@@ -284,6 +312,9 @@ GUIONES: dict[str, dict] = {
                    "de entrada. Pero se pregunta, no se vende: el trato con el "
                    "despacho como canal llega cuando haya pilotos y S.L."),
         "canal": "email",
+        # El asunto que aprobó el founder el 2-oct-2026 tras probar otro.
+        "asunto": {"es": "Bynoesis, una startup para gestorías",
+                   "ca": "Bynoesis, una startup de Lleida per a gestories"},
         "es": ("Buenos días:\n\n"
                "Me llamo {yo} y estoy montando una herramienta para autónomos de "
                "oficios —fontaneros, electricistas, reformas— que les ordena las "
@@ -369,6 +400,9 @@ GUION_POR_ORIGEN = {
     ("gestoria", "contactado"): ("gestoria_recordatorio",),
     ("gremio", "lista"): ("gremio_presentacion",),
 }
+# Lo mismo, cuando la ficha dice qué es (`tipo`) en vez de deducirlo del origen:
+# una gestoría leída de la hoja tiene origen «su web», no «gestoría».
+GUION_POR_TIPO = GUION_POR_ORIGEN
 
 GUION_POR_ESTADO = {
     "lista": ("lista_referido", "lista_frio"),
@@ -578,9 +612,12 @@ def _dias_desde(valor) -> int | None:
     return (date.today() - cuando).days
 
 
-def siguiente_fecha(estado: str, desde: date | None = None) -> str:
+def siguiente_fecha(estado: str, desde: date | None = None,
+                    tipo: str | None = None) -> str:
     """Cuando toca volver a tocar a alguien que acaba de entrar en este estado."""
     dias = ESTADOS.get(estado, {}).get("dias", 3)
+    if estado == "contactado" and tipo in TIPOS:
+        dias = TIPOS[tipo]["dias_contactado"]
     return ((desde or date.today()) + timedelta(days=dias)).isoformat()
 
 
@@ -599,6 +636,15 @@ def enriquecer(prospect: dict) -> dict:
     p["origen_etiqueta"] = ORIGENES.get(p.get("origen") or "otro",
                                         ORIGENES["otro"])["etiqueta"]
     p["oficio_etiqueta"] = OFICIOS.get(p.get("oficio") or "", "")
+    tipo = p.get("tipo") if p.get("tipo") in TIPOS else "autonomo"
+    p["tipo"] = tipo
+    p["tipo_etiqueta"] = TIPOS[tipo]["etiqueta"]
+    # Dónde está, en una línea: es lo que se lee en la tarjeta y en la lista.
+    p["lugar"] = " · ".join(dict.fromkeys(
+        x for x in (p.get("poblacion"), p.get("provincia")) if x))
+    p["lengua"] = zonas.lengua_de(p.get("provincia"))
+    p["correo_verificado"] = zonas.correo_verificado(
+        p.get("correo_verificacion"))
     hoy = date.today().isoformat()
     p["vencido"] = bool(p.get("siguiente_el") and p["siguiente_el"] <= hoy
                         and meta["abierto"] and not p.get("baja"))
@@ -609,7 +655,8 @@ def enriquecer(prospect: dict) -> dict:
     p["debe_informar"] = bool(not origen["del_interesado"]
                               and not p.get("informado_el")
                               and not p.get("baja"))
-    claves = (GUION_POR_ORIGEN.get((p.get("origen"), estado))
+    claves = (GUION_POR_TIPO.get((tipo, estado))
+              or GUION_POR_ORIGEN.get((p.get("origen"), estado))
               or GUION_POR_ESTADO.get(estado, ()))
     p["guiones"] = [g for g in claves if g in GUIONES]
     return p
@@ -627,12 +674,16 @@ def resumen(prospects: list[dict]) -> dict:
     # «Alcanzado» de un peldano incluye a los que ya pasaron de largo: quien esta
     # en piloto tambien tuvo su conversacion. Contar solo el estado actual haria
     # que el embudo se vaciara solo al avanzar la gente.
+    # El objetivo (40 nombres, 20 conversaciones…) es el de los autónomos. Mil
+    # gestorías en la lista no son mil posibles clientes: contarlas aquí daría
+    # el primer peldaño por cubierto sin haber escrito un solo nombre.
+    autonomos = [p for p in vivos if p["tipo"] == "autonomo"]
     alcanzado = {}
     for indice, clave in enumerate(ORDEN_ESTADOS):
         if clave in ("dormido", "descartado"):
             continue
         alcanzado[clave] = sum(
-            1 for p in vivos
+            1 for p in autonomos
             if p.get("estado") in ORDEN_ESTADOS
             and ORDEN_ESTADOS.index(p["estado"]) >= indice
             and p.get("estado") not in ("dormido", "descartado")
@@ -654,8 +705,42 @@ def resumen(prospects: list[dict]) -> dict:
         "frios": frios,
         "sin_informar": [p for p in vivos if p["debe_informar"]],
         "embudo": embudo,
-        "parte": _parte(vivos, hoy, embudo, frios),
+        "hay_autonomos": bool(autonomos),
+        "parte": (_parte(vivos, hoy, embudo, frios) if autonomos or not vivos
+                  else _parte_canal(vivos, hoy, frios)),
     }
+
+
+def _parte_canal(vivos, hoy, frios) -> str:
+    """El parte cuando lo que se mira son gestorías, gremios o almacenes.
+
+    No se les pide un piloto: se les escribe por tandas y por zonas, y lo que
+    cuenta es cuántas quedan por escribir y cuáles han contestado.
+    """
+    pendientes = [p for p in vivos if p.get("estado") == "lista"]
+    contestaron = [p for p in vivos
+                   if p.get("estado") in ("cita", "hablado", "piloto", "carta",
+                                          "cliente")]
+    if hoy:
+        primero = hoy[0]
+        toca = ESTADOS[primero["estado"]]["siguiente"].lower()
+        return (f"Hoy toca volver a {len(hoy)} que ya tienen noticias tuyas. "
+                f"Empieza por {primero['nombre']}: {toca}.")
+    if pendientes:
+        zonas: dict[str, int] = {}
+        # La tanda se escribe por correo: la zona se elige entre quienes lo tienen.
+        for p in ([x for x in pendientes if x.get("email")] or pendientes):
+            zona = p.get("provincia") or "sin provincia"
+            zonas[zona] = zonas.get(zona, 0) + 1
+        zona, cuantas = max(zonas.items(), key=lambda par: par[1])
+        return (f"Tienes {len(vivos)} en la lista y {len(pendientes)} sin "
+                f"escribir. La zona con más por hacer es {zona}, con {cuantas}: "
+                f"la siguiente tanda de {LOTE_DIARIO} sale de ahí.")
+    if frios:
+        return (f"Están todos escritos, pero {len(frios)} llevan más de dos "
+                "semanas sin noticias tuyas.")
+    return (f"{len(vivos)} en la lista, todos escritos, y {len(contestaron)} "
+            "han contestado.")
 
 
 def _parte(vivos, hoy, embudo, frios) -> str:

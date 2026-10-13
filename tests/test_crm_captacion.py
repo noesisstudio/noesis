@@ -101,7 +101,7 @@ class ListaPegadaTests(unittest.TestCase):
 class GuionesTests(unittest.TestCase):
     """Los guiones se mandan a personas reales: no pueden tener huecos."""
 
-    # Los que sustituye `admin-crm.js`. Uno nuevo saldría literal en el mensaje.
+    # Los que sustituye `static/crm/crm.js`. Uno nuevo saldría literal en el mensaje.
     HUECOS = {"nombre", "yo", "quien", "oficio", "zona", "novedad"}
 
     def test_every_script_has_both_languages_and_known_holes(self):

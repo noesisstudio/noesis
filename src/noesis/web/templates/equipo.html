@@ -184,20 +184,15 @@ function workerModal(worker) {
        type:'password', value:'', placeholder:'Solo números'}
     ],
     onSubmit: async values => {
-      try {
-        const payload = {
-          name:values.name, phone:values.phone, color:values.color, role:values.role,
-          can_submit_costs: values.can_submit_costs === 'true',
-          can_view_assigned_budget: values.can_view_assigned_budget === 'true'
-        };
-        if (values.pin) payload.pin = values.pin;
-        await apiPost(editing ? `/workers/${worker.id}` : '/workers',
-          editing ? payload : {...payload, pin:values.pin});
-        await loadWorkers();
-      } catch (error) {
-        alert(error.message);
-        throw error;
-      }
+      const payload = {
+        name:values.name, phone:values.phone, color:values.color, role:values.role,
+        can_submit_costs: values.can_submit_costs === 'true',
+        can_view_assigned_budget: values.can_view_assigned_budget === 'true'
+      };
+      if (values.pin) payload.pin = values.pin;
+      await apiPost(editing ? `/workers/${worker.id}` : '/workers',
+        editing ? payload : {...payload, pin:values.pin});
+      await loadWorkers();
     }
   });
 }

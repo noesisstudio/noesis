@@ -831,6 +831,19 @@ def _split_client_with_the_ledger(business_id: int, args: dict) -> None:
             return  # el nombre entero ya es de alguien: no hay nada que cortar
     except ValueError:
         return  # varias fichas encajan: eso se resuelve preguntando, no cortando
+    # «Factura a la Marta López», «al Joan»: en catalán, y hablando, el nombre de
+    # una persona lleva artículo. No se quita a ciegas («La Caixa» lo lleva de
+    # verdad): solo si sin él el nombre es el de una ficha que ya existe.
+    sin_articulo = re.sub(r"^(?:(?:la|el|en|na)\s+|l')", "", crudo, flags=re.I)
+    if sin_articulo != crudo:
+        try:
+            ficha = db.resolve_client_reference(sin_articulo, business_id)
+        except ValueError:
+            ficha = None
+        if ficha:
+            args["cliente"] = ficha["name"]
+            args["cliente_id"] = ficha["id"]
+            return
     palabras = crudo.split()
     for corte in range(len(palabras) - 1, 0, -1):
         try:
