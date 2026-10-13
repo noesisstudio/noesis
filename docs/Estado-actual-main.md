@@ -47,7 +47,7 @@ Hoja, Añadir) y hay una demo autónoma con datos inventados generada desde la a
 Todo el código nuevo está en `src/noesis/crm/` y la guía en
 [`crm/README.md`](crm/README.md). **Local, sin commit y bloqueado:** necesita la
 migración 74 y el Financial Core fija el esquema en 73 (100 pruebas suyas fallan con
-ella). Actualizado sobre `main` acff183. **Resuelto en local el 13/10:** el historial financiero admite el esquema 74 (ver Decisiones); falta que la CI lo valide en PostgreSQL. La hoja
+ella). Actualizado sobre `main` acff183. **Resuelto en local el 13/10:** el historial financiero admite el esquema 74 (ver Decisiones), validado en SQLite y en PostgreSQL 16 local. La hoja
 real tampoco está conectada.
 
 ## 2026-10-04 — Fase1.9C: epoch/T0/fence (implementada y validada)

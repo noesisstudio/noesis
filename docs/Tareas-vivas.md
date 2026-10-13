@@ -3,8 +3,8 @@
 ## 2026-10-12 — Revisión de errores: dos decisiones pendientes
 
 - [x] Pin de esquema del Financial Core frente a la migración 74 del CRM: resuelto el
-  13/10 (ver Decisiones). Queda que la CI pase las matrices de PostgreSQL con el
-  esquema 74 antes de subir el CRM.
+  13/10 (ver Decisiones) y validado en PostgreSQL 16 local con las matrices del
+  historial antes de subir.
 - [ ] Comprobar en Railway si el servicio tiene `TZ=Europe/Madrid`. El reloj de tareas
   ya usa hora de Madrid, pero el código llama 126 veces a `date.today()` y 72 a
   `datetime.now()`, que siguen la hora del proceso. Si el contenedor va en UTC, de

@@ -19,8 +19,8 @@ el 74: `service.py`, `cutoff.py`, `importer.py` y `reconciliation.py`.
 - **Regla para la próxima migración ajena al Financial Core:** comprobar que no toca
   tablas financieras ni fuentes del historial, ampliar las cuatro listas y esa
   prueba, y dejarlo escrito aquí. Si las toca, necesita su propia fase y su ADR.
-- **Sin validar:** las matrices de PostgreSQL de 1.9B–1.9E con el esquema 74; las
-  ejecuta la CI.
+- **Validado en PostgreSQL 16 local (13/10):** las matrices de 1.9B–1.9E pasan con el
+  esquema 74 (143 pruebas). Detalle en Registro-QA.
 
 ## Planes por segmento y tarifa tachada con −50 % de lanzamiento (2026-10-12)
 

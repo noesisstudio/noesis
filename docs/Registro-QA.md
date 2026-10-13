@@ -20,8 +20,15 @@
   seguridad sale con un rechazo no recogido. Recorrido de las 20 pantallas de esa
   cuenta ya con datos, a 1280 y 390 px: sin errores ni desbordamiento.
 
-Sin probar: PostgreSQL y la CI (las matrices del historial con el esquema 74 solo
-corren allí), subida de documentos, importación de clientes, cobro de una factura
+- **PostgreSQL 16 descartable en Docker, mismos pasos que la CI:** migración con datos
+  históricos 32 → 74, humo de 36 rutas, Financial Core (6), operaciones (37),
+  persistencia de eventos (28), escritores prestados (18), emisión (27), cobros y banco
+  (41), recibidas y gastos (44), canales (50), y el historial con el esquema 74:
+  inventario (37), corte (50), importación (25) y reconciliación (31). Humo de versión
+  candidata con ida y vuelta de migraciones: correcto. Todo en verde.
+
+Sin probar: la CI de GitHub y el humo de código anterior sobre esquema nuevo
+(`postgres_legacy_smoke`, necesita la copia base), subida de documentos, importación de clientes, cobro de una factura
 emitida (hacen falta los datos fiscales del negocio), portal del trabajador, Safari y
 Firefox.
 
