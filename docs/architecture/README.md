@@ -1,5 +1,13 @@
 # Financial Core: punto de entrada y continuidad
 
+## 2026-10-13 — Backup V2 CRM74: corrective gates remotos
+
+[Orden y estado factual](RECOVERY-BACKUP-V2-CRM74-CI-corrective.md).
+Attempt1 BLOCKED por dos hashes públicos; no fallo de producto. Se autoriza un
+único commit y push de la misma rama para baseline exacta y gates de enlaces y
+whitespace. Nueva CI completa pendiente; el verde PG previo no certifica el
+nuevo SHA. No main, deploy, datos reales, providers, flags ni bridge.
+
 ## 2026-10-13 — Recovery Backup V2 port CRM74, exclusivamente local
 
 [Orden](RECOVERY-BACKUP-V2-CRM74-orden.md),

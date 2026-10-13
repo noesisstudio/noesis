@@ -1,5 +1,16 @@
 # Registro de QA
 
+## 2026-10-13 — Backup V2 CRM74: attempt1 bloqueado y gates correctivos
+
+Run38405811293: Tests i migracions FAILURE sólo en secrets, dos hashes públicos
+base/lineage de project-state. Los pasos posteriores no se ejecutaron. Job PG18
+SUCCESS:464 PASS,0 skips,0 FAIL/ERROR; grupo V2/identity70 PASS. No certifica
+el correctivo futuro. Checker nuevo reproduce audit original550 enlaces/0 rotos;
+cinco tests dirigidos y Ruff PASS. Controles negativos, scanner completo, verdad
+y rango se verifican antes del único commit autorizado. Resultado remoto final
+pendiente de workflow_dispatch nuevo completo, no suma ni rerun de attempt1.
+[Orden, resultados y evidencia](architecture/RECOVERY-BACKUP-V2-CRM74-CI-corrective.md).
+
 ## 2026-10-13 — Backup V2 CRM74: validación local fresca
 
 **BACKUP_V2_CRM74 LOCAL CODE-VERIFIED PASS**. Pasada general completa fresca:

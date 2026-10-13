@@ -1,5 +1,15 @@
 # AGENTS.md - Manual del proyecto Bynoesis
 
+> Orden vigente: BACKUP V2 CRM74 REMOTE CI CORRECTIVE GATES.
+> Un único commit correctivo y push normal de codex/recovery-backup-v2-crm74.
+> Leer [orden y estado](docs/architecture/RECOVERY-BACKUP-V2-CRM74-CI-corrective.md).
+> Sólo baseline exacta (dos hashes públicos), checker/tests de enlaces, workflow
+> y estado factual. No cambiar producto, migraciones, manifest, lineage o Mise.
+> CI nueva completa sobre el SHA final; no reutilizar resultados anteriores.
+> Stop ante tercer finding no previsto, necesidad de cambiar producto o main drift.
+> Sin main/merge/deploy/producción/Railway/QA/backups reales/providers/business15,
+> flags, A75–F80, bridge, G-LIVE/H. Encabezados inferiores son históricos.
+
 > Orden vigente: únicamente RECOVERY BACKUP V2 PORT CRM74 local.
 > Leer [orden](docs/architecture/RECOVERY-BACKUP-V2-CRM74-orden.md),
 > [adenda/cierre](docs/architecture/RECOVERY-BACKUP-V2-CRM74-port.md) y arquitectura.

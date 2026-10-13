@@ -1,5 +1,14 @@
 # Decisiones
 
+## 2026-10-13 — Excepciones de hashes públicos y gates remotos
+
+El founder autoriza exactamente dos excepciones detect-secrets en project-state,
+por archivo/tipo/huella, is_verified=true/is_secret=false; ninguna exclusión global.
+Enlaces inline del delta reproducen audit550/0 sin red; anchors no se validan.
+Whitespace usa base real de evento; dispatch usa merge-base con origin/main.
+Un único correctivo sin producto; sólo una CI nueva completa certifica su SHA.
+[Orden](architecture/RECOVERY-BACKUP-V2-CRM74-CI-corrective.md).
+
 ## Backup V2 se porta sobre CRM74, sin reescribir historia (2026-10-13)
 
 Se conserva el delta funcional de V2 histórico, adaptando sólo admin/CI y la

@@ -40,6 +40,22 @@
       "autoaudit_fail": 0
     },
     "remote_ci": false,
+    "remote_ci_attempt1": {
+      "run_id": 38405811293,
+      "status": "BLOCKED",
+      "reason": "Exactly two confirmed public base/lineage hashes; Hex High Entropy String in docs/project-state.json",
+      "general": "FAILURE at secrets; later gates not run",
+      "postgres": "SUCCESS; 464 PASS; V2/identity70 PASS; not final evidence for corrective SHA"
+    },
+    "remote_ci_corrective": {
+      "status": "PREPARED; final fresh CI pending",
+      "scope": "exact two baseline exceptions, documentation links checker/tests, event-bound diff gate, factual documentation",
+      "product_changes": false,
+      "history": "one appended corrective commit; preserve original port and base",
+      "receipt": "fresh workflow_dispatch run/head/jobs delivered in external final report; no second documentation commit authorized",
+      "report": "docs/architecture/RECOVERY-BACKUP-V2-CRM74-CI-corrective.md",
+      "sharp": "SEPARATE SECURITY DEBT / PRE-PRODUCTION TRIAGE REQUIRED; unchanged"
+    },
     "deployed": false,
     "real_data_access": false,
     "new_migration": false,

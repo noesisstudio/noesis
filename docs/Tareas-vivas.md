@@ -1,5 +1,13 @@
 # Tareas vivas
 
+## 2026-10-13 — Backup V2 CRM74 corrective remoto
+
+Validar controles negativos, scanner/links/diff/truth; publicar un único correctivo
+sin reescribir historia y comprobar nueva CI completa del mismo SHA. Detener ante
+drift remoto, tercer finding o necesidad de cambiar producto. Alert sharp abierta:
+SEPARATE SECURITY DEBT / PRE-PRODUCTION TRIAGE REQUIRED. Sin main/deploy/real.
+[Orden y estado](architecture/RECOVERY-BACKUP-V2-CRM74-CI-corrective.md).
+
 ## 2026-10-13 — Después del port Backup V2 CRM74
 
 [Informe y límites](architecture/RECOVERY-BACKUP-V2-CRM74-port.md).

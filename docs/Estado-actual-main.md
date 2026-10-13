@@ -1,5 +1,12 @@
 # Estado actual del producto
 
+## 2026-10-13 — Candidato Backup V2 CRM74: correctivo CI, main intacto
+
+Rama codex/recovery-backup-v2-crm74 publicada; attempt1 BLOCKED por dos hashes
+públicos en secrets. PG18 PASS previo; nueva CI completa del correctivo pendiente.
+Autorizado un único commit de gates/documentación y push a esa rama. No merge ni
+despliegue; main remoto reservado en base678bd3f. [Detalle](architecture/RECOVERY-BACKUP-V2-CRM74-CI-corrective.md).
+
 ## 2026-10-13 — Candidato local Backup V2 CRM74
 
 [Port y validación](architecture/RECOVERY-BACKUP-V2-CRM74-port.md) sobre current

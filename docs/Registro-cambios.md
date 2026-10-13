@@ -1,5 +1,16 @@
 # Registro de cambios
 
+## 2026-10-13 — Backup V2 CRM74: corrección de gates remotos
+
+Attempt1 bloqueado sólo por falsos positivos documentales. Dos excepciones
+exactas generadas por detect-secrets, sin cambiar configuración del scanner.
+Nuevo checker de enlaces internos sin red y cinco tests; CI resuelve base según
+PR/push/dispatch y valida enlaces y whitespace del rango real. Backend, CRM,
+manifest, lineage, migraciones y toolchain intactos. Pruebas locales y límites en
+[estado correctivo](architecture/RECOVERY-BACKUP-V2-CRM74-CI-corrective.md). CI completa nueva pendiente; riesgo limitado a gates.
+Diagnóstico por archivo/detector, sin contenido sensible; rollback del correctivo
+por revert explícito, sin reescribir historia ni modificar main.
+
 ## 2026-10-13 — Recovery Backup V2 port local sobre current main CRM74
 
 Objetivo: archive PostgreSQL18 nativo autocontenido sin sustituir CRM/producto.

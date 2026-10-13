@@ -1,5 +1,13 @@
 # Mapa de código
 
+## 2026-10-13 — Gates documentales del candidato Backup V2 CRM74
+
+scripts/check_doc_links.py verifica enlaces inline locales del delta sin red;
+tests/test_doc_links.py cubre destino válido/ausente, esquemas externos, fragmentos
+y rutas inválidas. Workflow CI calcula base por evento para links/diff. El scanner
+scripts/check_secrets.py conserva lógica/configuración y excepciones exactas.
+No cambio de código de producto. [Detalle](architecture/RECOVERY-BACKUP-V2-CRM74-CI-corrective.md).
+
 ## 2026-10-13 — Backup V2 CRM74
 
 `web/postgres_native_backup.py`: archive/manifest2/restore físico sin migrations.
