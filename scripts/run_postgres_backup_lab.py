@@ -30,7 +30,9 @@ CASES = [
     ("History reconciliation", ["-m", "unittest", "tests.postgres_financial_history_reconciliation.HistoryReconciliationPostgres"]),
     ("legacy catalog53", ["tests/postgres_legacy_smoke.py"]),
     ("privacy + rollback", ["tests/postgres_release_smoke.py"]),
-    ("POSTGRES_BACKUP_V2_CRM74", ["-m", "unittest", "tests.postgres_backup_v2", "tests.test_postgres_backup_v2", "tests.test_postgres_backup_identity", "-v"]),
+    ("A75 Readiness", ["-m", "unittest", "tests.postgres_financial_readiness", "-v"]),
+    ("Lineage Foundation", ["-m", "unittest", "tests.postgres_schema_lineage", "-v"]),
+    ("POSTGRES_BACKUP_V2_CANONICAL75", ["-m", "unittest", "tests.postgres_backup_v2", "tests.test_postgres_backup_v2", "tests.test_postgres_backup_identity", "-v"]),
 ]
 
 
@@ -64,7 +66,7 @@ def main():
                 current_env["PYTHONPATH"] = str(Path(".legacy-baseline/src").resolve())
             started = time.monotonic()
             result = subprocess.run([sys.executable, *args], env=current_env, shell=False,
-                                    capture_output=True, timeout=900)  # nosec B603
+                                    capture_output=True, timeout=1800)  # nosec B603
             print(name, "PASS" if result.returncode == 0 else "FAIL", flush=True)
             output = (result.stdout + result.stderr).decode(errors="replace")
             # Sólo fixtures sintéticos. Conservar el resultado íntegro para CI.

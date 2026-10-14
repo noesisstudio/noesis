@@ -1,0 +1,215 @@
+"""Foundation: PostgreSQL18 propio, sin outbound; locks y rollback reales."""
+
+from concurrent.futures import ThreadPoolExecutor
+import os
+from pathlib import Path
+import subprocess
+import sys
+import threading
+import time
+import unittest
+from unittest.mock import patch
+from urllib.parse import quote
+from uuid import uuid4
+
+from noesis import config, db, migrations
+from noesis.schema_lineage import inspect, require_runtime, SchemaLineageError, MIGRATION_LOCK_KEY
+from tests import postgres_financial_operations as operations_pg
+
+
+class SchemaLineagePostgres(unittest.TestCase):
+    setUpClass = classmethod(operations_pg.FinancialOperationsPostgres.setUpClass.__func__)
+    tearDownClass = classmethod(operations_pg.FinancialOperationsPostgres.tearDownClass.__func__)
+
+    def fresh(self, target):
+        """Cada caso tiene namespace vacío distinto; jamás un esquema real."""
+        namespace = "lineage_case_" + uuid4().hex
+        with db.get_conn() as conn:
+            conn.execute("CREATE SCHEMA " + namespace)
+        url = self.original_url + ("&" if "?" in self.original_url else "?") + "options=" + quote("-csearch_path=" + namespace)
+        db.close_pool()
+        settings = patch.object(config, "DATABASE_URL", url)
+        settings.start()
+        def cleanup():
+            db.close_pool()
+            settings.stop()
+            with db.get_conn() as conn:
+                conn.execute("DROP SCHEMA " + namespace + " CASCADE")
+            db.close_pool()
+        self.addCleanup(cleanup)
+        if target:
+            self.assertEqual(migrations.upgrade(target), target)
+        return namespace
+
+    def test_zero_73_74_75_and_empty_downgrade(self):
+        self.fresh(0)
+        for target in (73, 74, 75):
+            self.assertEqual(migrations.upgrade(target), target)
+            with db.get_conn() as conn:
+                self.assertEqual(inspect(conn).schema_version, target)
+        self.assertEqual(migrations.downgrade(74), 74)
+        self.assertEqual(migrations.upgrade(), 75)
+
+    def test_crm_drop_readd_preserves_logical_columns_despite_attnum_holes(self):
+        self.fresh(75)
+        for _ in range(2):
+            self.assertEqual(migrations.downgrade(73), 73)
+            self.assertEqual(migrations.upgrade(), 75)
+            with db.get_conn() as conn:
+                self.assertEqual(require_runtime(conn).schema_version, 75)
+
+    def test_known_old68_delete_repaired_but_unknown_function_never_adopted(self):
+        from noesis.schema_objects import OLD_CASH_DELETE
+        self.fresh(68)
+        with db.get_conn() as conn:
+            conn.execute(OLD_CASH_DELETE.replace("RETURN NEW", "RETURN NULL"))
+        with self.assertRaisesRegex(SchemaLineageError, "OBJECT_MISMATCH"):
+            migrations.upgrade()
+        with db.get_conn() as conn:
+            conn.execute(OLD_CASH_DELETE)
+        self.assertEqual(migrations.upgrade(), 75)
+        with db.get_conn() as conn:
+            self.assertEqual(require_runtime(conn).schema_version, 75)
+
+    def test_savepoint_before_lock_rejected_no_rollback_or_isolation_change(self):
+        self.fresh(75)
+        with db.get_conn() as conn:
+            conn.execute("SAVEPOINT caller_boundary")
+            for callback in (lambda: require_runtime(conn), lambda: migrations.upgrade_connection(conn)):
+                with self.assertRaisesRegex(SchemaLineageError, "TX_PROTOCOL_REQUIRED"):
+                    callback()
+            conn.execute("ROLLBACK TO SAVEPOINT caller_boundary")
+            self.assertEqual(conn.execute("SHOW transaction_isolation").fetchone()[0], "read committed")
+
+    def test_legacy74_and_legacy75_rejected(self):
+        self.fresh(74)
+        with db.get_conn() as conn:
+            conn.execute("UPDATE schema_migrations SET name='evaluacion_readiness_financiera' WHERE version=74")
+        for stage in (74, 75):
+            if stage == 75:
+                with db.get_conn() as conn:
+                    conn.execute("INSERT INTO schema_migrations VALUES (75,'resoluciones_antecedentes_financieros',now())")
+            with self.assertRaisesRegex(SchemaLineageError, "LEGACY_FINANCIAL"):
+                migrations.upgrade()
+        self.assertFalse(migrations.is_current())
+
+    def test_warm_lexer_never_caches_live_integrity_or_missing_guards(self):
+        self.fresh(75)
+        for _ in range(2):
+            with db.get_conn() as conn:
+                self.assertEqual(require_runtime(conn).schema_version, 75)
+        with db.get_conn() as conn:
+            conn.execute("ALTER TABLE businesses ADD COLUMN unrecognized_column INTEGER")
+        with db.get_conn() as conn, self.assertRaisesRegex(SchemaLineageError, "OBJECT_MISMATCH"):
+            require_runtime(conn)
+        with db.get_conn() as conn:
+            conn.execute("ALTER TABLE businesses DROP COLUMN unrecognized_column")
+        with db.get_conn() as conn:
+            self.assertEqual(require_runtime(conn).schema_version, 75)
+        with db.get_conn() as conn:
+            conn.execute("DROP TRIGGER financial_readiness_evaluations_insert ON financial_readiness_evaluations")
+        with db.get_conn() as conn, self.assertRaisesRegex(SchemaLineageError, "OBJECT_MISMATCH"):
+            require_runtime(conn)
+        self.assertFalse(migrations.is_current())
+
+    def test_row75_without_objects_cannot_be_adopted(self):
+        self.fresh(74)
+        with db.get_conn() as conn:
+            conn.execute("INSERT INTO schema_migrations VALUES (75,'evaluacion_readiness_financiera',now())")
+        with self.assertRaisesRegex(SchemaLineageError, "OBJECT_MISMATCH"):
+            migrations.upgrade()
+
+    def test_two_migrators_wait_then_revalidate_without_duplicate_ddl(self):
+        self.fresh(74)
+        acquired = threading.Event()
+        release = threading.Event()
+        original = migrations._upgrade_readiness75
+        calls = []
+        def observed(conn):
+            calls.append("DDL")
+            acquired.set()
+            self.assertTrue(release.wait(10))
+            original(conn)
+        entries = migrations.MIGRATIONS[:-1] + ((75, "evaluacion_readiness_financiera", observed, migrations._downgrade_readiness75),)
+        with patch.object(migrations, "MIGRATIONS", entries), ThreadPoolExecutor(max_workers=2) as workers:
+            first = workers.submit(migrations.upgrade)
+            self.assertTrue(acquired.wait(10))
+            second = workers.submit(migrations.upgrade)
+            time.sleep(0.4)
+            self.assertFalse(second.done())
+            release.set()
+            self.assertEqual(first.result(20), 75)
+            self.assertEqual(second.result(20), 75)
+        self.assertEqual(calls, ["DDL"])
+
+    def test_real_30_second_advisory_timeout_without_ddl(self):
+        self.fresh(74)
+        with db.get_conn() as holder:
+            holder.execute("SELECT pg_advisory_xact_lock(?)", (MIGRATION_LOCK_KEY,))
+            started = time.monotonic()
+            with self.assertRaisesRegex(SchemaLineageError, "MIGRATION_LOCK_TIMEOUT"):
+                migrations.upgrade()
+            duration = time.monotonic() - started
+            self.assertGreaterEqual(duration, 30)
+            self.assertLess(duration, 36)
+        with db.get_conn() as conn:
+            self.assertEqual(inspect(conn).schema_version, 74)
+
+    def test_share_before_repeatable_snapshot_read_only_no_isolation_change(self):
+        self.fresh(75)
+        with db.get_conn() as conn:
+            conn.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
+            self.assertEqual(require_runtime(conn).schema_version, 75)
+            self.assertEqual(conn.execute("SHOW transaction_isolation").fetchone()[0], "repeatable read")
+            self.assertEqual(conn.execute("SHOW transaction_read_only").fetchone()[0], "on")
+
+    def test_late_lock_on_snapshot_rejected_without_restart(self):
+        self.fresh(75)
+        with db.get_conn() as conn:
+            conn.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ")
+            conn.execute("SELECT 1")
+            with self.assertRaisesRegex(SchemaLineageError, "SCHEMA_TX_PROTOCOL_REQUIRED"):
+                require_runtime(conn)
+            self.assertEqual(conn.execute("SHOW transaction_isolation").fetchone()[0], "repeatable read")
+
+    def test_failure_after_ddl_rolls_back_metadata_and_tables(self):
+        self.fresh(74)
+        def failure(conn):
+            migrations._upgrade_readiness75(conn)
+            raise RuntimeError("synthetic crash boundary")
+        entries = migrations.MIGRATIONS[:-1] + ((75, "evaluacion_readiness_financiera", failure, migrations._downgrade_readiness75),)
+        with patch.object(migrations, "MIGRATIONS", entries), self.assertRaisesRegex(RuntimeError, "synthetic crash"):
+            migrations.upgrade()
+        with db.get_conn() as conn:
+            self.assertEqual(inspect(conn).schema_version, 74)
+        self.assertEqual(migrations.upgrade(), 75)
+
+    def _crash(self, boundary):
+        self.fresh(74)
+        environment = {**os.environ, "DATABASE_URL": config.DATABASE_URL,
+                       "NOESIS_DATABASE_URL": config.DATABASE_URL}
+        child = subprocess.Popen([sys.executable, "-m", "tests.schema_lineage_worker", boundary],
+                                 cwd=Path(__file__).parents[1], env=environment,
+                                 stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE, text=True)
+        try:
+            self.assertEqual(child.stdout.readline().strip(), "READY")
+            child.kill()
+            child.communicate(timeout=20)
+            with db.get_conn() as conn:
+                self.assertEqual(inspect(conn).schema_version, 74)
+            self.assertEqual(migrations.upgrade(), 75)
+        finally:
+            if child.poll() is None:
+                child.kill()
+            child.communicate()
+
+    def test_process_crash_after_ddl_before_registry(self):
+        self._crash("before_registry")
+
+    def test_process_crash_after_registry_before_commit(self):
+        self._crash("after_registry")
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -7,13 +7,19 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from uuid import uuid4
 from unittest.mock import Mock, patch
 
 from psycopg import sql
 from psycopg.conninfo import make_conninfo
 from psycopg.rows import dict_row
 
-from noesis import db, migrations
+from noesis import config, db, migrations
+from noesis.core.persistence import FinancialSession
+from noesis.financial_activation.contracts import Capability, Profile
+from noesis.financial_activation.evaluator import FinancialReadinessEvaluator
+from noesis.financial_operations.contracts import Principal
+from noesis.schema_lineage import require_runtime
 from noesis.web import backups, postgres_native_backup as native
 from noesis.web import postgres_backup_tools as tools
 from noesis.web.postgres_backup_identity import LEGACY_FINANCIAL, expected_identities, describe
@@ -39,8 +45,26 @@ class PostgresBackupV2(unittest.TestCase):
         with cls.source.connection() as conn:
             conn.row_factory = dict_row
             migrations.upgrade_connection(db.Connection(conn, "postgres"))
-        cls.archive74 = cls.folder / "source74.pgdump"
-        cls.manifest74 = native.create(cls.source.dsn, cls.archive74, backups._create_documents_backup,
+        # Evidencia A75 sintética poblada: no basta un roundtrip de tablas vacías.
+        db.close_pool()
+        try:
+            with patch.object(config, "DATABASE_URL", cls.source.dsn):
+                with db.get_conn() as conn:
+                    conn.execute("SELECT setval(pg_get_serial_sequence('businesses','id'),200000)")
+                business = db.create_business("A75 synthetic restore")
+                cls.bid = business["id"]
+                if cls.bid == 15:
+                    raise AssertionError("Business piloto reservado")
+                db.set_trial(cls.bid, days=14)
+                user = db.create_user("a75-restore@example.test", "fixture", cls.bid)
+                with db.get_conn() as conn:
+                    cls.evaluation = FinancialReadinessEvaluator(FinancialSession(conn), cls.bid).evaluate(
+                        Principal(user["id"], 0), uuid4(), Profile((Capability.EXPENSE_CONFIRM,)),
+                        code_version="synthetic-restore")
+        finally:
+            db.close_pool()
+        cls.archive75 = cls.folder / "source75.pgdump"
+        cls.manifest75 = native.create(cls.source.dsn, cls.archive75, backups._create_documents_backup,
                                        backups._verify_documents_backup)
         with cls.source.connection() as conn:
             conn.execute("CREATE SCHEMA future")
@@ -61,7 +85,7 @@ class PostgresBackupV2(unittest.TestCase):
             conn.execute("INSERT INTO future.parent(extra,amount) VALUES ('open',1234567890123.4567)")
             conn.execute("INSERT INTO future.child VALUES (1,1)")
             conn.execute("SELECT setval('future.parent_id_seq', 500, true)")
-        cls.archive = cls.folder / "unknown-objects74.pgdump"
+        cls.archive = cls.folder / "unknown-objects75.pgdump"
         cls.manifest = native.create(cls.source.dsn, cls.archive, backups._create_documents_backup,
                                     backups._verify_documents_backup)
         cls.target_context = tools.disposable_target()
@@ -84,21 +108,51 @@ class PostgresBackupV2(unittest.TestCase):
     def test_B_restore18(self):
         self.assertIn("18.6", self.result["pg_restore_version"])
 
-    def test_C_backup74_restore74(self):
-        result = native.verify(self.archive74, backups._verify_documents_backup)
-        self.assertEqual(result["schema_version"], 74)
+    def test_C_backup75_restore75(self):
+        result = native.verify(self.archive75, backups._verify_documents_backup)
+        self.assertEqual(result["schema_version"], 75)
         self.assertEqual(result["technical_integrity"], "PASS")
 
-    def test_D_unknown_objects74_restore_runner74(self):
-        self.assertEqual(migrations.LATEST_VERSION, 74)
-        self.assertEqual(self.result["schema_version"], 74)
+    def test_D_unknown_objects75_restore_runner75(self):
+        self.assertEqual(migrations.LATEST_VERSION, 75)
+        self.assertEqual(self.result["schema_version"], 75)
         self.assertEqual(self.result["privacy_status"], "NO_E_INSTALLED")
         self.assertFalse(self.result["serving_authorized"])
         self.assertFalse(self.result["g_real_evidence"])
-        self.assertEqual(self.result["schema_lineage_id"], "CANONICAL_CRM74")
+        self.assertEqual(self.result["schema_lineage_id"], "CANONICAL_CRM74_FINANCIAL75_80")
         self.assertEqual(self.manifest["migration_identities"], expected_identities())
         self.assertEqual(self.manifest["manifest_contract_version"], 2)
         self.assertEqual(self.result["schema_lineage_fingerprint"], self.manifest["schema_lineage_fingerprint"])
+
+    def test_populated_A75_restore_preserves_hash_binding_and_off_state(self):
+        db.close_pool()
+        try:
+            with patch.object(config, "DATABASE_URL", self.target.dsn):
+                with db.get_conn() as conn:
+                    observed = require_runtime(conn)
+                    self.assertEqual(observed.schema_version, 75)
+                    self.assertEqual(observed.binding(), self.evaluation["context"]["schema_binding"])
+                    row = conn.execute("SELECT result_canonical,content_hash FROM financial_readiness_evaluations WHERE business_id=?", (self.bid,)).fetchone()
+                    self.assertEqual(row["content_hash"], self.evaluation["content_hash"])
+                    body = json.loads(row["result_canonical"])
+                    self.assertEqual(body["context"], self.evaluation["context"])
+                    self.assertEqual(body["capabilities"], self.evaluation["capabilities"])
+                    control = conn.execute("SELECT state,activation_generation,ever_enabled FROM financial_activation_control WHERE business_id=?", (self.bid,)).fetchone()
+                    self.assertEqual((control["state"], control["activation_generation"], control["ever_enabled"]), ("off", 0, False))
+        finally:
+            db.close_pool()
+        self.assertEqual(self.result["privacy_status"], "NO_E_INSTALLED")
+        self.assertFalse(self.result["serving_authorized"])
+
+    def test_corrupt_registry_shape_cannot_claim_canonical75_backup(self):
+        with tools.disposable_target() as source:
+            with source.connection() as raw:
+                raw.row_factory = dict_row
+                migrations.upgrade_connection(db.Connection(raw, "postgres"))
+                raw.execute("ALTER TABLE schema_migrations DROP CONSTRAINT schema_migrations_pkey")
+            with self.assertRaisesRegex(tools.BackupError, "METADATA_INCOMPLETE"):
+                native.create(source.dsn, self.folder / "corrupt-registry75.pgdump",
+                              backups._create_documents_backup, backups._verify_documents_backup)
 
     def test_E_unknown_table(self):
         with self.target.connection() as conn:
@@ -139,7 +193,7 @@ class PostgresBackupV2(unittest.TestCase):
 
     def test_N_schema_version(self):
         with self.target.connection() as conn:
-            self.assertEqual(conn.execute("SELECT max(version) FROM schema_migrations").fetchone()[0], 74)
+            self.assertEqual(conn.execute("SELECT max(version) FROM schema_migrations").fetchone()[0], 75)
 
     def test_O_missing_archive(self):
         path = self.copy_set()
@@ -242,7 +296,7 @@ class PostgresBackupV2(unittest.TestCase):
             with self.assertRaisesRegex(tools.BackupError, "IDENTITY_MISMATCH"):
                 native.restore(path, target, backups._verify_documents_backup)
 
-    def test_v1_74_supported_but_unknown_table_74_rejected(self):
+    def test_v1_75_supported_but_unknown_table_75_rejected(self):
         with tools.disposable_target() as source:
             with source.connection() as conn:
                 conn.row_factory = dict_row
@@ -345,11 +399,11 @@ class PostgresBackupV2(unittest.TestCase):
         original = manifest_path.read_bytes()
         result = native.verify(path, backups._verify_documents_backup)
         self.assertEqual(result["manifest_contract_version"], 1)
-        self.assertEqual(result["schema_lineage_id"], "CANONICAL_CRM74")
+        self.assertEqual(result["schema_lineage_id"], "CANONICAL_CRM74_FINANCIAL75_80")
         self.assertEqual(manifest_path.read_bytes(), original)
         self.assertFalse(result["serving_authorized"])
 
-    def test_crm74_registry_timestamp_rows_survive_exactly(self):
+    def test_canonical75_registry_timestamp_rows_survive_exactly(self):
         with self.source.connection() as source, self.target.connection() as target:
             query = "SELECT version,name,applied_at FROM public.schema_migrations ORDER BY version"
             self.assertEqual(source.execute(query).fetchall(), target.execute(query).fetchall())
@@ -377,14 +431,14 @@ class PostgresBackupV2(unittest.TestCase):
             self.assertEqual(result["schema_lineage_fingerprint"], manifest["schema_lineage_fingerprint"])
             self.assertFalse(result["serving_authorized"])
 
-    def test_postgres_migration_paths_0_32_73_to74(self):
+    def test_postgres_migration_paths_0_32_73_to75(self):
         for start in (0, 32, 73):
             with self.subTest(start=start), tools.disposable_target() as source:
                 with source.connection() as conn:
                     conn.row_factory = dict_row
                     wrapped = db.Connection(conn, "postgres")
                     migrations.upgrade_connection(wrapped, start)
-                    self.assertEqual(migrations.upgrade_connection(wrapped), 74)
+                    self.assertEqual(migrations.upgrade_connection(wrapped), 75)
                     rows = conn.execute("SELECT version,name FROM schema_migrations ORDER BY version").fetchall()
                     self.assertEqual([[r["version"], r["name"]] for r in rows], expected_identities())
 

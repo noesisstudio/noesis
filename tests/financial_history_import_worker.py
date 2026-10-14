@@ -22,6 +22,8 @@ def main():
             or config.IS_PRODUCTION
         ):
             raise RuntimeError("Solo PG sintético local.")
+    from tests.synthetic_schema_profiles import enable
+    enable()
     args = json.loads(sys.argv[1])
     bid = args["business_id"]
     principal = Principal(args["user_id"], 0)

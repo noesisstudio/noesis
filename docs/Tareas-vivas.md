@@ -1,5 +1,33 @@
 # Tareas vivas
 
+## 2026-10-14 — A75 REMOTE VALIDATION PENDING
+
+[Orden remota](architecture/FASE-1.10A75-remote-orden.md). Commit candidato y
+publicación exclusivamente de codex/phase-1-10a75 autorizados; no equivalen a PASS.
+47 archivos congelados verificados sin drift antes de preparar CI. Sólo cambia
+el harness ci.yml: logs unittest detallados, budgets180min por job, flags OFF
+explícitos y gates independientes tras instalación satisfactoria, sin omisiones
+por un gate previo fallido. No cambia lógica funcional ni scripts/tests existentes.
+Full Python/CRM/Node y20 etapas PostgreSQL18.6 desde cero pendientes; recibo final
+externo ligado al SHA remoto exacto, sin commit documental posterior. No reparar
+WSL. Detener ante fallo CI; ningún commit correctivo sin nueva autorización.
+Main remoto reservado678bd3f; sin merge/deploy/real/providers/flags/B76–F80/bridge/G-LIVE/H.
+Sharp HIGH sigue SEPARATE SECURITY DEBT / PRE-PRODUCTION TRIAGE REQUIRED.
+
+
+## 2026-10-13 — Bloqueo A75
+
+Resolver infraestructura WSL sin afectar QA real; repetir full Python/Node/CRM
+y20 etapas PG18 desde cero, después gates/cierre y commit local. No sumar
+parciales ni iniciar B76. [Bloqueo y recibos](architecture/FASE-1.10A75-cierre.md).
+
+## 2026-10-13 — Sólo Foundation + A75 local
+
+Cerrar full suite fresca, PG18/crashes/V2 canonical75, seguridad/verdad/enlaces/AST
+y autoauditoría, después commit local. Publicación/review y B76 requieren nueva
+orden. Nada de producción/QA/copias reales/providers/piloto/flags. [Cierre](architecture/FASE-1.10A75-cierre.md).
+Sharp HIGH: SEPARATE SECURITY DEBT / PRE-PRODUCTION TRIAGE REQUIRED, sin cambios.
+
 ## 2026-10-13 — Backup V2 CRM74 corrective remoto
 
 Validar controles negativos, scanner/links/diff/truth; publicar un único correctivo

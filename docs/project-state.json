@@ -69,7 +69,7 @@
   "conversation_corrections_candidate_2026_09_24": "Local, no publicado: campos compuestos sobre propuestas existentes, consultas fiscales sin coincidencias parciales, concepto e IVA por linea. 70 regresiones dirigidas y suite completa local de 1197 tests correctas (1012.404 s); ultimo ajuste de interrogacion revalidado con 6 casos. Ruff, secretos y verdad documental correctos. Sin migracion, dependencias, proveedores ni cambios de flags. Meta real y memoria por actor pendientes.",
   "reliability_hotfix_2026_09_24": "df113b1: fechas compatibles PostgreSQL, correcciones multilínea sin pérdida de detalle y rollback 58 aditivo bloqueado ante borradores incompletos. CI 36012914685 verde: 1189 tests en 352.518 s, 36 rutas PostgreSQL, rollback y seguridad. Sin cambios de flags ni proveedores.",
   "product_stage": "MVP y bloque de fiabilidad desplegados; piloto real controlado pendiente",
-  "schema_version": 74,
+  "schema_version": 75,
   "crm_captacion_2026_10_05": "Local, sin desplegar: /admin/crm visual (vista por tipo, cifras, embudo, ritmo semanal, provincias, tablero arrastrable, tanda por zonas, lista con filtros) y unido a la hoja de Google por enlace de solo lectura con lectura diaria 07:30; la hoja lee el estado con IMPORTDATA por direccion con clave (solo huella en base). Codigo en src/noesis/crm/, esquema 74 aditivo (tipo, datos de hoja, sales_sheets, sales_feeds, sales_suppressions). Pagina organizada como dashboard por apartados con ancla; demo autonoma con datos inventados generada desde la propia app (noesis.crm.demo) y publicada en privado para el founder. 88 pruebas nuevas en tests/crm. Hoja real Leads sin conectar; PostgreSQL pendiente de CI. BLOQUEADO: el Financial Core fija el esquema en 73 y con la migracion 74 del CRM fallan 100 pruebas de test_financial_history*; el resto (1786) pasa. Actualizado sobre main acff183. No subir a main hasta resolverlo; verified_test_count sin tocar. ACTUALIZACION 2026-10-13: bloqueo resuelto en local con autorizacion del founder; las cuatro guardas de financial_history admiten el esquema 74 porque la migracion solo toca tablas sales_*; test_financial_history* vuelve a pasar entero (169 pruebas, 2 skips existentes). Validado tambien en PostgreSQL 16 local con los pasos de la CI (migracion 32->74, humo y 143 pruebas del historial).",
   "conversation_transport_candidate_2026_09_24": "Local no publicado: esquemas 59/60, memoria por actor y transporte previo a vinculacion. NOESIS_CONVERSATION_ISOLATION_ENABLED y NOESIS_WHATSAPP_INBOX_ENABLED false por defecto. FIFO, acuse tras commit, incidencias sin replay automatico. 96 pruebas dirigidas correctas (71.801 s) y 460 backend/webhook correctas (397.517 s); Ruff, secretos y verdad documental correctos. Suite completa 1197 corresponde al bloque previo. Requiere CI PostgreSQL, procedimiento de revision/retencion y Meta real antes de activar.",
   "verified_test_count": 1925,
@@ -1179,5 +1179,46 @@
         "closure_addenda_only_documentation": true
       }
     }
+  },
+  "schema_lineage_a75_candidate": {
+    "status": "REMOTE_VALIDATION_PENDING",
+    "branch": "codex/phase-1-10a75",
+    "base_ref": "ac6a03d",
+    "semantic_source_ref": "c910616",
+    "implemented_physical_latest": 75,
+    "production_schema_unchanged": 74,
+    "migration74": "captacion_hoja_y_tipo",
+    "migration75": "evaluacion_readiness_financiera",
+    "canonical75_fingerprint": "289b8eb580edd4c45d2de40233ffd7dfc193999b10f49825661cba18905696a1",
+    "report": "docs/architecture/FASE-1.10A75-cierre.md",
+    "parity": "docs/architecture/FASE-1.10A75-parity.md",
+    "full_fresh_suite": "PENDING - authoritative fresh Linux/PostgreSQL18.6 CI on candidate SHA",
+    "postgres_focused_cases": 37,
+    "postgres_focused_seconds": 370.302,
+    "new_evaluation_version": 2,
+    "schema_binding_version": 1,
+    "profile_version": 1,
+    "policy_version": 1,
+    "flags_changed": false,
+    "deployed": false,
+    "real_data_access": false,
+    "future76_80_implemented": false,
+    "bridge": false,
+    "pushed": false,
+    "final_commit_created": false,
+    "final_directed_windows_cases": 74,
+    "final_directed_windows_seconds": 161.594,
+    "postgres_final_complete": false,
+    "infrastructure_error": "Windows Event1000 wsl.exe/wslservice.exe c00000fd; 2026-10-13 22:59:59 and 23:15:08",
+    "technical_fixture_integrity": "TECHNICAL_ONLY - never VERIFIED/runtime/binding",
+    "general_collected_expected": 2004,
+    "remote_validation_order": "docs/architecture/FASE-1.10A75-remote-orden.md",
+    "remote_candidate_publication_authorized": true,
+    "functional_freeze_verified_files": 47,
+    "remote_ci_harness_changes": [
+      "ci.yml only: verbose full suite; 180min budgets; independent gates; explicit OFF flags"
+    ],
+    "no_automatic_ci_correction": true,
+    "final_receipt_outside_git": true
   }
 }

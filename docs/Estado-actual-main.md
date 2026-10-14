@@ -1,5 +1,35 @@
 # Estado actual del producto
 
+## 2026-10-14 — A75 REMOTE VALIDATION PENDING
+
+[Orden remota](architecture/FASE-1.10A75-remote-orden.md). Commit candidato y
+publicación exclusivamente de codex/phase-1-10a75 autorizados; no equivalen a PASS.
+47 archivos congelados verificados sin drift antes de preparar CI. Sólo cambia
+el harness ci.yml: logs unittest detallados, budgets180min por job, flags OFF
+explícitos y gates independientes tras instalación satisfactoria, sin omisiones
+por un gate previo fallido. No cambia lógica funcional ni scripts/tests existentes.
+Full Python/CRM/Node y20 etapas PostgreSQL18.6 desde cero pendientes; recibo final
+externo ligado al SHA remoto exacto, sin commit documental posterior. No reparar
+WSL. Detener ante fallo CI; ningún commit correctivo sin nueva autorización.
+Main remoto reservado678bd3f; sin merge/deploy/real/providers/flags/B76–F80/bridge/G-LIVE/H.
+Sharp HIGH sigue SEPARATE SECURITY DEBT / PRE-PRODUCTION TRIAGE REQUIRED.
+
+
+## 2026-10-13 — A75 BLOCKED por infraestructura WSL
+
+74 dirigidos Windows PASS en161.594s; las suites completas no terminaron por
+WSL STATUS_STACK_OVERFLOW/0xC00000FD confirmado en Windows Event1000. Sin commit
+final ni etiqueta CODE-VERIFIED PASS. Código candidato75, main/producción intactos.
+[Informe](architecture/FASE-1.10A75-cierre.md).
+
+## 2026-10-13 — Candidato local Foundation + A75
+
+Rama codex/phase-1-10a75 sobre BackupV2 CRM74 revisado. Target local75 candidate,
+74 CRM intacta; producción permanece CRM74, sin consultar/modificar. Registry
+exacto/perfiles físicos, migrador serializado, startup sin DDL, history por identidad
+y nuevas evaluaciones/proofs2 bound. Validación completa pendiente, sin push.
+Policy real provisional/PRIVACY_NOT_READY; cinco flags OFF. [Estado](architecture/FASE-1.10A75-cierre.md).
+
 ## 2026-10-13 — Candidato Backup V2 CRM74: correctivo CI, main intacto
 
 Rama codex/recovery-backup-v2-crm74 publicada; attempt1 BLOCKED por dos hashes

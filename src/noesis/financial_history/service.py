@@ -1,10 +1,13 @@
 """Dry-run explícito interno: solo persiste diagnóstico; ningún canal conectado."""
 
+
+from noesis.schema_lineage import require_compatible
+
 from contextlib import contextmanager
 from datetime import datetime, timezone
 import hashlib
 
-from noesis import config, db, migrations
+from noesis import config, db
 from noesis.core.persistence import FinancialSession
 from noesis.financial_operations.contracts import AccessDenied, Principal, positive_id, uuid_text
 from .canonical import instant, sha256
@@ -49,7 +52,10 @@ class HistoryDiagnostics:
     @contextmanager
     def _session(self, principal):
         with db.get_conn() as connection:
+            if connection.dialect == 'sqlite':
+                connection.execute('BEGIN')
             session = FinancialSession(connection)
+            require_compatible(session, (70, 71, 72, 73, 74, 75))
             self._permission(session, principal)
             yield session
 
@@ -125,7 +131,7 @@ class HistoryDiagnostics:
 
     def _create(self, session, principal, manifest_uuid, repository_version, environment_identity):
         # 74 es la migración del CRM de captación: solo toca tablas sales_*.
-        if migrations.current_version_connection(session.borrowed_connection) not in (70, 71, 72, 73, 74):
+        if require_compatible(session, (70, 71, 72, 73, 74, 75)).schema_version not in (70, 71, 72, 73, 74, 75):
             raise ValueError('Esquema70/71 requerido para diagnóstico1.9B.')
         return HistoryRepository(session, self.business_id, manifest_uuid).create(
             principal, repository_version, environment_identity, stamp())

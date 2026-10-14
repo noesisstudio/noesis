@@ -1,5 +1,29 @@
 # Registro de QA
 
+## 2026-10-14 — A75 REMOTE VALIDATION PENDING
+
+[Orden remota](architecture/FASE-1.10A75-remote-orden.md). Commit candidato y
+publicación exclusivamente de codex/phase-1-10a75 autorizados; no equivalen a PASS.
+47 archivos congelados verificados sin drift antes de preparar CI. Sólo cambia
+el harness ci.yml: logs unittest detallados, budgets180min por job, flags OFF
+explícitos y gates independientes tras instalación satisfactoria, sin omisiones
+por un gate previo fallido. No cambia lógica funcional ni scripts/tests existentes.
+Full Python/CRM/Node y20 etapas PostgreSQL18.6 desde cero pendientes; recibo final
+externo ligado al SHA remoto exacto, sin commit documental posterior. No reparar
+WSL. Detener ante fallo CI; ningún commit correctivo sin nueva autorización.
+Main remoto reservado678bd3f; sin merge/deploy/real/providers/flags/B76–F80/bridge/G-LIVE/H.
+Sharp HIGH sigue SEPARATE SECURITY DEBT / PRE-PRODUCTION TRIAGE REQUIRED.
+
+
+## 2026-10-13 — Foundation + A75 en validación local
+
+Dirigidos iniciales: lineageSQLite16/collision6/binding+startup10 PASS. OriginalA
+28 adaptada a75 y protocolo exterior; dos ajustes de fixture corregidos. PG18
+A29+foundation8=37 PASS370.302s,0 skips/FAIL/ERROR; timeout30s y snapshots reales.
+V2 portable/identity31 PASS con POSIX skip Windows cubiertoPG; native70 inicial
+69PASS1 error sólo atributo de fixture corregido. Nada de sumar como full PASS.
+Full fresh general y runnerPG final pendientes; [registro](architecture/FASE-1.10A75-cierre.md).
+
 ## 2026-10-13 — Backup V2 CRM74: attempt1 bloqueado y gates correctivos
 
 Run38405811293: Tests i migracions FAILURE sólo en secrets, dos hashes públicos
@@ -5138,3 +5162,12 @@ que dice comprobar.
 - Regresiones corregidas: imports que rompían descarga/subida de Documentos y
   verificación/entrada del webhook de WhatsApp.
 - Pendiente externo: prueba real con credenciales Meta, Stripe y certificado AEAT.
+
+## 2026-10-13 — A75: dirigidos PASS, cierre BLOCKED
+
+74 tests Windows finales PASS/161.594s/0skip/0FAIL/0ERROR. Source47files congelado.
+WSL/wslservice caen con0xC00000FD, eventos22:59:59/23:15:08: full general/PG
+no terminadas. No total fresco PASS ni nuevo verified_test_count. Node11PASS;
+Ruff/Bandit/AST/dependencias/secret scan/links disponibles verificados; recibos
+fuera Git en NoesisSynthetic/phase-1-10a75-20261013. Matrices finales pendientes.
+[Informe y criterios](architecture/FASE-1.10A75-cierre.md).

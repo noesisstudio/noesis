@@ -104,16 +104,46 @@ class Cursor:
 
 class Connection:
     def __init__(self, raw, dialect: str):
-        self.raw = raw
+        self._raw = raw
         self.dialect = dialect
+        self._schema_statement_count = 0
+        self._schema_lock_mode = None
+        self._schema_prelock_savepoint = False
+        status = getattr(getattr(raw, "info", None), "transaction_status", 0)
+        self._schema_untracked_tx = dialect == "postgres" and status != 0
+
+    @property
+    def raw(self):
+        # El acceso nativo previo al protocolo no acredita un snapshot limpio.
+        if self.dialect == "postgres" and self._schema_lock_mode is None:
+            self._schema_untracked_tx = True
+        return self._raw
+
+    def _schema_reset_if_idle(self):
+        if self.dialect == "postgres" and self._raw.info.transaction_status == 0:
+            self._schema_statement_count = 0
+            self._schema_lock_mode = None
+            self._schema_prelock_savepoint = False
+            self._schema_untracked_tx = False
+
+    def _track_schema_statement(self, sql):
+        if self.dialect != "postgres":
+            return
+        self._schema_reset_if_idle()
+        text = sql.strip().upper()
+        if text.startswith("SAVEPOINT") and self._schema_lock_mode is None:
+            self._schema_prelock_savepoint = True
+        if not text.startswith(("BEGIN", "SET TRANSACTION", "SET LOCAL", "RELEASE", "ROLLBACK")):
+            self._schema_statement_count += 1
 
     def execute(self, sql: str, params=()) -> Cursor:
         if self.dialect == "postgres":
             if sql.strip().upper() == "BEGIN IMMEDIATE":
                 sql = "SELECT 1"
             sql = sql.replace("?", "%s")
+        self._track_schema_statement(sql)
         try:
-            return Cursor(self.raw.execute(sql, params))
+            return Cursor(self._raw.execute(sql, params))
         except Exception as exc:
             from .financial_history.fence import translate
             converted = translate(exc)
@@ -123,7 +153,7 @@ class Connection:
 
     def executescript(self, script: str) -> None:
         if self.dialect == "sqlite":
-            self.raw.executescript(script)
+            self._raw.executescript(script)
             return
         for statement in script.split(";"):
             if statement.strip():
@@ -141,8 +171,9 @@ class Connection:
             sql = sql.replace("?", "%s")
         else:
             params = tuple(format(v, "f") if isinstance(v, Decimal) else v for v in params)
+        self._track_schema_statement(sql)
         try:
-            return Cursor(self.raw.execute(sql, params), normalise=False)
+            return Cursor(self._raw.execute(sql, params), normalise=False)
         except Exception as exc:
             from .financial_history.fence import translate
             converted = translate(exc)
@@ -151,13 +182,15 @@ class Connection:
             raise
 
     def commit(self) -> None:
-        self.raw.commit()
+        self._raw.commit()
+        self._schema_reset_if_idle()
 
     def rollback(self) -> None:
-        self.raw.rollback()
+        self._raw.rollback()
+        self._schema_reset_if_idle()
 
     def close(self) -> None:
-        self.raw.close()
+        self._raw.close()
 
 
 _pool = None
@@ -14122,6 +14155,7 @@ def delete_business_cascade(business_id) -> bool:
                                 "financial_history_manifests", "financial_history_items",
                                 "financial_history_import_batches", "financial_history_import_items",
                                 "financial_history_reconciliations", "financial_history_reconciliation_findings",
+                                "financial_activation_control", "financial_readiness_evaluations", "financial_readiness_capabilities",
                                 "financial_history_incidences", "financial_history_decisions",
                                 "economic_events", "economic_event_links",
                                 "invoice_economic_coverage", "payment_economic_coverage",

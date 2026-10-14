@@ -1,5 +1,30 @@
 # Mapa de código
 
+## 2026-10-14 — A75 REMOTE VALIDATION PENDING
+
+[Orden remota](architecture/FASE-1.10A75-remote-orden.md). Commit candidato y
+publicación exclusivamente de codex/phase-1-10a75 autorizados; no equivalen a PASS.
+47 archivos congelados verificados sin drift antes de preparar CI. Sólo cambia
+el harness ci.yml: logs unittest detallados, budgets180min por job, flags OFF
+explícitos y gates independientes tras instalación satisfactoria, sin omisiones
+por un gate previo fallido. No cambia lógica funcional ni scripts/tests existentes.
+Full Python/CRM/Node y20 etapas PostgreSQL18.6 desde cero pendientes; recibo final
+externo ligado al SHA remoto exacto, sin commit documental posterior. No reparar
+WSL. Detener ante fallo CI; ningún commit correctivo sin nueva autorización.
+Main remoto reservado678bd3f; sin merge/deploy/real/providers/flags/B76–F80/bridge/G-LIVE/H.
+Sharp HIGH sigue SEPARATE SECURITY DEBT / PRE-PRODUCTION TRIAGE REQUIRED.
+
+
+## 2026-10-13 — Foundation + A75 candidate
+
+schema_lineage.py: registry/observación/binding/locks; schema_objects.py: perfiles
+estructurales read-only; core/schema_*json: catálogo y deltas empaquetados.
+financial_activation/: contratos/evaluator/repository/schemaA75, sin activar.
+Migrations sólo añade75; Connection rastrea protocoloTX; history revalida identidad;
+startup valida sin initDb. BackupV2 comparte catálogo y conserva integridad técnica.
+scripts/check_schema_lineage.py: collision/append-only/AST; build_schema_profiles.py
+sólo fixtures para revisión, nunca startup ni baseline regenerationCI. [Cierre](architecture/FASE-1.10A75-cierre.md).
+
 ## 2026-10-13 — Gates documentales del candidato Backup V2 CRM74
 
 scripts/check_doc_links.py verifica enlaces inline locales del delta sin red;

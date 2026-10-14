@@ -1,5 +1,35 @@
 # 06 · RGPD y seguridad
 
+## 2026-10-14 — A75 REMOTE VALIDATION PENDING
+
+[Orden remota](../architecture/FASE-1.10A75-remote-orden.md). Commit candidato y
+publicación exclusivamente de codex/phase-1-10a75 autorizados; no equivalen a PASS.
+47 archivos congelados verificados sin drift antes de preparar CI. Sólo cambia
+el harness ci.yml: logs unittest detallados, budgets180min por job, flags OFF
+explícitos y gates independientes tras instalación satisfactoria, sin omisiones
+por un gate previo fallido. No cambia lógica funcional ni scripts/tests existentes.
+Full Python/CRM/Node y20 etapas PostgreSQL18.6 desde cero pendientes; recibo final
+externo ligado al SHA remoto exacto, sin commit documental posterior. No reparar
+WSL. Detener ante fallo CI; ningún commit correctivo sin nueva autorización.
+Main remoto reservado678bd3f; sin merge/deploy/real/providers/flags/B76–F80/bridge/G-LIVE/H.
+Sharp HIGH sigue SEPARATE SECURITY DEBT / PRE-PRODUCTION TRIAGE REQUIRED.
+
+
+## 2026-10-13 — Readiness no es aprobación legal
+
+Candidate local75, producciónCRM74 intacta. Leer [orden](../architecture/FASE-1.10A75-orden.md),
+[foundation](../architecture/SCHEMA-LINEAGE-FOUNDATION-A75-v1.md),
+[A75v2](../architecture/FINANCIAL-READINESS-v2.md), [cierre](../architecture/FASE-1.10A75-cierre.md).
+Identidad exacta version/name/perfiles, sin MAX-only. Migrator propietario aparte:
+advisoryxact estable/registry exclusivo/rollback total; consumer SHARE primero
+sobre TX prestada, sin commit/rollback/conexión ni downgrade de aislamiento.
+Startup sólo75 conocida, sin initDb/reset ni fallback legacy. History conserva
+versiones/hashes y exige prefijos explícitos hasta75. A2 bound no autoriza efectos.
+V1 sólo catálogo75; V2 restaura exacto sin migrations ni serving;75 NO_E_INSTALLED.
+Policy provisional/PRIVACY_NOT_READY, IA sin autoridad, cinco flags OFF.
+Sólofixtures, sin B76–F80/bridge/producción/QA/copias reales/providers/business15,
+push/main/merge/deploy/G-LIVE/H. Reglas inferiores de estados antiguos históricas.
+
 ## Recovery V2 CRM74 (2026-10-13)
 
 El manifest sólo contiene metadatos/hashes, no valores de filas, secretos ni DSN.

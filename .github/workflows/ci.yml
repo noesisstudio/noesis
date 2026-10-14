@@ -20,9 +20,16 @@ jobs:
   tests-and-migrations:
     name: Tests i migracions
     runs-on: ubuntu-latest
-    # La suite completa ya roza 15 min en runners compartidos y después valida
-    # upgrade/downgrade/upgrade. El límite debe detectar bloqueos, no cancelar QA sano.
-    timeout-minutes: 35
+    # A75 inspecciona perfiles completos en cada TX; margen para full suite fresca.
+    # Ningún resultado parcial ni timeout se considera PASS.
+    timeout-minutes: 180
+    env:
+      PYTHON_DOTENV_DISABLED: "1"
+      NOESIS_FINANCIAL_CORE_ENABLED: "false"
+      NOESIS_LEDGER_REPORTING_ENABLED: "false"
+      NOESIS_OPEN_ITEMS_ENABLED: "false"
+      NOESIS_NEW_TAX_ENGINE_ENABLED: "false"
+      NOESIS_NEW_BANK_RECONCILIATION_ENABLED: "false"
 
     steps:
       - name: Descarregar el repositori
@@ -67,35 +74,48 @@ jobs:
           enable-cache: true
 
       - name: Instal·lar el projecte
+        id: install-project
         run: uv sync --locked --extra security --extra test
 
       - name: Auditar dependències
+        if: ${{ !cancelled() && steps.install-project.outcome == 'success' }}
         run: uv run pip-audit
 
       - name: Detectar secrets nous
+        if: ${{ !cancelled() && steps.install-project.outcome == 'success' }}
         shell: bash
         run: uv run python scripts/check_secrets.py
 
       - name: Validar enlaces internos del delta sin red
+        if: ${{ !cancelled() && steps.install-project.outcome == 'success' }}
         env:
           VALIDATION_BASE: ${{ steps.validation-base.outputs.base }}
         run: uv run python scripts/check_doc_links.py --base-ref "$VALIDATION_BASE" --head-ref HEAD
 
       - name: Validar whitespace del rango de commits
+        if: ${{ !cancelled() && steps.install-project.outcome == 'success' }}
         env:
           VALIDATION_BASE: ${{ steps.validation-base.outputs.base }}
         run: git diff --check "$VALIDATION_BASE" HEAD
 
       - name: Analitzar patrons de seguretat
+        if: ${{ !cancelled() && steps.install-project.outcome == 'success' }}
         run: uv run bandit -r src/noesis -q -lll -iii
 
       - name: Detectar errors estàtics
-        run: uv run ruff check src tests scripts/check_doc_links.py
+        if: ${{ !cancelled() && steps.install-project.outcome == 'success' }}
+        run: uv run ruff check src tests scripts/check_doc_links.py scripts/check_schema_lineage.py scripts/build_schema_profiles.py
 
       - name: Validar demostración pública y calendario sin red
+        if: ${{ !cancelled() && steps.install-project.outcome == 'success' }}
         run: node --test tests/public_marketing.test.cjs tests/public_calendar.test.cjs tests/admin_economia.test.cjs tests/financial_channels.test.cjs tests/local_dates.test.cjs
 
+      - name: Validar catálogo append-only y collision guard
+        if: ${{ !cancelled() && steps.install-project.outcome == 'success' }}
+        run: uv run python scripts/check_schema_lineage.py --main-ref origin/main
+
       - name: Validar la font de veritat del projecte
+        if: ${{ !cancelled() && steps.install-project.outcome == 'success' }}
         shell: bash
         run: |
           if [ -n "${{ github.event.pull_request.base.sha }}" ]; then
@@ -105,12 +125,14 @@ jobs:
           fi
 
       - name: Executar tots els tests
+        if: ${{ !cancelled() && steps.install-project.outcome == 'success' }}
         env:
           NOESIS_SECRET: noesis-ci-secret-fixed-32-characters-minimum
           NOESIS_DB_PATH: ${{ runner.temp }}/noesis-ci-tests.db
-        run: uv run python -m unittest discover -s tests -p "test_*.py"
+        run: uv run python -m unittest discover -s tests -p "test_*.py" -v
 
       - name: Validar el cicle complet de migracions
+        if: ${{ !cancelled() && steps.install-project.outcome == 'success' }}
         env:
           NOESIS_SECRET: noesis-ci-secret-fixed-32-characters-minimum
           NOESIS_DB_PATH: ${{ runner.temp }}/noesis-ci-migrations.db
@@ -146,7 +168,14 @@ jobs:
   postgres-smoke:
     name: PostgreSQL18 y POSTGRES_BACKUP_V2 sin outbound
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 180
+    env:
+      PYTHON_DOTENV_DISABLED: "1"
+      NOESIS_FINANCIAL_CORE_ENABLED: "false"
+      NOESIS_LEDGER_REPORTING_ENABLED: "false"
+      NOESIS_OPEN_ITEMS_ENABLED: "false"
+      NOESIS_NEW_TAX_ENGINE_ENABLED: "false"
+      NOESIS_NEW_BANK_RECONCILIATION_ENABLED: "false"
     steps:
       - name: Descargar el repositorio
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

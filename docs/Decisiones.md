@@ -1,5 +1,29 @@
 # Decisiones
 
+## 2026-10-14 — A75 REMOTE VALIDATION PENDING
+
+[Orden remota](architecture/FASE-1.10A75-remote-orden.md). Commit candidato y
+publicación exclusivamente de codex/phase-1-10a75 autorizados; no equivalen a PASS.
+47 archivos congelados verificados sin drift antes de preparar CI. Sólo cambia
+el harness ci.yml: logs unittest detallados, budgets180min por job, flags OFF
+explícitos y gates independientes tras instalación satisfactoria, sin omisiones
+por un gate previo fallido. No cambia lógica funcional ni scripts/tests existentes.
+Full Python/CRM/Node y20 etapas PostgreSQL18.6 desde cero pendientes; recibo final
+externo ligado al SHA remoto exacto, sin commit documental posterior. No reparar
+WSL. Detener ante fallo CI; ningún commit correctivo sin nueva autorización.
+Main remoto reservado678bd3f; sin merge/deploy/real/providers/flags/B76–F80/bridge/G-LIVE/H.
+Sharp HIGH sigue SEPARATE SECURITY DEBT / PRE-PRODUCTION TRIAGE REQUIRED.
+
+
+## 2026-10-13 — Identidad canónica y nueva evidenciaA75
+
+Orden humana autoriza sólo foundation+A75 local desdeV2 revisado, sin push/main.
+Registry completo+perfiles; ownership≠serving. SHARE antes de snapshot para
+consumer; migrator advisoryxact estable→registry exclusivo→reread/DDL/postcheck.
+A nueva sobre/context/proofs2+binding1; Profile/policy/económico/history mantienen
+versiones. A74 bytes/hash se conservan; ninguna promoción de autoridad. [ADR](architecture/ADR-SCHEMA-LINEAGE-002-foundation-a75.md),
+[paridad](architecture/FASE-1.10A75-parity.md), [cierre](architecture/FASE-1.10A75-cierre.md).
+
 ## 2026-10-13 — Excepciones de hashes públicos y gates remotos
 
 El founder autoriza exactamente dos excepciones detect-secrets en project-state,

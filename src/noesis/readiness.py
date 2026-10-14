@@ -139,7 +139,13 @@ def collect_readiness(*, check_database: bool = True) -> dict:
 
     if check_database:
         try:
-            current = migrations.current_version()
+            from . import db
+            from .schema_lineage import require_runtime
+            with db.get_conn() as conn:
+                if conn.dialect == "sqlite":
+                    conn.execute("BEGIN")
+                observation = require_runtime(conn)
+                current = observation.schema_version
             latest = migrations.LATEST_VERSION
             checks.append(ReadinessCheck(
                 "base de datos", "ok" if current == latest else "blocker",

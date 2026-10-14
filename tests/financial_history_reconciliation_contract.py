@@ -318,6 +318,10 @@ class HistoryReconciliationContract:
                 conn.execute("INSERT INTO expenses (business_id,concept,amount,created_at) VALUES (?,'Otro','1.00','2026-09-01')",(self.bid,))
             self.frozen()
             self.importer.run(self.principal,self.batch_uuid)
+            with self.reconciler._cut._session(self.principal) as session:
+                batch, base = self.reconciler._context(
+                    session,self.epoch_uuid,str(self.manifest["manifest_uuid"]),self.batch_uuid)
+                batch, base = dict(batch), dict(base)
             with self.corruption("economic_events") as conn:
                 if conn.dialect == "postgres":
                     rows = conn.execute("SELECT conname,pg_get_constraintdef(oid) AS ddl FROM pg_constraint WHERE conrelid='economic_events'::regclass AND contype='u'").fetchall()
@@ -334,7 +338,27 @@ class HistoryReconciliationContract:
                     conn.execute("INSERT INTO economic_events SELECT * FROM duplicate_fixture")
                 rows = conn.execute("SELECT event_uuid,source_id,source_revision FROM economic_events WHERE business_id=? AND source_type='expense' ORDER BY source_id",(self.bid,)).fetchall()
                 conn.execute("UPDATE economic_events SET source_id=?,source_revision=?,expense_id=? WHERE business_id=? AND event_uuid=?",(rows[0]["source_id"],rows[0]["source_revision"],rows[0]["source_id"],self.bid,str(rows[1]["event_uuid"])))
-            self.assert_blocked_unchanged("EVENT_CONTENT_CONFLICT")
+            from types import SimpleNamespace
+            from noesis.core.persistence import FinancialSession
+            from noesis.schema_lineage import SchemaLineageError
+            from noesis.financial_history.reconciliation_verifier import ReconciliationVerifier
+
+            before = self.snapshot()
+            with self.assertRaises(SchemaLineageError):
+                self.reconcile()
+            codes = set()
+            # Auditor interno SELECT sobre corrupción sintética; no servicio ni evidencia durable.
+            with db.get_conn() as conn:
+                verifier = ReconciliationVerifier(
+                    FinancialSession(conn),self.bid,batch,base,
+                    SimpleNamespace(finding=lambda finding: codes.add(finding.code.value)),
+                    lambda step: None,8)
+                verifier.run()
+                self.assertIsNone(conn.execute(
+                    "SELECT 1 FROM financial_history_reconciliations WHERE business_id=?",
+                    (self.bid,)).fetchone())
+            self.assertIn("EVENT_CONTENT_CONFLICT",codes)
+            self.assertEqual(before,self.snapshot())
 
     def test_terminal_batch_cannot_open_new_import_intent(self):
         self.sources()

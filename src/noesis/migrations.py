@@ -4424,6 +4424,16 @@ def _downgrade_sales_sheet_and_kind(conn) -> None:
     downgrade(conn)
 
 
+def _upgrade_readiness75(conn):
+    from .financial_activation.schema import upgrade as apply
+    apply(conn)
+
+
+def _downgrade_readiness75(conn):
+    from .financial_activation.schema import downgrade as revert
+    revert(conn)
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     (1, "esquema_inicial", _upgrade_initial, _downgrade_initial),
     (2, "integridad_multiempresa", _upgrade_tenant_integrity, _downgrade_tenant_integrity),
@@ -4539,6 +4549,7 @@ MIGRATIONS: tuple[Migration, ...] = (
     (73, "reconciliacion_historica_durable", _upgrade_financial_history_reconciliation, _downgrade_financial_history_reconciliation),
     (74, "captacion_hoja_y_tipo",
      _upgrade_sales_sheet_and_kind, _downgrade_sales_sheet_and_kind),
+    (75, "evaluacion_readiness_financiera", _upgrade_readiness75, _downgrade_readiness75),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 
@@ -4589,23 +4600,43 @@ def current_version_connection(conn) -> int:
 
 
 def is_current() -> bool:
+    from . import db
+    from .schema_lineage import require_runtime
     try:
-        return current_version() == LATEST_VERSION
+        with db.get_conn() as conn:
+            if conn.dialect == "sqlite":
+                conn.execute("BEGIN")
+            require_runtime(conn)
+        return True
     except Exception:
         return False
 
 
-def upgrade_connection(conn, target: int | None = None) -> int:
-    """Aplica migraciones sobre una conexión existente.
+def _validated_migration_state(conn, *, bootstrap=False, objects=True):
+    from .schema_lineage import CATALOG, inspect, LineageId, SchemaLineageError
+    if tuple((v, n) for v, n, *_ in MIGRATIONS) != CATALOG:
+        raise SchemaLineageError("MIGRATION_IDENTITY_MISMATCH")
+    observed = inspect(conn, bootstrap=bootstrap, objects=objects)
+    if observed.lineage_id == LineageId.LEGACY_FINANCIAL_74_79:
+        raise SchemaLineageError("LEGACY_FINANCIAL_LINEAGE_DETECTED")
+    if observed.errors:
+        raise SchemaLineageError(observed.errors[0])
+    if objects and observed.integrity not in ("VERIFIED", "TECHNICAL_ONLY"):
+        raise SchemaLineageError("SCHEMA_OBJECT_MISMATCH")
+    return observed.schema_version
 
-    La restauración de Postgres la usa con un ``search_path`` temporal para no
-    escribir nunca en el esquema real durante la verificación.
-    """
+
+def upgrade_connection(conn, target: int | None = None) -> int:
+    """Plan propietario sobre conexión/TX prestadas; ningún commit propio."""
+    from .schema_lineage import lock_migrator
     target = LATEST_VERSION if target is None else target
-    if target < 0 or target > LATEST_VERSION:
-        raise ValueError(f"Versión objetivo no válida: {target}")
+    if type(target) is not int or not 0 <= target <= LATEST_VERSION:
+        raise ValueError("Versión objetivo no válida.")
+    lock_migrator(conn)
+    current = _validated_migration_state(conn, bootstrap=True)
+    if current >= target:
+        return current
     _ensure_version_table(conn)
-    current = _current_version(conn)
     for version, name, apply, _revert in MIGRATIONS:
         if current < version <= target:
             apply(conn)
@@ -4614,7 +4645,9 @@ def upgrade_connection(conn, target: int | None = None) -> int:
                 "VALUES (?, ?, ?)",
                 (version, name, datetime.now().isoformat(timespec="seconds")),
             )
-            current = version
+            current = _validated_migration_state(conn, objects=version >= 70 or version == target)
+            if current != version:
+                raise ValueError("SCHEMA_LINEAGE_DRIFT")
     return current
 
 
@@ -4626,23 +4659,29 @@ def upgrade(target: int | None = None) -> int:
     return current
 
 
+def downgrade_connection(conn, target: int | None = None) -> int:
+    """Bajada técnica protegida con la misma serialización y TX propietaria."""
+    from .schema_lineage import lock_migrator
+    lock_migrator(conn)
+    current = _validated_migration_state(conn)
+    target = max(0, current - 1) if target is None else target
+    if type(target) is not int or not 0 <= target < current:
+        raise ValueError("Versión objetivo no válida.")
+    for version, _name, _apply, revert in reversed(MIGRATIONS):
+        if target < version <= current:
+            revert(conn)
+            conn.execute("DELETE FROM schema_migrations WHERE version=?", (version,))
+            observed = _validated_migration_state(conn, bootstrap=version == 1,
+                objects=version - 1 >= 70 or version - 1 == target)
+            if observed != version - 1:
+                raise ValueError("SCHEMA_LINEAGE_DRIFT")
+    return target
+
+
 def downgrade(target: int | None = None) -> int:
     from . import db
-
     with db.get_conn() as conn:
-        # SQLite DDL debe compartir rollback con todos los pasos de la bajada.
-        conn.execute("BEGIN IMMEDIATE")
-        current = _current_version(conn)
-        target = max(0, current - 1) if target is None else target
-        if target < 0 or target >= current:
-            raise ValueError(f"Versión objetivo no válida: {target}")
-        for version, _name, _apply, revert in reversed(MIGRATIONS):
-            if target < version <= current:
-                revert(conn)
-                conn.execute(
-                    "DELETE FROM schema_migrations WHERE version=?", (version,)
-                )
-        return target
+        return downgrade_connection(conn, target)
 
 
 def main() -> None:

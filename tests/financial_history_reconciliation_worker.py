@@ -19,6 +19,8 @@ def main():
     url = urlsplit(config.DATABASE_URL)
     if url.hostname not in ("localhost","127.0.0.1","::1") or url.path != "/noesis_ci" or config.IS_PRODUCTION:
         raise RuntimeError("Solo fixture PG local /noesis_ci.")
+    from tests.synthetic_schema_profiles import enable
+    enable()
     args = json.loads(sys.argv[1])
     bid, principal = args["business_id"], Principal(args["user_id"],0)
     emit("READY")

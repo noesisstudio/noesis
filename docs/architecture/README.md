@@ -1,5 +1,29 @@
 # Financial Core: punto de entrada y continuidad
 
+## 2026-10-14 — A75 REMOTE VALIDATION PENDING
+
+[Orden remota](FASE-1.10A75-remote-orden.md). Commit candidato y
+publicación exclusivamente de codex/phase-1-10a75 autorizados; no equivalen a PASS.
+47 archivos congelados verificados sin drift antes de preparar CI. Sólo cambia
+el harness ci.yml: logs unittest detallados, budgets180min por job, flags OFF
+explícitos y gates independientes tras instalación satisfactoria, sin omisiones
+por un gate previo fallido. No cambia lógica funcional ni scripts/tests existentes.
+Full Python/CRM/Node y20 etapas PostgreSQL18.6 desde cero pendientes; recibo final
+externo ligado al SHA remoto exacto, sin commit documental posterior. No reparar
+WSL. Detener ante fallo CI; ningún commit correctivo sin nueva autorización.
+Main remoto reservado678bd3f; sin merge/deploy/real/providers/flags/B76–F80/bridge/G-LIVE/H.
+Sharp HIGH sigue SEPARATE SECURITY DEBT / PRE-PRODUCTION TRIAGE REQUIRED.
+
+
+## 2026-10-13 — Foundation y A75 candidate exclusivamente local
+
+[Orden](FASE-1.10A75-orden.md), [ADR](ADR-SCHEMA-LINEAGE-002-foundation-a75.md),
+[foundation](SCHEMA-LINEAGE-FOUNDATION-A75-v1.md), [readinessv2](FINANCIAL-READINESS-v2.md),
+[paridad](FASE-1.10A75-parity.md), [cierre](FASE-1.10A75-cierre.md).
+Catálogo local75 candidate; CRM74 histórica/producción intacta. No B76–F80,
+bridge/main/push/deploy/producción/QA/copias reales/providers/business15/flags.
+Historia/design/V2 conservados; encabezados inferiores no amplían permiso.
+
 ## 2026-10-13 — Backup V2 CRM74: corrective gates remotos
 
 [Orden y estado factual](RECOVERY-BACKUP-V2-CRM74-CI-corrective.md).

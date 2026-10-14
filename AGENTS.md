@@ -1,5 +1,33 @@
 # AGENTS.md - Manual del proyecto Bynoesis
 
+> Orden vigente: REMOTE VALIDATION CANDIDATE A75, aún sin PASS.
+> Leer [orden remota](docs/architecture/FASE-1.10A75-remote-orden.md).
+> Sólo harness CI y documentación factual; lógica funcional congelada.
+> Se autoriza un commit candidato y push de codex/phase-1-10a75, después
+> workflow_dispatch Linux/PostgreSQL18.6 completo sobre ese SHA exacto.
+> WSL permanece inestable; no repararlo. Fallo CI exige parar sin nuevo commit.
+> Sin main/merge/deploy/producción/QA real/backups reales/providers/business15,
+> flags, B76–F80/bridge/G-LIVE/H. Policy provisional/PRIVACY_NOT_READY intactos.
+> Encabezados inferiores son históricos y no amplían esta orden.
+
+
+> A75 queda BLOCKED por WSL0xC00000FD; sin commit final ni PASS completo.
+> Leer cierre en arquitectura antes de continuar; repetir full suites y gates.
+> TECHNICAL_ONLY de owner SQLite sintético nunca permite serving/readiness/binding.
+> No reparación global de WSL afectando QA real; resto del alcance local intacto.
+
+> Orden vigente: exclusivamente SCHEMA-LINEAGE FOUNDATION + 1.10A75 local.
+> Leer orden/contrato/paridad/cierre A75 en docs/architecture/README.md.
+> Base revisada Backup V2 CRM74; nueva rama codex/phase-1-10a75, sin push/main.
+> Registry version/name completo, perfiles físicos y binding; ownership separado
+> de runtime, locks de migrador según diseño. Sólo A75; ninguna B76–F80 o bridge.
+> Preservar historia A74/A–G y Backup V2/CRM74; hashes nuevos no promueven legacy.
+> Sólo fixtures sintéticos; no producción/Railway/QA/backups reales/providers,
+> business15, flags, evidencia REAL, G-LIVE/H, merge/main/deploy ni push.
+> Cinco flags OFF, IA sin autoridad y PRIVACY_NOT_READY intactos.
+> Encabezados inferiores son históricos y no amplían esta orden.
+
+
 > Orden vigente: BACKUP V2 CRM74 REMOTE CI CORRECTIVE GATES.
 > Un único commit correctivo y push normal de codex/recovery-backup-v2-crm74.
 > Leer [orden y estado](docs/architecture/RECOVERY-BACKUP-V2-CRM74-CI-corrective.md).

@@ -12,7 +12,7 @@ from pathlib import Path
 import psycopg
 
 from .postgres_backup_inventory import digest, inventory, sequences
-from .postgres_backup_identity import IDENTITY_FIELDS, privacy_status, validate_manifest_identity
+from .postgres_backup_identity import IDENTITY_FIELDS, privacy_status, validate_manifest_identity, lock_backup_registry
 from .postgres_backup_tools import (
     BackupError, Toolchain, _DisposableTarget, database_identity, database_settings,
     disposable_target, libpq_environment, run, safe_environment,
@@ -79,6 +79,7 @@ def create(dsn: str, destination: Path, documents_creator, documents_verifier,
             raise BackupError("PRIVATE_BACKUP_DIRECTORY_REQUIRED")
         with psycopg.connect(dsn) as conn:
             conn.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
+            lock_backup_registry(conn)
             server_number = int(conn.execute("SHOW server_version_num").fetchone()[0])
             tools.check_server(server_number // 10000)
             snapshot = conn.execute("SELECT pg_export_snapshot()").fetchone()[0]
@@ -215,6 +216,7 @@ def restore(path: Path, target: _DisposableTarget, documents_verifier) -> dict:
                  psycopg.conninfo.conninfo_to_dict(target.dsn)["dbname"], str(path)], env=env)
         with target.connection() as conn:
             conn.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
+            lock_backup_registry(conn)
             actual = inventory(conn)
             keys = inventory_keys(manifest.get("manifest_contract_version", 1))
             if {key: actual[key] for key in keys} != {key: manifest[key] for key in keys}:

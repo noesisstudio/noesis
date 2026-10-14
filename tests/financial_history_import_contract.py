@@ -27,34 +27,11 @@ class HistoryImportContract:
         self.epoch_uuid = str(uuid4())
 
     def exact_storage(self):
-        # Esquema de fixture descartable, NO migración de fuentes legacy del producto.
-        types = {
-            "expenses": ("amount", "vat_rate"),
-            "received_invoices": ("base", "vat_amount", "irpf_amount", "total", "vat_rate"),
-            "bank_transactions": ("amount",),
-            "invoice_payments": ("amount",),
-        }
+        # Perfil cerrado de fixture, separado de la identidad de producto.
+        from tests.synthetic_schema_profiles import convert_storage, enable
+        enable()
         with db.get_conn() as conn:
-            if conn.dialect == "postgres":
-                for table, columns in types.items():
-                    for column in columns:
-                        conn.execute(
-                            f"ALTER TABLE {table} ALTER COLUMN {column} TYPE NUMERIC USING {column}::numeric"
-                        )
-            else:
-                conn.execute("PRAGMA writable_schema=ON")
-                for table, columns in types.items():
-                    ddl = conn.execute(
-                        "SELECT sql FROM sqlite_master WHERE name=?", (table,)
-                    ).fetchone()["sql"]
-                    import re
-
-                    for column in columns:
-                        ddl = re.sub(r"\b" + column + r"\s+REAL\b", column + " TEXT", ddl)
-                    conn.execute("UPDATE sqlite_master SET sql=? WHERE name=?", (ddl, table))
-                version = conn.execute("PRAGMA schema_version").fetchone()["schema_version"]
-                conn.execute(f"PRAGMA schema_version={version + 1}")
-                conn.execute("PRAGMA writable_schema=OFF")
+            convert_storage(conn)
 
     def sources(self, *, expense_unknown=False, expense_vat=None, received_issued=None):
         self.exact_storage()

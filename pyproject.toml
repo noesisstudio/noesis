@@ -68,6 +68,7 @@ noesis-inbound-email-check = "noesis.documents.inbound_email:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
+"noesis.core" = ["schema_lineage_catalog.json", "schema_object_profiles.json"]
 # La distribución debe servir las mismas páginas que el checkout editable.
 "noesis.web" = ["templates/*.html", "templates/partials/*.html", "templates/crm/*.html", "static/*", "static/crm/*", "static/fonts/*", "static/vendor/*"]
 

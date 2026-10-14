@@ -6,7 +6,8 @@ import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, MagicMock, patch
+from noesis.schema_lineage import classify_registry
 
 from noesis import db, migrations
 from noesis.web import backups
@@ -18,21 +19,23 @@ from noesis.web.postgres_backup_tools import BackupError
 
 
 class BackupIdentityContracts(unittest.TestCase):
-    def test_current_catalog_is_main_crm74(self):
-        self.assertEqual(migrations.LATEST_VERSION, 74)
-        self.assertEqual(expected_identities()[-1], [74, "captacion_hoja_y_tipo"])
-        self.assertEqual(describe(expected_identities())["schema_lineage_id"], CANONICAL_CRM74)
+    def test_current_catalog_preserves_crm74_and_adds_a75(self):
+        self.assertEqual(migrations.LATEST_VERSION, 75)
+        self.assertEqual(expected_identities()[73], [74, "captacion_hoja_y_tipo"])
+        self.assertEqual(expected_identities()[-1], [75, "evaluacion_readiness_financiera"])
+        self.assertEqual(describe(expected_identities()[:74])["schema_lineage_id"], CANONICAL_CRM74)
+        self.assertEqual(describe(expected_identities())["schema_lineage_id"], "CANONICAL_CRM74_FINANCIAL75_80")
 
     def test_schema73_distinct_identity(self):
         older = expected_identities()[:73]
         self.assertEqual(describe(older)["schema_lineage_id"], CANONICAL_PRE74)
         self.assertNotEqual(fingerprint(older), fingerprint(expected_identities()))
-        with self.assertRaisesRegex(BackupError, "CURRENT_CANONICAL_CRM74_REQUIRED"):
+        with self.assertRaisesRegex(BackupError, "CURRENT_CANONICAL75_REQUIRED"):
             describe(older, require_current=True)
 
     def test_fingerprint_matches_approved_design(self):
         design = Path(__file__).parents[1] / "docs/architecture/SCHEMA-LINEAGE-75-80-fingerprints.md"
-        self.assertIn(f'| canonical74 | `{fingerprint(expected_identities())}` |',
+        self.assertIn(f'| canonical74 | `{fingerprint(expected_identities()[:74])}` |',
                       design.read_text(encoding="utf-8"))
         # Identidad sin applied_at, no objetos ni autoridad.
         self.assertEqual(fingerprint(expected_identities()), fingerprint(expected_identities()))
@@ -55,7 +58,7 @@ class BackupIdentityContracts(unittest.TestCase):
             identity = describe(legacy)
             self.assertEqual(identity["schema_lineage_id"], LEGACY_FINANCIAL)
             self.assertNotEqual(identity["schema_lineage_fingerprint"], fingerprint(expected_identities()))
-            with self.assertRaisesRegex(BackupError, "CURRENT_CANONICAL_CRM74_REQUIRED"):
+            with self.assertRaisesRegex(BackupError, "CURRENT_CANONICAL75_REQUIRED"):
                 describe(legacy, require_current=True)
             self.assertEqual(privacy_status(identity),
                              "POST_RESTORE_PRIVACY_RECONCILIATION_REQUIRED" if n >= 78 else "NO_E_INSTALLED")
@@ -66,21 +69,23 @@ class BackupIdentityContracts(unittest.TestCase):
             describe(legacy)
 
     def test_null_registry_timestamp_rejected_without_changing_fingerprint(self):
-        conn = Mock()
+        conn = MagicMock()
         conn.execute.return_value.fetchall.return_value = [(n, name, "synthetic-time")
-                                                          for n, name in expected_identities()]
-        self.assertEqual(read_identity(conn)["schema_lineage_fingerprint"], fingerprint(expected_identities()))
+                                                          for n, name in expected_identities()[:74]]
+        # This unit isolates timestamps; physical registry shape is exercised in PG.
+        with patch("noesis.schema_objects.inspect_registry", return_value=classify_registry(expected_identities()[:74])):
+            self.assertEqual(read_identity(conn)["schema_lineage_fingerprint"], fingerprint(expected_identities()[:74]))
         conn.execute.return_value.fetchall.return_value[-1] = (74, "captacion_hoja_y_tipo", None)
         with self.assertRaisesRegex(BackupError, "SCHEMA_METADATA_INCOMPLETE"):
             read_identity(conn)
 
-    def test_physical_sqlite_migration_paths_0_32_73_to74(self):
+    def test_physical_sqlite_migration_paths_0_32_73_to75(self):
         for start in (0, 32, 73):
             with self.subTest(start=start), sqlite3.connect(":memory:") as raw:
                 raw.row_factory = sqlite3.Row
                 conn = db.Connection(raw, "sqlite")
                 migrations.upgrade_connection(conn, start)
-                self.assertEqual(migrations.upgrade_connection(conn), 74)
+                self.assertEqual(migrations.upgrade_connection(conn), 75)
                 rows = conn.execute("SELECT version,name FROM schema_migrations ORDER BY version").fetchall()
                 self.assertEqual([[row["version"], row["name"]] for row in rows], expected_identities())
                 self.assertIsNotNone(conn.execute("SELECT * FROM sales_sheets LIMIT 0"))
@@ -96,7 +101,7 @@ class LegacyBackupIdentityContracts(unittest.TestCase):
             cls.columns = {row["name"]: [col[1] for col in raw.execute('PRAGMA table_info("' + row["name"] + '")')]
                            for row in raw.execute("SELECT name FROM sqlite_master WHERE type='table' AND name<>'sqlite_sequence' ORDER BY name")}
 
-    def artifact(self, folder, identities, version=74):
+    def artifact(self, folder, identities, version=75):
         path = Path(folder) / "fixture.dump.gz"
         tables = list(self.columns)
         with gzip.open(path, "wt") as output:
@@ -110,11 +115,11 @@ class LegacyBackupIdentityContracts(unittest.TestCase):
                         output.write(json.dumps({"type": "row", "values": [row[c] for c in columns]}) + "\n")
         return path
 
-    def test_v1_current74_exact_registry_supported_offline(self):
+    def test_v1_current75_exact_registry_supported_offline(self):
         with tempfile.TemporaryDirectory() as folder:
             # Orden de almacenamiento V1 no promete orden numérico.
             path = self.artifact(folder, list(reversed(expected_identities())))
-            self.assertEqual(backups._legacy_preflight(path)["schema_version"], 74)
+            self.assertEqual(backups._legacy_preflight(path)["schema_version"], 75)
 
     def test_v1_73_requires_catalog73(self):
         with tempfile.TemporaryDirectory() as folder:

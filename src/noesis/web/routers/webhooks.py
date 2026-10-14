@@ -35,10 +35,14 @@ def readiness():
     try:
         from ... import migrations
 
-        current = migrations.current_version()
+        from ...schema_lineage import require_runtime
         expected = migrations.LATEST_VERSION
-        ready = current == expected
-    except db.DatabaseError:
+        with db.get_conn() as conn:
+            if conn.dialect == "sqlite":
+                conn.execute("BEGIN")
+            current = require_runtime(conn).schema_version
+        ready = True
+    except (ValueError, *db.DatabaseError):
         current = None
         expected = None
         ready = False

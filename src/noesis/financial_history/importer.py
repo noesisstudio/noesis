@@ -1,9 +1,11 @@
 """Importer interno: registra evidencia congelada, nunca ejecuta acciones originales."""
 
+
+from noesis.schema_lineage import require_compatible
+
 from collections import deque
 import json
 
-from noesis import migrations
 from noesis.economic_events.contracts import EventRelation
 from noesis.economic_events.persistence import StoredEvent
 from noesis.economic_events.repository import EventsRepository
@@ -29,7 +31,7 @@ class HistoryImporter(HistoryCutoff):
 
     def _boundary(self, session, manifest_uuid):
         # 74 es la migración del CRM de captación: solo toca tablas sales_*.
-        if migrations.current_version_connection(session.borrowed_connection) not in (72, 73, 74):
+        if require_compatible(session, (72, 73, 74, 75)).schema_version not in (72, 73, 74, 75):
             raise StateError("Schema72 requerido.")
         row = session.execute(
             "SELECT * FROM financial_history_cut_manifests WHERE business_id=? AND manifest_uuid=?",

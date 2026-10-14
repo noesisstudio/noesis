@@ -1,5 +1,32 @@
 # Registro de cambios
 
+## 2026-10-14 — A75 REMOTE VALIDATION PENDING
+
+[Orden remota](architecture/FASE-1.10A75-remote-orden.md). Commit candidato y
+publicación exclusivamente de codex/phase-1-10a75 autorizados; no equivalen a PASS.
+47 archivos congelados verificados sin drift antes de preparar CI. Sólo cambia
+el harness ci.yml: logs unittest detallados, budgets180min por job, flags OFF
+explícitos y gates independientes tras instalación satisfactoria, sin omisiones
+por un gate previo fallido. No cambia lógica funcional ni scripts/tests existentes.
+Full Python/CRM/Node y20 etapas PostgreSQL18.6 desde cero pendientes; recibo final
+externo ligado al SHA remoto exacto, sin commit documental posterior. No reparar
+WSL. Detener ante fallo CI; ningún commit correctivo sin nueva autorización.
+Main remoto reservado678bd3f; sin merge/deploy/real/providers/flags/B76–F80/bridge/G-LIVE/H.
+Sharp HIGH sigue SEPARATE SECURITY DEBT / PRE-PRODUCTION TRIAGE REQUIRED.
+
+
+## 2026-10-13 — Foundation schema-lineage y A75 local
+
+Objetivo: preservar A histórica con nueva identidad canónicaCRM74+A75 y evitar
+colisiones. Áreas: catálogo/perfiles/locks/migrator, infraestructuraConnection,
+readiness/history/startup y adaptaciónV1/V2/CI; tests nuevos y docs heredables.
+Sin cambios de CRM74/callbacks1–74/precios/scheduler/providers/fiscalidad.
+Pruebas dirigidas en [cierre](architecture/FASE-1.10A75-cierre.md); full fresca pendiente. Límites: sintético,
+sin producción/push/deploy. Riesgo: protocolo TX y compatibilidad explícita;
+diagnóstico por códigos de lineage, sin DSN/datos. Rollback técnico sólo vacío
+75→74, nunca llamado rollback productivo; código vuelve a base revisada con
+revert explícito, no historia reescrita.
+
 ## 2026-10-13 — Backup V2 CRM74: corrección de gates remotos
 
 Attempt1 bloqueado sólo por falsos positivos documentales. Dos excepciones
@@ -7097,3 +7124,15 @@ No sustituye `Registro-QA.md` (evidencia detallada), `Estado-actual-main.md`
   revisar primero esos commits y el run CI `29757337851`.
 - **Estado de publicación:** PR #48 fusionado en `main`; candidato de repositorio
   validado por CI, producción todavía no verificada.
+
+## 2026-10-13 — Foundation/A75: candidata local BLOCKED
+
+Objetivo: identidad de schema y port semántico A75 sobre CRM74+BackupV2, sin
+publicación. Áreas: infraestructura/TX, readiness, history, startup, backups,
+catálogos/perfiles y gates/documentación.74 dirigidos finales PASS161.594s;
+full general/PG bloqueadas por WSL STATUS_STACK_OVERFLOW0xC00000FD. Sin commit
+final, deploy, flags, real data/providers ni B76–F80/bridge. Riesgo: falta full QA
+y coste de inspección. Diagnóstico: Windows Event1000 wsl.exe/wslservice.exe;
+no reparar entorno global afectando QA real. Rollback del trabajo: revisar delta
+de rama local; ningún rollback productivo acreditado.
+[Detalle](architecture/FASE-1.10A75-cierre.md).

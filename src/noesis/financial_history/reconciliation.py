@@ -1,6 +1,8 @@
 """Servicio interno E: audita sin importar, reparar, reclasificar o liberar fence."""
 
-from noesis import migrations
+
+from noesis.schema_lineage import require_compatible
+
 from noesis.financial_operations.contracts import AccessDenied, ConflictError, StateError, positive_id, uuid_text
 from .canonical import version_one
 from .cutoff import EpochUnavailable, HistoryCutoff
@@ -25,7 +27,7 @@ class HistoryReconciliation:
 
     def _context(self, session, epoch_uuid, manifest_uuid, batch_uuid):
         # 74 es la migración del CRM de captación: solo toca tablas sales_*.
-        if migrations.current_version_connection(session.borrowed_connection) not in (73, 74):
+        if require_compatible(session, (73, 74, 75)).schema_version not in (73, 74, 75):
             raise StateError("Schema73 requerido.")
         batch, cut, base = self._reader._batch(session,batch_uuid)
         if str(cut["epoch_uuid"]) != epoch_uuid or str(batch["manifest_uuid"]) != manifest_uuid:

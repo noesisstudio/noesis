@@ -21,7 +21,6 @@ import re
 import time
 import uuid
 from contextlib import asynccontextmanager
-from pathlib import Path
 from urllib.parse import urlsplit
 
 from fastapi import FastAPI, Request
@@ -363,23 +362,12 @@ def _startup() -> None:
                 "pero faltan las credenciales IMAP. El resto del SaaS puede arrancar."
             )
     if config.RESET_DB:
-        if config.DATABASE_URL:
-            raise RuntimeError("NOESIS_RESET_DB no se admite con Postgres.")
-        # Reinicio de UN SOLO USO: borra todo una vez y deja un marcador, para que
-        # aunque olvides quitar la variable NO se vuelva a borrar en cada despliegue.
-        marker = Path(config.DB_PATH).parent / ".db_reset_done"
-        if marker.exists():
-            db.init_db()
-            log.info("NOESIS_RESET_DB presente, pero ya se reinició antes: no se borra.")
-        else:
-            db.reset_db()
-            try:
-                marker.write_text("done")
-            except OSError:
-                pass
-            log.warning("NOESIS_RESET_DB: base de datos REINICIADA (una sola vez).")
-    else:
-        db.init_db()
+        raise RuntimeError("El runtime no posee migraciones ni reset: usa el proceso local propietario explícito.")
+    from ..schema_lineage import require_runtime
+    with db.get_conn() as conn:
+        if conn.dialect == "sqlite":
+            conn.execute("BEGIN")
+        require_runtime(conn)
     # Datos demo solo si se piden explícitamente (producción arranca limpia y real).
     if config.SEED_DEMO:
         from .. import demo

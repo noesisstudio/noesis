@@ -1,0 +1,330 @@
+{
+  "format": "noesis.schema-lineage.catalog.v1",
+  "catalog_id": "canonical-v1",
+  "implemented_latest": 75,
+  "baseline_main_version": 74,
+  "migrations": [
+    {
+      "version": 1,
+      "name": "esquema_inicial"
+    },
+    {
+      "version": 2,
+      "name": "integridad_multiempresa"
+    },
+    {
+      "version": 3,
+      "name": "cola_whatsapp_durable"
+    },
+    {
+      "version": 4,
+      "name": "panel_personalizable"
+    },
+    {
+      "version": 5,
+      "name": "equipo_fichaje"
+    },
+    {
+      "version": 6,
+      "name": "fichaje_inalterable"
+    },
+    {
+      "version": 7,
+      "name": "verifactu_fase1"
+    },
+    {
+      "version": 8,
+      "name": "backups_verificados"
+    },
+    {
+      "version": 9,
+      "name": "verifactu_fase2"
+    },
+    {
+      "version": 10,
+      "name": "datos_cobro"
+    },
+    {
+      "version": 11,
+      "name": "cobros_parciales"
+    },
+    {
+      "version": 12,
+      "name": "gasto_por_foto"
+    },
+    {
+      "version": 13,
+      "name": "recordatorios_cobro"
+    },
+    {
+      "version": 14,
+      "name": "cerebro_whatsapp"
+    },
+    {
+      "version": 15,
+      "name": "gestoria"
+    },
+    {
+      "version": 16,
+      "name": "ciclo_webhooks"
+    },
+    {
+      "version": 17,
+      "name": "proveedores_recibidas"
+    },
+    {
+      "version": 18,
+      "name": "plataforma_base"
+    },
+    {
+      "version": 19,
+      "name": "proyectos_rentables"
+    },
+    {
+      "version": 20,
+      "name": "nivel_explicacion"
+    },
+    {
+      "version": 21,
+      "name": "memoria_noesis"
+    },
+    {
+      "version": 22,
+      "name": "control_autonomia"
+    },
+    {
+      "version": 23,
+      "name": "columna_operativa"
+    },
+    {
+      "version": 24,
+      "name": "entregas_gestoria"
+    },
+    {
+      "version": 25,
+      "name": "cierre_trabajo_campo"
+    },
+    {
+      "version": 26,
+      "name": "preferencias_cliente"
+    },
+    {
+      "version": 27,
+      "name": "control_integraciones"
+    },
+    {
+      "version": 28,
+      "name": "calendario_privado"
+    },
+    {
+      "version": 29,
+      "name": "conciliacion_bancaria"
+    },
+    {
+      "version": 30,
+      "name": "correo_durable"
+    },
+    {
+      "version": 31,
+      "name": "alta_operativa"
+    },
+    {
+      "version": 32,
+      "name": "integridad_factura_emitida"
+    },
+    {
+      "version": 33,
+      "name": "facturacion_profesional"
+    },
+    {
+      "version": 34,
+      "name": "limites_auth_compartidos"
+    },
+    {
+      "version": 35,
+      "name": "auditoria_seguridad"
+    },
+    {
+      "version": 36,
+      "name": "solicitudes_acceso"
+    },
+    {
+      "version": 37,
+      "name": "visitas_agregadas"
+    },
+    {
+      "version": 38,
+      "name": "huellas_documentales"
+    },
+    {
+      "version": 39,
+      "name": "cuentas_gestoria"
+    },
+    {
+      "version": 40,
+      "name": "demo_comercial"
+    },
+    {
+      "version": 41,
+      "name": "espacio_fiscal_gestoria"
+    },
+    {
+      "version": 42,
+      "name": "perfiles_documentales_profesionales"
+    },
+    {
+      "version": 43,
+      "name": "acceso_soporte_acotado"
+    },
+    {
+      "version": 44,
+      "name": "costes_reales_plataforma"
+    },
+    {
+      "version": 45,
+      "name": "whatsapp_multicanal"
+    },
+    {
+      "version": 46,
+      "name": "orden_suscripcion_stripe"
+    },
+    {
+      "version": 47,
+      "name": "mfa_gestoria"
+    },
+    {
+      "version": 48,
+      "name": "perfiles_visuales_factura"
+    },
+    {
+      "version": 49,
+      "name": "onboarding_recuperable"
+    },
+    {
+      "version": 50,
+      "name": "control_acceso_usuarios"
+    },
+    {
+      "version": 51,
+      "name": "recuperacion_contrasena_gestoria"
+    },
+    {
+      "version": 52,
+      "name": "documentos_por_correo"
+    },
+    {
+      "version": 53,
+      "name": "material_o_mano_de_obra"
+    },
+    {
+      "version": 54,
+      "name": "registro_valor_util"
+    },
+    {
+      "version": 55,
+      "name": "solicitudes_privacidad"
+    },
+    {
+      "version": 56,
+      "name": "supuestos_economicos"
+    },
+    {
+      "version": 57,
+      "name": "captacion_comercial"
+    },
+    {
+      "version": 58,
+      "name": "factura_a_medias"
+    },
+    {
+      "version": 59,
+      "name": "memoria_por_conversacion"
+    },
+    {
+      "version": 60,
+      "name": "entrada_whatsapp_durable"
+    },
+    {
+      "version": 61,
+      "name": "cuentas_conectadas"
+    },
+    {
+      "version": 62,
+      "name": "operaciones_financieras_durables"
+    },
+    {
+      "version": 63,
+      "name": "economic_events_durables"
+    },
+    {
+      "version": 64,
+      "name": "revisiones_origen_financiero"
+    },
+    {
+      "version": 65,
+      "name": "cobertura_emision_capturada"
+    },
+    {
+      "version": 66,
+      "name": "cobertura_cobros_banco_capturados"
+    },
+    {
+      "version": 67,
+      "name": "cobertura_recibidas_gastos_capturados"
+    },
+    {
+      "version": 68,
+      "name": "enlaces_canales_financieros"
+    },
+    {
+      "version": 69,
+      "name": "reparacion_delete_cobros_postgres"
+    },
+    {
+      "version": 70,
+      "name": "inventario_historico_diagnostico"
+    },
+    {
+      "version": 71,
+      "name": "corte_historico_epoch_fence"
+    },
+    {
+      "version": 72,
+      "name": "incorporacion_historica_durable"
+    },
+    {
+      "version": 73,
+      "name": "reconciliacion_historica_durable"
+    },
+    {
+      "version": 74,
+      "name": "captacion_hoja_y_tipo"
+    },
+    {
+      "version": 75,
+      "name": "evaluacion_readiness_financiera"
+    }
+  ],
+  "designed_not_installed": [
+    {
+      "version": 76,
+      "name": "resoluciones_antecedentes_financieros"
+    },
+    {
+      "version": 77,
+      "name": "cobertura_cancelacion_fiscal_live"
+    },
+    {
+      "version": 78,
+      "name": "activacion_handoff_generaciones"
+    },
+    {
+      "version": 79,
+      "name": "privacy_export_retention_closure"
+    },
+    {
+      "version": 80,
+      "name": "providers_preflight_dispatch_evidence"
+    }
+  ]
+}

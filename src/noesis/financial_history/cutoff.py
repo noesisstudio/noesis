@@ -1,12 +1,15 @@
 """Corte interno autenticado: epoch durable, sin importación ni activación."""
 
+
+from noesis.schema_lineage import require_compatible
+
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 import logging
 import re
 from uuid import uuid4
 
-from noesis import db, migrations
+from noesis import db
 from noesis.core.locks import lock_business
 from noesis.core.persistence import FinancialSession
 from noesis.financial_operations.contracts import AccessDenied, ConflictError, StateError, uuid_text
@@ -35,6 +38,7 @@ class HistoryCutoff(HistoryDiagnostics):
             if conn.dialect == 'sqlite':
                 conn.execute('BEGIN IMMEDIATE')
             session = FinancialSession(conn)
+            require_compatible(session, (71, 72, 73, 74, 75))
             # Preflight sin locks: un writer con gate puede actualizar el negocio.
             self._permission(session, principal)
             if not installed(session):
@@ -174,7 +178,7 @@ class _CutInventory(HistoryDiagnostics):
     def _create(self, session, principal, manifest_uuid, repository_version, environment_identity):
         from .repository import HistoryRepository
         # 74 es la migración del CRM de captación: solo toca tablas sales_*.
-        if migrations.current_version_connection(session.borrowed_connection) not in (71, 72, 73, 74):
+        if require_compatible(session, (71, 72, 73, 74, 75)).schema_version not in (71, 72, 73, 74, 75):
             raise ValueError('Schema71 requerido para certifiable_inventory.')
         epoch = self.cutoff._row(session, self.epoch_uuid, principal, active=True)
         if epoch['environment_identity'] != environment_identity:

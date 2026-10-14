@@ -1,34 +1,17 @@
 """Identidad del registry para backups; no validator runtime ni autoridad financiera."""
 
-import hashlib
-import json
+from noesis.schema_lineage import CATALOG, LEGACY_NAMES, fingerprint
 
 from .postgres_backup_tools import BackupError
 
 CANONICAL_PRE74 = "CANONICAL_PRE74"
 CANONICAL_CRM74 = "CANONICAL_CRM74"
 LEGACY_FINANCIAL = "LEGACY_FINANCIAL74_79"
-LEGACY_NAMES = (
-    "evaluacion_readiness_financiera",
-    "resoluciones_antecedentes_financieros",
-    "cobertura_cancelacion_fiscal_live",
-    "activacion_handoff_generaciones",
-    "privacy_export_retention_closure",
-    "providers_preflight_dispatch_evidence",
-)
 IDENTITY_FIELDS = ("migration_identities", "schema_lineage_fingerprint", "schema_lineage_id")
 
 
 def expected_identities() -> list[list]:
-    from noesis.migrations import MIGRATIONS
-    return [[version, name] for version, name, *_ in MIGRATIONS]
-
-
-def fingerprint(identities: list[list]) -> str:
-    body = {"format": "noesis.schema-lineage.v1",
-            "migrations": [{"version": version, "name": name} for version, name in identities]}
-    return hashlib.sha256(json.dumps(body, sort_keys=True, separators=(",", ":"),
-                                     ensure_ascii=False, allow_nan=False).encode("utf-8")).hexdigest()
+    return [[version, name] for version, name in CATALOG]
 
 
 def describe(identities, *, require_current: bool = False) -> dict:
@@ -58,17 +41,44 @@ def describe(identities, *, require_current: bool = False) -> dict:
             raise BackupError("MIGRATION_IDENTITY_MISMATCH")
         lineage = (CANONICAL_PRE74 if n < 74 else CANONICAL_CRM74 if n == 74
                    else "CANONICAL_CRM74_FINANCIAL75_80")
-    if require_current and (lineage != CANONICAL_CRM74 or identities != expected):
-        raise BackupError("CURRENT_CANONICAL_CRM74_REQUIRED")
+    if require_current and (lineage != "CANONICAL_CRM74_FINANCIAL75_80" or identities != expected):
+        raise BackupError("CURRENT_CANONICAL75_REQUIRED")
     return {"schema_version": n, "migration_identities": identities,
             "schema_lineage_fingerprint": fingerprint(identities), "schema_lineage_id": lineage}
+
+
+def lock_backup_registry(conn, *, public=True):
+    """Primera operacion tras BEGIN/SET TRANSACTION, antes del snapshot exportado."""
+    conn.execute("SET LOCAL lock_timeout='30s'")
+    conn.execute("LOCK TABLE " + ("public." if public else "") + "schema_migrations IN SHARE MODE")
 
 
 def read_identity(conn) -> dict:
     rows = conn.execute("SELECT version,name,applied_at FROM public.schema_migrations ORDER BY version").fetchall()
     if any(row[2] is None for row in rows):
         raise BackupError("SCHEMA_METADATA_INCOMPLETE")
-    return describe([[row[0], row[1]] for row in rows])
+    identity = describe([[row[0], row[1]] for row in rows])
+    from noesis.schema_objects import inspect_registry, physical_objects, expected_objects
+    from noesis import db
+    from psycopg.rows import dict_row
+    with conn.cursor(row_factory=dict_row) as cursor:
+        class ExactReader:
+            dialect = "postgres"
+            def execute_exact(self, query, params=()):
+                return db.Cursor(cursor.execute(query.replace('?', '%s'), params), normalise=False)
+        reader = ExactReader()
+        observation = inspect_registry(reader, namespace="public")
+        if observation.errors or observation.lineage_fingerprint != identity["schema_lineage_fingerprint"]:
+            raise BackupError("SCHEMA_METADATA_INCOMPLETE")
+        if identity["schema_version"] == 75 and identity["schema_lineage_id"] != LEGACY_FINANCIAL:
+            # Solo minimos A; el perfil completo runtime sigue siendo requisito separado.
+            actual = physical_objects(reader, "public")
+            expected = expected_objects("postgres", 75)
+            keys = [key for key in expected if any(name in key for name in
+                    ("financial_activation_control", "financial_readiness_evaluations", "financial_readiness_capabilities", "idx_readiness_created"))]
+            if not keys or any(actual.get(key) != expected[key] for key in keys):
+                raise BackupError("SCHEMA_OBJECT_MISMATCH")
+    return identity
 
 
 def validate_manifest_identity(manifest: dict) -> dict:

@@ -102,9 +102,10 @@ def _verify_sqlite_backup(path: Path, origin_counts: dict[str, int]) -> None:
             integrity = restored.execute("PRAGMA integrity_check").fetchone()[0]
             if integrity != "ok":
                 raise RuntimeError(f"PRAGMA integrity_check: {integrity}")
-            version = restored.execute(
-                "SELECT COALESCE(MAX(version), 0) FROM schema_migrations"
-            ).fetchone()[0]
+            from ..schema_lineage import require_runtime
+            restored.row_factory = sqlite3.Row
+            restored.execute("BEGIN")
+            version = require_runtime(db.Connection(restored, "sqlite")).schema_version
             if int(version) != migrations.LATEST_VERSION:
                 raise RuntimeError(
                     f"Esquema restaurado {version}/{migrations.LATEST_VERSION}"
@@ -224,7 +225,10 @@ def _create_postgres_backup_v1() -> tuple[Path, dict[str, int]]:
         raise RuntimeError("psycopg no está instalado.")
     destination = _destination(".dump.gz")
     with psycopg.connect(config.DATABASE_URL, row_factory=dict_row) as conn:
-        conn.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
+        from ..schema_lineage import require_runtime
+        wrapped = db.Connection(conn, "postgres")
+        wrapped.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
+        identity = require_runtime(wrapped)
         tables = _postgres_table_order(conn)
         counts = {
             table: int(
@@ -236,12 +240,7 @@ def _create_postgres_backup_v1() -> tuple[Path, dict[str, int]]:
             )
             for table in tables
         }
-        version = int(
-            conn.execute(
-                "SELECT COALESCE(MAX(version), 0) AS version "
-                "FROM schema_migrations"
-            ).fetchone()["version"]
-        )
+        version = identity.schema_version
         header = {
             "format": POSTGRES_DUMP_FORMAT,
             "created_at": datetime.now(timezone.utc).isoformat(),
@@ -478,7 +477,8 @@ def _verify_postgres_backup(path: Path, origin_counts: dict[str, int]) -> dict |
                     f"{header.get('schema_version')}/{migrations.LATEST_VERSION}"
                 )
             wrapped = db.Connection(raw, "postgres")
-            version = migrations.current_version_connection(wrapped)
+            from ..schema_lineage import inspect
+            version = inspect(wrapped).require_canonical((migrations.LATEST_VERSION,)).schema_version
             if version != migrations.LATEST_VERSION:
                 raise RuntimeError(
                     f"Esquema restaurado {version}/{migrations.LATEST_VERSION}"
