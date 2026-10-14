@@ -1,5 +1,28 @@
 # 08 · Financial Core
 
+## 2026-10-14 — A75 corrective4, candidato autorizado; validación fresca PENDING
+
+[Orden](../architecture/FASE-1.10A75-corrective-4-orden.md),
+[estado candidato](../architecture/FASE-1.10A75-corrective-4.md).
+Base93dbac0/main678bd3f exactos y árbol inicialmente limpio. Run38587900781:
+generalSUCCESS2018/2016PASS/2skips; PG18/20, stage17ModuleNotFound/tests y
+stage19dosERRORpostvalidator55. Readiness29/V273 verdes del SHA anterior:
+son diagnóstico, no acreditan corrective4 ni se reutilizan como cierre.
+Cambios mínimos: runnerStage17 como módulo, guardhost(inet_server_addr()),
+permitidosNULL/127.0.0.1 intactos. Regresiones portablesguards y subtestsPG
+cuatro perfilesTECH completos/id/hash/rechazos/future/unknown/vuelta75exacta,
+conservando18Lineage y73V2. Code implementado no equivale a validadoPG.
+Antes del commit: local posible sinWSL,gates,diff exacto. UNcommit normalparent93dbac0,
+push sólofeature y CI nuevaLinux/PG18.6 completa: general+20etapas aisladas.
+Fallo nuevo: documentarBLOCKED sin otro correctivo. Recibo final fueraGit,
+ligado al SHA/run/jobs; no segundo commit documental. Riesgo: guard permanece
+fail-closed, demostrar reconocimiento owner correcto sin autoridad financiera.
+Rollbackdiagnóstico: revertir sólo el corrective4, no datos ni migrations históricas.
+Sin cambiosmigrations/canonical/locks/readiness/privacy/providers/flags/SOURCE_DRIFT/
+normalizadorV2. SinWSL/producción/Railway/QA/copias reales/B76–F80/bridge/G-LIVE/H,
+main/merge/deploy. SharpHIGH deuda separada; policy provisional intacta.
+
+
 ## 2026-10-14 — A75 validación remota del candidato, PENDING
 
 [Orden](../architecture/FASE-1.10A75-corrective-3-remote-orden.md),

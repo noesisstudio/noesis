@@ -1,5 +1,20 @@
 # AGENTS.md - Manual del proyecto Bynoesis
 
+> Orden vigente: exclusivamente A75 CORRECTIVE4; leer
+> [orden](docs/architecture/FASE-1.10A75-corrective-4-orden.md) y
+> [candidato/validación](docs/architecture/FASE-1.10A75-corrective-4.md).
+> Sólo Stage17 invocación -m tests.postgres_release_smoke y guard owner
+> host(inet_server_addr()), sin ampliar NULL/127.0.0.1 ni debilitar controles.
+> Regresiones dirigidas conservan18Lineage/73V2 y prueban cuatro perfilesTECH,
+> rechazos reales de serving/readiness/binding/runtime y fullobjectnegatives.
+> Un commit parent93dbac0, push feature y dispatch nuevo general+20PG completas.
+> Ningún PASS heredado, fallo nuevo: diagnósticoBLOCKED sin otro correctivo.
+> NO WSL/reset/repair/install, real/QA/backups/providers/main/merge/deploy/flags,
+> B76–F80/RecoveryBridge/G-LIVE/H. Canonical/DDL/locks/readiness/SOURCE_DRIFT
+> y fixescorrective3 intactos. SharpHIGH sigue deuda separada; policy provisional.
+> Encabezados inferiores son históricos y no amplían esta orden.
+
+
 > Orden vigente: A75 REMOTE TARGETED VALIDATION AFTER WSL FAILURE.
 > Leer [orden](docs/architecture/FASE-1.10A75-corrective-3-remote-orden.md) y
 > [candidato remoto](docs/architecture/FASE-1.10A75-corrective-3-remote.md).

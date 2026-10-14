@@ -1,6 +1,9 @@
 """Foundation: PostgreSQL18 propio, sin outbound; locks y rollback reales."""
 
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import nullcontext
+import hashlib
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -130,10 +133,13 @@ class SchemaLineagePostgres(unittest.TestCase):
         from noesis.schema_lineage import lock_migrator, require_compatible
         from noesis.schema_objects import expected_objects, physical_objects
         from noesis.schema_retention import retention_objects
+        from noesis.schema_lineage import canonical
+        from noesis.core.persistence import FinancialSession
+        from noesis.financial_activation.evaluator import FinancialReadinessEvaluator
+        from noesis import readiness
+        from noesis.web import server
         self.fresh(75)
         for target in (55, 54, 53, 58):
-            if target == 58:
-                self.assertEqual(migrations.upgrade(), 75)
             self.assertEqual(migrations.downgrade(target), target)
             with db.get_conn() as conn:
                 # El consumidor SHARE jamás reconoce retención como canonical.
@@ -145,7 +151,13 @@ class SchemaLineagePostgres(unittest.TestCase):
                 self.assertEqual(observation.integrity, 'TECHNICAL_ONLY')
                 self.assertEqual(observation.object_profile_id, f'postgres/retention-owner/{target}/v1')
                 self.assertEqual(physical_objects(conn), retention_objects(target))
+                expected_hash = hashlib.sha256(canonical(retention_objects(target)).encode()).hexdigest()
+                self.assertEqual(observation.object_profile_hash, expected_hash)
                 self.assertEqual(inspect(conn).object_profile_hash, observation.object_profile_hash)
+                addresses = conn.execute_exact('SELECT host(inet_server_addr()) AS address, '
+                                               'inet_server_addr()::text AS original_text').fetchone()
+                self.assertEqual(addresses['address'], '127.0.0.1')
+                self.assertEqual(addresses['original_text'], '127.0.0.1/32')
                 for consumer in (
                     observation.binding,
                     lambda: observation.require_canonical((target, 75)),
@@ -154,21 +166,38 @@ class SchemaLineagePostgres(unittest.TestCase):
                 ):
                     with self.assertRaisesRegex(SchemaLineageError, 'SCHEMA_LINEAGE_MISMATCH'):
                         consumer()
+                evaluator = FinancialReadinessEvaluator(FinancialSession(conn), 1)
+                with self.assertRaisesRegex(SchemaLineageError, 'SCHEMA_LINEAGE_MISMATCH'):
+                    evaluator.read(None, str(uuid4()))
+                # Consumidores reales sobre la TX prestada: no otra conexión,
+                # scheduler, provider ni commit durante esta prueba negativa.
+                with patch.object(db, 'get_conn', return_value=nullcontext(conn)), patch.object(server, 'start_scheduler') as scheduler:
+                    with self.assertRaisesRegex(SchemaLineageError, 'SCHEMA_LINEAGE_MISMATCH'):
+                        server._startup()
+                    scheduler.assert_not_called()
+                    report = readiness.collect_readiness()
+                    self.assertFalse(report['ready'])
+                    self.assertTrue(any(c['area'] == 'base de datos' and c['status'] == 'blocker' for c in report['checks']))
                 with patch.object(config, 'IS_PRODUCTION', True):
                     self.assertEqual(inspect(conn).errors, ('SCHEMA_OBJECT_MISMATCH',))
                 with patch('noesis.schema_retention.socket.if_nameindex', return_value=[(1, 'lo'), (2, 'eth0')]):
                     self.assertEqual(inspect(conn).errors, ('SCHEMA_OBJECT_MISMATCH',))
+                print('PG_RETENTION_AUTHORITY ' + json.dumps({
+                    'version': target, 'profile_id': observation.object_profile_id,
+                    'profile_hash': expected_hash, 'integrity': observation.integrity,
+                    'runtime': 'REJECTED', 'binding': 'REJECTED',
+                    'readiness': 'REJECTED', 'startup_serving': 'REJECTED',
+                }, sort_keys=True), flush=True)
             # Cada ruta vuelve a canonical75 antes de cualquier runtime válido.
-            if target == 58:
-                self.assertEqual(migrations.upgrade(), 75)
-                with db.get_conn() as conn:
-                    self.assertEqual(require_runtime(conn).integrity, 'VERIFIED')
-                    self.assertEqual(physical_objects(conn), expected_objects('postgres', 75))
+            self.assertEqual(migrations.upgrade(), 75)
+            with db.get_conn() as conn:
+                self.assertEqual(require_runtime(conn).integrity, 'VERIFIED')
+                self.assertEqual(physical_objects(conn), expected_objects('postgres', 75))
 
     def test_retention_rejects_partial_changed_unknown_and_future_objects(self):
         from noesis.schema_lineage import lock_migrator
+        from noesis.schema_objects import physical_objects
         self.fresh(75)
-        self.assertEqual(migrations.downgrade(55), 55)
         changes = (
             'ALTER TABLE assistant_messages DROP COLUMN actor',
             'ALTER TABLE assistant_messages ALTER COLUMN actor TYPE VARCHAR(100)',
@@ -177,20 +206,29 @@ class SchemaLineagePostgres(unittest.TestCase):
             'CREATE TABLE financial_future_unknown(id INTEGER)',
             'CREATE TABLE unrelated_extra(id INTEGER)',
         )
-        with db.get_conn() as conn:
-            lock_migrator(conn)
-            for statement in changes:
-                conn.execute('SAVEPOINT retention_negative')
-                try:
-                    conn.execute(statement)
-                    self.assertEqual(inspect(conn).errors, ('SCHEMA_OBJECT_MISMATCH',))
-                finally:
-                    conn.execute('ROLLBACK TO SAVEPOINT retention_negative')
-                    conn.execute('RELEASE SAVEPOINT retention_negative')
-                self.assertEqual(inspect(conn).integrity, 'TECHNICAL_ONLY')
-        self.assertEqual(migrations.upgrade(), 75)
-        with db.get_conn() as conn:
-            self.assertEqual(require_runtime(conn).schema_version, 75)
+        for target in (55, 54, 53, 58):
+            self.assertEqual(migrations.downgrade(target), target)
+            with db.get_conn() as conn:
+                lock_migrator(conn)
+                original = physical_objects(conn)
+                for statement in changes:
+                    with self.subTest(version=target, alteration=changes.index(statement)):
+                        conn.execute('SAVEPOINT retention_negative')
+                        try:
+                            conn.execute(statement)
+                            self.assertEqual(inspect(conn).errors, ('SCHEMA_OBJECT_MISMATCH',))
+                        finally:
+                            conn.execute('ROLLBACK TO SAVEPOINT retention_negative')
+                            conn.execute('RELEASE SAVEPOINT retention_negative')
+                        self.assertEqual(inspect(conn).integrity, 'TECHNICAL_ONLY')
+                        self.assertEqual(physical_objects(conn), original)
+                print('PG_RETENTION_NEGATIVES ' + json.dumps({
+                    'version': target, 'alterations_rejected': len(changes),
+                    'physical_snapshot_unchanged': True,
+                }, sort_keys=True), flush=True)
+            self.assertEqual(migrations.upgrade(), 75)
+            with db.get_conn() as conn:
+                self.assertEqual(require_runtime(conn).integrity, 'VERIFIED')
 
     def test_known_old68_delete_repaired_but_unknown_function_never_adopted(self):
         from noesis.schema_objects import OLD_CASH_DELETE

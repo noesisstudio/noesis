@@ -29,7 +29,7 @@ CASES = [
     ("History import", ["-m", "unittest", "tests.postgres_financial_history_import.HistoryImportPostgres"]),
     ("History reconciliation", ["-m", "unittest", "tests.postgres_financial_history_reconciliation.HistoryReconciliationPostgres"]),
     ("legacy catalog53", ["tests/postgres_legacy_smoke.py"]),
-    ("privacy + rollback", ["tests/postgres_release_smoke.py"]),
+    ("privacy + rollback", ["-m", "tests.postgres_release_smoke"]),
     ("A75 Readiness", ["-m", "unittest", "tests.postgres_financial_readiness", "-v"]),
     ("Lineage Foundation", ["-m", "unittest", "tests.postgres_schema_lineage", "-v"]),
     ("POSTGRES_BACKUP_V2_CANONICAL75", ["-m", "unittest", "tests.postgres_backup_v2", "tests.test_postgres_backup_v2", "tests.test_postgres_backup_identity", "-v"]),

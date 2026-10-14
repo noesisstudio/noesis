@@ -34,7 +34,7 @@ def isolated_migration_owner(conn):
     # Prueba del cluster local desechable, no una URL/flag que afirme aislamiento.
     row = conn.execute_exact("SELECT current_setting('data_directory') AS directory, "
                              "current_setting('listen_addresses') AS listeners, "
-                             "inet_server_addr()::text AS address").fetchone()
+                             "host(inet_server_addr()) AS address").fetchone()
     directory = Path(row['directory']).resolve()
     if (row['listeners'] not in ('', '127.0.0.1') or row['address'] not in (None, '127.0.0.1')
             or directory.name != 'data' or not directory.parent.name.startswith('nv2-')
