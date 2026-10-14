@@ -67,6 +67,9 @@ def physical_objects(conn, namespace=None):
             values = list(row.values())
             key_fields = 2 if kind in ("column", "constraint", "trigger", "function") else 1
             key = kind + ":" + ":".join(str(v) for v in values[:key_fields])
+            if key == 'constraint:economic_events:economic_events_amount_check':
+                from .schema_check_identity import canonical_amount_check
+                values[-1] = canonical_amount_check(values[-1])
             result[key] = [normalized_sql(v, namespace) if type(v) is str else v for v in values]
     return result
 
@@ -139,6 +142,16 @@ def validate_objects(conn, observation, namespace=None):
                 raise SchemaLineageError("SCHEMA_METADATA_INCOMPLETE")
         return "bootstrap0", hashlib.sha256(canonical({}).encode()).hexdigest()
     expected = expected_objects(conn.dialect, n)
+    if conn.dialect == 'postgres' and n in (53, 54, 55, 58) and actual != expected:
+        from .schema_retention import isolated_migration_owner, retention_objects
+        technical = retention_objects(n)
+        if actual == technical:
+            if isolated_migration_owner(conn):
+                return f'postgres/retention-owner/{n}/v1', hashlib.sha256(canonical(technical).encode('utf-8')).hexdigest()
+            raise SchemaLineageError('SCHEMA_OBJECT_MISMATCH')
+        if (set(technical) - set(expected)) & set(actual):
+            # Retención parcial/alterada o acompañada por otros objetos: cerrada.
+            raise SchemaLineageError('SCHEMA_OBJECT_MISMATCH')
     variant = False
     key = "function:cash_payment_delete:"
     historical = [["cash_payment_delete"], [], normalized_sql(OLD_CASH_DELETE)]
@@ -215,7 +228,7 @@ def inspect_registry(conn, *, namespace=None, bootstrap=False, validate=None):
     if validate:
         try:
             profile_id, profile_hash = validate(conn, observation, namespace)
-            integrity = "TECHNICAL_ONLY" if profile_id.startswith("sqlite/synthetic-owner/") else "VERIFIED"
+            integrity = "TECHNICAL_ONLY" if profile_id.startswith(("sqlite/synthetic-owner/", "postgres/retention-owner/")) else "VERIFIED"
             return replace(observation, integrity=integrity, object_profile_id=profile_id,
                            object_profile_hash=profile_hash)
         except SchemaLineageError as exc:

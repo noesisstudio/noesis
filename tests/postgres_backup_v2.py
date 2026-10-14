@@ -25,9 +25,11 @@ from noesis.schema_objects import expected_objects, physical_objects
 from noesis.web import backups, postgres_native_backup as native
 from noesis.web import postgres_backup_tools as tools
 from noesis.web.postgres_backup_identity import LEGACY_FINANCIAL, expected_identities, describe
+from tests.postgres_identity_diagnostic import amount_check, object_diff
+from tests.postgres_check_semantics import AmountCheckSemanticProof
 
 
-class PostgresBackupV2(unittest.TestCase):
+class PostgresBackupV2(AmountCheckSemanticProof, unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if not tools.outbound_blocked():
@@ -71,6 +73,8 @@ class PostgresBackupV2(unittest.TestCase):
         with cls.source.connection() as conn:
             conn.row_factory = dict_row
             cls.source75_objects = physical_objects(db.Connection(conn, "postgres"), "public")
+            cls.source_check = amount_check(db.Connection(conn, 'postgres'), 'v2-source-check')
+            object_diff(db.Connection(conn, 'postgres'), 'v2-source0-to75-profile')
             cls.evaluation_body = conn.execute(
                 "SELECT result_canonical FROM financial_readiness_evaluations WHERE business_id=%s",
                 (cls.bid,),
@@ -81,6 +85,10 @@ class PostgresBackupV2(unittest.TestCase):
         cls.addClassCleanup(cls.target75_context.__exit__, None, None, None)
         with patch.object(migrations, "upgrade_connection", side_effect=AssertionError("V2 cannot migrate")):
             cls.result75 = native.restore(cls.archive75, cls.target75, backups._verify_documents_backup)
+        with cls.target75.connection() as conn:
+            conn.row_factory = dict_row
+            cls.restored_check = amount_check(db.Connection(conn, 'postgres'), 'v2-restored-check')
+            object_diff(db.Connection(conn, 'postgres'), 'v2-restored-profile')
         with cls.source.connection() as conn:
             conn.execute("CREATE SCHEMA future")
             conn.execute("CREATE TYPE future.status AS ENUM ('open','closed')")

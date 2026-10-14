@@ -1,5 +1,28 @@
 # AGENTS.md - Manual del proyecto Bynoesis
 
+> Orden vigente: A75 REMOTE TARGETED VALIDATION AFTER WSL FAILURE.
+> Leer [orden](docs/architecture/FASE-1.10A75-corrective-3-remote-orden.md) y
+> [candidato remoto](docs/architecture/FASE-1.10A75-corrective-3-remote.md).
+> Se levanta sólo requisito de PG local antes de commit: un commit candidato
+> parent cb23aa4 y push normal feature; nuevo dispatch Linux/PG18.6 completo20/20.
+> Producto actual congelado; no cambiar código/tests/workflow. Portables/gates
+> confirmados, CI autoritativa nueva aún pendiente; commit no equivale a PASS.
+> NO WSL/reintento/reset/repair/install/QA real. Fallo CI: BLOCKED sin otro commit.
+> Main678bd3f intacta; no merge/deploy/real/providers/flags/B76–F80/bridge/G-LIVE/H.
+> Retención TECHNICAL_ONLY nunca autoridad; canonical e historia intactos.
+> Encabezados inferiores son históricos y no amplían esta orden.
+
+
+> Orden vigente: A75 CORRECTIVE #3, [orden](docs/architecture/FASE-1.10A75-corrective-3-orden.md)
+> y [diagnóstico](docs/architecture/FASE-1.10A75-corrective-3.md). T1/T2 stage17 y
+> CHECK source/restored: metadatos privados, stdout sólo hashes. No fix hasta
+> equivalencia PG + negativos; normalización sólo transformación exacta probada.
+> No relajar object policy, startup/locks/SOURCE_DRIFT/readiness/migration75/flags.
+> Si DDL histórica necesita cambio: diagnóstico y reporte primero. Un commit
+> parent cb23aa4 sólo tras dirigidosPASS, push feature y CI nueva20/20.
+> Main678bd3f reservada; sin real/providers/B76–F80/bridge/business15/G-LIVE/H.
+> Encabezados inferiores son históricos y no amplían la orden.
+
 > Orden vigente: A75 CORRECTIVE #2 exclusivamente. Leer [orden](docs/architecture/FASE-1.10A75-corrective-2-orden.md)
 > y [diagnóstico](docs/architecture/FASE-1.10A75-corrective-2.md). Sólo cuatro bloqueos:
 > baseline exacta/UTF8, stages3/17 canonical75, LIKE cutoff y separación V2.
@@ -29,6 +52,15 @@
 > Sin main/merge/deploy/producción/QA real/backups reales/providers/business15,
 > flags, B76–F80/bridge/G-LIVE/H. Policy provisional/PRIVACY_NOT_READY intactos.
 > Encabezados inferiores son históricos y no amplían esta orden.
+
+> Autorización humana adicional: perfiles TECHNICAL_ONLY cerrados53/54/55/58,
+> sólo migrador aislado con lock exclusivo y prueba local de aislamiento.
+> Leer decisión de retención vinculada en el diagnóstico. Nunca canonical,
+> runtime/readiness/activation/serving/PilotGate/binding/REAL. Extras desconocidos
+> rechazan; canonical53–75 e historia intactos; terminar canonical75exacto.
+> Candidato implementado, PG incompleto por wsl.exe c00000fd: no commit/push/CI
+> hasta completar dirigidosPASS. Sin reparación/reset ni reintentos ciegos.
+
 
 
 > A75 queda BLOCKED por WSL0xC00000FD; sin commit final ni PASS completo.

@@ -1,5 +1,53 @@
 # Registro de QA
 
+## 2026-10-14 — A75 validación remota del candidato, PENDING
+
+[Orden](architecture/FASE-1.10A75-corrective-3-remote-orden.md),
+[estado candidato](architecture/FASE-1.10A75-corrective-3-remote.md).
+Autorizado UN commit candidato parent cb23aa4 y publicación sólo de
+codex/phase-1-10a75. Levantado exclusivamente requisitoPG local previo a commit.
+Producto/tests/workflow actuales congelados; ninguna nueva modificación funcional.
+Portables91PASS/1skipPOSIX/0FAIL/0ERROR, regresiones finales4PASS y Node11PASS
+confirmados. Ruff/Bandit/secrets/dependency/AST/truth/links/diffPASS existentes.
+CI fresca completa Linux/PG18.6 sobre SHA exacto, general+20etapas aisladas;
+resultado todavíaPENDING. No heredar verdes ni presentar commit como aprobación.
+WSL local inutilizable: no nuevos intentos/reset/repair/reinstall ni QA real.
+Si falla CI, devolver stage/test/error/clasificación y BLOCKED sin otro commit.
+Recibo final SHA/run/jobs/contadores fueraGit: carpeta privada NoesisSynthetic
+phase-1-10a75-20261013; sin segundo commit documental ni SHA futuro en JSON.
+Sin main/merge/deploy/real/providers/flags/B76–F80/bridge/business15/G-LIVE/H.
+TECHNICAL_ONLY no serving/readiness/binding/REAL; policy provisional intacta.
+
+
+## 2026-10-14 — A75 correctivo3, implementación autorizada; PostgreSQL BLOCKED
+
+[Orden](architecture/FASE-1.10A75-corrective-3-orden.md),
+[diagnóstico y estado](architecture/FASE-1.10A75-corrective-3.md),
+[retención autorizada](architecture/FASE-1.10A75-corrective-3-retention-decision.md).
+El titular autoriza perfiles TECHNICAL_ONLY exactos53/54/55/58, exclusivamente
+migrador técnico aislado. Nunca canonical, runtime, binding, readiness, serving,
+activation, PilotGate ni REAL. Conjunto completo cerrado derivado58–60; extras,
+mutaciones o retención parcial rechazan SCHEMA_OBJECT_MISMATCH. Vuelta75exacta.
+Código candidato: schema_retention.py, schema_check_identity.py y hook acotado
+schema_objects.py. CHECK sólo reconoce dos árboles demostrados; conserva tokens
+canonical originales. Perfiles canonical/DDL histórico/readiness/startup/locking/
+SOURCE_DRIFT/formatV2/privacy/flags intactos. Regresiones nuevas positivas/negativas.
+WSL probe respondió0; arranque dirigido produjo stage17exit1 sin log recuperable,
+y crasheswsl.exe c00000fd a16:52:16 y16:53:51. Sin diagnóstico atribuido al producto.
+Se detienen intentos WSL, sin reset/repair. PostgreSQL nuevo INCOMPLETO, no PASS.
+Base cb23aa4; no commit/push/CI nueva hasta dirigidos completosPASS. Ver recibo
+privado de estado para resultados locales y límites. CI anterior no se hereda.
+Main678bd3f reservada; sin merge/deploy/real/providers/B76–F80/bridge/business15/
+G-LIVE/H. Cinco flagsOFF y policy provisional/PRIVACY_NOT_READY intactos.
+
+Validación medida:92casos portables (91PASS/1skip POSIX/0FAIL/0ERROR,151.231s),
+4regresiones finales nuevasPASS/0.380s; secretos885/0nuevos, enlaces547/0rotos;
+Node11PASS/399.8126ms; Ruff/Bandit/AST/truth/
+diffPASS y pip-audit sin vulnerabilidades conocidas (noesis local no auditable).
+Sin validaciónPG completa ni CI nueva: no equivalente a cierre. Diagnóstico:
+wsl.exe c00000fd; conservar privado source/receipts y no reset/repair. Rollback
+candidato: revertir sólo hooks/helpers del diff local, sin tocar datos ni historia.
+
 ## 2026-10-14 — A75 correctivo2, REMOTE VALIDATION PENDING
 
 [Orden](architecture/FASE-1.10A75-corrective-2-orden.md),

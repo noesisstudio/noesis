@@ -15,6 +15,8 @@ from starlette.testclient import TestClient
 
 from noesis import config, db, migrations
 from noesis.web import auth, server
+from tests.postgres_identity_diagnostic import object_diff
+from noesis.schema_lineage import SchemaLineageError
 
 
 PASSWORD = "noesis-release-test-password"  # pragma: allowlist secret
@@ -60,7 +62,22 @@ def _rollback() -> None:
             with db.get_conn() as conn:
                 conn.execute("UPDATE invoices SET pending_fields=? WHERE id=? AND business_id=?",
                              (draft.get("pending_fields"), draft["id"], draft["business_id"]))
-    assert migrations.downgrade(55) == 55
+    with db.get_conn() as conn:
+        object_diff(conn, 'stage17-T2-before-downgrade55')
+    original_validator = migrations._validated_migration_state
+    def observed_validator(conn, **kwargs):
+        try:
+            return original_validator(conn, **kwargs)
+        except SchemaLineageError:
+            # Capturar ANTES del rollback de la TX exterior. T2 puede ser75
+            # correcto y la divergencia aparecer sólo en un paso intermedio.
+            rows = conn.execute_exact('SELECT version,name FROM schema_migrations ORDER BY version').fetchall()
+            versions = [row['version'] for row in rows]
+            if versions == list(range(1, len(rows) + 1)):
+                object_diff(conn, 'stage17-failed-downgrade55-v' + str(len(rows)), version=len(rows))
+            raise
+    with patch.object(migrations, '_validated_migration_state', observed_validator):
+        assert migrations.downgrade(55) == 55
     assert _snapshot() == original
     assert migrations.downgrade(54) == 54
     assert _snapshot() == original
@@ -238,7 +255,15 @@ def main():
         with patch.object(config,'DATABASE_URL',isolated_url):
             migrations.upgrade(32)
             seed = runpy.run_path(str(Path(__file__).with_name('postgres_migration_smoke.py')))
-            assert seed['main']() == 0
+            original_upgrade = migrations.upgrade
+            def observed_upgrade(*args, **kwargs):
+                result = original_upgrade(*args, **kwargs)
+                if result == 75:
+                    with db.get_conn() as conn:
+                        object_diff(conn, 'stage17-T1-after-upgrade75')
+                return result
+            with patch.object(migrations, 'upgrade', observed_upgrade):
+                assert seed['main']() == 0
             with db.get_conn() as conn:
                 client = conn.execute('SELECT id,business_id FROM clients ORDER BY id LIMIT 1').fetchone()
             db.add_invoice(client['id'],'Borrador del rollback',100,business_id=client['business_id'])

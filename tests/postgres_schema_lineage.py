@@ -70,6 +70,54 @@ class SchemaLineagePostgres(unittest.TestCase):
                      'NEW_TAX_ENGINE_ENABLED', 'NEW_BANK_RECONCILIATION_ENABLED'):
             self.assertFalse(getattr(config, flag))
 
+    def test_amount_check_and_unknown_owned_objects_remain_fail_closed(self):
+        from noesis.schema_lineage import lock_migrator
+        self.fresh(75)
+        changes = {
+            'changed_limit': [
+                'ALTER TABLE economic_events DROP CONSTRAINT economic_events_amount_check',
+                'ALTER TABLE economic_events ADD CONSTRAINT economic_events_amount_check CHECK '
+                '(amount IS NULL OR (amount BETWEEN -9999999999999999.99 AND 9999999999999999.98 AND amount=trunc(amount,2)))',
+            ],
+            'changed_scale': [
+                'ALTER TABLE economic_events DROP CONSTRAINT economic_events_amount_check',
+                'ALTER TABLE economic_events ADD CONSTRAINT economic_events_amount_check CHECK '
+                '(amount IS NULL OR (amount BETWEEN -9999999999999999.99 AND 9999999999999999.99 AND amount=trunc(amount,3)))',
+            ],
+            'changed_operator': [
+                'ALTER TABLE economic_events DROP CONSTRAINT economic_events_amount_check',
+                'ALTER TABLE economic_events ADD CONSTRAINT economic_events_amount_check CHECK '
+                '(amount IS NULL OR (amount > -9999999999999999.99 AND amount <= 9999999999999999.99 AND amount=trunc(amount,2)))',
+            ],
+            'changed_boolean': [
+                'ALTER TABLE economic_events DROP CONSTRAINT economic_events_amount_check',
+                'ALTER TABLE economic_events ADD CONSTRAINT economic_events_amount_check CHECK '
+                '(amount IS NULL OR (amount BETWEEN -9999999999999999.99 AND 9999999999999999.99 OR amount=trunc(amount,2)))',
+            ],
+            'missing_check': ['ALTER TABLE economic_events DROP CONSTRAINT economic_events_amount_check'],
+            'unknown_owned_column': ['ALTER TABLE economic_events ADD COLUMN unknown_financial_column TEXT'],
+            'extra_financial_trigger': [
+                "CREATE FUNCTION qa_unknown_economic_guard() RETURNS trigger LANGUAGE plpgsql AS 'BEGIN RETURN NEW; END'",
+                'CREATE TRIGGER unknown_financial_guard BEFORE INSERT ON economic_events '
+                'FOR EACH ROW EXECUTE FUNCTION qa_unknown_economic_guard()',
+            ],
+        }
+        with db.get_conn() as conn:
+            lock_migrator(conn)
+            self.assertEqual(require_runtime(conn).schema_version, 75)
+            for label, statements in changes.items():
+                with self.subTest(change=label):
+                    conn.execute('SAVEPOINT negative_object')
+                    try:
+                        for statement in statements:
+                            conn.execute(statement)
+                        with self.assertRaisesRegex(SchemaLineageError, 'SCHEMA_OBJECT_MISMATCH'):
+                            require_runtime(conn)
+                    finally:
+                        conn.execute('ROLLBACK TO SAVEPOINT negative_object')
+                        conn.execute('RELEASE SAVEPOINT negative_object')
+                    self.assertEqual(require_runtime(conn).schema_version, 75)
+
     def test_crm_drop_readd_preserves_logical_columns_despite_attnum_holes(self):
         self.fresh(75)
         for _ in range(2):
@@ -77,6 +125,72 @@ class SchemaLineagePostgres(unittest.TestCase):
             self.assertEqual(migrations.upgrade(), 75)
             with db.get_conn() as conn:
                 self.assertEqual(require_runtime(conn).schema_version, 75)
+
+    def test_retention_owner_profiles_never_authorize_consumers_and_return_exact75(self):
+        from noesis.schema_lineage import lock_migrator, require_compatible
+        from noesis.schema_objects import expected_objects, physical_objects
+        from noesis.schema_retention import retention_objects
+        self.fresh(75)
+        for target in (55, 54, 53, 58):
+            if target == 58:
+                self.assertEqual(migrations.upgrade(), 75)
+            self.assertEqual(migrations.downgrade(target), target)
+            with db.get_conn() as conn:
+                # El consumidor SHARE jamás reconoce retención como canonical.
+                with self.assertRaisesRegex(SchemaLineageError, 'SCHEMA_OBJECT_MISMATCH'):
+                    require_compatible(conn, (target,))
+            with db.get_conn() as conn:
+                lock_migrator(conn)
+                observation = inspect(conn)
+                self.assertEqual(observation.integrity, 'TECHNICAL_ONLY')
+                self.assertEqual(observation.object_profile_id, f'postgres/retention-owner/{target}/v1')
+                self.assertEqual(physical_objects(conn), retention_objects(target))
+                self.assertEqual(inspect(conn).object_profile_hash, observation.object_profile_hash)
+                for consumer in (
+                    observation.binding,
+                    lambda: observation.require_canonical((target, 75)),
+                    lambda: require_compatible(conn, (target,)),
+                    lambda: require_runtime(conn),
+                ):
+                    with self.assertRaisesRegex(SchemaLineageError, 'SCHEMA_LINEAGE_MISMATCH'):
+                        consumer()
+                with patch.object(config, 'IS_PRODUCTION', True):
+                    self.assertEqual(inspect(conn).errors, ('SCHEMA_OBJECT_MISMATCH',))
+                with patch('noesis.schema_retention.socket.if_nameindex', return_value=[(1, 'lo'), (2, 'eth0')]):
+                    self.assertEqual(inspect(conn).errors, ('SCHEMA_OBJECT_MISMATCH',))
+            # Cada ruta vuelve a canonical75 antes de cualquier runtime válido.
+            if target == 58:
+                self.assertEqual(migrations.upgrade(), 75)
+                with db.get_conn() as conn:
+                    self.assertEqual(require_runtime(conn).integrity, 'VERIFIED')
+                    self.assertEqual(physical_objects(conn), expected_objects('postgres', 75))
+
+    def test_retention_rejects_partial_changed_unknown_and_future_objects(self):
+        from noesis.schema_lineage import lock_migrator
+        self.fresh(75)
+        self.assertEqual(migrations.downgrade(55), 55)
+        changes = (
+            'ALTER TABLE assistant_messages DROP COLUMN actor',
+            'ALTER TABLE assistant_messages ALTER COLUMN actor TYPE VARCHAR(100)',
+            'ALTER TABLE invoices ADD COLUMN retention_unknown TEXT',
+            'ALTER TABLE whatsapp_ingress DROP CONSTRAINT whatsapp_ingress_pkey',
+            'CREATE TABLE financial_future_unknown(id INTEGER)',
+            'CREATE TABLE unrelated_extra(id INTEGER)',
+        )
+        with db.get_conn() as conn:
+            lock_migrator(conn)
+            for statement in changes:
+                conn.execute('SAVEPOINT retention_negative')
+                try:
+                    conn.execute(statement)
+                    self.assertEqual(inspect(conn).errors, ('SCHEMA_OBJECT_MISMATCH',))
+                finally:
+                    conn.execute('ROLLBACK TO SAVEPOINT retention_negative')
+                    conn.execute('RELEASE SAVEPOINT retention_negative')
+                self.assertEqual(inspect(conn).integrity, 'TECHNICAL_ONLY')
+        self.assertEqual(migrations.upgrade(), 75)
+        with db.get_conn() as conn:
+            self.assertEqual(require_runtime(conn).schema_version, 75)
 
     def test_known_old68_delete_repaired_but_unknown_function_never_adopted(self):
         from noesis.schema_objects import OLD_CASH_DELETE

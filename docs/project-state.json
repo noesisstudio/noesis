@@ -1181,7 +1181,7 @@
     }
   },
   "schema_lineage_a75_candidate": {
-    "status": "CORRECTIVE_2_REMOTE_VALIDATION_PENDING",
+    "status": "CORRECTIVE_3_BLOCKED_RETENTION_POLICY_AND_WSL",
     "branch": "codex/phase-1-10a75",
     "base_ref": "ac6a03d",
     "semantic_source_ref": "c910616",
@@ -1282,6 +1282,73 @@
       "v2_identity_pass": 30,
       "v2_identity_windows_posix_skip": 1,
       "native_postgres_available": false
-    }
+    },
+    "corrective_3_order": "docs/architecture/FASE-1.10A75-corrective-3-orden.md",
+    "corrective_3_report": "docs/architecture/FASE-1.10A75-corrective-3.md",
+    "corrective_3_base_ref": "cb23aa4",
+    "corrective_3_product_changes": true,
+    "corrective_3_semantic_proof": "PASS_2129_DECIMAL_PROBES_27_THREE_VALUED_AND_CASES",
+    "corrective_3_probe_count": 2129,
+    "corrective_3_stage17_diff": {
+      "T1": {
+        "missing": 0,
+        "extra": 0,
+        "changed": 0
+      },
+      "T2": {
+        "missing": 0,
+        "extra": 0,
+        "changed": 0
+      },
+      "failed_version": 55,
+      "failed_extra_keys": 34,
+      "cause": "intentional legacy retention migrations58_60",
+      "shares_V2_cause": false
+    },
+    "corrective_3_commit_created": false,
+    "corrective_3_fresh_vs_historical75_equal": true,
+    "corrective_3_lineage_pg": {
+      "cases": 16,
+      "pass": 16,
+      "seconds": 63.902,
+      "negative_subcases": 7,
+      "before_product_changes": true
+    },
+    "corrective_3_readiness_pg": "INCOMPLETE_WSL_CLIENT_C00000FD",
+    "corrective_3_wsl_authorized": true,
+    "corrective_3_policy_decision": "HUMAN_APPROVED_EXACT_TECHNICAL_ONLY_53_54_55_58",
+    "corrective_3_retention_proposal": "docs/architecture/FASE-1.10A75-corrective-3-retention-decision.md",
+    "corrective_3_fresh_ci": "PENDING_NEW_DISPATCH_AFTER_CANDIDATE_COMMIT",
+    "corrective_3_current_status": "REMOTE_VALIDATION_CANDIDATE_PENDING",
+    "corrective_3_new_postgres_validation": "INCOMPLETE_STAGE17_EXIT1_NO_RECOVERABLE_LOG_WSL_CLIENT_C00000FD",
+    "corrective_3_new_lineage_pg": "NOT_COMPLETED_AFTER_PRODUCT_CHANGES",
+    "corrective_3_new_v2_runtime": "NOT_COMPLETED_AFTER_PRODUCT_CHANGES",
+    "corrective_3_scope": "schema_retention exact isolated owner + two-tree amount CHECK identity; canonical profiles and historical migrations unchanged",
+    "corrective_3_portable_validation": {
+      "cases": 92,
+      "pass": 91,
+      "skips": 1,
+      "fail": 0,
+      "error": 0,
+      "seconds": 151.231,
+      "new_final_regressions": 4,
+      "new_final_pass": 4,
+      "new_final_seconds": 0.38,
+      "not_general_suite": true
+    },
+    "corrective_3_node": {
+      "cases": 11,
+      "pass": 11,
+      "fail": 0,
+      "milliseconds": 399.8126
+    },
+    "corrective_3_gates": "Ruff/Bandit/AST/truth/diff/pip-audit PASS; secrets885/0new, links547/0broken",
+    "corrective_3_remote_order": "docs/architecture/FASE-1.10A75-corrective-3-remote-orden.md",
+    "corrective_3_remote_report": "docs/architecture/FASE-1.10A75-corrective-3-remote.md",
+    "corrective_3_remote_permission": "ONE_CANDIDATE_CHILD_OF_cb23aa4_FEATURE_PUSH_AND_NEW_FULL_DISPATCH; NOT_PHASE_APPROVAL",
+    "corrective_3_local_pg_precommit_requirement_lifted": true,
+    "corrective_3_product_frozen": true,
+    "corrective_3_wsl_retry_allowed": false,
+    "corrective_3_final_remote_receipt": "outside Git in NoesisSynthetic/phase-1-10a75-20261013; exact SHA/run/jobs required before continuation"
   }
 }
