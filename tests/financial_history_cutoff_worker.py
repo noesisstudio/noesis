@@ -92,10 +92,12 @@ def main():
                 service = EconomicEvents(FinancialSession(conn), bid)
                 service.append(principal, service.read(principal, args["event_uuid"]).event)
             emit({"result": "wrote"})
-        elif mode == "sql":
+        elif mode in ("sql", "sql_paused"):
             with db.get_conn() as conn:
+                concept = "qa_cut_pause()" if mode == "sql_paused" else "'SQL fixture'"
                 conn.execute(
-                    "INSERT INTO expenses (business_id,concept,amount,spent_on,created_at) VALUES (?,'SQL fixture',10,'2026-10-04','2026-10-04T00:00:00')",
+                    "INSERT INTO expenses (business_id,concept,amount,spent_on,created_at) VALUES (?,"
+                    + concept + ",10,'2026-10-04','2026-10-04T00:00:00')",
                     (bid,),
                 )
             emit({"result": "wrote"})

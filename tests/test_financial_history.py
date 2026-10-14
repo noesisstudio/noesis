@@ -550,32 +550,65 @@ class FinancialHistoryContractsTest(unittest.TestCase):
                     self.assertNotIn(node.module, ("noesis.db", "noesis.financial_writers", "noesis.invoice_capture",
                         "noesis.payment_capture", "noesis.purchasing_capture", "noesis.financial_operations.service"))
 
-    def test_five_flags_and_schema_unchanged(self):
+    def test_five_flags_off_and_exact_crm74_readiness75_lineage(self):
         from noesis import config, migrations
         for name in ("FINANCIAL_CORE_ENABLED", "LEDGER_REPORTING_ENABLED", "OPEN_ITEMS_ENABLED",
                      "NEW_TAX_ENGINE_ENABLED", "NEW_BANK_RECONCILIATION_ENABLED"):
             self.assertFalse(getattr(config, name))
-        # 73 es el último esquema del Financial Core. La 74 es del CRM de captación
-        # y se admite porque no toca ninguna tabla financiera (prueba siguiente).
-        self.assertEqual(migrations.LATEST_VERSION, 74)
+        # CRM74 reservada; sólo readiness75 se añade, sin activación.
+        self.assertEqual(migrations.LATEST_VERSION, 75)
+        self.assertEqual([(v,n) for v,n,*_ in migrations.MIGRATIONS if v > 73],
+                         [(74,"captacion_hoja_y_tipo"),(75,"evaluacion_readiness_financiera")])
 
-    def test_migration_after_core_schema_only_touches_sales_tables(self):
-        import re
-        from pathlib import Path
-        from noesis import migrations
-        from noesis.crm import esquema
-
-        self.assertEqual(
-            [version for version, *_ in migrations.MIGRATIONS if version > 73], [74]
-        )
-        source = Path(esquema.__file__).read_text(encoding="utf-8")
-        tables = set(re.findall(
-            r"(?:CREATE TABLE IF NOT EXISTS|DROP TABLE IF EXISTS|ALTER TABLE|"
-            r"UPDATE|FROM|\bON) (\w+)", source,
-        ))
-        self.assertTrue(tables)
-        for table in tables:
-            self.assertTrue(table.startswith("sales_"), table)
+    def test_crm74_and_readiness75_only_modify_their_owned_objects(self):
+        import tempfile
+        from unittest.mock import patch
+        from noesis import config, db, migrations
+        from noesis.financial_activation.schema import TABLES
+        from noesis.financial_history.reconciliation_verifier import storage_hash
+        def snapshot():
+            with db.get_conn() as conn:
+                objects = {r['name']:dict(r) for r in conn.execute_exact(
+                    "SELECT name,type,tbl_name,sql FROM sqlite_master WHERE name NOT LIKE 'sqlite_%'").fetchall()}
+                rows = {name:sorted(storage_hash(r) for r in conn.execute_exact(
+                    'SELECT * FROM "'+name.replace('"','""')+'"').fetchall())
+                    for name,obj in objects.items() if obj['type']=='table' and name!='schema_migrations'}
+                registry = [dict(r) for r in conn.execute_exact('SELECT * FROM schema_migrations ORDER BY version').fetchall()]
+            return objects,rows,registry
+        with tempfile.TemporaryDirectory() as temporary, patch.multiple(
+                config,DATABASE_URL='',DB_PATH=Path(temporary)/'owned.db'):
+            migrations.upgrade(73)
+            before,rows,_ = snapshot()
+            migrations.upgrade(74)
+            crm,crm_rows,_ = snapshot()
+            for name in set(before)|set(crm):
+                if before.get(name)!=crm.get(name):
+                    self.assertTrue((crm.get(name) or before[name])['tbl_name'].startswith('sales_'),name)
+            for table in rows:
+                if not table.startswith('sales_'):
+                    self.assertEqual(rows[table],crm_rows[table],table)
+            business=db.create_business('Fixture conservación','owned@example.test')
+            client=db.add_client('Cliente fixture',business_id=business['id'])
+            db.add_invoice(client['id'],'Legacy preservada',100,business_id=business['id'])
+            db.add_expense('Legacy preservado','1.00',business_id=business['id'])
+            with db.get_conn() as conn:
+                conn.execute("INSERT INTO sales_sheets (nombre,url,created_at) VALUES ('CRM fixture','https://example.test','2026-10-14T00:00:00')")
+            before,rows,registry=snapshot()
+            migrations.upgrade(75)
+            after,after_rows,after_registry=snapshot()
+            for name,obj in before.items():
+                self.assertEqual(obj,after[name],name)
+            for table,values in rows.items():
+                self.assertEqual(values,after_rows[table],table)
+            added=set(after)-set(before)
+            self.assertEqual({name for name in added if after[name]['type']=='table'},set(TABLES))
+            self.assertTrue(added)
+            for name in added:
+                self.assertIn(after[name]['tbl_name'],TABLES,name)
+            for table in TABLES:
+                self.assertEqual(after_rows[table],[])
+            self.assertEqual(after_registry[:-1],registry)
+            self.assertEqual(after_registry[-1]['name'],'evaluacion_readiness_financiera')
 
 
 if __name__ == "__main__":

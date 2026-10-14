@@ -1181,7 +1181,7 @@
     }
   },
   "schema_lineage_a75_candidate": {
-    "status": "REMOTE_VALIDATION_PENDING",
+    "status": "CORRECTIVE_1_REMOTE_VALIDATION_PENDING",
     "branch": "codex/phase-1-10a75",
     "base_ref": "ac6a03d",
     "semantic_source_ref": "c910616",
@@ -1192,7 +1192,7 @@
     "canonical75_fingerprint": "289b8eb580edd4c45d2de40233ffd7dfc193999b10f49825661cba18905696a1",
     "report": "docs/architecture/FASE-1.10A75-cierre.md",
     "parity": "docs/architecture/FASE-1.10A75-parity.md",
-    "full_fresh_suite": "PENDING - authoritative fresh Linux/PostgreSQL18.6 CI on candidate SHA",
+    "full_fresh_suite": "PENDING - new exact corrective SHA authoritative Linux/PostgreSQL18.6 CI",
     "postgres_focused_cases": 37,
     "postgres_focused_seconds": 370.302,
     "new_evaluation_version": 2,
@@ -1204,14 +1204,14 @@
     "real_data_access": false,
     "future76_80_implemented": false,
     "bridge": false,
-    "pushed": false,
-    "final_commit_created": false,
+    "pushed": true,
+    "final_commit_created": true,
     "final_directed_windows_cases": 74,
     "final_directed_windows_seconds": 161.594,
     "postgres_final_complete": false,
     "infrastructure_error": "Windows Event1000 wsl.exe/wslservice.exe c00000fd; 2026-10-13 22:59:59 and 23:15:08",
     "technical_fixture_integrity": "TECHNICAL_ONLY - never VERIFIED/runtime/binding",
-    "general_collected_expected": 2004,
+    "general_collected_expected": 2011,
     "remote_validation_order": "docs/architecture/FASE-1.10A75-remote-orden.md",
     "remote_candidate_publication_authorized": true,
     "functional_freeze_verified_files": 47,
@@ -1219,6 +1219,49 @@
       "ci.yml only: verbose full suite; 180min budgets; independent gates; explicit OFF flags"
     ],
     "no_automatic_ci_correction": true,
-    "final_receipt_outside_git": true
+    "final_receipt_outside_git": true,
+    "failed_candidate_sha": "f5150b27076ab5725bae436fba781095a0a9c0ee",
+    "failed_remote_run_id": 38527937181,
+    "failed_general": {
+      "total": 2004,
+      "pass": 1965,
+      "skips": 2,
+      "fail": 3,
+      "error": 34,
+      "seconds": 1911.037
+    },
+    "failed_postgres": {
+      "executed": 338,
+      "pass": 333,
+      "fail": 2,
+      "error": 3,
+      "stages": 13
+    },
+    "corrective_order": "docs/architecture/FASE-1.10A75-corrective-1-orden.md",
+    "corrective_report": "docs/architecture/FASE-1.10A75-corrective-1.md",
+    "corrective_source_drift_fix": "SQLite metadata-only autocommit observer, full validated page replay, bounded instability fail-closed; PG unchanged",
+    "required_pg_stages": 20,
+    "stage_isolation": "fresh owned noesis_ci database per stage, fresh docs/backups dirs, accumulate all results",
+    "corrective_parent_sha": "f5150b27076ab5725bae436fba781095a0a9c0ee",
+    "corrective_local_directed": {
+      "web_a75_lineage": {
+        "cases": 111,
+        "pass": 111,
+        "seconds": 189.255
+      },
+      "initial_controls": {
+        "cases": 7,
+        "pass": 7,
+        "seconds": 11.894
+      },
+      "history": {
+        "cases": 86,
+        "pass": 84,
+        "skips": 2,
+        "seconds": 253.306
+      },
+      "full_suite_completed": false,
+      "pg_directed": "not available on Windows; WSL not retried"
+    }
   }
 }

@@ -1,5 +1,6 @@
 """Contratos del sitio público: promesas, privacidad, rutas y medición."""
 import json
+from contextlib import ExitStack
 import re
 import tempfile
 import unittest
@@ -17,7 +18,10 @@ from noesis.web.routers import pages
 
 class PublicMarketingTests(unittest.TestCase):
     def setUp(self):
+        self.stack = ExitStack()
+        self.addCleanup(self.stack.close)
         self.temp = tempfile.TemporaryDirectory()
+        self.stack.enter_context(self.temp)
         self.patches = [
             patch.object(config, "DB_PATH", Path(self.temp.name) / "site.db"),
             patch.object(config, "DATABASE_URL", ""),
@@ -27,16 +31,10 @@ class PublicMarketingTests(unittest.TestCase):
             patch.object(config, "PUBLIC_WHATSAPP_DEMO_PHONE", ""),
         ]
         for item in self.patches:
-            item.start()
+            self.stack.enter_context(item)
         pages._public_event_times.clear()
-        self.http = TestClient(server.app)
-        self.http.__enter__()
-
-    def tearDown(self):
-        self.http.__exit__(None, None, None)
-        for item in reversed(self.patches):
-            item.stop()
-        self.temp.cleanup()
+        db.init_db()
+        self.http = self.stack.enter_context(TestClient(server.app))
 
     def post_event(self, data, **kwargs):
         return self.http.post("/public/event", json=data, headers={

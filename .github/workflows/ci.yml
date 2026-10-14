@@ -104,7 +104,7 @@ jobs:
 
       - name: Detectar errors estàtics
         if: ${{ !cancelled() && steps.install-project.outcome == 'success' }}
-        run: uv run ruff check src tests scripts/check_doc_links.py scripts/check_schema_lineage.py scripts/build_schema_profiles.py
+        run: uv run ruff check src tests scripts/check_doc_links.py scripts/check_schema_lineage.py scripts/build_schema_profiles.py scripts/run_postgres_backup_lab.py
 
       - name: Validar demostración pública y calendario sin red
         if: ${{ !cancelled() && steps.install-project.outcome == 'success' }}

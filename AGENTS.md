@@ -1,5 +1,17 @@
 # AGENTS.md - Manual del proyecto Bynoesis
 
+
+> Orden vigente: A75 CORRECTIVE REMOTE VALIDATION1. Leer [orden](docs/architecture/FASE-1.10A75-corrective-1-orden.md)
+> y [diagnóstico/cierre](docs/architecture/FASE-1.10A75-corrective-1.md).
+> Sólo defectos demostrados por CI, un commit correctivo y push de la misma rama;
+> CI nueva Linux/PostgreSQL18.6 completa20/20. SOURCE_DRIFT nunca READY por snapshot
+> previo; observador SQLite sólo PRAGMA sin autoridad, páginas revalidadas.
+> No startup autoDDL ni validator bypass/qa triggers aceptados. Historial inmutable,
+> main reservado, flagsOFF/policy provisional intactos; sin real/B76–F80/bridge/G-LIVE/H.
+> Si el nuevo SHA falla, registrar BLOCKED sin segundo correctivo no autorizado.
+> Encabezados inferiores históricos no amplían esta orden.
+
+
 > Orden vigente: REMOTE VALIDATION CANDIDATE A75, aún sin PASS.
 > Leer [orden remota](docs/architecture/FASE-1.10A75-remote-orden.md).
 > Sólo harness CI y documentación factual; lógica funcional congelada.

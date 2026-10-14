@@ -36,6 +36,14 @@ CASES = [
 ]
 
 
+def invoke(args, environment):
+    try:
+        return subprocess.run([sys.executable, *args], env=environment, shell=False,
+                              capture_output=True, timeout=1800)  # nosec B603
+    except subprocess.TimeoutExpired as exc:
+        return subprocess.CompletedProcess(args, 124, exc.stdout or b'', exc.stderr or b'')
+
+
 def main():
     if not outbound_blocked():
         raise SystemExit("Ejecutar dentro de namespace sin outbound, como usuario no root")
@@ -60,23 +68,45 @@ def main():
                    NOESIS_DB_PATH=str(root / "unused.db"), NOESIS_SECRET="noesis-ci-secret-fixed-32-characters-minimum",
                    NOESIS_VALUE_LEDGER_ENABLED="false", NOESIS_VALUE_LEDGER_ADMIN_ENABLED="false")
         results = []
-        for name, args in CASES:
-            current_env = env.copy()
+        for index, (name, args) in enumerate(CASES, 1):
+            # La única DB reseteable pertenece al cluster sellado creado arriba.
+            # Nunca heredar schema/datos/carreras de una etapa anterior.
+            with source.connection() as manager:
+                manager.autocommit = True
+                manager.execute('DROP DATABASE IF EXISTS noesis_ci WITH (FORCE)')
+                manager.execute('CREATE DATABASE noesis_ci TEMPLATE template0')
+                database_oid = manager.execute("SELECT oid FROM pg_database WHERE datname='noesis_ci'").fetchone()[0]
+            stage_root = root / str(index)
+            stage_root.mkdir()
+            current_env = {**env, 'NOESIS_DOCS_PATH':str(stage_root/'documents'),
+                           'NOESIS_BACKUP_DIR':str(stage_root/'backups'),
+                           'NOESIS_DB_PATH':str(stage_root/'unused.db')}
+            preparation = {
+                'migrations historical': ['-m', 'noesis.migrations', 'upgrade', '32'],
+                'legacy catalog53': ['-m', 'noesis.migrations', 'upgrade'],
+                'privacy + rollback': ['tests/postgres_smoke.py'],
+            }.get(name)
+            preparation_result = None
+            if preparation:
+                preparation_result = invoke(preparation, current_env)
+                print('PRECONDITION', name, preparation_result.returncode, flush=True)
+                print((preparation_result.stdout+preparation_result.stderr).decode(errors='replace'), flush=True)
             if name == "legacy catalog53":
                 current_env["PYTHONPATH"] = str(Path(".legacy-baseline/src").resolve())
             started = time.monotonic()
-            result = subprocess.run([sys.executable, *args], env=current_env, shell=False,
-                                    capture_output=True, timeout=1800)  # nosec B603
+            result = invoke(args, current_env)
+            if preparation_result is not None and preparation_result.returncode:
+                result.returncode = preparation_result.returncode
             print(name, "PASS" if result.returncode == 0 else "FAIL", flush=True)
             output = (result.stdout + result.stderr).decode(errors="replace")
             # Sólo fixtures sintéticos. Conservar el resultado íntegro para CI.
             print(output, flush=True)
             results.append({"name": name, "returncode": result.returncode,
-                            "duration": round(time.monotonic() - started, 3)})
-            if result.returncode:
-                return result.returncode
+                            "duration": round(time.monotonic() - started, 3),
+                            "database_oid": database_oid, "isolated_stage": index,
+                            "precondition_returncode": None if preparation_result is None else preparation_result.returncode})
         print(json.dumps(results, indent=2))
-    return 0
+    return 1 if any(row["returncode"] for row in results) else 0
 
 
 if __name__ == "__main__":

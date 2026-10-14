@@ -1,5 +1,25 @@
 # Registro de QA
 
+## 2026-10-14 — A75 correctivo1, REMOTE VALIDATION PENDING
+
+[Orden correctiva](architecture/FASE-1.10A75-corrective-1-orden.md),
+[diagnóstico y cierre candidato](architecture/FASE-1.10A75-corrective-1.md).
+Run38527937181 de f5150b27:FAIL,2004/1965PASS/2skip/3FAIL/34ERROR;
+PG338/333PASS/2FAIL/3ERROR,13/20. Sin fallo de infraestructura Linux.
+Sólo este correctivo autorizado, un commit descendiente del candidato, push normal
+feature y CI20/20 fresca sobre nuevoSHA. Sin main/rebase/amend/force/deploy/real.
+Producto: únicamente HistoryDiagnostics observa commits SQLite ocultos al snapshot
+por validación previa y reabre página con lineage/permisos completos; no commits
+propios ni nueva autoridad. PG conserva su camino actual. Startup/validator/profiles/
+migrations/flags intactos. Fixtures web explícitos y herméticos; guards sin bypass;
+runner usa una DB sintética nueva por etapa y acumula resultado20 antes de exit.
+Policy E provisional/PRIVACY_NOT_READY y deuda sharp HIGH intactos. Sin B76–F80,
+bridge/producción/Railway/QA/backups reales/providers/business15/G-LIVE/H.
+Dirigidos nuevos: 111 PASS (189.255 s); 7 controles PASS (11.894 s); history
+86 casos/84 PASS/2 skips PG previstos (253.306 s), 0 FAIL/ERROR. Ruff, Bandit,
+AST/collision, truth y enlaces PASS. No es full suite; cierre remoto PENDING.
+
+
 ## 2026-10-14 — A75 REMOTE VALIDATION PENDING
 
 [Orden remota](architecture/FASE-1.10A75-remote-orden.md). Commit candidato y

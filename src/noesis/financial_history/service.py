@@ -110,14 +110,31 @@ class HistoryDiagnostics:
         for kind in sorted(SOURCES):
             after = None
             while True:
-                with self._session(principal) as session:
-                    sources = self._reader(session).page(kind, after)
+                sources, unstable = self._comparison_page(principal, kind, after)
+                retry_drift |= unstable
                 if not sources:
                     break
                 for source in sources:
                     hash_source(comparison, source)
                 after = sources[-1].key
         return self._complete(principal, manifest_uuid, comparison.hexdigest(), retry_drift)
+
+    def _comparison_page(self, principal, kind, after):
+        if config.DATABASE_URL:
+            with self._session(principal) as session:
+                return self._reader(session).page(kind, after), False
+        # Observador de metadatos, nunca autoridad: sólo PRAGMA, sin snapshot ni
+        # fuentes tenant. La infraestructura compartida posee ambos contextos.
+        # data_version dentro de la TX de lectura también estaría congelado.
+        with db.get_conn() as observer:
+            for _ in range(2):
+                before = observer.execute('PRAGMA data_version').fetchone()[0]
+                with self._session(principal) as session:
+                    sources = self._reader(session).page(kind, after)
+                if observer.execute('PRAGMA data_version').fetchone()[0] == before:
+                    return sources, False
+            # Nunca congelar READY si tampoco la segunda observación es estable.
+            return sources, True
 
     def _complete(self, principal, manifest_uuid, comparison_hash, retry_drift):
         with self._session(principal) as session:

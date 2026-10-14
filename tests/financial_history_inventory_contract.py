@@ -316,6 +316,63 @@ class HistoryInventoryContract:
         self.assertIn('SOURCE_DRIFT',self.codes(manifest))
         self.assertNotEqual(manifest['source_set_hash'],manifest['comparison_source_set_hash'])
 
+    def test_lineage_validation_before_raw_reader_must_not_hide_committed_source_drift(self):
+        from noesis.financial_history import service
+        draft = self.draft()
+        original_page, original_require = RawReader.page, service.require_compatible
+        validated, observations = set(), []
+        changed = False
+        def require(session, allowed):
+            result = original_require(session, allowed)
+            validated.add(id(session.borrowed_connection))
+            return result
+        def page(reader, kind, after=None):
+            nonlocal changed
+            if kind == 'invoice':
+                self.assertIn(id(reader.connection), validated)
+                with db.get_conn() as conn:
+                    planning = conn.execute("SELECT 1 FROM financial_history_manifests WHERE business_id=? AND status='planning'", (self.bid,)).fetchone()
+                if planning and not changed:
+                    if reader.connection.dialect == 'sqlite':
+                        self.assertTrue(reader.connection.raw.in_transaction)
+                    with db.get_conn() as conn:
+                        conn.execute('UPDATE invoices SET concept=? WHERE business_id=? AND id=?',
+                                     ('Commit después de lineage y antes de RawReader', self.bid, draft['id']))
+                    changed = True
+            rows = original_page(reader, kind, after)
+            if kind == 'invoice' and changed and rows:
+                observations.append(rows[0].fields['concept_hash'])
+            return rows
+        with patch.object(service, 'require_compatible', require), patch.object(RawReader, 'page', page):
+            manifest = self.run_history()
+        self.assertTrue(changed)
+        self.assertEqual(manifest['result'], 'BLOCKED')
+        self.assertIn('SOURCE_DRIFT', self.codes(manifest))
+        self.assertNotEqual(manifest['source_set_hash'], manifest['comparison_source_set_hash'])
+        if not config.DATABASE_URL:
+            self.assertGreaterEqual(len(observations), 2)
+            self.assertNotEqual(observations[0], observations[1])
+
+    def test_concurrent_other_tenant_commit_reobserves_without_false_source_drift(self):
+        self.draft()
+        other = db.create_business('Otro fixture', uuid4().hex+'@example.test')
+        original, changed = RawReader.page, False
+        def page(reader, kind, after=None):
+            nonlocal changed
+            if kind == 'invoice' and not changed:
+                with db.get_conn() as conn:
+                    planning = conn.execute("SELECT 1 FROM financial_history_manifests WHERE business_id=? AND status='planning'", (self.bid,)).fetchone()
+                if planning:
+                    db.add_expense('Otro tenant concurrente', '1.00', business_id=other['id'])
+                    changed = True
+            return original(reader, kind, after)
+        with patch.object(RawReader, 'page', page):
+            manifest = self.run_history()
+        self.assertTrue(changed)
+        self.assertEqual(manifest['result'], 'READY_FOR_REVIEW')
+        self.assertNotIn('SOURCE_DRIFT', self.codes(manifest))
+        self.assertEqual(manifest['source_set_hash'], manifest['comparison_source_set_hash'])
+
     def test_sql_guards_diagnostic_frozen_delete_and_cross_business(self):
         self.issued()
         manifest = self.run_history()

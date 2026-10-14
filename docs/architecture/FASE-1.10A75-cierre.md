@@ -1,5 +1,11 @@
 # 1.10A75 — REMOTE VALIDATION PENDING
 
+
+> Candidato f5150b27 terminó REMOTE BLOCKED enrun38527937181.
+> Continúa exclusivamente [correctivo1](FASE-1.10A75-corrective-1.md), todavíaREMOTE VALIDATION PENDING.
+> El informe inferior es histórico y no acredita el nuevoSHA.
+
+
 **REMOTE VALIDATION PENDING. No LOCAL ni REMOTE CODE-VERIFIED PASS todavía.**
 
 [Orden remota](FASE-1.10A75-remote-orden.md). Se prepara un único commit candidato

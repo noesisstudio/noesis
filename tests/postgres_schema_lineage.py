@@ -15,6 +15,7 @@ from uuid import uuid4
 from noesis import config, db, migrations
 from noesis.schema_lineage import inspect, require_runtime, SchemaLineageError, MIGRATION_LOCK_KEY
 from tests import postgres_financial_operations as operations_pg
+from tests.test_schema_lineage import A75_GOLDEN
 
 
 class SchemaLineagePostgres(unittest.TestCase):
@@ -49,6 +50,25 @@ class SchemaLineagePostgres(unittest.TestCase):
                 self.assertEqual(inspect(conn).schema_version, target)
         self.assertEqual(migrations.downgrade(74), 74)
         self.assertEqual(migrations.upgrade(), 75)
+
+    def test_canonical75_exact_identity_and_no_new_financial_effect(self):
+        self.fresh(75)
+        with db.get_conn() as conn:
+            observation = require_runtime(conn)
+            self.assertEqual(observation.lineage_fingerprint, A75_GOLDEN)
+            self.assertEqual(observation.migration_identity[-2:],
+                             ((74, 'captacion_hoja_y_tipo'), (75, 'evaluacion_readiness_financiera')))
+            for table in ('financial_activation_control', 'financial_readiness_evaluations',
+                          'financial_readiness_capabilities', 'financial_operations', 'economic_events'):
+                self.assertEqual(conn.execute('SELECT COUNT(*) AS n FROM '+table).fetchone()['n'], 0)
+            tables = {r['tablename'] for r in conn.execute(
+                'SELECT tablename FROM pg_tables WHERE schemaname=current_schema()').fetchall()}
+            self.assertTrue({'financial_activation_grants', 'financial_handoff_receipts',
+                             'financial_provider_attempts'}.isdisjoint(tables))
+        # Sin fila de control equivale a off/generation0/ever_enabledfalse.
+        for flag in ('FINANCIAL_CORE_ENABLED', 'LEDGER_REPORTING_ENABLED', 'OPEN_ITEMS_ENABLED',
+                     'NEW_TAX_ENGINE_ENABLED', 'NEW_BANK_RECONCILIATION_ENABLED'):
+            self.assertFalse(getattr(config, flag))
 
     def test_crm_drop_readd_preserves_logical_columns_despite_attnum_holes(self):
         self.fresh(75)

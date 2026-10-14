@@ -1,6 +1,8 @@
 """Epoch/T0/fence real; PostgreSQL16 localhost descartable /noesis_ci."""
 
 import unittest
+from contextlib import contextmanager
+from datetime import datetime
 import json
 import threading
 import time
@@ -9,6 +11,7 @@ from uuid import uuid4
 from noesis import db
 from noesis.core.locks import lock_business, lock_key
 from noesis.financial_operations.contracts import AccessDenied
+from noesis.schema_lineage import require_runtime, SchemaLineageError
 
 from tests.financial_history_cutoff_contract import HistoryCutoffContract
 from tests.financial_history_cutoff_races import CutoffProcessRaces
@@ -100,31 +103,67 @@ class HistoryCutoffPostgres(HistoryCutoffContract, CutoffProcessRaces, unittest.
                                  (self.bid, self.user["id"]))
 
     def test_sql_statement_snapshot_before_open_observes_fence_after_commit(self):
-        # Pausa ANTES del guard C: el INSERT inicia con snapshot anterior a T0.
+        # La expresión VOLATILE se evalúa dentro del INSERT antes del guard C.
+        # No cambia ningún objeto owned; query_start y lock observan la barrera.
         key = lock_key("cutoff-test-pause", uuid4())
-        with db.get_conn() as conn:
-            conn.execute(
-                f"CREATE FUNCTION qa_cut_pause() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN PERFORM pg_advisory_xact_lock({key}); RETURN NEW; END $$"
-            )
-            conn.execute(
-                "CREATE TRIGGER aa0_cut_pause BEFORE INSERT ON expenses FOR EACH ROW EXECUTE FUNCTION qa_cut_pause()"
-            )
-        with db.get_conn() as pause:
-            pause.execute("SELECT pg_advisory_xact_lock(?)", (key,))
-            writer = self.child("sql")
-            self._waiting(1, "advisory", key)
-            self.open()
-        result = self.result(writer)
-        self.assertEqual(result["error"], "HistoricalFenceActive")
-        with db.get_conn() as conn:
-            self.assertFalse(
-                conn.execute(
+        with self._pause_function(key):
+            with db.get_conn() as pause:
+                pause.execute("SELECT pg_advisory_xact_lock(?)", (key,))
+                writer = self.child("sql_paused")
+                self._waiting(1, "advisory", key)
+                with db.get_conn() as observer:
+                    require_runtime(observer)
+                    statement = observer.execute(
+                        "SELECT query_start FROM pg_stat_activity WHERE query LIKE 'INSERT INTO expenses%' "
+                        "AND query LIKE '%qa_cut_pause()%' AND wait_event_type='Lock'"
+                    ).fetchone()
+                    self.assertIsNotNone(statement)
+                epoch = self.open()
+                self.assertLess(datetime.fromisoformat(str(statement['query_start'])),
+                                datetime.fromisoformat(str(epoch['t0']).replace('Z', '+00:00')))
+            result = self.result(writer)
+            self.assertEqual(result["error"], "HistoricalFenceActive")
+            with db.get_conn() as conn:
+                self.assertFalse(conn.execute(
                     "SELECT 1 FROM expenses WHERE business_id=? AND concept='SQL fixture'",
                     (self.bid,),
-                ).fetchone()
+                ).fetchone())
+
+    @contextmanager
+    def _pause_function(self, key):
+        with db.get_conn() as conn:
+            conn.execute(
+                f"CREATE FUNCTION qa_cut_pause() RETURNS text VOLATILE LANGUAGE plpgsql AS $$ "
+                f"BEGIN PERFORM pg_advisory_xact_lock({key}); RETURN 'SQL fixture'; END $$"
             )
-            conn.execute("DROP TRIGGER aa0_cut_pause ON expenses")
-            conn.execute("DROP FUNCTION qa_cut_pause()")
+        try:
+            yield
+        finally:
+            with db.get_conn() as conn:
+                conn.execute("DROP FUNCTION qa_cut_pause()")
+
+    def test_pause_function_cleanup_even_when_assertion_fails(self):
+        with self.assertRaisesRegex(AssertionError, 'synthetic assertion'):
+            with self._pause_function(lock_key('cleanup', uuid4())):
+                self.fail('synthetic assertion')
+        with db.get_conn() as conn:
+            require_runtime(conn)
+            self.assertIsNone(conn.execute("SELECT to_regprocedure('qa_cut_pause()') AS f").fetchone()['f'])
+
+    def test_extra_trigger_on_owned_expenses_rejected_and_cleaned(self):
+        with db.get_conn() as conn:
+            conn.execute("CREATE FUNCTION qa_owned_probe() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RETURN NEW; END $$")
+        try:
+            with db.get_conn() as conn:
+                conn.execute("CREATE TRIGGER qa_owned_probe BEFORE INSERT ON expenses FOR EACH ROW EXECUTE FUNCTION qa_owned_probe()")
+            with db.get_conn() as conn, self.assertRaisesRegex(SchemaLineageError, 'SCHEMA_OBJECT_MISMATCH'):
+                require_runtime(conn)
+        finally:
+            with db.get_conn() as conn:
+                conn.execute("DROP TRIGGER IF EXISTS qa_owned_probe ON expenses")
+                conn.execute("DROP FUNCTION qa_owned_probe()")
+        with db.get_conn() as conn:
+            self.assertEqual(require_runtime(conn).schema_version, 75)
 
 
 if __name__ == "__main__":

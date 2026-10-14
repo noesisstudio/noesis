@@ -3,13 +3,27 @@
 from __future__ import annotations
 
 import unittest
+from contextlib import ExitStack
+from pathlib import Path
+import tempfile
 import xml.etree.ElementTree as ET
 from unittest.mock import patch
 
-from noesis import config
+from noesis import config, db
 
 
 class SeoTestCase(unittest.TestCase):
+    def setUp(self):
+        stack = ExitStack()
+        self.addCleanup(stack.close)
+        temporary = stack.enter_context(tempfile.TemporaryDirectory())
+        stack.enter_context(patch.multiple(config, DATABASE_URL='',
+                                          DB_PATH=Path(temporary)/'seo.db',
+                                          SEED_DEMO=False, RESET_DB=False))
+        from noesis.web import server
+        stack.enter_context(patch.object(server, 'start_scheduler', lambda: None))
+        db.init_db()
+
     def _client(self):
         from starlette.testclient import TestClient
         from noesis.web import server
