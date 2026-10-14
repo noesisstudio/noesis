@@ -1181,7 +1181,7 @@
     }
   },
   "schema_lineage_a75_candidate": {
-    "status": "CORRECTIVE_1_REMOTE_VALIDATION_PENDING",
+    "status": "CORRECTIVE_2_REMOTE_VALIDATION_PENDING",
     "branch": "codex/phase-1-10a75",
     "base_ref": "ac6a03d",
     "semantic_source_ref": "c910616",
@@ -1211,7 +1211,7 @@
     "postgres_final_complete": false,
     "infrastructure_error": "Windows Event1000 wsl.exe/wslservice.exe c00000fd; 2026-10-13 22:59:59 and 23:15:08",
     "technical_fixture_integrity": "TECHNICAL_ONLY - never VERIFIED/runtime/binding",
-    "general_collected_expected": 2011,
+    "general_collected_expected": 2014,
     "remote_validation_order": "docs/architecture/FASE-1.10A75-remote-orden.md",
     "remote_candidate_publication_authorized": true,
     "functional_freeze_verified_files": 47,
@@ -1262,6 +1262,26 @@
       },
       "full_suite_completed": false,
       "pg_directed": "not available on Windows; WSL not retried"
+    },
+    "corrective_2_order": "docs/architecture/FASE-1.10A75-corrective-2-orden.md",
+    "corrective_2_report": "docs/architecture/FASE-1.10A75-corrective-2.md",
+    "corrective_2_previous_run": 38539348109,
+    "corrective_2_product_changes": false,
+    "corrective_2_v2_diagnostic": "PENDING - dedicated canonical75 vs expected/source/restored; stop on mismatch",
+    "corrective_2_local_controls": {
+      "cases": 8,
+      "pass": 8,
+      "seconds": 6.956
+    },
+    "corrective_2_final_receipt": "outside Git after fresh exact SHA CI",
+    "corrective_2_local_directed": {
+      "cases": 64,
+      "pass": 64,
+      "seconds": 174.818,
+      "v2_identity_cases": 31,
+      "v2_identity_pass": 30,
+      "v2_identity_windows_posix_skip": 1,
+      "native_postgres_available": false
     }
   }
 }

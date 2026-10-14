@@ -1,5 +1,6 @@
 """POSTGRES_BACKUP_V2 A–Y: PostgreSQL18 real, sólo namespace sin outbound."""
 import gzip
+import hashlib
 import json
 import os
 import shutil
@@ -19,7 +20,8 @@ from noesis.core.persistence import FinancialSession
 from noesis.financial_activation.contracts import Capability, Profile
 from noesis.financial_activation.evaluator import FinancialReadinessEvaluator
 from noesis.financial_operations.contracts import Principal
-from noesis.schema_lineage import require_runtime
+from noesis.schema_lineage import canonical, require_runtime
+from noesis.schema_objects import expected_objects, physical_objects
 from noesis.web import backups, postgres_native_backup as native
 from noesis.web import postgres_backup_tools as tools
 from noesis.web.postgres_backup_identity import LEGACY_FINANCIAL, expected_identities, describe
@@ -66,6 +68,19 @@ class PostgresBackupV2(unittest.TestCase):
         cls.archive75 = cls.folder / "source75.pgdump"
         cls.manifest75 = native.create(cls.source.dsn, cls.archive75, backups._create_documents_backup,
                                        backups._verify_documents_backup)
+        with cls.source.connection() as conn:
+            conn.row_factory = dict_row
+            cls.source75_objects = physical_objects(db.Connection(conn, "postgres"), "public")
+            cls.evaluation_body = conn.execute(
+                "SELECT result_canonical FROM financial_readiness_evaluations WHERE business_id=%s",
+                (cls.bid,),
+            ).fetchone()["result_canonical"]
+        # Destino A propio: restaurar ANTES de añadir future/hstore al origen.
+        cls.target75_context = tools.disposable_target()
+        cls.target75 = cls.target75_context.__enter__()
+        cls.addClassCleanup(cls.target75_context.__exit__, None, None, None)
+        with patch.object(migrations, "upgrade_connection", side_effect=AssertionError("V2 cannot migrate")):
+            cls.result75 = native.restore(cls.archive75, cls.target75, backups._verify_documents_backup)
         with cls.source.connection() as conn:
             conn.execute("CREATE SCHEMA future")
             conn.execute("CREATE TYPE future.status AS ENUM ('open','closed')")
@@ -125,9 +140,29 @@ class PostgresBackupV2(unittest.TestCase):
         self.assertEqual(self.result["schema_lineage_fingerprint"], self.manifest["schema_lineage_fingerprint"])
 
     def test_populated_A75_restore_preserves_hash_binding_and_off_state(self):
+        with self.target75.connection() as raw:
+            raw.row_factory = dict_row
+            restored = physical_objects(db.Connection(raw, "postgres"), "public")
+            self.assertIsNone(raw.execute("SELECT to_regnamespace('future') AS namespace").fetchone()["namespace"])
+            self.assertIsNone(raw.execute("SELECT extname FROM pg_extension WHERE extname='hstore'").fetchone())
+        expected = expected_objects("postgres", 75)
+        source = self.source75_objects
+        differences = []
+        for key in sorted(set(source) | set(expected) | set(restored)):
+            if source.get(key) == expected.get(key) == restored.get(key):
+                continue
+            def digest(objects):
+                return hashlib.sha256(canonical(objects[key]).encode("utf-8")).hexdigest() if key in objects else None
+            differences.append({"object_key": key,
+                                "classification": "missing" if key not in restored else "extra" if key not in expected else "changed",
+                                "source_hash": digest(source), "expected_hash": digest(expected),
+                                "restored_hash": digest(restored)})
+        print("V2_CANONICAL75_OBJECT_DIFF " + json.dumps(differences, sort_keys=True), flush=True)
+        # Sólo hashes en diagnóstico: nunca exponer descriptor SQL ni datos.
+        self.assertFalse(differences, "V2 STRUCTURAL MISMATCH: " + json.dumps(differences, sort_keys=True))
         db.close_pool()
         try:
-            with patch.object(config, "DATABASE_URL", self.target.dsn):
+            with patch.object(config, "DATABASE_URL", self.target75.dsn):
                 with db.get_conn() as conn:
                     observed = require_runtime(conn)
                     self.assertEqual(observed.schema_version, 75)
@@ -135,14 +170,19 @@ class PostgresBackupV2(unittest.TestCase):
                     row = conn.execute("SELECT result_canonical,content_hash FROM financial_readiness_evaluations WHERE business_id=?", (self.bid,)).fetchone()
                     self.assertEqual(row["content_hash"], self.evaluation["content_hash"])
                     body = json.loads(row["result_canonical"])
+                    self.assertTrue(row["result_canonical"] == self.evaluation_body, "Restored evaluation body must be byte-exact")
                     self.assertEqual(body["context"], self.evaluation["context"])
                     self.assertEqual(body["capabilities"], self.evaluation["capabilities"])
                     control = conn.execute("SELECT state,activation_generation,ever_enabled FROM financial_activation_control WHERE business_id=?", (self.bid,)).fetchone()
                     self.assertEqual((control["state"], control["activation_generation"], control["ever_enabled"]), ("off", 0, False))
+                    for table in ('economic_events', 'financial_operations'):
+                        self.assertEqual(conn.execute("SELECT COUNT(*) AS n FROM " + table + " WHERE business_id=?", (self.bid,)).fetchone()["n"], 0)
         finally:
             db.close_pool()
-        self.assertEqual(self.result["privacy_status"], "NO_E_INSTALLED")
-        self.assertFalse(self.result["serving_authorized"])
+        self.assertEqual(self.result75["technical_integrity"], "PASS")
+        self.assertEqual(self.result75["privacy_status"], "NO_E_INSTALLED")
+        self.assertFalse(self.result75["serving_authorized"])
+        self.assertFalse(self.result75["g_real_evidence"])
 
     def test_corrupt_registry_shape_cannot_claim_canonical75_backup(self):
         with tools.disposable_target() as source:

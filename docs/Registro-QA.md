@@ -1,5 +1,22 @@
 # Registro de QA
 
+## 2026-10-14 — A75 correctivo2, REMOTE VALIDATION PENDING
+
+[Orden](architecture/FASE-1.10A75-corrective-2-orden.md),
+[diagnóstico candidato](architecture/FASE-1.10A75-corrective-2.md).
+Run38539348109 bloqueado por cuatro causas; fullPython2011/2009PASS/2skips,
+PG16/20 etapasPASS. No heredar verdes. Sólo baseline exacta+UTF8, preparación
+canonical75 propia de stages3/17, LIKE parametrizados cutoff y dos destinos V2.
+Cero cambios src/noesis; SOURCE_DRIFT, A75, lineage/locking/profiles/startup
+congelados. V2source/expected/restored emite sólo hashes; mismatch detiene cierre.
+8 controles inicialesPASS/6.956s; dirigidos readiness/lineage/collision/correctivos
+64PASS/174.818s. V2/identity:31/30PASS/1skip Windows POSIX/3.897s.
+Secrets UTF8, Ruff/Bandit, dependencias, AST/truth/diff y760enlacesPASS.
+PG y full CI frescos PENDING. Un commit y push
+feature, receipt final fueraGit, sin segundo correctivo ni SHA futuro en JSON.
+Policy provisional/PRIVACY_NOT_READY, flagsOFF y sharp HIGH intactos.
+Sin main/merge/deploy/real/providers/B76–F80/bridge/business15/G-LIVE/H.
+
 ## 2026-10-14 — A75 correctivo1, REMOTE VALIDATION PENDING
 
 [Orden correctiva](architecture/FASE-1.10A75-corrective-1-orden.md),

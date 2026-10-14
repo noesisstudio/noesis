@@ -7,6 +7,7 @@ por archivo, tipo y huella exacta; nunca se aceptan hallazgos nuevos automática
 import json
 from pathlib import Path
 import subprocess
+import sys
 
 
 def scan(files: list[str], data: dict):
@@ -30,6 +31,10 @@ def scan(files: list[str], data: dict):
 
 
 def main() -> int:
+    # detect-secrets abre texto con el encoding del intérprete; cp1252 puede
+    # omitir silenciosamente UTF-8. Reejecutar sin depender del locale del host.
+    if not sys.flags.utf8_mode:
+        return subprocess.call([sys.executable, "-X", "utf8", str(Path(__file__).resolve())])
     files = subprocess.run(
         ["git", "ls-files", "-z"], check=True, capture_output=True,
     ).stdout.decode("utf-8").split("\0")

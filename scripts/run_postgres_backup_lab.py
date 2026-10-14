@@ -44,6 +44,28 @@ def invoke(args, environment):
         return subprocess.CompletedProcess(args, 124, exc.stdout or b'', exc.stderr or b'')
 
 
+def run_stage(name, args, environment):
+    canonical75 = [["-m", "noesis.migrations", "upgrade"],
+                   ["-m", "tests.postgres_canonical75_precondition"]]
+    preparations = {
+        'migrations historical': [["-m", "noesis.migrations", "upgrade", "32"]],
+        'legacy catalog53': [["-m", "noesis.migrations", "upgrade"]],
+        'HTTP + backup + restore': canonical75,
+        'privacy + rollback': [*canonical75, ["tests/postgres_smoke.py"]],
+    }.get(name, [])
+    preparation_result = None
+    for preparation in preparations:
+        preparation_result = invoke(preparation, environment)
+        print('PRECONDITION', name, preparation_result.returncode, flush=True)
+        print((preparation_result.stdout + preparation_result.stderr).decode(errors='replace'), flush=True)
+        if preparation_result.returncode:
+            return preparation_result, preparation_result.returncode
+    if name == "legacy catalog53":
+        environment = {**environment, "PYTHONPATH": str(Path(".legacy-baseline/src").resolve())}
+    result = invoke(args, environment)
+    return result, None if preparation_result is None else preparation_result.returncode
+
+
 def main():
     if not outbound_blocked():
         raise SystemExit("Ejecutar dentro de namespace sin outbound, como usuario no root")
@@ -81,22 +103,8 @@ def main():
             current_env = {**env, 'NOESIS_DOCS_PATH':str(stage_root/'documents'),
                            'NOESIS_BACKUP_DIR':str(stage_root/'backups'),
                            'NOESIS_DB_PATH':str(stage_root/'unused.db')}
-            preparation = {
-                'migrations historical': ['-m', 'noesis.migrations', 'upgrade', '32'],
-                'legacy catalog53': ['-m', 'noesis.migrations', 'upgrade'],
-                'privacy + rollback': ['tests/postgres_smoke.py'],
-            }.get(name)
-            preparation_result = None
-            if preparation:
-                preparation_result = invoke(preparation, current_env)
-                print('PRECONDITION', name, preparation_result.returncode, flush=True)
-                print((preparation_result.stdout+preparation_result.stderr).decode(errors='replace'), flush=True)
-            if name == "legacy catalog53":
-                current_env["PYTHONPATH"] = str(Path(".legacy-baseline/src").resolve())
             started = time.monotonic()
-            result = invoke(args, current_env)
-            if preparation_result is not None and preparation_result.returncode:
-                result.returncode = preparation_result.returncode
+            result, precondition_returncode = run_stage(name, args, current_env)
             print(name, "PASS" if result.returncode == 0 else "FAIL", flush=True)
             output = (result.stdout + result.stderr).decode(errors="replace")
             # Sólo fixtures sintéticos. Conservar el resultado íntegro para CI.
@@ -104,7 +112,7 @@ def main():
             results.append({"name": name, "returncode": result.returncode,
                             "duration": round(time.monotonic() - started, 3),
                             "database_oid": database_oid, "isolated_stage": index,
-                            "precondition_returncode": None if preparation_result is None else preparation_result.returncode})
+                            "precondition_returncode": precondition_returncode})
         print(json.dumps(results, indent=2))
     return 1 if any(row["returncode"] for row in results) else 0
 

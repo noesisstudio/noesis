@@ -2,8 +2,10 @@
 
 import hashlib
 import json
+import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -12,6 +14,7 @@ from uuid import uuid4
 from noesis import config, db
 from noesis.financial_history.readers import RawReader
 from scripts.check_secrets import scan
+from scripts.run_postgres_backup_lab import run_stage
 from tests import test_public_marketing as marketing
 from tests import test_seo as seo
 from tests import test_financial_history_inventory as inventory
@@ -73,7 +76,7 @@ class CorrectiveFixtureTests(unittest.TestCase):
 
 class CorrectiveSecretTests(unittest.TestCase):
     def test_exact_single_public_exception_without_detector_or_filter_changes(self):
-        before = json.loads(subprocess.check_output(['git', 'show', 'f5150b27076ab5725bae436fba781095a0a9c0ee:.secrets.baseline']))  # pragma: allowlist secret; public failed candidate
+        before = json.loads(subprocess.check_output(['git', 'show', 'b3a93361975693a157cf3874346dcfa456ce7162:.secrets.baseline']))  # pragma: allowlist secret; public corrective parent
         after = json.loads(Path('.secrets.baseline').read_text(encoding='utf-8'))
         self.assertEqual({k:v for k,v in before.items() if k!='results'},
                          {k:v for k,v in after.items() if k!='results'})
@@ -82,7 +85,7 @@ class CorrectiveSecretTests(unittest.TestCase):
             old, new = before['results'].get(name, []), after['results'].get(name, [])
             self.assertEqual(old, new[:-1] if name==filename else new)
         added = after['results'][filename][-1]
-        fingerprint = json.loads(Path(filename).read_text(encoding='utf-8'))['schema_lineage_a75_candidate']['canonical75_fingerprint']
+        fingerprint = json.loads(Path(filename).read_text(encoding='utf-8'))['schema_lineage_a75_candidate']['failed_candidate_sha']
         self.assertEqual(added['filename'], filename)
         self.assertEqual(added['type'], 'Hex High Entropy String')
         self.assertEqual(added['hashed_secret'], hashlib.sha1(fingerprint.encode()).hexdigest())
@@ -98,3 +101,51 @@ class CorrectiveSecretTests(unittest.TestCase):
             findings = list(scan([str(target)], baseline))
             self.assertTrue(any(secret.secret_hash==hashlib.sha1(unknown.encode()).hexdigest()
                                 for _,secret in findings))
+
+    def test_utf8_json_detected_with_utf8_mode_enabled_or_disabled(self):
+        baseline = json.loads(Path('.secrets.baseline').read_text(encoding='utf-8'))
+        scanner = Path('scripts/check_secrets.py').resolve()
+        unknown = hashlib.sha256(uuid4().bytes).hexdigest()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            subprocess.run(['git', 'init', '-q', str(root)], check=True, capture_output=True)
+            (root/'.secrets.baseline').write_text(json.dumps(baseline), encoding='utf-8')
+            (root/'unicode.json').write_text(json.dumps({'text':'revisión é € \u008d', 'api_secret':unknown}, ensure_ascii=False), encoding='utf-8')
+            subprocess.run(['git', '-C', str(root), 'add', 'unicode.json'], check=True, capture_output=True)
+            outputs = []
+            for mode in ('0', '1'):
+                env = {**os.environ, 'PYTHONUTF8':mode}
+                result = subprocess.run([sys.executable, '-X', 'utf8='+mode, str(scanner)],
+                                        cwd=root, env=env, capture_output=True)
+                self.assertEqual(result.returncode, 1, result.stderr.decode('utf-8', errors='replace'))
+                self.assertIn(b'Hex High Entropy String', result.stdout)
+                self.assertNotIn(unknown.encode(), result.stdout + result.stderr)
+                outputs.append(result.stdout)
+            self.assertEqual(outputs[0], outputs[1])
+
+
+class CorrectiveHarnessTests(unittest.TestCase):
+    def test_each_smoke_stage_prepares_and_validates_canonical75_independently(self):
+        for name in ('HTTP + backup + restore', 'privacy + rollback'):
+            with self.subTest(stage=name):
+                ok = subprocess.CompletedProcess([], 0, b'', b'')
+                with patch('scripts.run_postgres_backup_lab.invoke', return_value=ok) as invoke:
+                    result, precondition = run_stage(name, ['stage-contract'], {})
+                commands = [call.args[0] for call in invoke.call_args_list]
+                expected = [['-m', 'noesis.migrations', 'upgrade'],
+                            ['-m', 'tests.postgres_canonical75_precondition']]
+                if name == 'privacy + rollback':
+                    expected.append(['tests/postgres_smoke.py'])
+                self.assertEqual(commands, [*expected, ['stage-contract']])
+                self.assertEqual((result.returncode, precondition), (0, 0))
+
+    def test_failed_upgrade_or_identity_check_never_launches_smoke_or_contract(self):
+        for name in ('HTTP + backup + restore', 'privacy + rollback'):
+            for failed_step in (0, 1):
+                with self.subTest(stage=name, failed_step=failed_step):
+                    results = [subprocess.CompletedProcess([], 0, b'', b'')]*failed_step
+                    results.append(subprocess.CompletedProcess([], 7, b'', b''))
+                    with patch('scripts.run_postgres_backup_lab.invoke', side_effect=results) as invoke:
+                        result, precondition = run_stage(name, ['must-not-run'], {})
+                    self.assertEqual(invoke.call_count, failed_step + 1)
+                    self.assertEqual((result.returncode, precondition), (7, 7))

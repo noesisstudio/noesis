@@ -114,8 +114,9 @@ class HistoryCutoffPostgres(HistoryCutoffContract, CutoffProcessRaces, unittest.
                 with db.get_conn() as observer:
                     require_runtime(observer)
                     statement = observer.execute(
-                        "SELECT query_start FROM pg_stat_activity WHERE query LIKE 'INSERT INTO expenses%' "
-                        "AND query LIKE '%qa_cut_pause()%' AND wait_event_type='Lock'"
+                        "SELECT query_start FROM pg_stat_activity WHERE query LIKE ? "
+                        "AND query LIKE ? AND wait_event_type='Lock'",
+                        ("INSERT INTO expenses%", "%qa_cut_pause()%"),
                     ).fetchone()
                     self.assertIsNotNone(statement)
                 epoch = self.open()

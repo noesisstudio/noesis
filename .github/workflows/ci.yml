@@ -84,7 +84,7 @@ jobs:
       - name: Detectar secrets nous
         if: ${{ !cancelled() && steps.install-project.outcome == 'success' }}
         shell: bash
-        run: uv run python scripts/check_secrets.py
+        run: uv run python -X utf8 scripts/check_secrets.py
 
       - name: Validar enlaces internos del delta sin red
         if: ${{ !cancelled() && steps.install-project.outcome == 'success' }}

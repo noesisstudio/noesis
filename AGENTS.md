@@ -1,5 +1,13 @@
 # AGENTS.md - Manual del proyecto Bynoesis
 
+> Orden vigente: A75 CORRECTIVE #2 exclusivamente. Leer [orden](docs/architecture/FASE-1.10A75-corrective-2-orden.md)
+> y [diagnóstico](docs/architecture/FASE-1.10A75-corrective-2.md). Sólo cuatro bloqueos:
+> baseline exacta/UTF8, stages3/17 canonical75, LIKE cutoff y separación V2.
+> Cero producto; SOURCE_DRIFT y A75/guards/profiles/startup congelados. Si V2canonical
+> difiere: sólo hashes y STOP, sin relajar. Un commit parent b3a93361, push feature,
+> CI nueva20/20; cualquier fallo bloquea sin otro commit. Receipt final fueraGit.
+> Main reservado678bd3f; no real/B76–F80/bridge/flags/providers/G-LIVE/H.
+> Encabezados inferiores son históricos y no amplían la orden.
 
 > Orden vigente: A75 CORRECTIVE REMOTE VALIDATION1. Leer [orden](docs/architecture/FASE-1.10A75-corrective-1-orden.md)
 > y [diagnóstico/cierre](docs/architecture/FASE-1.10A75-corrective-1.md).
