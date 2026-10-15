@@ -237,7 +237,7 @@ def _try_worker_link(from_phone: str, text: str) -> dict | None:
             "subscription_required": True,
             "reply": (
                 "El canal de equipo forma parte del plan "
-                f"{billing_adapter.PLANS['pro']['name']}. "
+                f"{billing_adapter.plan_name('pro', billing_adapter.segment_for(business))}. "
                 "El titular puede activarlo desde Suscripción."
             ),
         }

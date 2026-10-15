@@ -221,14 +221,20 @@
 
     // Con el registro cerrado los planes llevan al formulario de solicitud; con
     // el registro abierto, al alta. En ambos casos se conserva el plan elegido.
-    document.querySelectorAll('.plan-start-link[data-plan]').forEach(link => {
+    // `para` lleva la pestaña al alta: decide con qué nombre se enseña el plan.
+    const signupPath = (link, intent) => {
       const plan = encodeURIComponent(link.dataset.plan);
+      const segment = link.dataset.segment
+        ? `&para=${encodeURIComponent(link.dataset.segment)}` : '';
+      return `/onboarding?intent=${intent}&plan=${plan}&billing=${period}${segment}`;
+    };
+    document.querySelectorAll('.plan-start-link[data-plan]').forEach(link => {
       link.href = link.getAttribute('href').startsWith('/solicitar-acceso')
-        ? `/solicitar-acceso?plan=${plan}`
-        : `/onboarding?intent=trial&plan=${plan}&billing=${period}`;
+        ? `/solicitar-acceso?plan=${encodeURIComponent(link.dataset.plan)}`
+        : signupPath(link, 'trial');
     });
     document.querySelectorAll('.plan-buy-link[data-plan]').forEach(link => {
-      link.href = `/onboarding?intent=subscribe&plan=${encodeURIComponent(link.dataset.plan)}&billing=${period}`;
+      link.href = signupPath(link, 'subscribe');
     });
     document.querySelectorAll('[data-billing-field]').forEach(field => {
       field.value = period;
@@ -253,22 +259,15 @@
     const tabs = Array.from(nav.querySelectorAll('[data-segment]'));
     const select = tab => {
       const plans = (tab.dataset.plans || '').split(' ').filter(Boolean);
-      const featured = tab.dataset.featured || '';
       tabs.forEach(item => {
         const active = item === tab;
         item.classList.toggle('active', active);
         if (active) item.setAttribute('aria-current', 'true');
         else item.removeAttribute('aria-current');
       });
-      document.querySelectorAll('[data-plan-card]').forEach(card => {
-        const key = card.dataset.planCard;
-        const recommended = key === featured;
-        card.hidden = !plans.includes(key);
-        card.classList.toggle('recommended', recommended);
-        const label = card.querySelector('.recommendation-label');
-        if (label) label.hidden = !recommended;
-        const start = card.querySelector('.plan-start-link');
-        if (start) start.classList.toggle('primary', recommended);
+      // Cada pestaña tiene sus propias tarjetas y su propia comparativa.
+      document.querySelectorAll('[data-segment-only]').forEach(block => {
+        block.hidden = block.dataset.segmentOnly !== tab.dataset.segment;
       });
       document.querySelectorAll('[data-segment-pricing]').forEach(block => {
         block.hidden = !plans.length;

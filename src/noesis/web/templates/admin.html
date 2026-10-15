@@ -68,9 +68,9 @@
           <form method="post" action="/admin/cuentas/{{ b.id }}/suscripcion">
             <input type="hidden" name="volver" value="admin">
             <select name="plan" aria-label="Plan para {{ b.name }}">
-              <option value="autonomo" {% if b.plan == 'autonomo' %}selected{% endif %}>Autónomo</option>
-              <option value="pro" {% if b.plan not in ('autonomo', 'premium') %}selected{% endif %}>{{ plan_names.pro }}</option>
-              <option value="premium" {% if b.plan == 'premium' %}selected{% endif %}>{{ plan_names.premium }}</option>
+              <option value="autonomo" {% if b.plan == 'autonomo' %}selected{% endif %}>{{ plan_full_names.autonomo }}</option>
+              <option value="pro" {% if b.plan not in ('autonomo', 'premium') %}selected{% endif %}>{{ plan_full_names.pro }}</option>
+              <option value="premium" {% if b.plan == 'premium' %}selected{% endif %}>{{ plan_full_names.premium }}</option>
             </select>
             <button class="btn sm primary" type="submit" name="action" value="activar">Activar</button>
           </form>
@@ -858,8 +858,9 @@ new Chart(document.getElementById('ch-funnel'), {
               y: { grid: { display: false } } } })
 });
 
-const PLAN_LABELS = { trial: 'Prueba', autonomo: 'Autónomo (29 €)', pro: 'Pyme (49 €)',
-                      premium: 'Avanzado (99 €)' };
+const PLAN_LABELS = { trial: 'Prueba', autonomo: {{ (plan_full_names.autonomo ~ ' (29 €)') | tojson }},
+                      pro: {{ (plan_full_names.pro ~ ' (49 €)') | tojson }},
+                      premium: {{ (plan_full_names.premium ~ ' (99 €)') | tojson }} };
 const planKeys = Object.keys(C.planes);
 new Chart(document.getElementById('ch-planes'), {
   type: 'doughnut',

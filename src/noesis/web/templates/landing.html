@@ -54,7 +54,7 @@
   <div><span class="eyebrow">Precio de lanzamiento · −{{ launch_discount }} %</span><h2 id="pricing-short-title">Empieza con lo que necesitas.</h2><p>La mitad de la tarifa durante tus {{ launch_months }} primeros meses. Sin permanencia.</p><a class="btn primary" href="/precios" data-public-event="pricing_click">Comparar planes →</a></div>
   <ul class="pricing-strip-plans">
     {% for key, segment in (("autonomo", "autonomos"), ("pro", "pymes"), ("premium", "empresas")) %}
-    <li><a href="/precios?para={{ segment }}#planes" data-public-event="pricing_plan_click"><span>{{ plan_cards[key].name }}</span><s>{{ list_prices[key] }} €</s><b>{{ prices[key] }} €</b><small>+ IVA/mes</small></a></li>
+    <li><a href="/precios?para={{ segment }}#planes" data-public-event="pricing_plan_click"><span>{{ segment_plan_names[segment][key] }}</span><s>{{ list_prices[key] }} €</s><b>{{ prices[key] }} €</b><small>+ IVA/mes</small></a></li>
     {% endfor %}
   </ul>
 </section>

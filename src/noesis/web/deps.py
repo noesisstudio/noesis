@@ -41,9 +41,13 @@ TEMPLATES.env.globals["asset_v"] = _asset_version()
 TEMPLATES.env.globals["base_url"] = config.BASE_URL
 TEMPLATES.env.globals['financial_core_enabled'] = lambda: config.FINANCIAL_CORE_ENABLED
 TEMPLATES.env.globals["public_signup_available"] = config.public_signup_available()
-# Nombre visible de cada plan: sale del catálogo, no se copia en las plantillas.
-TEMPLATES.env.globals["plan_names"] = {
-    key: plan["name"] for key, plan in billing_adapter.PLANS.items()
+# Nombre visible de cada plan: sale del catálogo, no se copia en las plantillas. Las
+# pantallas de una cuenta lo sustituyen por el de su segmento; donde no hay cuenta
+# (administración, bienvenida) se enseñan todos los nombres de cada plan.
+TEMPLATES.env.globals["plan_names"] = billing_adapter.plan_names()
+TEMPLATES.env.globals["plan_full_names"] = {
+    key: " / ".join(billing_adapter.plan_all_names(key))
+    for key in billing_adapter.PLANS
 }
 TEMPLATES.env.globals["public_contact_email"] = config.PUBLIC_CONTACT_EMAIL
 # Vacío: la web pública no pinta aviso de cookies ni carga Google Analytics.

@@ -87,6 +87,11 @@ def _signup_selection(
     )
 
 
+def _signup_segment(para: str = "") -> str:
+    """Pestaña de /precios desde la que llega el alta: decide el nombre del plan."""
+    return para if billing_adapter.PRICING_SEGMENTS.get(para, {}).get("plans") else ""
+
+
 def _google_return_path(flow: str, error: str = "", plan: str = "",
                         billing: str = "monthly", intent: str = "trial") -> str:
     target = "/onboarding" if flow == "signup" else "/login"
@@ -206,7 +211,7 @@ def logout(request: Request):
 
 @router.get("/auth/google")
 def google_start(request: Request, flow: str = "login", plan: str = "",
-                 billing: str = "monthly", intent: str = "trial"):
+                 billing: str = "monthly", intent: str = "trial", para: str = ""):
     """Empieza OAuth con state de un solo uso y no filtra el secreto al cliente."""
     flow = "signup" if flow == "signup" else "login"
     if flow == "signup" and not config.public_signup_available():
@@ -229,6 +234,8 @@ def google_start(request: Request, flow: str = "login", plan: str = "",
     request.session["google_oauth_plan"] = plan
     request.session["google_oauth_billing"] = billing
     request.session["google_oauth_intent"] = intent
+    if flow == "signup":
+        request.session["signup_segment"] = _signup_segment(para)
     query = urlparse.urlencode({
         "client_id": config.GOOGLE_OAUTH_CLIENT_ID,
         "redirect_uri": _google_redirect_uri(),
@@ -595,7 +602,7 @@ def access_request_submit(
 # =========================================================== ONBOARDING ===== #
 @router.get("/onboarding", response_class=HTMLResponse)
 def onboarding(request: Request, error: str = "", plan: str = "",
-               billing: str = "monthly", intent: str = "trial"):
+               billing: str = "monthly", intent: str = "trial", para: str = ""):
     if not config.public_signup_available():
         # Con el alta cerrada no se enseña una pantalla intermedia: se lleva
         # directamente al formulario, conservando el plan que venía mirando.
@@ -606,12 +613,14 @@ def onboarding(request: Request, error: str = "", plan: str = "",
     selected_plan, selected_billing, selected_intent = _signup_selection(
         plan, billing, intent
     )
+    selected_segment = _signup_segment(para)
     return TEMPLATES.TemplateResponse(request, "onboarding.html", {
         "error": error,
         "selected_plan": selected_plan,
         "selected_billing": selected_billing,
         "selected_intent": selected_intent,
-        "plan_catalog": billing_adapter.PLANS,
+        "selected_segment": selected_segment,
+        "plan_catalog": billing_adapter.plans_for(selected_segment),
         "annual_prices": billing_adapter.PLAN_ANNUAL_PRICES,
         "google_oauth_available": config.google_oauth_available(),
     })
@@ -622,7 +631,7 @@ def onboarding_signup(request: Request, name: str = Form(...),
                       email: str = Form(...), password: str = Form(...),
                       sector: str = Form(""), acepto: str = Form(""),
                       plan: str = Form("autonomo"), billing: str = Form("monthly"),
-                      intent: str = Form("trial")):
+                      intent: str = Form("trial"), para: str = Form("")):
     if not config.public_signup_available():
         return TEMPLATES.TemplateResponse(
             request, "registro-cerrado.html",
@@ -630,8 +639,9 @@ def onboarding_signup(request: Request, name: str = Form(...),
             status_code=503,
         )
     plan, billing, intent = _signup_selection(plan, billing, intent)
+    segment = _signup_segment(para)
     onboarding_query = (
-        f"&plan={plan}&billing={billing}&intent={intent}"
+        f"&plan={plan}&billing={billing}&intent={intent}&para={segment}"
     )
     key = f"signup:{auth.client_ip(request)}"
     if auth.is_rate_limited(key):
@@ -666,6 +676,7 @@ def onboarding_signup(request: Request, name: str = Form(...),
     request.session["signup_plan"] = plan
     request.session["signup_billing"] = billing
     request.session["signup_intent"] = intent
+    request.session["signup_segment"] = segment
     db.record_product_event(biz["id"], "account_created")
     db.record_product_event(
         biz["id"], "plan_interest",
@@ -703,7 +714,9 @@ def onboarding_google(request: Request, error: str = "", plan: str = "",
         "selected_plan": selected_plan,
         "selected_billing": selected_billing,
         "selected_intent": selected_intent,
-        "plan_catalog": billing_adapter.PLANS,
+        "plan_catalog": billing_adapter.plans_for(
+            _signup_segment(str(request.session.get("signup_segment") or ""))
+        ),
         "annual_prices": billing_adapter.PLAN_ANNUAL_PRICES,
     })
 
@@ -999,7 +1012,11 @@ def onboarding_whatsapp(
         "status": status,
         "signup_intent": intent,
         "selected_plan": plan,
-        "selected_plan_label": billing_adapter.PLANS[plan]["name"],
+        "selected_plan_label": billing_adapter.plan_name(
+            plan, billing_adapter.segment_for(
+                biz, str(request.session.get("signup_segment") or ""),
+            ),
+        ),
         "selected_billing": billing_period,
         "wa_reports": db.resolve_whatsapp_reports(biz.get("whatsapp_reports")),
     })

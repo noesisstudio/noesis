@@ -151,7 +151,7 @@
               <div class="eco-triple">
                 {% for i in range(3) %}
                 <span>
-                  <small>{{ [plan_names.autonomo, plan_names.pro, plan_names.premium][i] }}</small>
+                  <small>{{ [plan_full_names.autonomo, plan_full_names.pro, plan_full_names.premium][i] }}</small>
                   <input type="number" name="{{ campo.clave }}"
                          id="{% if i == 0 %}f-{{ campo.clave }}{% else %}f-{{ campo.clave }}-{{ i }}{% endif %}"
                          value="{{ campo.valor[i] }}" step="{{ campo.spec.paso }}"

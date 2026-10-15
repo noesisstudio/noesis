@@ -242,12 +242,14 @@ class PublicMarketingTests(unittest.TestCase):
     def test_pricing_shows_list_price_next_to_the_launch_price_by_segment(self):
         from noesis.adapters import billing
 
-        def card(page, key):
+        def card(page, segment, key):
             return re.search(
-                rf'<article[^>]*data-plan-card="{key}"[^>]*>', page
+                rf'<article[^>]*data-plan-card="{key}" '
+                rf'data-segment-only="{segment}"[^>]*>', page
             ).group(0)
 
         default = self.http.get("/precios").text
+        pymes = self.http.get("/precios?para=pymes").text
         empresas = self.http.get("/precios?para=empresas").text
         gestorias = self.http.get("/precios?para=gestorias").text
         unknown = self.http.get("/precios?para=otra").text
@@ -255,9 +257,21 @@ class PublicMarketingTests(unittest.TestCase):
 
         # La tarifa tachada sale del catálogo y el descuento anunciado nunca
         # promete más de lo que hay entre la tarifa y lo que se cobra.
+        sold = [
+            (segment, key)
+            for segment, item in billing.PRICING_SEGMENTS.items()
+            for key in item["plans"]
+        ]
+        for segment, key in sold:
+            plan = billing.PLANS.get(key) or billing.UPCOMING_PLANS[key]
+            self.assertIn(
+                f'data-list-monthly="{plan["list_price"]}"',
+                card(default, segment, key),
+            )
+            self.assertIn(
+                f'data-monthly="{plan["price"]}"', card(default, segment, key)
+            )
         for key, plan in billing.PLANS.items():
-            self.assertIn(f'data-list-monthly="{plan["list_price"]}"', card(default, key))
-            self.assertIn(f'data-monthly="{plan["price"]}"', card(default, key))
             self.assertIn(f'<s>{plan["list_price"]} €</s>', home)
             self.assertLessEqual(
                 plan["price"] * 100,
@@ -266,14 +280,55 @@ class PublicMarketingTests(unittest.TestCase):
         self.assertIn(f"−{billing.LAUNCH_DISCOUNT_PERCENT} %", default)
         self.assertIn(f"{billing.LAUNCH_OFFER_MONTHS} primeros meses", default)
 
-        # Cada pestaña enseña tres peldaños de la misma escalera y destaca uno.
-        self.assertNotIn(" hidden", card(default, "autonomo"))
-        self.assertIn("recommended", card(default, "autonomo"))
-        self.assertIn(" hidden", card(default, "empresa"))
-        self.assertIn(" hidden", card(empresas, "autonomo"))
-        self.assertIn("recommended", card(empresas, "premium"))
-        self.assertNotIn(" hidden", card(empresas, "empresa"))
+        # Cada pestaña enseña dos peldaños seguidos de la misma escalera, con su
+        # nombre de Básico y de Avanzado, y destaca uno.
+        pages = {"autonomos": default, "pymes": pymes, "empresas": empresas}
+        for segment, page in pages.items():
+            shown = [
+                pair for pair in sold if " hidden" not in card(page, *pair)
+            ]
+            self.assertEqual(
+                shown,
+                [(segment, key) for key in billing.PRICING_SEGMENTS[segment]["plans"]],
+            )
+            self.assertEqual(len(shown), 2)
+            for _, key in shown:
+                self.assertIn(
+                    f'<div class="plan-label">{billing.plan_name(key, segment)}',
+                    page,
+                )
+                self.assertEqual(
+                    "recommended" in card(page, segment, key),
+                    key == billing.PRICING_SEGMENTS[segment]["featured"],
+                )
+        self.assertEqual(
+            [billing.plan_name(key, "autonomos") for key in ("autonomo", "pro")],
+            ["Autónomo Básico", "Autónomo Avanzado"],
+        )
+        self.assertEqual(
+            [billing.plan_name(key, "pymes") for key in ("pro", "premium")],
+            ["Pyme Básico", "Pyme Avanzado"],
+        )
+        self.assertEqual(
+            [billing.plan_name(key, "empresas") for key in ("premium", "empresa")],
+            ["Empresa Básico", "Empresa Avanzado"],
+        )
         self.assertIn('class="active" aria-current="true" data-segment="autonomos"', unknown)
+        # El alta recuerda la pestaña para enseñar el plan con ese mismo nombre.
+        if "/onboarding?" in pymes:
+            self.assertIn("plan=pro&billing=monthly&para=pymes", pymes)
+
+        # Una cuenta ve el nombre de su tamaño de equipo; si su segmento no vende
+        # ese plan, el de la puerta más cercana. Sin dato, el nombre por defecto.
+        self.assertEqual(billing.segment_for({"team_size": "solo"}), "autonomos")
+        self.assertEqual(billing.segment_for({"team_size": "6-10"}), "pymes")
+        self.assertEqual(billing.segment_for({"team_size": "11+"}), "empresas")
+        self.assertEqual(billing.segment_for({}, "pymes"), "pymes")
+        self.assertEqual(billing.segment_for({}, "gestorias"), "")
+        self.assertEqual(billing.plan_name("pro", "empresas"), "Pyme Básico")
+        self.assertEqual(billing.plan_name("premium", "autonomos"), "Pyme Avanzado")
+        self.assertEqual(billing.plan_name("pro"), billing.PLANS["pro"]["name"])
+        self.assertEqual(billing.plans_for("pymes")["pro"]["name"], "Pyme Básico")
 
         # Empresa se anuncia pero todavía no se puede contratar ni solicitar.
         self.assertNotIn("empresa", billing.PLANS)
@@ -283,8 +338,8 @@ class PublicMarketingTests(unittest.TestCase):
         # Las gestorías no tienen precio público: ven su panel y ningún plan.
         panel = re.search(r'<div[^>]*data-segment-panel="gestorias"[^>]*>', gestorias)
         self.assertNotIn(" hidden", panel.group(0))
-        for key in billing.PLANS:
-            self.assertIn(" hidden", card(gestorias, key))
+        for pair in sold:
+            self.assertIn(" hidden", card(gestorias, *pair))
 
     def test_rejects_personal_data_unbounded_payloads_and_foreign_origins(self):
         for data in ({"event": "hero_demo_started", "page": "/", "email": "someone@example.com"},

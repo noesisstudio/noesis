@@ -1,5 +1,46 @@
 # Decisiones
 
+## Dos planes por pestaña: Básico y Avanzado de cada segmento (2026-10-13)
+
+El founder pide quitar planes de cada pestaña de `/precios` y que cada una enseñe los
+suyos con nombre propio y mucho más detalle («Autónomo Básico y Autónomo Avanzado»).
+Preguntado por la estructura, elige dos planes por pestaña sobre la escalera que ya
+existe, y que cada cuenta vea el nombre de su pestaña.
+
+| Pestaña | Básico | Avanzado |
+|---|---|---|
+| Autónomos | Autónomo Básico · `autonomo` · 29 € | Autónomo Avanzado · `pro` · 49 € |
+| Pymes | Pyme Básico · `pro` · 49 € | Pyme Avanzado · `premium` · 99 € |
+| Empresas | Empresa Básico · `premium` · 99 € | Empresa Avanzado · sin clave · 199 €, próximamente |
+
+- **No cambia lo que se cobra ni lo que se concede:** claves, precios, tarifa tachada,
+  Stripe y derechos por plan siguen igual. Solo cambian el nombre visible y la
+  explicación. `pro` y `premium` tienen dos nombres cada uno porque se venden en dos
+  pestañas; la web lo dice en una pregunta frecuente.
+- **Fuente única:** `PLAN_SEGMENT_NAMES` en `adapters/billing.py`. El primer nombre de
+  cada plan es el que se usa cuando no se sabe el segmento (`PLANS[...]["name"]`).
+  `plan_name(plan, segmento)` da el de la pestaña o, si esa pestaña no vende el plan,
+  el de la más cercana: una empresa en `pro` ve «Pyme Básico».
+- **Qué nombre ve una cuenta:** el de su tamaño de equipo (`team_size` del alta: solo →
+  Autónomos, 2–5 y 6–10 → Pymes, 11+ → Empresas). Hasta que lo declara vale la pestaña
+  desde la que llegó, que viaja en `?para=` y se recuerda en la sesión
+  (`signup_segment`). Una cuenta sin tamaño de equipo ve el nombre por defecto.
+- **Por qué no se guarda la pestaña en la base de datos:** el founder eligió «el de su
+  pestaña». Guardarla exige una migración 75 sobre `businesses`, y las guardas del
+  historial financiero rechazan cualquier esquema posterior al 74 mientras no se
+  amplíen con autorización (decisión de abajo). El tamaño de equipo ya está guardado,
+  lo declara el propio negocio y responde a la misma pregunta que las pestañas. Es una
+  interpretación de quien lo implementó; si el founder quiere la pestaña literal, hace
+  falta esa migración y ampliar las cuatro guardas.
+- **Detalle de cada tarjeta:** solo afirma lo que el servidor concede a ese plan
+  (`PLAN_ENTITLEMENTS` y `deps.required_entitlement`). Análisis del año y previsión de
+  caja aparecen desde `pro` porque `/analysis`, `/forecast` y `/pnl` exigen
+  `advanced_analysis`. Las tarjetas de equipo dicen que hay un solo acceso de titular.
+- **Sigue abierto:** el nombre de los productos en Stripe (la factura de la
+  suscripción enseña el de Stripe, que solo puede ser uno por precio) y todo lo que ya
+  estaba abierto el 12/10 (condición de 12 meses, gestoría en el plan de 29 €, voz
+  como extra, límite de trabajadores).
+
 ## El historial financiero admite el esquema 74 del CRM (2026-10-13)
 
 El founder autoriza resolver el bloqueo del CRM de captación. Las cuatro guardas de

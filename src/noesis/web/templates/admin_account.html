@@ -23,7 +23,7 @@
     </div>
     <div class="support-status">
       <span class="badge {{ 'b-green' if snapshot.business.subscription_status == 'active' else 'b-amber' }}">{{ {'trial':'En prueba','active':'Activa','past_due':'Pago pendiente','canceled':'Cancelada','inactive':'Inactiva','pending':'Pendiente'}.get(snapshot.business.subscription_status, snapshot.business.subscription_status or 'Sin estado') }}</span>
-      <span class="badge b-gray">Plan {{ {'trial':'Prueba','autonomo':'Autónomo','pro':plan_names.pro,'premium':plan_names.premium}.get(snapshot.business.plan, snapshot.business.plan or 'Sin asignar') }}</span>
+      <span class="badge b-gray">Plan {{ {'trial':'Prueba','autonomo':plan_full_names.autonomo,'pro':plan_full_names.pro,'premium':plan_full_names.premium}.get(snapshot.business.plan, snapshot.business.plan or 'Sin asignar') }}</span>
     </div>
   </header>
 
@@ -135,9 +135,9 @@
     <form method="post" action="/admin/cuentas/{{ snapshot.business.id }}/suscripcion" class="support-form">
       <label>Activar con el plan
         <select name="plan">
-          <option value="autonomo">Autónomo</option>
-          <option value="pro" selected>{{ plan_names.pro }}</option>
-          <option value="premium">{{ plan_names.premium }}</option>
+          <option value="autonomo">{{ plan_full_names.autonomo }}</option>
+          <option value="pro" selected>{{ plan_full_names.pro }}</option>
+          <option value="premium">{{ plan_full_names.premium }}</option>
         </select>
       </label>
       <button class="btn primary" type="submit" name="action" value="activar">Activar cuenta</button>

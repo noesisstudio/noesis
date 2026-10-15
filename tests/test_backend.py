@@ -3220,6 +3220,11 @@ class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
                 customer_id="cus_current", subscription_id="sub_current",
             )
             premium_page = client.get(f"/b/{business['id']}/suscripcion")
+            db.update_business_profile(
+                business["id"], sector="Reformas", team_size="11+",
+                province="Valencia", primary_goal="facturar",
+            )
+            company_page = client.get(f"/b/{business['id']}/suscripcion")
             change = client.post(
                 f"/b/{business['id']}/suscripcion/checkout",
                 data={"plan": "pro", "billing_period": "annual"},
@@ -3229,8 +3234,8 @@ class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
         self.assertEqual(page.status_code, 200)
         self.assertIn("Plan actual", page.text)
         self.assertIn("Gestionar plan", page.text)
-        self.assertIn("Mejorar a Pyme", page.text)
-        self.assertIn("Mejorar a Avanzado", page.text)
+        self.assertIn("Mejorar a Autónomo Avanzado", page.text)
+        self.assertIn("Mejorar a Pyme Avanzado", page.text)
         self.assertIn("Cambiar tarjeta", page.text)
         self.assertIn("Cancelar suscripción", page.text)
         self.assertEqual(page.text.count("data-stripe-portal-form"), 6)
@@ -3238,6 +3243,9 @@ class SubscriptionReadOnlyHttpTestCase(BackendTestCase):
         self.assertNotIn("Activar plan Aut", page.text)
         self.assertNotIn("/suscripcion/checkout", page.text)
         self.assertEqual(premium_page.text.count("Incluido en tu plan"), 2)
+        # Con el tamaño de equipo declarado, el plan lleva el nombre de su segmento.
+        self.assertIn("<h2>Empresa Básico</h2>", company_page.text)
+        self.assertIn("<h3>Pyme Básico</h3>", company_page.text)
         self.assertNotIn("Mejorar a ", premium_page.text)
         self.assertEqual(change.status_code, 303)
         self.assertEqual(change.headers["location"], "https://billing.example/current")
@@ -4012,6 +4020,15 @@ class PortalHttpTestCase(BackendTestCase):
 
         with patch.object(server, "start_scheduler", lambda: None):
             with TestClient(server.app) as client:
+                # El alta enseña el plan con el nombre de la pestaña de /precios
+                # desde la que se llega; una pestaña desconocida se ignora.
+                from_pymes = client.get("/onboarding?plan=pro&para=pymes").text
+                self.assertIn(">Pyme Básico</option>", from_pymes)
+                self.assertIn('name="para" value="pymes"', from_pymes)
+                unknown_tab = client.get("/onboarding?plan=pro&para=otra").text
+                self.assertIn(">Autónomo Avanzado</option>", unknown_tab)
+                self.assertIn('name="para" value=""', unknown_tab)
+
                 missing_sector = client.post(
                     "/onboarding/signup",
                     data={
@@ -4173,7 +4190,7 @@ class PortalHttpTestCase(BackendTestCase):
                 whatsapp_step = client.get(preferences.headers["location"])
                 self.assertEqual(whatsapp_step.status_code, 200)
                 self.assertIn("Así queda Negocio Completo", whatsapp_step.text)
-                self.assertIn("Pyme · Anual", whatsapp_step.text)
+                self.assertIn("Pyme Básico · Anual", whatsapp_step.text)
                 pending = client.post(
                     f"/onboarding/whatsapp/{business_id}/connect",
                     data={"action": "check"},

@@ -1016,8 +1016,10 @@ es una hipótesis de estimación, no altera contabilidad ni impuestos.
   checkout sin tocar datos reales.
 - `src/noesis/adapters/billing.py`: catálogo mensual/anual y matriz central de
   derechos. Stripe usa un `price_id` distinto por plan y periodicidad; el anual
-  cobra 11 meses y da 12. Autónomo conserva el núcleo y Negocio/Premium habilitan
-  Proyectos, Equipo, Gestoría y Análisis avanzado. El adaptador también puede leer
+  cobra 11 meses y da 12. `autonomo` conserva el núcleo y `pro`/`premium` habilitan
+  Proyectos, Equipo, Gestoría y Análisis avanzado. El nombre visible depende de la
+  pestaña de `/precios` (`PLAN_SEGMENT_NAMES`, `plan_name`): dos planes por
+  segmento, Básico y Avanzado; `segment_for` saca el segmento del `team_size`. El adaptador también puede leer
   una suscripción concreta por API y convertirla en evidencia solo si coinciden
   negocio, cliente, suscripción, estado activo y un precio conocido de Bynoesis.
   Para una cuenta activa crea sesiones efímeras del portal general o deep links

@@ -224,7 +224,8 @@ class SeoTestCase(unittest.TestCase):
         texto = respuesta.text
         self.assertTrue(texto.startswith("# Bynoesis\n\n> "))
         for clave, plan in billing.PLANS.items():
-            self.assertIn(f"{plan['name']}: {plan['price']} € al mes + IVA", texto)
+            nombres = " / ".join(billing.plan_all_names(clave))
+            self.assertIn(f"{nombres}: {plan['price']} € al mes + IVA", texto)
             self.assertIn(
                 f"{billing.PLAN_ANNUAL_PRICES[clave]} € al año + IVA", texto
             )

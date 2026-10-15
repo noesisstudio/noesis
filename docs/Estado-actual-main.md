@@ -1,5 +1,15 @@
 # Estado actual del producto
 
+## 2026-10-13 — Dos planes por pestaña en /precios (local, sin desplegar)
+
+Cada pestaña de `/precios` enseña dos planes con nombre propio y el detalle por
+bloques: Autónomos (Autónomo Básico 29 €, Autónomo Avanzado 49 €), Pymes (Pyme Básico
+49 €, Pyme Avanzado 99 €) y Empresas (Empresa Básico 99 €, Empresa Avanzado 199 €,
+«Próximamente»). Gestorías sigue sin precio público. Son los mismos cuatro peldaños:
+no cambian precios, claves, Stripe ni derechos. Dentro de la cuenta, el plan lleva el
+nombre que corresponde al tamaño de equipo del negocio. La sección del 12/10 que dice
+Autónomo, Pyme y Avanzado queda como histórica. Detalle en [Decisiones](Decisiones.md).
+
 ## 2026-10-12 — Precios por segmento con tarifa tachada (local, sin desplegar)
 
 `/precios` enseña una escalera con cuatro pestañas (Autónomos, Pymes, Empresas,

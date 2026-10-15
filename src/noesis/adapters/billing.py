@@ -31,18 +31,47 @@ _PORTAL_CONFIGURATION_VERSION = "noesis-v1"
 # Catálogo de planes: fuente única de verdad. El precio se comunica siempre + IVA;
 # el modelo reproducible y sus márgenes están en docs/Unit-economics-y-cerebro-interno.md.
 # `price` es lo que se cobra (precio de lanzamiento) y `list_price` la tarifa que la
-# web enseña tachada al lado. Las claves `pro` y `premium` se conservan: solo cambió
-# el nombre visible (antes Negocio y Premium).
+# web enseña tachada al lado. Las claves `pro` y `premium` se conservan: solo cambia
+# el nombre visible.
+
+# Nombre visible de cada plan según la pestaña de /precios que lo vende. Cada pestaña
+# enseña dos peldaños seguidos de la escalera, Básico y Avanzado, así que los planes
+# intermedios se llaman distinto según para quién son: misma clave y mismo cobro. El
+# primer nombre de cada plan es el que se usa cuando no se sabe el segmento.
+PLAN_SEGMENT_NAMES = {
+    "autonomo": {"autonomos": "Autónomo Básico"},
+    "pro": {"autonomos": "Autónomo Avanzado", "pymes": "Pyme Básico"},
+    "premium": {"pymes": "Pyme Avanzado", "empresas": "Empresa Básico"},
+    "empresa": {"empresas": "Empresa Avanzado"},
+}
+
+
+def _default_plan_name(plan: str) -> str:
+    return next(iter(PLAN_SEGMENT_NAMES[plan].values()))
+
+
 PLANS = {
-    "autonomo": {"name": "Autónomo", "price": 29, "list_price": 60, "credits": 75},
-    "pro": {"name": "Pyme", "price": 49, "list_price": 100, "credits": 300},
-    "premium": {"name": "Avanzado", "price": 99, "list_price": 200, "credits": 1500},
+    "autonomo": {
+        "name": _default_plan_name("autonomo"),
+        "price": 29, "list_price": 60, "credits": 75,
+    },
+    "pro": {
+        "name": _default_plan_name("pro"),
+        "price": 49, "list_price": 100, "credits": 300,
+    },
+    "premium": {
+        "name": _default_plan_name("premium"),
+        "price": 99, "list_price": 200, "credits": 1500,
+    },
 }
 # Plan anunciado en la pestaña Empresas que todavía no se puede contratar: necesita
 # roles y varios accesos por negocio. No entra en PLANS para que ni Stripe ni el alta
 # lo ofrezcan.
 UPCOMING_PLANS = {
-    "empresa": {"name": "Empresa", "price": 199, "list_price": 400, "credits": 3000},
+    "empresa": {
+        "name": _default_plan_name("empresa"),
+        "price": 199, "list_price": 400, "credits": 3000,
+    },
 }
 PLAN_PRICES = {key: plan["price"] for key, plan in PLANS.items()}
 PLAN_LIST_PRICES = {key: plan["list_price"] for key, plan in PLANS.items()}
@@ -62,26 +91,78 @@ LAUNCH_DISCOUNT_PERCENT = 50
 LAUNCH_OFFER_MONTHS = 12
 
 
-# Puertas de /precios: cada pestaña enseña tres peldaños seguidos de la misma
-# escalera y destaca uno. Las gestorías no tienen precio público.
+# Puertas de /precios: cada pestaña enseña dos peldaños seguidos de la misma
+# escalera (su Básico y su Avanzado) y destaca uno. Las gestorías no tienen precio
+# público. `team_sizes` son los tamaños de equipo del alta que caen en cada puerta.
 PRICING_SEGMENTS = {
     "autonomos": {
         "label": "Autónomos", "hint": "Trabajas por tu cuenta",
-        "plans": ("autonomo", "pro", "premium"), "featured": "autonomo",
+        "plans": ("autonomo", "pro"), "featured": "autonomo",
+        "team_sizes": ("solo",),
     },
     "pymes": {
         "label": "Pymes", "hint": "De 2 a 10 personas",
-        "plans": ("autonomo", "pro", "premium"), "featured": "pro",
+        "plans": ("pro", "premium"), "featured": "pro",
+        "team_sizes": ("2-5", "6-10"),
     },
     "empresas": {
         "label": "Empresas", "hint": "Más de 10 personas",
-        "plans": ("pro", "premium", "empresa"), "featured": "premium",
+        "plans": ("premium", "empresa"), "featured": "premium",
+        "team_sizes": ("11+",),
     },
     "gestorias": {
         "label": "Gestorías", "hint": "Despachos con cartera",
-        "plans": (), "featured": "",
+        "plans": (), "featured": "", "team_sizes": (),
     },
 }
+
+
+def plan_name(plan: str, segment: str = "") -> str:
+    """Nombre de un plan para un segmento.
+
+    Si ese segmento no vende el plan, se usa el nombre de la puerta más cercana: una
+    empresa en el plan de 49 € ve «Pyme Básico», no «Autónomo Avanzado».
+    """
+    names = PLAN_SEGMENT_NAMES.get(plan)
+    if not names:
+        return ""
+    if not PRICING_SEGMENTS.get(segment, {}).get("plans"):
+        return _default_plan_name(plan)
+    order = list(PRICING_SEGMENTS)
+    position = order.index(segment)
+    return min(
+        names.items(), key=lambda item: abs(order.index(item[0]) - position),
+    )[1]
+
+
+def plan_names(segment: str = "") -> dict[str, str]:
+    return {plan: plan_name(plan, segment) for plan in PLAN_SEGMENT_NAMES}
+
+
+def plan_all_names(plan: str) -> tuple[str, ...]:
+    """Todos los nombres con los que se vende un plan, en orden de escalera."""
+    return tuple(PLAN_SEGMENT_NAMES.get(plan, {}).values())
+
+
+def plans_for(segment: str = "") -> dict[str, dict]:
+    """Planes contratables con el nombre que les corresponde en ese segmento."""
+    return {
+        key: {**plan, "name": plan_name(key, segment)}
+        for key, plan in PLANS.items()
+    }
+
+
+def segment_for(business: dict | None, fallback: str = "") -> str:
+    """Puerta de /precios que corresponde a una cuenta.
+
+    Manda el tamaño de equipo que el negocio declara en el alta. Mientras no lo ha
+    dicho, vale la pestaña desde la que llegó (`fallback`).
+    """
+    team_size = str((business or {}).get("team_size") or "")
+    for key, segment in PRICING_SEGMENTS.items():
+        if team_size in segment["team_sizes"]:
+            return key
+    return fallback if PRICING_SEGMENTS.get(fallback, {}).get("plans") else ""
 
 
 def _plan_card(plan: dict, *, upcoming: bool) -> dict:
@@ -113,6 +194,7 @@ def pricing_context() -> dict:
             },
         },
         "pricing_segments": PRICING_SEGMENTS,
+        "segment_plan_names": {key: plan_names(key) for key in PRICING_SEGMENTS},
         "launch_discount": LAUNCH_DISCOUNT_PERCENT,
         "launch_months": LAUNCH_OFFER_MONTHS,
     }

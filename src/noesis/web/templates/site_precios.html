@@ -1,28 +1,119 @@
 {% extends "site_base.html" %}
 {% block page_title %}Precios del software para autónomos y pymes{% endblock %}
-{% block meta_description %}Planes de Bynoesis con precio de lanzamiento: {{ plan_cards.autonomo.name }} {{ prices.autonomo }} €, {{ plan_cards.pro.name }} {{ prices.pro }} € y {{ plan_cards.premium.name }} {{ prices.premium }} € al mes más IVA, un {{ launch_discount }} % menos que la tarifa. {% if public_signup_available %}Prueba 14 días sin tarjeta.{% else %}Acceso piloto acompañado.{% endif %}{% endblock %}
+{% block meta_description %}Planes de Bynoesis para autónomos, pymes y empresas, cada uno con su Básico y su Avanzado: {{ prices.autonomo }} €, {{ prices.pro }} € y {{ prices.premium }} € al mes más IVA con el precio de lanzamiento, un {{ launch_discount }} % menos que la tarifa. {% if public_signup_available %}Prueba 14 días sin tarjeta.{% else %}Acceso piloto acompañado.{% endif %}{% endblock %}
 {% set seg = pricing_segments[pricing_segment] %}
 
-{# Cabecera de una tarjeta: tarifa tachada, descuento y precio de lanzamiento. #}
-{% macro card_open(key) %}
+{# Cabecera de una tarjeta: nombre del plan en esa pestaña, tarifa tachada, descuento
+   y precio de lanzamiento. Cada tarjeta pertenece a una sola pestaña. #}
+{% macro card_open(segment, key) %}
 {% set card = plan_cards[key] %}
-      <article class="public-price-card{{ ' recommended' if seg.featured == key }}{{ ' upcoming' if card.upcoming }}" data-plan-card="{{ key }}" data-plan-price data-monthly="{{ card.monthly }}" data-annual="{{ card.annual }}" data-saving="{{ card.saving }}" data-list-monthly="{{ card.list }}" data-list-annual="{{ card.annual_list }}"{{ ' hidden' if key not in seg.plans }}>
-        <div class="recommendation-label"{{ ' hidden' if seg.featured != key }}>Recomendado</div>
-        <div class="plan-label">{{ card.name }}{% if card.upcoming %} <span class="plan-soon">Próximamente</span>{% endif %}</div>
+{% set featured = pricing_segments[segment].featured == key %}
+      <article class="public-price-card{{ ' recommended' if featured }}{{ ' upcoming' if card.upcoming }}" data-plan-card="{{ key }}" data-segment-only="{{ segment }}" data-plan-price data-monthly="{{ card.monthly }}" data-annual="{{ card.annual }}" data-saving="{{ card.saving }}" data-list-monthly="{{ card.list }}" data-list-annual="{{ card.annual_list }}"{{ ' hidden' if segment != pricing_segment }}>
+        {% if featured %}<div class="recommendation-label">Recomendado</div>{% endif %}
+        <div class="plan-label">{{ segment_plan_names[segment][key] }}{% if card.upcoming %} <span class="plan-soon">Próximamente</span>{% endif %}</div>
         <p class="public-price-was"><span class="visually-hidden">Tarifa: </span><s><span data-list-value>{{ card.list }}</span> €</s> <b>−{{ launch_discount }} %</b></p>
         <p class="public-price"><span class="visually-hidden">Precio de lanzamiento: </span><span data-price-value>{{ card.monthly }}</span> €<small data-price-suffix> + IVA/mes</small></p>
         <small class="launch-price-note">{% if card.upcoming %}Precio de lanzamiento previsto{% else %}Precio de lanzamiento · {{ launch_months }} meses desde tu alta{% endif %}</small>
         <small class="annual-price-note" data-annual-note hidden></small>
 {% endmacro %}
 
-{% macro plan_cta(key) %}
+{% macro plan_cta(segment, key) %}
+{% set featured = pricing_segments[segment].featured == key %}
         {% if public_signup_available %}
-        <a class="btn{{ ' primary' if seg.featured == key }} full plan-start-link" data-plan="{{ key }}" href="/onboarding?intent=trial&plan={{ key }}&billing=monthly">Probar 14 días <span aria-hidden="true">→</span></a>
-        <a class="plan-buy-link" data-plan="{{ key }}" href="/onboarding?intent=subscribe&plan={{ key }}&billing=monthly">Contratar ahora</a>
+        <a class="btn{{ ' primary' if featured }} full plan-start-link" data-plan="{{ key }}" data-segment="{{ segment }}" href="/onboarding?intent=trial&plan={{ key }}&billing=monthly&para={{ segment }}">Probar 14 días <span aria-hidden="true">→</span></a>
+        <a class="plan-buy-link" data-plan="{{ key }}" data-segment="{{ segment }}" href="/onboarding?intent=subscribe&plan={{ key }}&billing=monthly&para={{ segment }}">Contratar ahora</a>
         {% else %}
-        <a class="btn{{ ' primary' if seg.featured == key }} full plan-start-link" data-plan="{{ key }}" href="/solicitar-acceso?plan={{ key }}">Solicitar acceso <span aria-hidden="true">→</span></a>
+        <a class="btn{{ ' primary' if featured }} full plan-start-link" data-plan="{{ key }}" data-segment="{{ segment }}" href="/solicitar-acceso?plan={{ key }}">Solicitar acceso <span aria-hidden="true">→</span></a>
         {% endif %}
 {% endmacro %}
+
+{# Un bloque de la tarjeta: etiqueta y lista de lo que incluye. #}
+{% macro group(title) %}
+        <div class="price-group" aria-hidden="true">{{ title }}</div>
+        <ul class="public-price-list" aria-label="{{ title }}">{{ caller() }}</ul>
+{% endmacro %}
+
+{% macro credits(key) %}{{ "{:,}".format(plan_cards[key].credits).replace(",", ".") }}{% endmacro %}
+
+{# Lo que comparten todos los planes. Se repite con las mismas palabras en las tres
+   pestañas para que nadie tenga que adivinar si su plan lo trae. #}
+{% macro day_to_day() %}
+          <li>Clientes, trabajos y agenda en un mismo sitio</li>
+          <li>Presupuestos y catálogo de productos y servicios, con plantillas por oficio</li>
+          <li>Trabajos que aparecen en el calendario de tu móvil</li>
+{% endmacro %}
+{% macro invoices_and_payments() %}
+          <li>Facturas en PDF con IVA e IRPF y numeración correlativa</li>
+          <li>Lo que te deben, siempre a la vista</li>
+          <li>Recordatorios de cobro que tú confirmas antes de enviar</li>
+          <li>Cuadra lo cobrado con el extracto de tu banco</li>
+{% endmacro %}
+{% macro whatsapp() %}
+          <li>{% if voice_available and ocr_available %}Escríbele, mándale un audio o la foto de un ticket{% else %}Escríbele o mándale un documento; audio e imágenes en la puesta en marcha{% endif %}</li>
+          <li>Parte de la mañana con la agenda y los cobros del día</li>
+          <li>Bynoesis prepara; tú revisas y confirmas antes de emitir o enviar</li>
+{% endmacro %}
+{% macro papers_and_taxes() %}
+          <li>Gastos, tickets y facturas recibidas ordenados por trimestre</li>
+          <li>Cálculo orientativo de IVA e IRPF de cada trimestre</li>
+{% endmacro %}
+{% macro gestoria() %}
+          <li>Tu gestoría entra a su portal y ve los papeles de cada período</li>
+          <li>Paquete trimestral listo para descargar, sin perseguir correos</li>
+          <li>Te pide lo que falta desde el mismo sitio</li>
+{% endmacro %}
+{% macro projects_and_numbers() %}
+          <li>Obras y trabajos largos con presupuesto, costes y margen</li>
+          <li>Horas, materiales y equipo de cada proyecto</li>
+          <li>Ingresos, gastos y beneficio del año, con previsión de caja</li>
+          <li>Te dice si dependes demasiado de un solo cliente</li>
+{% endmacro %}
+{% macro team() %}
+          <li>Asigna cada trabajo y planifica la semana</li>
+          <li>Tu equipo recibe sus trabajos por WhatsApp o con un enlace</li>
+          <li>Fichaje con registro de jornada inalterable</li>
+{% endmacro %}
+{% macro accompaniment() %}
+          <li>Puesta en marcha acompañada: lo configuramos contigo</li>
+          <li>Línea directa con el equipo por WhatsApp</li>
+{% endmacro %}
+{# Resumen de lo que ya trae el Básico de cada pestaña, para la tarjeta del Avanzado. #}
+{% macro recap_solo() %}
+          <li>Clientes, trabajos, agenda y presupuestos</li>
+          <li>Facturas en PDF, cobros y recordatorios</li>
+          <li>WhatsApp y parte de la mañana</li>
+          <li>Gastos, tickets y cálculo orientativo de impuestos</li>
+{% endmacro %}
+{% macro recap_team() %}
+          <li>Equipo: asignación de trabajos y fichaje</li>
+          <li>Clientes, presupuestos, facturas y cobros</li>
+          <li>WhatsApp y parte de la mañana</li>
+          <li>Gestoría conectada, papeles e impuestos</li>
+          <li>Proyectos, análisis del año y previsión de caja</li>
+{% endmacro %}
+{% macro receptionist() %}
+        <div class="beta-feature"><b>Recepcionista 24/7</b><span>Beta con acceso preferente: atenderá las llamadas que no cojas, las resumirá y propondrá citas. Incluirá 100 minutos al mes cuando se active; hasta entonces no se cobra por ella.</span></div>
+{% endmacro %}
+
+{# Comparativa punto por punto: un valor por plan, en el orden de la escalera. #}
+{% set compare_rows = [
+  ("Clientes, trabajos, agenda y presupuestos", ("Sí", "Sí", "Sí", "Sí")),
+  ("Catálogo de productos y plantillas por oficio", ("Sí", "Sí", "Sí", "Sí")),
+  ("Facturas en PDF con IVA e IRPF", ("Sí", "Sí", "Sí", "Sí")),
+  ("Cobros, recordatorios y extracto del banco", ("Sí", "Sí", "Sí", "Sí")),
+  ("WhatsApp y parte de la mañana", ("Sí", "Sí", "Sí", "Sí")),
+  ("Gastos, tickets y cálculo orientativo de impuestos", ("Sí", "Sí", "Sí", "Sí")),
+  ("Gestoría conectada: portal y paquete trimestral", ("No", "Sí", "Sí", "Sí")),
+  ("Proyectos: costes, horas y margen", ("No", "Sí", "Sí", "Sí")),
+  ("Análisis del año y previsión de caja", ("No", "Sí", "Sí", "Sí")),
+  ("Equipo: asignación de trabajos y fichaje", ("No", "Sí", "Sí", "Sí")),
+  ("Acciones avanzadas de IA al mes", (credits("autonomo"), credits("pro"), credits("premium"), credits("empresa"))),
+  ("Soporte", ("Estándar", "Prioritario", "Línea directa", "Persona asignada")),
+  ("Puesta en marcha acompañada", ("No", "No", "Sí", "Sí")),
+  ("Recepcionista 24/7 (beta)", ("No", "No", "Acceso preferente", "Acceso preferente")),
+  ("Varios accesos con permisos y registro de cambios", ("No", "No", "No", "Sí")),
+] %}
+{% set plan_order = plan_cards.keys() | list %}
 
 {% block content %}
   <section class="public-page-hero pricing-page-hero">
@@ -34,7 +125,7 @@
   <section class="public-section pricing-section" id="planes" aria-label="Planes de Bynoesis">
     <nav class="segment-tabs" aria-label="¿Para quién es?" data-segment-tabs>
       {% for key, item in pricing_segments.items() %}
-      <a href="/precios?para={{ key }}#planes" class="{{ 'active' if key == pricing_segment }}"{% if key == pricing_segment %} aria-current="true"{% endif %} data-segment="{{ key }}" data-plans="{{ item.plans | join(' ') }}" data-featured="{{ item.featured }}"><b>{{ item.label }}</b><span>{{ item.hint }}</span></a>
+      <a href="/precios?para={{ key }}#planes" class="{{ 'active' if key == pricing_segment }}"{% if key == pricing_segment %} aria-current="true"{% endif %} data-segment="{{ key }}" data-plans="{{ item.plans | join(' ') }}"><b>{{ item.label }}</b><span>{{ item.hint }}</span></a>
       {% endfor %}
     </nav>
 
@@ -47,57 +138,96 @@
     </div>
 
     <div class="public-pricing-grid" data-segment-pricing{{ ' hidden' if not seg.plans }}>
-      {{ card_open("autonomo") }}
-        <p>Para profesionales que quieren dejar de llevar clientes, trabajos y cobros de memoria.</p>
-        <ul class="public-price-list">
-          <li>Agenda, clientes, trabajos y presupuestos</li>
-          <li>Facturas con IVA e IRPF</li>
-          <li>Cobros y recordatorios preparados</li>
-          <li>{% if voice_available and ocr_available %}WhatsApp con texto, audio e imágenes{% else %}WhatsApp con texto y documentos; audio e imágenes en la puesta en marcha{% endif %}</li>
-          <li>Documentos e impuestos trimestrales</li>
-          <li>75 acciones avanzadas de IA al mes</li>
-        </ul>
-        {{ plan_cta("autonomo") }}
+      {# ---- Autónomos ---- #}
+      {{ card_open("autonomos", "autonomo") }}
+        <p>Para quien trabaja solo y quiere dejar de llevar clientes, trabajos y cobros de memoria.</p>
+        {% call group("Tu día a día") %}{{ day_to_day() }}{% endcall %}
+        {% call group("Facturas y cobros") %}{{ invoices_and_payments() }}{% endcall %}
+        {% call group("Por WhatsApp") %}{{ whatsapp() }}{% endcall %}
+        {% call group("Papeles e impuestos") %}{{ papers_and_taxes() }}{% endcall %}
+        {% call group("Inteligencia artificial") %}
+          <li>{{ credits("autonomo") }} acciones avanzadas de IA al mes</li>
+          <li>Lo del día a día no gasta acciones</li>
+        {% endcall %}
+        {{ plan_cta("autonomos", "autonomo") }}
         <small class="plan-footnote">Para una persona · sin permanencia</small>
       </article>
 
-      {{ card_open("pro") }}
-        <p>Para equipos que necesitan coordinar el trabajo y tener la jornada y la gestoría conectadas.</p>
-        <ul class="public-price-list">
-          <li>Todo lo del plan {{ plan_cards.autonomo.name }}</li>
-          <li>Asignación de trabajos y planificación</li>
-          <li>Fichaje y registro de jornada inalterable</li>
-          <li>Portal de gestoría y paquete trimestral</li>
-          <li>Proyectos, costes y rentabilidad</li>
-          <li>300 acciones avanzadas · soporte prioritario</li>
-        </ul>
-        {{ plan_cta("pro") }}
-        <small class="plan-footnote">Para equipos pequeños · sin permanencia</small>
+      {{ card_open("autonomos", "pro") }}
+        <p>Para el autónomo que lleva obras largas, trabaja con su gestoría o empieza a tener ayuda.</p>
+        {% call group("Todo lo de " ~ segment_plan_names.autonomos.autonomo) %}{{ recap_solo() }}{% endcall %}
+        {% call group("Tu gestoría, conectada") %}{{ gestoria() }}{% endcall %}
+        {% call group("Proyectos y números") %}{{ projects_and_numbers() }}{% endcall %}
+        {% call group("Si trabajas con alguien") %}{{ team() }}{% endcall %}
+        {% call group("Inteligencia artificial y soporte") %}
+          <li>{{ credits("pro") }} acciones avanzadas de IA al mes, frente a {{ credits("autonomo") }} del Básico</li>
+          <li>Soporte prioritario</li>
+        {% endcall %}
+        {{ plan_cta("autonomos", "pro") }}
+        <small class="plan-footnote">Para autónomos con gestoría, obras o ayuda · sin permanencia</small>
       </article>
 
-      {{ card_open("premium") }}
-        <p>Para negocios que quieren más automatización, uso intensivo y una puesta en marcha acompañada.</p>
-        <ul class="public-price-list">
-          <li>Todo lo del plan {{ plan_cards.pro.name }}</li>
-          <li>1.500 acciones avanzadas de IA al mes</li>
-          <li>Puesta en marcha acompañada</li>
-          <li>Línea directa con el equipo</li>
-        </ul>
-        <div class="beta-feature"><b>Recepcionista 24/7</b><span>Beta con acceso preferente: atenderá las llamadas que no cojas, las resumirá y propondrá citas. Incluirá 100 minutos al mes cuando se active; hasta entonces no se cobra por ella.</span></div>
-        {{ plan_cta("premium") }}
+      {# ---- Pymes ---- #}
+      {{ card_open("pymes", "pro") }}
+        <p>Para equipos de 2 a 10 personas que necesitan saber quién hace qué y tener la jornada en regla.</p>
+        {% call group("Tu equipo") %}{{ team() }}{% endcall %}
+        {% call group("El día a día del negocio") %}{{ day_to_day() }}{{ invoices_and_payments() }}{% endcall %}
+        {% call group("Por WhatsApp") %}{{ whatsapp() }}{% endcall %}
+        {% call group("Gestoría, papeles e impuestos") %}{{ papers_and_taxes() }}{{ gestoria() }}{% endcall %}
+        {% call group("Proyectos y números") %}{{ projects_and_numbers() }}{% endcall %}
+        {% call group("Inteligencia artificial y soporte") %}
+          <li>{{ credits("pro") }} acciones avanzadas de IA al mes</li>
+          <li>Soporte prioritario</li>
+        {% endcall %}
+        {{ plan_cta("pymes", "pro") }}
+        <small class="plan-footnote">Un acceso para el titular; el equipo entra por WhatsApp o enlace · sin permanencia</small>
+      </article>
+
+      {{ card_open("pymes", "premium") }}
+        <p>Para pymes con mucho movimiento que quieren más automatización y a alguien al lado en la puesta en marcha.</p>
+        {% call group("Todo lo de " ~ segment_plan_names.pymes.pro) %}{{ recap_team() }}{% endcall %}
+        {% call group("Más inteligencia artificial") %}
+          <li>{{ credits("premium") }} acciones avanzadas de IA al mes, frente a {{ credits("pro") }} del Básico</li>
+          <li>Para leer documentos, redactar y preparar gestiones a diario</li>
+        {% endcall %}
+        {% call group("Acompañamiento") %}{{ accompaniment() }}{% endcall %}
+        {{ receptionist() }}
+        {{ plan_cta("pymes", "premium") }}
         <small class="plan-footnote">Para uso intensivo · sin permanencia</small>
       </article>
 
-      {{ card_open("empresa") }}
+      {# ---- Empresas ---- #}
+      {{ card_open("empresas", "premium") }}
+        <p>Para empresas de más de 10 personas que quieren todo lo que Bynoesis hace hoy, con uso intensivo y trato directo.</p>
+        {% call group("Tu equipo") %}{{ team() }}{% endcall %}
+        {% call group("El día a día del negocio") %}{{ day_to_day() }}{{ invoices_and_payments() }}{% endcall %}
+        {% call group("Por WhatsApp") %}{{ whatsapp() }}{% endcall %}
+        {% call group("Gestoría, papeles e impuestos") %}{{ papers_and_taxes() }}{{ gestoria() }}{% endcall %}
+        {% call group("Proyectos y números") %}{{ projects_and_numbers() }}{% endcall %}
+        {% call group("Inteligencia artificial y acompañamiento") %}
+          <li>{{ credits("premium") }} acciones avanzadas de IA al mes</li>
+          {{ accompaniment() }}
+        {% endcall %}
+        {{ receptionist() }}
+        {{ plan_cta("empresas", "premium") }}
+        <small class="plan-footnote">Un acceso para el titular; los accesos con permisos llegan con {{ segment_plan_names.empresas.empresa }} · sin permanencia</small>
+      </article>
+
+      {{ card_open("empresas", "empresa") }}
         <p>Para empresas con varias personas en la oficina, más de una sede y necesidad de saber quién hace qué.</p>
-        <ul class="public-price-list">
-          <li>Todo lo del plan {{ plan_cards.premium.name }}</li>
+        {% call group("Todo lo de " ~ segment_plan_names.empresas.premium) %}
+          {{ recap_team() }}
+          <li>Puesta en marcha acompañada y línea directa</li>
+        {% endcall %}
+        {% call group("Accesos y control") %}
           <li>Varios accesos por empresa, cada uno con su permiso</li>
           <li>Registro de quién entra y qué cambia</li>
           <li>Varias sedes en la misma cuenta</li>
-          <li>3.000 acciones avanzadas de IA al mes</li>
+        {% endcall %}
+        {% call group("Inteligencia artificial y acompañamiento") %}
+          <li>{{ credits("empresa") }} acciones avanzadas de IA al mes</li>
           <li>Una persona del equipo asignada a tu cuenta</li>
-        </ul>
+        {% endcall %}
         <a class="btn full" href="/contacto" data-public-event="pricing_empresa_contact">Hablar con el equipo <span aria-hidden="true">→</span></a>
         <small class="plan-footnote">Todavía no se puede contratar · te avisamos cuando abra</small>
       </article>
@@ -111,7 +241,7 @@
       </div>
       <ul>
         <li><b>Una cartera, un acceso</b>Todas las empresas que te inviten, en el mismo espacio profesional.</li>
-        <li><b>Tu cliente elige su plan</b>La gestoría conectada va incluida desde el plan {{ plan_cards.pro.name }}.</li>
+        <li><b>Tu cliente elige su plan</b>La gestoría conectada va incluida desde {{ segment_plan_names.autonomos.pro }} y {{ segment_plan_names.pymes.pro }}.</li>
         <li><b>El criterio sigue siendo tuyo</b>Bynoesis ordena y pide lo que falta. No presenta impuestos.</li>
       </ul>
       <div class="segment-gestorias-actions">
@@ -127,30 +257,23 @@
     <p class="launch-terms" data-segment-pricing{{ ' hidden' if not seg.plans }}>El precio tachado es la tarifa de cada plan. Durante el lanzamiento, quien se da de alta paga el precio de lanzamiento sus {{ launch_months }} primeros meses; después pasa a la tarifa y avisamos 30 días antes. Importes sin IVA.</p>
 
     <details class="plan-compare" data-segment-pricing{{ ' hidden' if not seg.plans }}>
-      <summary>Comparar los planes punto por punto ↓</summary>
-      <div class="plan-compare-scroll">
+      <summary>Comparar los dos planes punto por punto ↓</summary>
+      {% for segment, item in pricing_segments.items() if item.plans %}
+      <div class="plan-compare-scroll" data-segment-only="{{ segment }}"{{ ' hidden' if segment != pricing_segment }}>
         <table>
           <thead>
-            <tr><th scope="col">Qué incluye</th>{% for card in plan_cards.values() %}<th scope="col">{{ card.name }}{% if card.upcoming %} <small>Próximamente</small>{% endif %}</th>{% endfor %}</tr>
+            <tr><th scope="col">Qué incluye</th>{% for key in item.plans %}<th scope="col">{{ segment_plan_names[segment][key] }}{% if plan_cards[key].upcoming %} <small>Próximamente</small>{% endif %}</th>{% endfor %}</tr>
           </thead>
           <tbody>
-            <tr><th scope="row">Precio de lanzamiento al mes</th>{% for card in plan_cards.values() %}<td><b>{{ card.monthly }} €</b></td>{% endfor %}</tr>
-            <tr><th scope="row">Tarifa al mes</th>{% for card in plan_cards.values() %}<td><s>{{ card.list }} €</s></td>{% endfor %}</tr>
-            <tr><th scope="row">Pensado para</th><td>Una persona</td><td>Equipos pequeños</td><td>Uso intensivo</td><td>Varias sedes</td></tr>
-            <tr><th scope="row">Agenda, clientes, trabajos y presupuestos</th><td>Sí</td><td>Sí</td><td>Sí</td><td>Sí</td></tr>
-            <tr><th scope="row">Facturas con IVA e IRPF, cobros y recordatorios</th><td>Sí</td><td>Sí</td><td>Sí</td><td>Sí</td></tr>
-            <tr><th scope="row">WhatsApp, documentos e impuestos trimestrales</th><td>Sí</td><td>Sí</td><td>Sí</td><td>Sí</td></tr>
-            <tr><th scope="row">Equipo: asignación de trabajos y fichaje</th><td class="no">No</td><td>Sí</td><td>Sí</td><td>Sí</td></tr>
-            <tr><th scope="row">Portal de gestoría y paquete trimestral</th><td class="no">No</td><td>Sí</td><td>Sí</td><td>Sí</td></tr>
-            <tr><th scope="row">Proyectos, costes y rentabilidad</th><td class="no">No</td><td>Sí</td><td>Sí</td><td>Sí</td></tr>
-            <tr><th scope="row">Acciones avanzadas de IA al mes</th><td>75</td><td>300</td><td>1.500</td><td>3.000</td></tr>
-            <tr><th scope="row">Soporte</th><td>Estándar</td><td>Prioritario</td><td>Línea directa</td><td>Persona asignada</td></tr>
-            <tr><th scope="row">Puesta en marcha acompañada</th><td class="no">No</td><td class="no">No</td><td>Sí</td><td>Sí</td></tr>
-            <tr><th scope="row">Recepcionista 24/7 (beta)</th><td class="no">No</td><td class="no">No</td><td>Acceso preferente</td><td>Acceso preferente</td></tr>
-            <tr><th scope="row">Varios accesos con permisos y registro de cambios</th><td class="no">No</td><td class="no">No</td><td class="no">No</td><td>Sí</td></tr>
+            <tr><th scope="row">Precio de lanzamiento al mes</th>{% for key in item.plans %}<td><b>{{ plan_cards[key].monthly }} €</b></td>{% endfor %}</tr>
+            <tr><th scope="row">Tarifa al mes</th>{% for key in item.plans %}<td><s>{{ plan_cards[key].list }} €</s></td>{% endfor %}</tr>
+            {% for label, values in compare_rows %}
+            <tr><th scope="row">{{ label }}</th>{% for key in item.plans %}{% set value = values[plan_order.index(key)] %}<td{{ ' class="no"' | safe if value == "No" }}>{{ value }}</td>{% endfor %}</tr>
+            {% endfor %}
           </tbody>
         </table>
       </div>
+      {% endfor %}
     </details>
   </section>
 
@@ -172,6 +295,7 @@
     <div class="section-heading"><span class="eyebrow">Sobre el pago</span><h2 id="pricing-faq-title">Claro antes de empezar.</h2><p>Sin letra pequeña, permanencias ni cargos automáticos al terminar la prueba.</p></div>
     <div class="public-accordion">
       <details open><summary>¿Qué es el precio de lanzamiento?</summary><p>Cada plan tiene una tarifa, que es el precio tachado. Mientras dure el lanzamiento, quien se da de alta paga un {{ launch_discount }} % menos durante sus {{ launch_months }} primeros meses. Después la cuenta pasa a la tarifa, y te avisamos 30 días antes para que decidas con tiempo.</p></details>
+      <details><summary>¿Qué diferencia hay entre {{ segment_plan_names.autonomos.pro }} y {{ segment_plan_names.pymes.pro }}?</summary><p>Ninguna en lo que incluyen ni en lo que cuestan: es el mismo plan de {{ prices.pro }} €, contado para quien trabaja solo o para un equipo. Lo mismo pasa con {{ segment_plan_names.pymes.premium }} y {{ segment_plan_names.empresas.premium }}, que son el plan de {{ prices.premium }} €. Si tu negocio crece, no tienes que cambiar nada.</p></details>
       <details><summary>¿Qué pasa cuando acaba la prueba?</summary><p>Nadie te cobra porque no pedimos tarjeta. Puedes seguir consultando tus datos; para crear, cambiar, enviar o automatizar, activas un plan.</p></details>
       <details><summary>¿Hay permanencia?</summary><p>No. Puedes elegir pago mensual o anual. El anual se cobra una vez y mantiene el acceso durante doce meses; el mensual se renueva cada mes. En ambos casos conservas el acceso pagado hasta el final del período contratado.</p></details>
       <details><summary>¿Cuánto ahorro con el plan anual?</summary><p>Una mensualidad completa: pagas el equivalente a 11 meses y utilizas Bynoesis durante 12. Se suma al precio de lanzamiento, siempre antes de IVA.</p></details>

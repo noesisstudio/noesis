@@ -233,6 +233,13 @@ def sitemap():
     return Response(cuerpo, media_type="application/xml")
 
 
+def _account_plan_names(request: Request, business: dict | None) -> dict[str, str]:
+    """Nombre de cada plan tal como se le vendió a esta cuenta."""
+    return billing_adapter.plan_names(billing_adapter.segment_for(
+        business, str(request.session.get("signup_segment") or ""),
+    ))
+
+
 @router.get("/llms.txt", include_in_schema=False)
 def llms_txt():
     """Ficha en Markdown para asistentes de IA, según la convención llms.txt.
@@ -242,17 +249,20 @@ def llms_txt():
     web pública ya afirma; no añade clientes, valoraciones ni certificaciones.
     """
     base = config.BASE_URL.rstrip("/")
+    # Cada plan se vende con un nombre por tipo de negocio; aquí van todos.
     planes = "\n".join(
-        f"- {plan['name']}: {plan['price']} € al mes + IVA, o "
+        f"- {' / '.join(billing_adapter.plan_all_names(clave))}: "
+        f"{plan['price']} € al mes + IVA, o "
         f"{billing_adapter.PLAN_ANNUAL_PRICES[clave]} € al año + IVA."
         for clave, plan in billing_adapter.PLANS.items()
     )
     tarifas = ", ".join(
         str(precio) for precio in billing_adapter.PLAN_LIST_PRICES.values()
     )
-    planes_equipo = " y ".join(
-        billing_adapter.PLANS[clave]["name"] for clave in ("pro", "premium")
-    )
+    planes_equipo = ", ".join(dict.fromkeys(
+        nombre for clave in ("pro", "premium")
+        for nombre in billing_adapter.plan_all_names(clave)
+    ))
     if TEMPLATES.env.globals["public_signup_available"]:
         acceso = f"Prueba de {config.TRIAL_DAYS} días desde {base}/precios."
     else:
@@ -480,18 +490,18 @@ def subscription_page(
         billing if billing in {"monthly", "annual"}
         else str(request.session.get("signup_billing") or "monthly")
     )
+    plan_names = _account_plan_names(request, biz)
     return TEMPLATES.TemplateResponse(request, "suscripcion.html", {
         "business": biz, "active": "ajustes", "page_title": "Suscripción",
         "status": status, "billing_on": billing_adapter.get_provider().available(),
         **billing_adapter.pricing_context(),
+        "plan_names": plan_names,
         "preferred_plan": preferred_plan,
         "preferred_billing": preferred_billing,
         "is_active_subscription": is_active_subscription,
         "trial_expired": trial_expired,
         "current_plan": active_plan if is_active_subscription else "",
-        "current_plan_label": billing_adapter.PLANS.get(
-            active_plan, {},
-        ).get("name", "Plan activo"),
+        "current_plan_label": plan_names.get(active_plan, "Plan activo"),
         "current_plan_rank": {
             "autonomo": 0, "pro": 1, "premium": 2,
         }.get(active_plan, -1),
@@ -517,6 +527,7 @@ def page(request: Request, business_id: int, page: str):
         "page_title": _PAGES[page],
         "activation": db.activation_snapshot(business_id),
         "entitlements": billing_adapter.entitlements_for(biz),
+        "plan_names": _account_plan_names(request, biz),
         # El parte de sección: la figura de Bynoesis en cada pantalla — lectura,
         # cifras clave y puerta al acompañante (None en el Home, que tiene el suyo).
         "page_brief": chat.page_brief(business_id, page),

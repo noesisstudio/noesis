@@ -1,5 +1,15 @@
 # Tareas vivas
 
+## 2026-10-13 — Planes Básico y Avanzado por pestaña: lo que queda
+
+- [ ] Decidir el nombre de los productos en Stripe. Un precio solo admite un nombre y
+  hoy `pro` se vende como «Autónomo Avanzado» y «Pyme Básico» (igual `premium`). La
+  factura de la suscripción enseña el de Stripe.
+- [ ] Confirmar si vale que la cuenta vea el nombre de su tamaño de equipo o si se
+  quiere guardar la pestaña de alta: lo segundo necesita la migración 75 y ampliar las
+  guardas del historial financiero (ver Decisiones del 13/10).
+- [ ] Revisar con el founder el texto de las seis tarjetas de `/precios`.
+
 ## 2026-10-12 — Revisión de errores: dos decisiones pendientes
 
 - [x] Pin de esquema del Financial Core frente a la migración 74 del CRM: resuelto el

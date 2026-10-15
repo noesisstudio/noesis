@@ -1723,7 +1723,8 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
 
 /* Precios y preguntas. */
 .pricing-preview { padding-bottom:78px; }
-.public-pricing-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; align-items:stretch; }
+/* Dos planes por pestaña: su Básico y su Avanzado, lado a lado. */
+.public-pricing-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:18px; align-items:stretch; max-width:940px; margin-left:auto; margin-right:auto; }
 .public-pricing-grid.compact { max-width:1050px; margin:0 auto; }
 .public-price-card { position:relative; display:flex; flex-direction:column; min-width:0; padding:30px 28px 24px;
   background:#fff; border:1px solid var(--border); border-radius:12px; }
@@ -1765,7 +1766,7 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
 .plan-compare summary { padding:16px 20px; color:var(--brand); font-size:13px; font-weight:750; cursor:pointer; list-style:none; }
 .plan-compare summary::-webkit-details-marker { display:none; }
 .plan-compare-scroll { overflow-x:auto; border-top:1px solid var(--border); }
-.plan-compare table { width:100%; min-width:680px; border-collapse:collapse; font-size:12.5px; }
+.plan-compare table { width:100%; min-width:460px; border-collapse:collapse; font-size:12.5px; }
 .plan-compare th, .plan-compare td { padding:11px 16px; border-bottom:1px solid var(--border); text-align:center; color:#4f5e58; }
 .plan-compare tbody tr:last-child th, .plan-compare tbody tr:last-child td { border-bottom:0; }
 .plan-compare th[scope="row"] { text-align:left; font-weight:500; color:var(--text); }
@@ -1780,6 +1781,9 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
 .plan-buy-link { display:block; margin-top:11px; color:var(--brand); font-size:11.5px;
   font-weight:750; text-align:center; text-decoration:underline; text-underline-offset:3px; }
 .public-price-list { margin-bottom:24px; }
+/* Bloques de la tarjeta: una etiqueta corta y lo que incluye debajo. */
+.price-group { margin:0 0 3px; color:var(--brand); font-size:10px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; }
+.price-group + .public-price-list { margin-bottom:17px; }
 .public-price-list li { position:relative; padding:6px 0 6px 18px; color:#4f5e58; font-size:12.5px; line-height:1.45; }
 .public-price-list li::before { content:""; position:absolute; left:0; top:12px; width:6px; height:6px; border-radius:50%; border:1px solid var(--brand-2); }
 .beta-line, .beta-feature { display:block; margin:0 0 18px; padding:10px 12px; border-left:2px solid var(--amber); background:#fbf7e9; color:#725c2c; font-size:11.5px; line-height:1.45; }
@@ -2042,7 +2046,6 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
   .workflow-line li:nth-child(2) { border-right:0; }
   .workflow-line li { padding-top:25px; padding-bottom:25px; border-bottom:1px solid var(--border); }
   .workflow-line li:nth-last-child(-n+2) { border-bottom:0; }
-  .public-pricing-grid .recommended { order:-1; grid-column:1/-1; }
   .pilot-stories, .faq-preview, .public-page-hero, .companion-section, .compliance-section,
   .price-included, .pricing-faq, .team-manifesto, .principles-list { grid-template-columns:1fr; }
   .pilot-illustration { max-height:260px; }
@@ -2099,7 +2102,6 @@ body.panel-editing .pblock-hidden .pbt-eye { color:var(--red); border-color:var(
   .workflow-line li:last-child { border-bottom:0; }
   .founder-card { border-right:0; border-bottom:1px solid var(--border); padding:30px 24px; }
   .founder-card:last-child { border-bottom:0; }
-  .public-pricing-grid .recommended { grid-column:auto; }
   .public-section, .workflow-section, .workday-section, .pricing-preview { padding:68px 0; }
   .pilot-stories { padding:30px 24px; grid-template-columns:1fr; }
   .public-page-hero { grid-template-columns:1fr; gap:24px; padding:65px 0 50px; }

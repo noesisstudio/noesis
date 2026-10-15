@@ -1,5 +1,29 @@
 # Registro de QA
 
+## 2026-10-13 — Dos planes por pestaña en /precios
+
+- **Suite completa por bloques en paralelo (7 procesos, SQLite, macOS): 1.894 pruebas,
+  0 fallos, 2 skips existentes.** No se añaden funciones de prueba: se amplían
+  `test_pricing_shows_list_price_next_to_the_launch_price_by_segment` (dos tarjetas
+  visibles por pestaña, su nombre, cuál se destaca, `para` en el enlace de alta y los
+  nombres por tamaño de equipo), `test_llms_txt_summarises_the_public_offer_for_ai_assistants`
+  (todos los nombres de cada plan), `test_active_subscription_is_managed_without_a_second_checkout`
+  (nombre por defecto y nombre de una cuenta de 11+) y
+  `test_subscribe_onboarding_configures_operations_before_checkout` (el alta enseña el
+  nombre de la pestaña y descarta una pestaña desconocida).
+- `node --test tests/*.test.cjs`: 11 de 11. `ruff check src tests` y verdad del
+  proyecto: correctos.
+- **En el navegador** (Chrome sin ventana, servidor local con datos de demostración):
+  las tres pestañas a 1280 px y Autónomos y Pymes a 390 px, sin desbordamiento
+  horizontal; cada una enseña sus dos tarjetas. Cambio de pestaña sin recargar
+  (Autónomos → Empresas), paso a pago anual (Pyme Básico: 539 €), enlaces de alta con
+  `para=pymes` y comparativa de dos columnas de la pestaña activa. Suscripción de la
+  cuenta de demostración (equipo de 2–5): Autónomo Básico, Pyme Básico y Pyme Avanzado.
+
+Sin probar: alta real con Google, Stripe (no hay claves en local; el nombre del
+producto en Stripe no se ha tocado), el aviso por WhatsApp del canal de equipo con el
+nombre nuevo, PostgreSQL, la CI de GitHub, Safari y Firefox.
+
 ## 2026-10-13 — Suite completa en verde con el CRM y flujos de alta desde el navegador
 
 - **Suite completa por bloques en paralelo: 1.894 pruebas, 0 fallos, 2 skips

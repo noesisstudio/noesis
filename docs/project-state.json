@@ -45,10 +45,25 @@
     "premium": 200
   },
   "plan_names": {
-    "autonomo": "Autónomo",
-    "pro": "Pyme",
-    "premium": "Avanzado"
+    "autonomo": "Autónomo Básico",
+    "pro": "Autónomo Avanzado",
+    "premium": "Pyme Avanzado"
   },
+  "plan_names_by_segment": {
+    "autonomos": {
+      "autonomo": "Autónomo Básico",
+      "pro": "Autónomo Avanzado"
+    },
+    "pymes": {
+      "pro": "Pyme Básico",
+      "premium": "Pyme Avanzado"
+    },
+    "empresas": {
+      "premium": "Empresa Básico",
+      "empresa": "Empresa Avanzado"
+    }
+  },
+  "pricing_two_per_segment_2026_10_13": "Local, sin desplegar ni confirmar. Cada pestana de /precios ensena dos planes con nombre propio (Basico y Avanzado) y detalle por bloques, sobre los mismos cuatro peldanos: precios, claves, Stripe y derechos sin cambios. pro y premium tienen dos nombres. La cuenta ve el nombre de su team_size; hasta declararlo, el de la pestana de alta (para= y sesion). No se guarda la pestana: exigiria la migracion 75 y ampliar las guardas del historial financiero. Pendiente: nombre de los productos en Stripe y revision del texto por el founder.",
   "pricing_ladder_2026_10_12": "Local, sin desplegar ni confirmar. /precios enseña una escalera con pestañas (Autonomos, Pymes, Empresas, Gestorias) y la tarifa tachada 60/100/200 junto al precio que se cobra, 29/49/99, como lanzamiento -50 % durante 12 meses desde el alta. Negocio pasa a llamarse Pyme y Premium, Avanzado; claves, Stripe y derechos por plan sin cambios. Empresa (199, tachado 400) se anuncia como Proximamente y no esta en PLANS. Pendiente del founder y del abogado: confirmar la condicion de 12 meses y el paso a tarifa; pendiente de construir: fin de oferta en Stripe y en la cuenta. No se ha tocado gestoria gratis en Autonomo, voz como extra ni limite de trabajadores.",
   "error_sweep_2026_10_12": "Local, sin desplegar. Revision general: fuera del historial financiero pasan 1720 pruebas; los 100 fallos de test_financial_history* por la migracion 74 del CRM quedaron resueltos el 13/10. Recorrido de 23 paginas publicas, panel con demo y con cuenta vacia, admin y portales a 1280 y 390 px: sin errores de servidor ni de consola. Corregido en /agenda: el calendario pintaba las citas un dia tarde por usar toISOString (UTC) y la fila de cada cita desbordaba la pagina; nuevo localDate() en app.js y prueba tests/local_dates.test.cjs en la CI. Pendiente: comprobar TZ del proceso en Railway.",
   "browser_flows_2026_10_13": "Local, sin desplegar. Suite completa 1894 pruebas en verde con el CRM (SQLite) y suites PostgreSQL de la CI en local. Altas desde el navegador revisadas con una cuenta de prueba: cliente, gasto, producto, posible cliente, presupuesto, equipo, factura y asistente. Corregido: formModal avisa de campos obligatorios y de rechazos del servidor; el parte de cada pantalla se refresca tras un cambio; aviso de seguridad para rechazos no recogidos; Anadir trabajo de Inicio ya no lleva a un enlace muerto; el motivo al emitir una factura desde la web no lleva el nombre interno de la herramienta.",

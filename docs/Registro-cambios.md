@@ -1,5 +1,36 @@
 # Registro de cambios
 
+## 2026-10-13 — Dos planes por pestaña en /precios: Básico y Avanzado
+
+Objetivo: que cada pestaña de `/precios` enseñe solo sus dos planes, con nombre propio
+(Autónomo Básico y Avanzado, Pyme Básico y Avanzado, Empresa Básico y Avanzado) y
+mucho más detalle, sin tocar lo que se cobra. Decisión en [Decisiones](Decisiones.md).
+
+- `adapters/billing.py`: `PLAN_SEGMENT_NAMES` (nombre de cada plan por pestaña),
+  `PRICING_SEGMENTS` con dos planes y `team_sizes`, y `plan_name`, `plan_names`,
+  `plan_all_names`, `plans_for` y `segment_for`. `pricing_context` añade
+  `segment_plan_names`. Precios, tarifa, claves y derechos: iguales.
+- `templates/site_precios.html`: seis tarjetas (una por pestaña y plan) con bloques
+  «Tu día a día», «Facturas y cobros», «Por WhatsApp», «Papeles e impuestos»,
+  gestoría, proyectos, equipo e IA; comparativa de dos columnas por pestaña; pregunta
+  nueva sobre los planes que comparten precio. `static/public-site.js` enseña los
+  bloques `data-segment-only` de la pestaña activa y añade `para` a los enlaces de
+  alta. `static/app.css`: rejilla de dos columnas y etiqueta `.price-group`.
+- Alta (`routers/account.py`, `onboarding.html`): `?para=` decide el nombre del plan
+  en el selector y se recuerda en la sesión (`signup_segment`), también por Google.
+- Cuenta (`routers/pages.py`): suscripción y Ajustes reciben `plan_names` del segmento
+  del negocio. `tools.py` y `web/whatsapp.py` nombran el plan mínimo igual.
+- Sin cuenta delante (`deps.py`): `plan_names` son los nombres por defecto y
+  `plan_full_names` lleva todos; lo usan administración, bienvenida y `llms.txt`.
+- `landing.html`: la franja de precios enseña el Básico de cada segmento.
+
+Pruebas: ver [Registro-QA](Registro-QA.md). Sin desplegar ni confirmar.
+
+Riesgo: bajo en dinero (no cambia cobro ni permisos), medio en comunicación: los
+planes de 49 y 99 € tienen dos nombres y Stripe solo uno. Diagnóstico: si una cuenta
+ve un nombre que no espera, mirar su `team_size`; sin él sale el nombre por defecto.
+Rollback: revertir; no hay migración ni datos nuevos.
+
 ## 2026-10-13 — Esquema 74 admitido en el historial y formularios que avisan
 
 Objetivo: resolver el bloqueo del CRM con autorización del founder y repasar, desde el
